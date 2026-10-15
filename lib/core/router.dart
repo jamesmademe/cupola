@@ -48,6 +48,7 @@ import 'package:cupola/features/services/presentation/service_home_screen.dart';
 import 'package:cupola/features/services/presentation/stack_screen.dart';
 import 'package:cupola/features/discover/domain/catalog_query.dart';
 import 'package:cupola/features/discover/domain/discover_index.dart';
+import 'package:cupola/features/discover/domain/seerr_invite.dart';
 import 'package:cupola/features/discover/presentation/discover_atrium.dart'
     show DiscoverIndexPage;
 import 'package:cupola/features/discover/presentation/calendar_page.dart';
@@ -63,6 +64,7 @@ import 'package:cupola/features/settings/presentation/settings_connections_scree
 import 'package:cupola/features/settings/presentation/service_settings_screen.dart';
 import 'package:cupola/features/settings/presentation/trusted_certificates_screen.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/import/presentation/manual_import_locate_screen.dart';
 import 'package:cupola/features/import/presentation/manual_import_progress_screen.dart';
 import 'package:cupola/features/import/presentation/blocked_import_review_page.dart';
@@ -3131,6 +3133,24 @@ String? _audienceRedirect(Uri uri, Audience audience) {
   };
 }
 
+/// Where an invite's link opens (`cupola://invite?…`): the Seerr already
+/// here at one of its addresses (the account's page, or the connection's form
+/// when it signs in with the key), else the sign-in, the invite in its query.
+String _inviteRedirect(Uri uri, SettingsModel settings) {
+  final here = SeerrInvite.fromQuery(
+    uri.queryParameters,
+  )?.connectedIn(settings);
+  if (here != null) {
+    return here.account != null
+        ? ServiceRoutes.settingsAccountFor(instanceId: here.id)
+        : ServiceRoutes.settingsForConnection(ServiceKey.seerr, here.id);
+  }
+  return Uri(
+    path: ServiceRoutes.welcomeSignIn,
+    queryParameters: uri.queryParameters.isEmpty ? null : uri.queryParameters,
+  ).toString();
+}
+
 bool _showsWelcome(Ref ref) => showsWelcome(
   onboardingCompleted: ref.read(onboardingCompletedProvider),
   settings: ref.read(currentSettingsProvider),
@@ -3148,6 +3168,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         ? ServiceRoutes.welcome
         : ServiceRoutes.home,
     redirect: (context, state) {
+      // Before the way in's gate: an invite opens a first run too.
+      if (SeerrInvite.isInviteUri(state.uri)) {
+        return _inviteRedirect(state.uri, ref.read(currentSettingsProvider));
+      }
       final path = state.uri.path;
       if (path == ServiceRoutes.legacyOnboarding) return ServiceRoutes.welcome;
       // Never away from the way in: a run saves its first connection before
@@ -3187,7 +3211,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: 'sign-in',
-            builder: (context, state) => const RequesterSignInScreen(),
+            // Keyed by the invite: one opened over another starts afresh.
+            builder: (context, state) => RequesterSignInScreen(
+              key: ValueKey(state.uri.query),
+              invite: state.uri.queryParameters,
+            ),
           ),
         ],
       ),

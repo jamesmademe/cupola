@@ -70,14 +70,21 @@ class _SeerrAccountFieldsState extends ConsumerState<SeerrAccountFields> {
     ref: ref,
     connection: () => widget.connection(),
     certificateProber: widget.certificateProber,
-    consent: ({required origin, required probe, previousFingerprint}) async =>
-        mounted &&
-        await showCertTrustDialog(
-          context,
-          origin: origin,
-          probe: probe,
-          previousFingerprint: previousFingerprint,
-        ),
+    consent:
+        ({
+          required origin,
+          required probe,
+          previousFingerprint,
+          invitedFingerprint,
+        }) async =>
+            mounted &&
+            await showCertTrustDialog(
+              context,
+              origin: origin,
+              probe: probe,
+              previousFingerprint: previousFingerprint,
+              invitedFingerprint: invitedFingerprint,
+            ),
   );
 
   @override

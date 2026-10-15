@@ -21,6 +21,7 @@ Future<bool> showCertTrustDialog(
   required String origin,
   required UntrustedCertificateProbe probe,
   String? previousFingerprint,
+  String? invitedFingerprint,
   List<ServiceKey> sharedWith = const [],
 }) async {
   final result = await showDialog<bool>(
@@ -30,6 +31,7 @@ Future<bool> showCertTrustDialog(
         origin: origin,
         probe: probe,
         previousFingerprint: previousFingerprint,
+        invitedFingerprint: invitedFingerprint,
         sharedWith: sharedWith,
       );
       return AlertDialog(

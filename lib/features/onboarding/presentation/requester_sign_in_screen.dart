@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/features/discover/domain/seerr_invite.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/onboarding/presentation/widgets/onboarding_parts.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
@@ -28,11 +29,21 @@ import 'package:cupola/features/shell/domain/shell_audience.dart';
 ///
 /// Signed in, the connection is saved with the account, the way in is over,
 /// and the app opens on the Home of whoever the account makes them.
+///
+/// An invite ([SeerrInvite]) fills it: opened by the invite's link, or the
+/// link pasted in the address, the server is read at once at whichever of
+/// its addresses answers, and the certificate the invite vouches for is
+/// trusted without a question.
 class RequesterSignInScreen extends ConsumerStatefulWidget {
   const RequesterSignInScreen({
     super.key,
+    this.invite = const {},
     this.certificateProber = probeUntrustedCertificate,
   });
+
+  /// The query of the invite's link the screen was opened with, rewritten
+  /// here by the router; empty when the door opened it.
+  final Map<String, String> invite;
 
   final CertificateProber certificateProber;
 
@@ -74,14 +85,22 @@ class _RequesterSignInScreenState extends ConsumerState<RequesterSignInScreen> {
     ref: ref,
     connection: _draft,
     certificateProber: widget.certificateProber,
-    consent: ({required origin, required probe, previousFingerprint}) async =>
-        mounted &&
-        await showCertTrustDialog(
-          context,
-          origin: origin,
-          probe: probe,
-          previousFingerprint: previousFingerprint,
-        ),
+    invitedPin: (url) => _invite?.pinFor(url),
+    consent:
+        ({
+          required origin,
+          required probe,
+          previousFingerprint,
+          invitedFingerprint,
+        }) async =>
+            mounted &&
+            await showCertTrustDialog(
+              context,
+              origin: origin,
+              probe: probe,
+              previousFingerprint: previousFingerprint,
+              invitedFingerprint: invitedFingerprint,
+            ),
   );
 
   bool _finishing = false;
@@ -90,14 +109,64 @@ class _RequesterSignInScreenState extends ConsumerState<RequesterSignInScreen> {
   /// not when the field takes the cursor.
   String? _problemOf;
 
+  /// The invite the address came from, while the address is still its
+  /// own: changed by hand, it is an address like any other.
+  SeerrInvite? _invite;
+
+  static const _brokenInvite = "This invite isn't whole. Ask for a new one.";
+
   @override
   void initState() {
     super.initState();
-    _address.addListener(() {
-      if (_addressProblem != null && _address.text != _problemOf) {
-        setState(() => _addressProblem = null);
+    if (widget.invite.isNotEmpty) {
+      final invite = SeerrInvite.fromQuery(widget.invite);
+      if (invite == null) {
+        _problemOf = '';
+        _addressProblem = _brokenInvite;
+      } else {
+        _take(invite);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _flow.readServer();
+        });
       }
-    });
+    }
+    _address.addListener(_onAddress);
+  }
+
+  void _onAddress() {
+    final text = _address.text;
+    if (SeerrInvite.mentionsInvite(text)) {
+      final invite = SeerrInvite.tryParse(text);
+      if (invite == null) {
+        _problemOf = text;
+        setState(() => _addressProblem = _brokenInvite);
+        return;
+      }
+      // Out of the field's own change: the paste is still being applied.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _take(invite);
+        _continue();
+      });
+      setState(() {});
+      return;
+    }
+    if (_invite case final invite?
+        when UrlUtils.normalizeBaseUrl(text) != invite.home) {
+      _invite = null;
+    }
+    if (_addressProblem != null && text != _problemOf) {
+      setState(() => _addressProblem = null);
+    }
+  }
+
+  /// Takes [invite]: its address at home in the field, the rest held.
+  void _take(SeerrInvite invite) {
+    _invite = invite;
+    _address.value = TextEditingValue(
+      text: invite.home,
+      selection: TextSelection.collapsed(offset: invite.home.length),
+    );
   }
 
   @override
@@ -108,11 +177,13 @@ class _RequesterSignInScreenState extends ConsumerState<RequesterSignInScreen> {
     super.dispose();
   }
 
-  ServiceInstance _draft() => ServiceInstance(
-    id: _id,
-    service: ServiceKey.seerr,
-    url: UrlUtils.normalizeBaseUrl(_address.text.trim()),
-  );
+  ServiceInstance _draft() =>
+      _invite?.draft(_id) ??
+      ServiceInstance(
+        id: _id,
+        service: ServiceKey.seerr,
+        url: UrlUtils.normalizeBaseUrl(_address.text.trim()),
+      );
 
   void _continue() {
     final typed = _address.text.trim();
@@ -245,7 +316,7 @@ class _RequesterSignInScreenState extends ConsumerState<RequesterSignInScreen> {
         focusNode: _addressFocus,
         label: 'Seerr address',
         hint: 'nas.home.arpa:5055',
-        help: 'Whoever runs your server can tell you.',
+        help: 'Whoever runs your server can tell you, or send you an invite.',
         isUrl: true,
         problem: _addressProblem,
         action: TextInputAction.go,

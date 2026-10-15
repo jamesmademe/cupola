@@ -72,6 +72,10 @@ import 'package:cupola/features/home/presentation/home_screen.dart';
 import 'package:cupola/features/services/presentation/stack_screen.dart';
 import 'package:cupola/features/services/presentation/service_tab_placeholder.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/discover/domain/seerr_invite.dart';
+import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
+import 'package:cupola/features/settings/domain/connection_address.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/stream/presentation/stream_item_screen.dart';
@@ -152,6 +156,101 @@ void main() {
       await tester.pumpAndSettle();
       expect(router.state.uri.toString(), ServiceRoutes.welcomeSignIn);
       expect(find.byType(RequesterSignInScreen), findsOneWidget);
+    });
+
+    group('an invite\'s link', () {
+      const invite = SeerrInvite(
+        home: 'http://nas.home.arpa:5055',
+        away: 'https://seerr.example.net',
+      );
+      final signIn = Uri(
+        path: ServiceRoutes.welcomeSignIn,
+        queryParameters: invite.toUri().queryParameters,
+      ).toString();
+
+      testWidgets('opens the sign-in with the invite on a first run', (
+        tester,
+      ) async {
+        final container = await _pumpRouter(tester, onboardingCompleted: false);
+        final router = container.read(routerProvider);
+
+        for (final link in [
+          invite.toLink(),
+          '/invite?${invite.toUri().query}',
+        ]) {
+          router.go(link);
+          await tester.pumpAndSettle();
+          expect(router.state.uri.toString(), signIn, reason: link);
+          expect(find.byType(RequesterSignInScreen), findsOneWidget);
+        }
+      });
+
+      testWidgets('opens the Seerr already here at one of its addresses: '
+          'the form of a key\'s', (tester) async {
+        final container = await _pumpRouter(
+          tester,
+          settings: const SettingsModel(
+            instances: [
+              ServiceInstance(
+                id: 'seerr',
+                service: ServiceKey.seerr,
+                url: 'http://nas.home.arpa:5055',
+                credential: 'key',
+              ),
+            ],
+          ),
+        );
+        final router = container.read(routerProvider);
+
+        router.go(invite.toLink());
+        await tester.pump();
+
+        expect(
+          router.state.uri.toString(),
+          ServiceRoutes.settingsForConnection(ServiceKey.seerr, 'seerr'),
+        );
+        // The page's own test of the connection and its polls, which this
+        // test does not look at, end before the tree and its container.
+        await tester.pump(const Duration(seconds: 6));
+        await tester.pumpWidget(const SizedBox.shrink());
+        container.dispose();
+      });
+
+      testWidgets('the page of an account\'s, found by its address away', (
+        tester,
+      ) async {
+        final container = await _pumpRouter(
+          tester,
+          settings: const SettingsModel(
+            instances: [
+              ServiceInstance(
+                id: 'seerr-2',
+                service: ServiceKey.seerr,
+                url: 'http://other.home.arpa:5055',
+                away: ConnectionAddress(url: 'https://seerr.example.net'),
+                account: SeerrAccountSignIn(
+                  kind: SeerrAccountKind.local,
+                  session: 'session',
+                ),
+              ),
+            ],
+          ),
+        );
+        final router = container.read(routerProvider);
+
+        router.go(invite.toLink());
+        await tester.pump();
+
+        expect(
+          router.state.uri.toString(),
+          ServiceRoutes.settingsAccountFor(instanceId: 'seerr-2'),
+        );
+        // The page's own test of the connection and its polls, which this
+        // test does not look at, end before the tree and its container.
+        await tester.pump(const Duration(seconds: 6));
+        await tester.pumpWidget(const SizedBox.shrink());
+        container.dispose();
+      });
     });
 
     testWidgets('the old onboarding address opens the Welcome', (tester) async {

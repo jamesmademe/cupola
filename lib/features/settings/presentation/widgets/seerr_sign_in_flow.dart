@@ -13,6 +13,8 @@ import 'package:cupola/features/discover/domain/seerr_server_facts.dart';
 import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
 import 'package:cupola/features/discover/presentation/seerr_sign_in_notice.dart';
 import 'package:cupola/features/settings/data/connection_reach_provider.dart';
+import 'package:cupola/features/settings/data/route_knock.dart';
+import 'package:cupola/features/settings/data/route_probe.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -20,6 +22,7 @@ import 'package:cupola/features/settings/domain/connection_address.dart';
 import 'package:cupola/features/settings/domain/connection_reach.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 
 /// How long the Plex page is waited on at most, whatever plex.tv says of its
 /// PIN: Seerr's own web client stops at 15 minutes too.
@@ -56,13 +59,25 @@ enum SeerrSignInStage {
   quickConnect,
 }
 
+/// Whether the certificate [shown] at an address is trusted on an invite's
+/// word: it is the one the invite vouched for ([invited]), as the person who
+/// sent it trusts it, and this device trusted none there ([trusted]). Never
+/// over a certificate already trusted: a change there is asked about.
+bool trustedOnInvite({
+  required String? trusted,
+  required String? invited,
+  required String shown,
+}) => trusted == null && invited != null && invited == shown;
+
 /// Asks the person whether to trust the certificate [probe] found at
-/// [origin]; true when they do.
+/// [origin]; true when they do. [invitedFingerprint] is the one an invite
+/// vouched for there, when the server shows another.
 typedef SeerrCertificateConsent =
     Future<bool> Function({
       required String origin,
       required UntrustedCertificateProbe probe,
       String? previousFingerprint,
+      String? invitedFingerprint,
     });
 
 /// The way into a Seerr with an account of one's own, apart from how it is
@@ -77,21 +92,29 @@ typedef SeerrCertificateConsent =
 ///
 /// [connection] is the connection as the draft stands: the address typed,
 /// its access, its name. Signing in saves it with the account.
+///
+/// [invitedPin] is the certificate an invite vouched for at an address: a
+/// server showing that one is trusted without a question, since the person
+/// who runs it said so, and one showing another is asked about with the
+/// difference said.
 class SeerrSignInFlow extends ChangeNotifier {
   SeerrSignInFlow({
     required WidgetRef ref,
     required ServiceInstance Function() connection,
     required SeerrCertificateConsent consent,
     CertificateProber certificateProber = probeUntrustedCertificate,
+    String? Function(String url)? invitedPin,
   }) : _ref = ref,
        _connectionOf = connection,
        _consent = consent,
-       _certificateProber = certificateProber;
+       _certificateProber = certificateProber,
+       _invitedPin = invitedPin;
 
   final WidgetRef _ref;
   final ServiceInstance Function() _connectionOf;
   final SeerrCertificateConsent _consent;
   final CertificateProber _certificateProber;
+  final String? Function(String url)? _invitedPin;
 
   /// The login of the password form: an email, or a media server's username.
   final login = TextEditingController();
@@ -169,16 +192,58 @@ class SeerrSignInFlow extends ChangeNotifier {
 
   /// Where a sign-in goes now. The saved connection, at the address it was
   /// saved with, is reached where its route is: signing in again away from
-  /// home goes to the address away. An address being typed is tried where it
-  /// is typed, as every connection test is.
+  /// home goes to the address away. A draft is tried at the address typed,
+  /// as every connection test is, unless it has two: then at the one that
+  /// answered a knock ([_knockDraft]), as an invite's do.
   ConnectionReach get _reach {
     final connection = _connection;
     final settings = _ref.read(currentSettingsProvider);
-    final saved = settings.instanceById(connection.id);
-    final route = saved != null && saved.url == connection.url
+    final route = _isSaved(connection, settings)
         ? _ref.read(connectionRouteProvider(connection.id))
-        : ConnectionRoute.home;
+        : _draftRoute;
     return reachOf(settings, connection, route);
+  }
+
+  /// Which address of a draft with two answered last.
+  ConnectionRoute _draftRoute = ConnectionRoute.home;
+
+  bool _isSaved(ServiceInstance connection, SettingsModel settings) {
+    final saved = settings.instanceById(connection.id);
+    return saved != null && saved.url == connection.url;
+  }
+
+  /// Knocks on a draft's two addresses, as the route probe does on a saved
+  /// connection's, and keeps the one that answered; home when neither did,
+  /// so the failure names the address the person knows. A certificate an
+  /// invite vouched for lets the knock through it: the knock carries no
+  /// secret, and nothing is trusted until the server shows it again.
+  Future<void> _knockDraft() async {
+    final connection = _connection;
+    final settings = _ref.read(currentSettingsProvider);
+    if (connection.away == null || _isSaved(connection, settings)) return;
+    ConnectionReach at(ConnectionRoute route) {
+      final reach = reachOf(settings, connection, route);
+      return (
+        url: reach.url,
+        access: reach.access,
+        pin: reach.pin ?? _invitedPin?.call(reach.url),
+      );
+    }
+
+    final knock = _ref.read(routeKnockProvider);
+    final route = await decideRoute(
+      home: knock(
+        ServiceKey.seerr,
+        at(ConnectionRoute.home),
+        timeout: homeKnockTimeout,
+      ),
+      away: knock(
+        ServiceKey.seerr,
+        at(ConnectionRoute.away),
+        timeout: awayKnockTimeout,
+      ),
+    );
+    _draftRoute = route ?? ConnectionRoute.home;
   }
 
   void _set(VoidCallback change) {
@@ -197,6 +262,8 @@ class SeerrSignInFlow extends ChangeNotifier {
       _stage = SeerrSignInStage.asking;
       _notice = null;
     });
+    await _knockDraft();
+    if (_disposed) return;
     final auth = _authService();
     SeerrServerFacts facts;
     try {
@@ -257,11 +324,19 @@ class SeerrSignInFlow extends ChangeNotifier {
       pinnedFingerprint: previous ?? '',
     );
     if (probe == null || _disposed) return false;
-    final trust = await _consent(
-      origin: UrlUtils.certOrigin(url) ?? url,
-      probe: probe,
-      previousFingerprint: previous,
-    );
+    final invited = _invitedPin?.call(url);
+    final trust =
+        trustedOnInvite(
+          trusted: previous,
+          invited: invited,
+          shown: probe.certificate.fingerprint,
+        ) ||
+        await _consent(
+          origin: UrlUtils.certOrigin(url) ?? url,
+          probe: probe,
+          previousFingerprint: previous,
+          invitedFingerprint: invited,
+        );
     if (!trust || _disposed) return false;
     await _ref
         .read(settingsProvider.notifier)

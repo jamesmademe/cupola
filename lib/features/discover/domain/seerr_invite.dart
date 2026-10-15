@@ -85,6 +85,20 @@ final class SeerrInvite {
     away: away == null ? null : ConnectionAddress(url: away!),
   );
 
+  /// The Seerr connection [settings] already has at one of the invite's
+  /// addresses, signed in or not; null when there is none.
+  ServiceInstance? connectedIn(SettingsModel settings) {
+    final addresses = {home, ?away};
+    for (final instance in settings.instancesOf(ServiceKey.seerr)) {
+      final its = {
+        UrlUtils.normalizeBaseUrl(instance.url),
+        if (instance.away case final away?) UrlUtils.normalizeBaseUrl(away.url),
+      }..remove('');
+      if (its.any(addresses.contains)) return instance;
+    }
+    return null;
+  }
+
   /// The fingerprint the invite vouches for at [url]'s origin, or null when
   /// it vouches for none there.
   String? pinFor(String url) {

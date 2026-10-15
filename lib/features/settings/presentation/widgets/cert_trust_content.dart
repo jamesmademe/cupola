@@ -30,6 +30,7 @@ class CertTrustContent extends StatelessWidget {
     required this.origin,
     required this.probe,
     this.previousFingerprint,
+    this.invitedFingerprint,
     this.sharedWith = const [],
     this.surface,
   });
@@ -48,6 +49,16 @@ class CertTrustContent extends StatelessWidget {
 
   /// The fingerprint already pinned for [origin], shown only when [rotated].
   final String? previousFingerprint;
+
+  /// The fingerprint an invite vouched for at [origin]. Shown, with the
+  /// difference said in amber, when the server shows another: the person who
+  /// sent the invite trusts a different certificate there.
+  final String? invitedFingerprint;
+
+  /// The server shows a certificate other than the invite's.
+  bool get _notInvited =>
+      invitedFingerprint != null &&
+      invitedFingerprint != probe.certificate.fingerprint;
 
   /// Other configured services reached through [origin]: trusting or
   /// forgetting this certificate covers them too. Excludes the service this
@@ -68,14 +79,14 @@ class CertTrustContent extends StatelessWidget {
     // app refuses to talk to a host it could otherwise reach, and it may be an
     // interception. It is still walked against the ground it lands on, raw:
     // the error byte reads about 3.4:1 as text on paper.
-    final alarm = statusToneColor(
-      scheme,
-      StatusTone.error,
-      surface:
-          surface ??
-          theme.dialogTheme.backgroundColor ??
-          scheme.surfaceContainerHigh,
-    );
+    final ground =
+        surface ??
+        theme.dialogTheme.backgroundColor ??
+        scheme.surfaceContainerHigh;
+    final alarm = statusToneColor(scheme, StatusTone.error, surface: ground);
+    // Amber, a fault: not what the invite promised, which a renewal after it
+    // was sent explains as well as an interception does.
+    final fault = statusToneColor(scheme, StatusTone.warning, surface: ground);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -109,6 +120,15 @@ class CertTrustContent extends StatelessWidget {
             ),
           ],
         ),
+        if (_notInvited) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            "This isn't the certificate in the invite",
+            style: theme.textTheme.bodyMedium!
+                .weight(FontWeight.w600)
+                .copyWith(color: fault),
+          ),
+        ],
         const SizedBox(height: AppSpacing.md),
         Text(_body(), style: theme.textTheme.bodyMedium),
         const SizedBox(height: AppSpacing.md),
@@ -123,6 +143,13 @@ class CertTrustContent extends StatelessWidget {
           _CertRow(
             label: 'Previously trusted',
             value: _displayFingerprint(previousFingerprint!),
+            monospace: true,
+            tone: scheme.onSurfaceVariant,
+          ),
+        if (_notInvited)
+          _CertRow(
+            label: 'In the invite',
+            value: _displayFingerprint(invitedFingerprint!),
             monospace: true,
             tone: scheme.onSurfaceVariant,
           ),
@@ -142,7 +169,11 @@ class CertTrustContent extends StatelessWidget {
           label: 'SHA-256',
           value: cert.displayFingerprint,
           monospace: true,
-          tone: rotated ? alarm : null,
+          tone: rotated
+              ? alarm
+              : _notInvited
+              ? fault
+              : null,
         ),
       ],
     );

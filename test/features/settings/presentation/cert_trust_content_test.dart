@@ -52,6 +52,60 @@ void main() {
       expect(find.text('Previously trusted'), findsNothing);
     });
 
+    testWidgets('a certificate other than the invite\'s says so in amber, '
+        'beside the invite\'s', (tester) async {
+      const invited =
+          '99ee88dd77cc99ee88dd77cc99ee88dd77cc99ee88dd77cc99ee88dd77cc99e';
+
+      await tester.pumpWidget(
+        _host(
+          const CertTrustContent(
+            origin: 'https://nas.local:8443',
+            probe: (certificate: _cert, rotated: false),
+            invitedFingerprint: invited,
+          ),
+        ),
+      );
+
+      final line = tester.widget<Text>(
+        find.text("This isn't the certificate in the invite"),
+      );
+      final scheme = AppTheme.darkTheme().colorScheme;
+      expect(
+        line.style?.color,
+        statusToneColor(
+          scheme,
+          StatusTone.warning,
+          surface:
+              AppTheme.darkTheme().dialogTheme.backgroundColor ??
+              scheme.surfaceContainerHigh,
+        ),
+      );
+      expect(find.text('In the invite'), findsOneWidget);
+      expect(find.textContaining('99:EE:88:DD'), findsOneWidget);
+      expect(find.text('Self-signed certificate'), findsOneWidget);
+    });
+
+    testWidgets('the invite\'s own certificate says nothing of the invite', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _host(
+          CertTrustContent(
+            origin: 'https://nas.local:8443',
+            probe: (certificate: _cert, rotated: false),
+            invitedFingerprint: _cert.fingerprint,
+          ),
+        ),
+      );
+
+      expect(
+        find.text("This isn't the certificate in the invite"),
+        findsNothing,
+      );
+      expect(find.text('In the invite'), findsNothing);
+    });
+
     testWidgets('a rotated certificate escalates the headline and shows both '
         'fingerprints', (tester) async {
       const previous =

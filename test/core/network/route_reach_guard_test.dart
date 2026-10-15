@@ -216,10 +216,10 @@ const _exceptions = <String, ({int count, String reason})>{
         'is this connection, by the address it is saved with.',
   ),
   'lib/features/discover/domain/seerr_invite.dart  .url': (
-    count: 1,
+    count: 2,
     reason:
-        'An invite names the address at home; the household member\'s app '
-        'reaches it, never this one.',
+        'An invite names the address at home, and finds the Seerr already '
+        'here at it; the household member\'s app reaches it, never this one.',
   ),
   'lib/features/discover/domain/seerr_invite.dart  .access': (
     count: 1,

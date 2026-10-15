@@ -46,8 +46,11 @@ GoRouter onboardingRouter({
         ),
         GoRoute(
           path: 'sign-in',
-          builder: (_, _) =>
-              RequesterSignInScreen(certificateProber: certificateProber),
+          builder: (_, state) => RequesterSignInScreen(
+            key: ValueKey(state.uri.query),
+            invite: state.uri.queryParameters,
+            certificateProber: certificateProber,
+          ),
         ),
       ],
     ),

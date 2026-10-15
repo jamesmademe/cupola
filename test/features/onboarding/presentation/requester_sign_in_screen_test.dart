@@ -7,10 +7,13 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/platform/browser_opener.dart';
+import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/features/discover/domain/seerr_invite.dart';
 import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/onboarding/presentation/requester_sign_in_screen.dart';
@@ -40,11 +43,13 @@ class _Browser implements BrowserOpener {
 }
 
 /// A first run, nothing saved, against [profile]'s world, opened on the
-/// Welcome and through its door to the sign-in.
+/// Welcome and through its door to the sign-in; or, with [invite], opened by
+/// the invite's link, as the router rewrites it.
 Future<(ProfileHarness, ProviderContainer, _Browser)> _atSignIn(
   WidgetTester tester,
-  ConfigProfile profile,
-) async {
+  ConfigProfile profile, {
+  SeerrInvite? invite,
+}) async {
   final browser = _Browser();
   final harness = await ProfileHarness.start(profile);
   harness.network.followFakeTime(tester.binding);
@@ -78,7 +83,14 @@ Future<(ProfileHarness, ProviderContainer, _Browser)> _atSignIn(
     ],
   );
   addTearDown(container.dispose);
-  final router = onboardingRouter();
+  final router = onboardingRouter(
+    initialLocation: invite == null
+        ? ServiceRoutes.welcome
+        : Uri(
+            path: ServiceRoutes.welcomeSignIn,
+            queryParameters: invite.toUri().queryParameters,
+          ).toString(),
+  );
   addTearDown(router.dispose);
   await tester.pumpWidget(
     UncontrolledProviderScope(
@@ -93,7 +105,9 @@ Future<(ProfileHarness, ProviderContainer, _Browser)> _atSignIn(
     ),
   );
   await harness.settle(tester);
-  await _tap(tester, harness, find.text('I have a Seerr account'));
+  if (invite == null) {
+    await _tap(tester, harness, find.text('I have a Seerr account'));
+  }
   return (harness, container, browser);
 }
 
@@ -138,7 +152,12 @@ void main() {
 
     expect(find.byType(RequesterSignInScreen), findsOneWidget);
     expect(find.text('Where is your Seerr?'), findsOneWidget);
-    expect(find.text('Whoever runs your server can tell you.'), findsOneWidget);
+    expect(
+      find.text(
+        'Whoever runs your server can tell you, or send you an invite.',
+      ),
+      findsOneWidget,
+    );
 
     await tester.enterText(_address(), WorldHosts.seerr);
     await _tap(tester, harness, find.text('Continue'));
@@ -286,5 +305,117 @@ void main() {
     expect(find.text('I have a Seerr account'), findsOneWidget);
 
     await harness.unmount(tester);
+  });
+
+  group('with an invite', () {
+    const away = 'https://seerr.example.net';
+
+    testWidgets('its link reads the server at once: no address to type, and '
+        'the connection keeps both addresses', (tester) async {
+      const anna = WorldSeerrUsers.annaLocal;
+      final (harness, container, _) = await _atSignIn(
+        tester,
+        Profiles.p2,
+        invite: const SeerrInvite(home: WorldHosts.seerr, away: away),
+      );
+
+      expect(find.text('Sign in with email'), findsOneWidget);
+
+      await _tap(tester, harness, find.text('Sign in with email'));
+      await tester.enterText(_field('Email'), anna.email);
+      await tester.enterText(_field('Password'), anna.password);
+      await _tap(tester, harness, find.widgetWithText(FilledButton, 'Sign in'));
+
+      final saved = _seerr(container)!;
+      expect(saved.url, WorldHosts.seerr);
+      expect(saved.away?.url, away, reason: 'the invite\'s address away');
+      expect(saved.account?.isSignedIn, isTrue);
+      _expectOpenedFor(container, Audience.requester);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('a second one opened over the first starts afresh', (
+      tester,
+    ) async {
+      final (harness, _, _) = await _atSignIn(
+        tester,
+        Profiles.p2,
+        invite: const SeerrInvite(home: 'http://seerr.home.arpa:5055'),
+      );
+      expect(find.text('Seerr did not answer'), findsOneWidget);
+
+      final router = GoRouter.of(tester.element(find.byType(Scaffold).first));
+      router.go(
+        Uri(
+          path: ServiceRoutes.welcomeSignIn,
+          queryParameters: const SeerrInvite(
+            home: WorldHosts.seerr,
+          ).toUri().queryParameters,
+        ).toString(),
+      );
+      await harness.settle(tester);
+
+      expect(find.text('Sign in with email'), findsOneWidget);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('pasted in the address, it is read the same', (tester) async {
+      final (harness, _, _) = await _atSignIn(tester, Profiles.p2);
+      const invite = SeerrInvite(home: WorldHosts.seerr, away: away);
+
+      await tester.enterText(_address(), 'Here: ${invite.toLink()} ciao');
+      await harness.settle(tester);
+
+      expect(find.text('Sign in with email'), findsOneWidget);
+      await _tap(tester, harness, find.byType(BackButton));
+      expect(
+        tester.widget<TextField>(_address()).controller!.text,
+        WorldHosts.seerr,
+        reason: 'the link gives way to the address it names',
+      );
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('one that is not whole is said at the address, and nothing is '
+        'asked', (tester) async {
+      final (harness, _, _) = await _atSignIn(tester, Profiles.p2);
+      final asked = harness.network.requests.length;
+
+      await tester.enterText(_address(), 'cupola://invite?v=1');
+      await harness.settle(tester);
+
+      expect(
+        find.text("This invite isn't whole. Ask for a new one."),
+        findsOneWidget,
+      );
+      expect(harness.network.requests.length, asked);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('away from home, the server is read at the address away', (
+      tester,
+    ) async {
+      final (harness, _, _) = await _atSignIn(
+        tester,
+        Profiles.p2,
+        invite: const SeerrInvite(
+          home: 'http://seerr.home.arpa:5055',
+          away: WorldHosts.seerr,
+        ),
+      );
+
+      expect(find.text('Sign in with email'), findsOneWidget);
+      expect(
+        find.text('Seerr did not answer'),
+        findsNothing,
+        reason: 'home did not answer a knock, and away did',
+      );
+
+      await harness.unmount(tester);
+    });
   });
 }

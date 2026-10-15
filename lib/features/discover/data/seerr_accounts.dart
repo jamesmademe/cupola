@@ -60,6 +60,9 @@ class SeerrAccounts {
             live.copyWith(
               url: instance.url,
               access: instance.access,
+              // An invite's address away comes with the draft; a draft
+              // without one keeps the saved one.
+              away: instance.away,
               label: instance.label,
               credential: '',
               account: account,

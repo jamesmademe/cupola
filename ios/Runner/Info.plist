@@ -92,5 +92,22 @@
 		<string>streamyfin</string>
 		<string>fladder</string>
 	</array>
+	<!-- An invite to a Seerr opens the app: cupola://invite?… (from the
+	     camera reading its QR, or a link tapped where it is a link). Flutter
+	     hands the whole link to the router, which reads it
+	     (lib/features/discover/domain/seerr_invite.dart). -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.matthwlabs.cupola.invite</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>cupola</string>
+			</array>
+		</dict>
+	</array>
+	<key>FlutterDeepLinkingEnabled</key>
+	<true/>
 </dict>
 </plist>
