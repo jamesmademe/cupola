@@ -2,7 +2,7 @@
 
 The page that hands everything this device has to a new one: a code to scan or a link to copy, what moves with it, and what the code does once it has done its job. Settings › `Set up another device`.
 
-Rendered from `lib/features/pairing/presentation/pair_offer_screen.dart` (`PairOfferScreen`) and `lib/features/pairing/presentation/pair_words.dart` by `test/design_catalog/pair_offer_catalog_test.dart`; the code is `QrCodeView`, the protocol is `lib/features/pairing/`. The catalog draws each state the notifier can stand in, with a notifier that opens no socket.
+Rendered from `lib/features/pairing/presentation/pair_offer_screen.dart` (`PairOfferScreen`) and `lib/features/pairing/presentation/pair_words.dart` by `test/design_catalog/pair_offer_catalog_test.dart`; the code is `QrCodeView`, its slot, countdown and outcome are `lib/features/pairing/presentation/pair_code.dart` (`PairCodeSlot`, `PairCountdown`, `PairCodeOutcome`, shared with the invite shown in person, `InviteSheet`), the protocol is `lib/features/pairing/`. The catalog draws each state the notifier can stand in, with a notifier that opens no socket.
 
 ## Anatomy
 

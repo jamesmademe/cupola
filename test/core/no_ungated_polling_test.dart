@@ -31,7 +31,7 @@ void main() {
   /// code closes by its own clock, and the page says so when it does.
   const uiClocks = {
     'lib/core/widgets/interactive_search_sheet.dart',
-    'lib/features/pairing/presentation/pair_offer_screen.dart',
+    'lib/features/pairing/presentation/pair_code.dart',
     'lib/features/release_search/presentation/release_search_sheet.dart',
   };
 

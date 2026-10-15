@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
@@ -24,6 +23,7 @@ import 'package:cupola/features/pairing/data/pair_server.dart';
 import 'package:cupola/features/pairing/data/pair_session.dart';
 import 'package:cupola/features/pairing/domain/pair_link.dart';
 import 'package:cupola/features/pairing/domain/pair_package.dart';
+import 'package:cupola/features/pairing/presentation/pair_code.dart';
 import 'package:cupola/features/pairing/presentation/pair_words.dart';
 import 'package:cupola/features/settings/presentation/widgets/invite_sheet.dart';
 import 'package:cupola/features/settings/presentation/widgets/seerr_sign_in_steps.dart';
@@ -47,7 +47,7 @@ class PairOfferScreen extends ConsumerStatefulWidget {
 
   /// The code's tile, and the place that holds it in every state, so nothing
   /// below it moves when the code arrives.
-  static const qrSide = InviteSheet.qrSide;
+  static const qrSide = PairCodeSlot.side;
 
   /// How long the button says *Link copied* before it offers the copy again.
   static const copiedFor = InviteSheet.copiedFor;
@@ -152,7 +152,7 @@ class _PairOfferScreenState extends ConsumerState<PairOfferScreen> {
   List<Widget> _body(BuildContext context, PairOfferState state) {
     return switch (state) {
       PairOfferPreparing() => [
-        const _CodeSlot(
+        const PairCodeSlot(
           child: SizedBox.square(
             dimension: 24,
             child: CircularProgressIndicator(strokeWidth: 2),
@@ -214,7 +214,7 @@ class _PairOfferScreenState extends ConsumerState<PairOfferScreen> {
         style: theme.textTheme.bodyMedium,
       ),
       const SizedBox(height: AppSpacing.xs),
-      _Countdown(closesAt: link.closesAt, now: network.now, style: dim),
+      PairCountdown(closesAt: link.closesAt, now: network.now, style: dim),
       const SizedBox(height: AppSpacing.sm),
       // The way to a Mac, which has no camera: the link, as a message.
       Center(
@@ -277,7 +277,7 @@ class _PairOfferScreenState extends ConsumerState<PairOfferScreen> {
   List<Widget> _sent(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return [
-      _CodeSlot(
+      PairCodeSlot(
         child: Icon(
           Icons.check_rounded,
           size: 72,
@@ -288,11 +288,10 @@ class _PairOfferScreenState extends ConsumerState<PairOfferScreen> {
           ),
         ),
       ),
-      ..._result(
-        context,
-        'Copied to the other phone',
-        'It has everything now. The code is closed.',
-        SeerrSignInPrimary(label: 'Done', onPressed: _done),
+      PairCodeOutcome(
+        title: 'Copied to the other phone',
+        why: 'It has everything now. The code is closed.',
+        primary: SeerrSignInPrimary(label: 'Done', onPressed: _done),
       ),
     ];
   }
@@ -300,7 +299,7 @@ class _PairOfferScreenState extends ConsumerState<PairOfferScreen> {
   List<Widget> _closed(BuildContext context, PairServerEnd how) {
     final colorScheme = Theme.of(context).colorScheme;
     return [
-      _CodeSlot(
+      PairCodeSlot(
         child: Icon(
           Icons.qr_code_2_rounded,
           size: 72,
@@ -311,124 +310,14 @@ class _PairOfferScreenState extends ConsumerState<PairOfferScreen> {
           ),
         ),
       ),
-      ..._result(
-        context,
-        'The code closed',
-        pairClosedBecause(how),
-        SeerrSignInPrimary(label: 'Make a new code', onPressed: _start),
+      PairCodeOutcome(
+        title: 'The code closed',
+        why: pairClosedBecause(how),
+        primary: SeerrSignInPrimary(
+          label: 'Make a new code',
+          onPressed: _start,
+        ),
       ),
     ];
   }
-
-  /// What the code's place says once it is not a code: a line, why, and the
-  /// one button.
-  List<Widget> _result(
-    BuildContext context,
-    String title,
-    String why,
-    Widget primary,
-  ) {
-    final theme = Theme.of(context);
-    return [
-      const SizedBox(height: AppSpacing.lg),
-      Semantics(
-        container: true,
-        liveRegion: true,
-        label: '$title. $why',
-        child: ExcludeSemantics(
-          child: Column(
-            children: [
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.titleMedium!.weight(FontWeight.w600),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                why,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall!.copyWith(
-                  color: CupolaThemeColors.of(context).dimText,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      const SizedBox(height: AppSpacing.xl),
-      primary,
-    ];
-  }
-}
-
-/// The code's place when there is no code: the same square, so the page does
-/// not jump when the code arrives or leaves.
-class _CodeSlot extends StatelessWidget {
-  const _CodeSlot({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Center(
-      child: SizedBox.square(
-        dimension: PairOfferScreen.qrSide,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: colorScheme.surfaceContainer,
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(color: colorScheme.outlineVariant),
-          ),
-          child: Center(child: child),
-        ),
-      ),
-    );
-  }
-}
-
-/// `Closes in 1:52`, ticking each second to the code's end. Not a live
-/// region: a reader walking the page hears the time it is on, and the end
-/// says nothing new, because the page changes by itself.
-class _Countdown extends StatefulWidget {
-  const _Countdown({
-    required this.closesAt,
-    required this.now,
-    required this.style,
-  });
-
-  final DateTime closesAt;
-  final DateTime Function() now;
-  final TextStyle style;
-
-  @override
-  State<_Countdown> createState() => _CountdownState();
-}
-
-class _CountdownState extends State<_Countdown> {
-  Timer? _tick;
-
-  @override
-  void initState() {
-    super.initState();
-    _tick = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _tick?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    liveRegion: false,
-    child: Text(
-      pairCountdown(widget.closesAt.difference(widget.now())),
-      textAlign: TextAlign.center,
-      style: widget.style,
-    ),
-  );
 }
