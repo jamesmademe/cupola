@@ -29,20 +29,26 @@ final _claim = find.byWidgetPredicate(
 
 void main() {
   group('OnboardingWelcome', () {
-    testWidgets('offers the one door and nothing to skip', (tester) async {
+    testWidgets('offers the two doors and nothing to skip', (tester) async {
       var opened = 0;
+      var signIn = 0;
       await tester.pumpWidget(
-        _host(OnboardingWelcome(onSetUp: () => opened++)),
+        _host(
+          OnboardingWelcome(onSetUp: () => opened++, onSignIn: () => signIn++),
+        ),
       );
 
       expect(_claim, findsOneWidget);
       expect(find.byType(FilledButton), findsOneWidget);
       expect(find.text(SetupDoors.setUpHint), findsOneWidget);
+      expect(find.text(SetupDoors.signInHint), findsOneWidget);
       expect(find.text('Back'), findsNothing);
       expect(find.textContaining('Skip'), findsNothing);
 
       await tester.tap(find.text('Set up a service'));
       expect(opened, 1);
+      await tester.tap(find.text('I have a Seerr account'));
+      expect(signIn, 1);
     });
 
     testWidgets('shows Back only when there is somewhere to go back to', (
@@ -50,7 +56,13 @@ void main() {
     ) async {
       var back = 0;
       await tester.pumpWidget(
-        _host(OnboardingWelcome(onSetUp: () {}, onBack: () => back++)),
+        _host(
+          OnboardingWelcome(
+            onSetUp: () {},
+            onSignIn: () {},
+            onBack: () => back++,
+          ),
+        ),
       );
 
       await tester.tap(find.text('Back'));
@@ -60,7 +72,9 @@ void main() {
     testWidgets('says the claim once as the heading, and keeps the promise '
         'for the close', (tester) async {
       final handle = tester.ensureSemantics();
-      await tester.pumpWidget(_host(OnboardingWelcome(onSetUp: () {})));
+      await tester.pumpWidget(
+        _host(OnboardingWelcome(onSetUp: () {}, onSignIn: () {})),
+      );
 
       expect(
         find.semantics.byLabel(OnePunchline.claim),
@@ -76,7 +90,9 @@ void main() {
       // A hint wrapped around a button is dropped; it has to sit on the
       // label the button merges.
       final handle = tester.ensureSemantics();
-      await tester.pumpWidget(_host(OnboardingWelcome(onSetUp: () {})));
+      await tester.pumpWidget(
+        _host(OnboardingWelcome(onSetUp: () {}, onSignIn: () {})),
+      );
 
       expect(
         find.semantics.byLabel('Set up a service'),
@@ -84,6 +100,14 @@ void main() {
           isButton: true,
           hasTapAction: true,
           hint: SetupDoors.setUpHint,
+        ),
+      );
+      expect(
+        find.semantics.byLabel('I have a Seerr account'),
+        containsSemantics(
+          isButton: true,
+          hasTapAction: true,
+          hint: SetupDoors.signInHint,
         ),
       );
       handle.dispose();

@@ -534,10 +534,18 @@ class OnboardingFooter extends StatelessWidget {
 /// There is no way past it. With nothing set up the shell has nothing to show,
 /// and the Home at zero would only say the same thing again inside the tabs.
 class OnboardingWelcome extends StatelessWidget {
-  const OnboardingWelcome({super.key, required this.onSetUp, this.onBack});
+  const OnboardingWelcome({
+    super.key,
+    required this.onSetUp,
+    required this.onSignIn,
+    this.onBack,
+  });
 
   /// Opens Connect, with Seerr proposed.
   final VoidCallback onSetUp;
+
+  /// Opens the sign-in with a Seerr account.
+  final VoidCallback onSignIn;
 
   /// Back where the visit came from, for a Welcome opened from inside the app
   /// ("Revisit onboarding"). Null on a first run, which came from nowhere.
@@ -552,7 +560,7 @@ class OnboardingWelcome extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          SetupDoors(onSetUp: onSetUp),
+          SetupDoors(onSetUp: onSetUp, onSignIn: onSignIn),
           if (onBack case final back?) ...[
             const SizedBox(height: AppSpacing.sm),
             TextButton(onPressed: back, child: const Text('Back')),

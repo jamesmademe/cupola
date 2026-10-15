@@ -33,9 +33,15 @@ class SeerrSignInSteps extends ConsumerWidget {
     required this.onUseApiKey,
     required this.onCheckAddress,
     required this.onUseHttps,
+    this.heading,
   });
 
   final SeerrSignInFlow flow;
+
+  /// The style of the steps' headings ("Sign in to Jellyseerr"): a section's
+  /// title inside a form, by default; the page's own headline where the
+  /// sign-in is the whole page.
+  final TextStyle? heading;
 
   /// What the flow shows at [SeerrSignInStage.start], under its notice.
   final List<Widget> Function(BuildContext context) start;
@@ -96,6 +102,9 @@ class SeerrSignInSteps extends ConsumerWidget {
       ],
     );
   }
+
+  TextStyle _heading(ThemeData theme) =>
+      heading ?? theme.textTheme.titleSmall!.weight(FontWeight.w600);
 
   List<Widget> _noticeActions(BuildContext context, SeerrSignInNotice notice) {
     final others = flow.offered.length;
@@ -164,10 +173,7 @@ class SeerrSignInSteps extends ConsumerWidget {
       ];
     }
     return [
-      Text(
-        'Sign in to ${facts.title}',
-        style: theme.textTheme.titleSmall!.weight(FontWeight.w600),
-      ),
+      Text('Sign in to ${facts.title}', style: _heading(theme)),
       const SizedBox(height: AppSpacing.md),
       for (final method in flow.offered) ...[
         SeerrSignInPrimary(
@@ -206,10 +212,7 @@ class SeerrSignInSteps extends ConsumerWidget {
     }
 
     return [
-      Text(
-        'Sign in to ${facts.title}',
-        style: theme.textTheme.titleSmall!.weight(FontWeight.w600),
-      ),
+      Text('Sign in to ${facts.title}', style: _heading(theme)),
       if (!local && serverName != null) ...[
         const SizedBox(height: AppSpacing.xs),
         Text(
@@ -255,10 +258,7 @@ class SeerrSignInSteps extends ConsumerWidget {
   List<Widget> _plexWaiting(BuildContext context) {
     final theme = Theme.of(context);
     return [
-      Text(
-        'Finish signing in with Plex',
-        style: theme.textTheme.titleSmall!.weight(FontWeight.w600),
-      ),
+      Text('Finish signing in with Plex', style: _heading(theme)),
       const SizedBox(height: AppSpacing.xs),
       Text(
         'Approve Cupola on the Plex page, then come back here.',

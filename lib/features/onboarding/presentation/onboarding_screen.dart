@@ -1230,6 +1230,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                                 children: [
                                   OnboardingWelcome(
                                     onSetUp: () => _connect(ServiceKey.seerr),
+                                    onSignIn: () => context.push(
+                                      ServiceRoutes.welcomeSignIn,
+                                    ),
                                     onBack: context.canPop() ? _leave : null,
                                   ),
                                   OnboardingStart(

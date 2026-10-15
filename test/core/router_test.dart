@@ -34,6 +34,7 @@ import 'package:cupola/features/readarr/presentation/readarr_overview_screen.dar
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_overview_screen.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:cupola/features/onboarding/presentation/requester_sign_in_screen.dart';
 import 'package:cupola/features/discover/presentation/discover_page.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/presentation/sonarr_overview_screen.dart';
@@ -140,6 +141,17 @@ void main() {
       await tester.pumpAndSettle();
       expect(router.state.uri.toString(), ServiceRoutes.welcomeConnect);
       expect(find.byType(OnboardingScreen), findsOneWidget);
+    });
+
+    testWidgets('the sign-in with an account opens outside the shell, from '
+        'nothing saved', (tester) async {
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      router.go(ServiceRoutes.welcomeSignIn);
+      await tester.pumpAndSettle();
+      expect(router.state.uri.toString(), ServiceRoutes.welcomeSignIn);
+      expect(find.byType(RequesterSignInScreen), findsOneWidget);
     });
 
     testWidgets('the old onboarding address opens the Welcome', (tester) async {

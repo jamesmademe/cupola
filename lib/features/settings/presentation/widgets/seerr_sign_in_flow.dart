@@ -583,6 +583,27 @@ class SeerrSignInFlow extends ChangeNotifier {
     });
   }
 
+  /// Back to the start with nothing read: the address is about to change.
+  void restart() {
+    final wasPlex = _stage == SeerrSignInStage.plex;
+    _stopWaiting();
+    if (wasPlex) unawaited(_ref.read(browserOpenerProvider).close());
+    _auth?.close();
+    _auth = null;
+    _authReach = null;
+    password.clear();
+    _set(() {
+      _stage = SeerrSignInStage.start;
+      _facts = null;
+      _method = null;
+      _notice = null;
+      _retry = null;
+      _code = null;
+      _cleartextAccepted = false;
+      _quickConnectOff = false;
+    });
+  }
+
   // === The outcome =========================================================
 
   Future<void> _signedIn(SeerrAccountSignIn account) async {

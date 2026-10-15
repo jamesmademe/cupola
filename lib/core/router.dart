@@ -75,6 +75,7 @@ import 'package:cupola/features/requests/presentation/requests_screen.dart';
 import 'package:cupola/features/shell/domain/shell_audience.dart';
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:cupola/features/onboarding/presentation/requester_sign_in_screen.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_overview_screen.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_screen.dart';
 import 'package:cupola/features/qbittorrent/presentation/torrent_detail_screen.dart';
@@ -3183,6 +3184,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: 'connect',
             builder: (context, state) =>
                 const OnboardingScreen(entry: OnboardingEntry.connect),
+          ),
+          GoRoute(
+            path: 'sign-in',
+            builder: (context, state) => const RequesterSignInScreen(),
           ),
         ],
       ),

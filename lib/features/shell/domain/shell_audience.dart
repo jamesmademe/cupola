@@ -34,4 +34,9 @@ class ShellAudienceNotifier extends Notifier<Audience> {
   }
 
   void _take() => state = ref.read(audienceProvider);
+
+  /// Takes the audience now, at a moment nothing is under the finger: the
+  /// first run's sign-in, whose screen goes away as it is taken, when the
+  /// way in was already over (the Home at zero's door).
+  void take() => _take();
 }

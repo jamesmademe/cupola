@@ -23,6 +23,11 @@ class ServiceRoutes {
   /// "Set up a service", which is already past the claim.
   static const welcomeConnect = '$welcome/connect';
 
+  /// The household member's way in: where their Seerr is, then their own
+  /// account on it. The Welcome's and the Home at zero's "I have a Seerr
+  /// account".
+  static const welcomeSignIn = '$welcome/sign-in';
+
   /// Where the way in lived before the Welcome. Rewrites onto [welcome].
   static const legacyOnboarding = '/onboarding';
 

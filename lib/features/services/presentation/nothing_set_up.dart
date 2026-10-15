@@ -37,6 +37,7 @@ class NothingSetUpView extends StatelessWidget {
   Widget build(BuildContext context) {
     final body = _NothingSetUp(
       onSetUp: () => context.push(ServiceRoutes.welcomeConnect),
+      onSignIn: () => context.push(ServiceRoutes.welcomeSignIn),
     );
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
@@ -66,8 +67,9 @@ class NothingSetUpView extends StatelessWidget {
 /// *not* `AppEmptyState`: that widget is for a region that came up empty, and
 /// this page is the product's front door until something answers.
 class _NothingSetUp extends StatelessWidget {
-  const _NothingSetUp({required this.onSetUp});
+  const _NothingSetUp({required this.onSetUp, required this.onSignIn});
   final VoidCallback onSetUp;
+  final VoidCallback onSignIn;
 
   @override
   Widget build(BuildContext context) {
@@ -99,7 +101,7 @@ class _NothingSetUp extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.xl),
-          SetupDoors(onSetUp: onSetUp),
+          SetupDoors(onSetUp: onSetUp, onSignIn: onSignIn),
         ],
       ),
     );

@@ -362,6 +362,12 @@ const _exceptions = <String, ({int count, String reason})>{
             'The certificate trusted for the address in the field: the trust '
             'prompt and the indicator beside it.',
       ),
+  'lib/features/onboarding/presentation/requester_sign_in_screen.dart  .url': (
+    count: 1,
+    reason:
+        'Whether a Seerr slot is empty, to sign in there rather than '
+        'beside it.',
+  ),
   'lib/features/settings/presentation/widgets/seerr_sign_in_flow.dart  .url': (
     count: 4,
     reason:
