@@ -362,14 +362,13 @@ const _exceptions = <String, ({int count, String reason})>{
             'The certificate trusted for the address in the field: the trust '
             'prompt and the indicator beside it.',
       ),
-  'lib/features/settings/presentation/widgets/seerr_account_fields.dart  .url':
-      (
-        count: 4,
-        reason:
-            'The sign-in form: the host it names, and whether its address is '
-            'still the saved one (then it signs in where the route is).',
-      ),
-  'lib/features/settings/presentation/widgets/seerr_account_fields.dart  pinForUrl(':
+  'lib/features/settings/presentation/widgets/seerr_sign_in_flow.dart  .url': (
+    count: 4,
+    reason:
+        'The sign-in form: the host it names, and whether its address is '
+        'still the saved one (then it signs in where the route is).',
+  ),
+  'lib/features/settings/presentation/widgets/seerr_sign_in_flow.dart  pinForUrl(':
       (
         count: 1,
         reason:
