@@ -37,6 +37,7 @@ class NothingSetUpView extends StatelessWidget {
   Widget build(BuildContext context) {
     final body = _NothingSetUp(
       onSetUp: () => context.push(ServiceRoutes.welcomeConnect),
+      onCopy: () => context.push(ServiceRoutes.welcomePair),
       onSignIn: () => context.push(ServiceRoutes.welcomeSignIn),
     );
     return LayoutBuilder(
@@ -67,8 +68,13 @@ class NothingSetUpView extends StatelessWidget {
 /// *not* `AppEmptyState`: that widget is for a region that came up empty, and
 /// this page is the product's front door until something answers.
 class _NothingSetUp extends StatelessWidget {
-  const _NothingSetUp({required this.onSetUp, required this.onSignIn});
+  const _NothingSetUp({
+    required this.onSetUp,
+    required this.onCopy,
+    required this.onSignIn,
+  });
   final VoidCallback onSetUp;
+  final VoidCallback onCopy;
   final VoidCallback onSignIn;
 
   @override
@@ -101,7 +107,7 @@ class _NothingSetUp extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.xl),
-          SetupDoors(onSetUp: onSetUp, onSignIn: onSignIn),
+          SetupDoors(onSetUp: onSetUp, onCopy: onCopy, onSignIn: onSignIn),
         ],
       ),
     );

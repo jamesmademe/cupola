@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
@@ -18,6 +19,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/presentation/widgets/service_connection_row.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_master_detail.dart';
 import 'package:cupola/features/settings/presentation/widgets/test_all_connections_button.dart';
+import 'package:cupola/features/shell/domain/shell_audience.dart';
 
 /// Every service Cupola can talk to, and the state of each connection.
 ///
@@ -32,6 +34,7 @@ class SettingsConnectionsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(currentSettingsProvider);
     final colorScheme = Theme.of(context).colorScheme;
+    final operator = ref.watch(shellAudienceProvider) == Audience.operator;
 
     // A Seerr account that signed out is among the connections, not among
     // the services to set up.
@@ -159,6 +162,23 @@ class SettingsConnectionsScreen extends ConsumerWidget {
                   color: colorScheme.onSurfaceVariant,
                 ),
               ),
+            // The shortest way to a second device: its own group, since it is
+            // not a service. The operator's: a requester has nothing to copy
+            // onto this device from another.
+            if (operator) ...[
+              const SizedBox(height: AppSpacing.xl),
+              SettingsGroupCard(
+                children: [
+                  SettingsCard.grouped(
+                    leading: const Icon(Icons.qr_code_scanner_rounded),
+                    title: 'Copy from another device',
+                    subtitle: 'Add what another device has',
+                    semanticHint: 'opens the code of another device',
+                    onTap: () => context.push(ServiceRoutes.welcomePair),
+                  ),
+                ],
+              ),
+            ],
             // Omitted rather than shown empty: trust is per origin, so an
             // origin can outlive every service that once used it, but with
             // nothing ever trusted there is nothing this row could find.

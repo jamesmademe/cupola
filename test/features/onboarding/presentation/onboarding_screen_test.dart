@@ -48,6 +48,55 @@ void main() {
       expect(find.byType(FilledButton), findsOneWidget);
     });
 
+    testWidgets('offers copying from another device, and opens the screen '
+        'that copies', (tester) async {
+      await _pumpOnboarding(tester, viewport: const Size(390, 844));
+
+      expect(find.text('Copy from another device'), findsOneWidget);
+      expect(find.text(SetupDoors.copyHint), findsOneWidget);
+      // A text door: the Welcome still has its one fill.
+      expect(find.byType(FilledButton), findsOneWidget);
+
+      await _tap(tester, 'Copy from another device');
+      expect(find.byKey(onboardingPairStandIn), findsOneWidget);
+    });
+
+    testWidgets('keeps its three doors on a phone, at rest and at twice the '
+        'reading size', (tester) async {
+      // 844pt is a 6.3" phone: the doors with their lines under them. 667pt
+      // is a short one: the lines go (each is still its door's hint) so the
+      // claim keeps its room. At twice the size the claim scrolls above the
+      // doors, which stay pinned and reachable.
+      for (final (size, scale) in [
+        (const Size(390, 844), 1.0),
+        (const Size(390, 667), 1.0),
+        (const Size(390, 844), 2.0),
+        (const Size(390, 667), 2.0),
+      ]) {
+        await _pumpOnboarding(tester, viewport: size, textScale: scale);
+
+        expect(tester.takeException(), isNull, reason: '$size at $scale');
+        for (final door in [
+          'Set up a service',
+          'Copy from another device',
+          'I have a Seerr account',
+        ]) {
+          expect(
+            tester.getRect(find.text(door)).bottom,
+            lessThanOrEqualTo(size.height),
+            reason: '$door on $size at $scale',
+          );
+        }
+        final lines = scale == 1 && size.height >= 800;
+        expect(
+          find.text(SetupDoors.copyHint),
+          lines ? findsOneWidget : findsNothing,
+          reason: '$size at $scale',
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+      }
+    });
+
     testWidgets('a first run has nothing to go back to', (tester) async {
       await _pumpOnboarding(tester);
 

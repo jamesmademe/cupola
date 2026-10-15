@@ -8,25 +8,32 @@ import 'package:cupola/core/widgets/setup_doors.dart';
 
 import 'catalog.dart';
 
+Widget _doors(_) => Padding(
+  padding: const EdgeInsets.all(24),
+  child: SetupDoors(onSetUp: () {}, onCopy: () {}, onSignIn: () {}),
+);
+
 void main() {
   catalogCard(
     'SetupDoors',
     scenes: [
       CatalogScene(
         'SetupDoors · the Welcome and the Home at zero: set up a service, '
-        'or sign in with a Seerr account, each said under its door',
-        (_) => Padding(
-          padding: const EdgeInsets.all(24),
-          child: SetupDoors(onSetUp: () {}, onSignIn: () {}),
-        ),
+        'copy from another device, or sign in with a Seerr account, each said '
+        'under its door',
+        _doors,
         width: 390,
       ),
       CatalogScene(
+        'SetupDoors · on a short phone (667pt tall) the lines are not drawn, '
+        'and each is said as its door\'s hint',
+        _doors,
+        width: 390,
+        height: 667,
+      ),
+      CatalogScene(
         'SetupDoors · at 200% the doors alone, their lines said as hints',
-        (_) => Padding(
-          padding: const EdgeInsets.all(24),
-          child: SetupDoors(onSetUp: () {}, onSignIn: () {}),
-        ),
+        _doors,
         width: 390,
         textScale: catalogTextScale,
       ),

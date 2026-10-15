@@ -10,9 +10,13 @@ import 'package:cupola/features/settings/data/service_connection_provider.dart';
 /// What the Home stands in as, so a test can tell the way in has left for it.
 const onboardingHomeStandIn = Key('onboarding-home-stand-in');
 
+/// What the screen that copies from another device stands in as.
+const onboardingPairStandIn = Key('onboarding-pair-stand-in');
+
 /// The way in, mounted as the app mounts it: the Welcome at `/welcome`,
 /// Connect at `/welcome/connect`, the sign-in with an account at
-/// `/welcome/sign-in`, and a stand-in for the Home to leave for.
+/// `/welcome/sign-in`, a stand-in for the screen that copies from another
+/// device at `/welcome/pair`, and a stand-in for the Home to leave for.
 ///
 /// The screen asks the router whether it can pop (to show a Back on the
 /// Welcome), and leaves for the Home with `go`, so neither can run without
@@ -42,6 +46,12 @@ GoRouter onboardingRouter({
             entry: OnboardingEntry.connect,
             certificateProber: certificateProber,
             localNetworkProbe: localNetworkProbe,
+          ),
+        ),
+        GoRoute(
+          path: 'pair',
+          builder: (_, _) => const Scaffold(
+            body: Center(child: Text('Pair', key: onboardingPairStandIn)),
           ),
         ),
         GoRoute(

@@ -537,12 +537,16 @@ class OnboardingWelcome extends StatelessWidget {
   const OnboardingWelcome({
     super.key,
     required this.onSetUp,
+    required this.onCopy,
     required this.onSignIn,
     this.onBack,
   });
 
   /// Opens Connect, with Seerr proposed.
   final VoidCallback onSetUp;
+
+  /// Opens the screen that copies everything from another device.
+  final VoidCallback onCopy;
 
   /// Opens the sign-in with a Seerr account.
   final VoidCallback onSignIn;
@@ -560,7 +564,7 @@ class OnboardingWelcome extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          SetupDoors(onSetUp: onSetUp, onSignIn: onSignIn),
+          SetupDoors(onSetUp: onSetUp, onCopy: onCopy, onSignIn: onSignIn),
           if (onBack case final back?) ...[
             const SizedBox(height: AppSpacing.sm),
             TextButton(onPressed: back, child: const Text('Back')),

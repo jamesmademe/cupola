@@ -29,24 +29,32 @@ final _claim = find.byWidgetPredicate(
 
 void main() {
   group('OnboardingWelcome', () {
-    testWidgets('offers the two doors and nothing to skip', (tester) async {
+    testWidgets('offers the three doors and nothing to skip', (tester) async {
       var opened = 0;
+      var copied = 0;
       var signIn = 0;
       await tester.pumpWidget(
         _host(
-          OnboardingWelcome(onSetUp: () => opened++, onSignIn: () => signIn++),
+          OnboardingWelcome(
+            onSetUp: () => opened++,
+            onCopy: () => copied++,
+            onSignIn: () => signIn++,
+          ),
         ),
       );
 
       expect(_claim, findsOneWidget);
       expect(find.byType(FilledButton), findsOneWidget);
       expect(find.text(SetupDoors.setUpHint), findsOneWidget);
+      expect(find.text(SetupDoors.copyHint), findsOneWidget);
       expect(find.text(SetupDoors.signInHint), findsOneWidget);
       expect(find.text('Back'), findsNothing);
       expect(find.textContaining('Skip'), findsNothing);
 
       await tester.tap(find.text('Set up a service'));
       expect(opened, 1);
+      await tester.tap(find.text('Copy from another device'));
+      expect(copied, 1);
       await tester.tap(find.text('I have a Seerr account'));
       expect(signIn, 1);
     });
@@ -59,6 +67,7 @@ void main() {
         _host(
           OnboardingWelcome(
             onSetUp: () {},
+            onCopy: () {},
             onSignIn: () {},
             onBack: () => back++,
           ),
@@ -73,7 +82,9 @@ void main() {
         'for the close', (tester) async {
       final handle = tester.ensureSemantics();
       await tester.pumpWidget(
-        _host(OnboardingWelcome(onSetUp: () {}, onSignIn: () {})),
+        _host(
+          OnboardingWelcome(onSetUp: () {}, onCopy: () {}, onSignIn: () {}),
+        ),
       );
 
       expect(
@@ -91,7 +102,9 @@ void main() {
       // label the button merges.
       final handle = tester.ensureSemantics();
       await tester.pumpWidget(
-        _host(OnboardingWelcome(onSetUp: () {}, onSignIn: () {})),
+        _host(
+          OnboardingWelcome(onSetUp: () {}, onCopy: () {}, onSignIn: () {}),
+        ),
       );
 
       expect(
@@ -100,6 +113,14 @@ void main() {
           isButton: true,
           hasTapAction: true,
           hint: SetupDoors.setUpHint,
+        ),
+      );
+      expect(
+        find.semantics.byLabel('Copy from another device'),
+        containsSemantics(
+          isButton: true,
+          hasTapAction: true,
+          hint: SetupDoors.copyHint,
         ),
       );
       expect(

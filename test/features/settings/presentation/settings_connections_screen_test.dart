@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/features/settings/data/connection_reach_provider.dart';
@@ -16,6 +18,7 @@ import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/presentation/settings_connections_screen.dart';
+import 'package:cupola/features/shell/domain/shell_audience.dart';
 
 import '../../../test_helpers/settings_scope.dart';
 
@@ -37,13 +40,13 @@ void main() {
 
       expect(find.text('Your services'), findsOneWidget);
       expect(find.text('Add a service'), findsOneWidget);
-      // Both configured services are in Media, so one domain group plus the
-      // single "add" group.
-      expect(find.byType(SettingsGroupCard), findsNWidgets(2));
+      // Both configured services are in Media, so one domain group, the "add"
+      // group and the group of its own that copying from another device has.
+      expect(find.byType(SettingsGroupCard), findsNWidgets(3));
       // Derived from the registry rather than written down: these were literal
       // 13/11 and rotted when the Stream domain landed.
       final total = ServiceKey.values.length;
-      expect(find.byType(SettingsCard), findsNWidgets(total));
+      expect(find.byType(SettingsCard), findsNWidgets(total + 1));
       expect(find.text('2 of $total'), findsOneWidget);
       expect(find.text('seerr.local'), findsOneWidget);
       expect(find.text('radarr.local:7878'), findsOneWidget);
@@ -202,7 +205,52 @@ void main() {
 
       expect(find.text('Your services'), findsNothing);
       expect(find.text('Add a service'), findsOneWidget);
-      expect(find.byType(SettingsGroupCard), findsOneWidget);
+      // The services to add, and copying from another device.
+      expect(find.byType(SettingsGroupCard), findsNWidgets(2));
+    });
+
+    group('Copy from another device', () {
+      testWidgets('is a group of its own under Add a service, and opens the '
+          'screen that copies', (tester) async {
+        await _pumpConnectionsScreen(tester);
+
+        expect(find.text('Copy from another device'), findsOneWidget);
+        expect(find.text('Add what another device has'), findsOneWidget);
+        expect(find.byIcon(Icons.qr_code_scanner_rounded), findsOneWidget);
+        final row = tester.getTopLeft(find.text('Copy from another device'));
+        expect(
+          row.dy,
+          greaterThan(tester.getTopLeft(find.text('Add a service')).dy),
+        );
+        // Under the last of the services to add, in a group that holds only
+        // itself.
+        expect(row.dy, greaterThan(tester.getBottomLeft(find.text('Plex')).dy));
+        expect(
+          find.descendant(
+            of: find.ancestor(
+              of: find.text('Copy from another device'),
+              matching: find.byType(SettingsGroupCard),
+            ),
+            matching: find.byType(SettingsCard),
+          ),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('Copy from another device'));
+        await tester.pumpAndSettle();
+        expect(find.text('PairPage'), findsOneWidget);
+      });
+
+      testWidgets('is the operator\'s: the requester has nothing to copy '
+          'from it', (tester) async {
+        await _pumpConnectionsScreen(
+          tester,
+          overrides: [shellAudienceProvider.overrideWith(_RequesterShell.new)],
+        );
+
+        expect(find.text('Copy from another device'), findsNothing);
+        expect(find.text('Add what another device has'), findsNothing);
+      });
     });
 
     testWidgets('tapping a service row navigates to the service route', (
@@ -330,6 +378,11 @@ class _UnauthorizedFailure implements HasFailureReason {
   ServiceFailureReason get reason => ServiceFailureReason.unauthorized;
 }
 
+class _RequesterShell extends ShellAudienceNotifier {
+  @override
+  Audience build() => Audience.requester;
+}
+
 class _Routes extends ConnectionRoutesNotifier {
   _Routes(this._routes);
 
@@ -346,6 +399,7 @@ Future<void> _pumpConnectionsScreen(
   Map<ServiceKey, ServiceDiagnosis> diagnoses = const {},
   Map<String, ConnectionRoute>? routes,
   List<ConnectionCandidate> found = const [],
+  List<Override> overrides = const [],
 }) async {
   final router = GoRouter(
     initialLocation: '/settings/connections',
@@ -353,6 +407,10 @@ Future<void> _pumpConnectionsScreen(
       GoRoute(
         path: '/settings/connections',
         builder: (_, _) => const SettingsConnectionsScreen(),
+      ),
+      GoRoute(
+        path: '/welcome/pair',
+        builder: (_, _) => const Scaffold(body: Text('PairPage')),
       ),
       GoRoute(
         path: '/settings/service/:service',
@@ -391,6 +449,7 @@ Future<void> _pumpConnectionsScreen(
           }),
         if (routes != null)
           connectionRoutesProvider.overrideWith(() => _Routes(routes)),
+        ...overrides,
       ],
       child: MaterialApp.router(routerConfig: router),
     ),

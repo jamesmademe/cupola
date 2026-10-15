@@ -214,6 +214,52 @@ void main() {
         expect(opened, ServiceRoutes.welcomeConnect);
       });
 
+      testWidgets('offers copying from another device between the other '
+          'two doors, and opens the screen that copies', (tester) async {
+        String? opened;
+        final router = GoRouter(
+          routes: [
+            GoRoute(path: '/', builder: (context, state) => _screen(page)),
+            GoRoute(
+              path: ServiceRoutes.welcomePair,
+              builder: (context, state) {
+                opened = state.uri.path;
+                return const SizedBox.shrink();
+              },
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+
+        await _pumpPage(
+          tester,
+          page,
+          router: router,
+          settings: const SettingsModel(),
+        );
+
+        expect(find.text('Copy from another device'), findsOneWidget);
+        expect(find.text(SetupDoors.copyHint), findsOneWidget);
+        expect(find.byIcon(Icons.qr_code_scanner_rounded), findsOneWidget);
+        // A text door, not a second fill.
+        expect(find.byType(FilledButton), findsOneWidget);
+        final doors = [
+          for (final label in [
+            'Set up a service',
+            'Copy from another device',
+            'I have a Seerr account',
+          ])
+            tester.getTopLeft(find.text(label)).dy,
+        ];
+        expect(doors, [...doors]..sort());
+
+        await tester.tap(find.text('Copy from another device'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(opened, ServiceRoutes.welcomePair);
+      });
+
       testWidgets('keeps the ring still: nothing is set up, nothing moves', (
         tester,
       ) async {
