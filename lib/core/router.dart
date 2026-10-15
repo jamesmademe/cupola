@@ -78,6 +78,9 @@ import 'package:cupola/features/shell/domain/shell_audience.dart';
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:cupola/features/onboarding/presentation/requester_sign_in_screen.dart';
+import 'package:cupola/features/pairing/data/pair_session.dart';
+import 'package:cupola/features/pairing/domain/pair_link.dart';
+import 'package:cupola/features/pairing/presentation/pair_receive_screen.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_overview_screen.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_screen.dart';
 import 'package:cupola/features/qbittorrent/presentation/torrent_detail_screen.dart';
@@ -3168,6 +3171,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         ? ServiceRoutes.welcome
         : ServiceRoutes.home,
     redirect: (context, state) {
+      // A pairing link carries the key to every secret of the device that
+      // made it: taken off the location here, before anything can keep it,
+      // and held in memory for the screen that uses it.
+      if (PairLink.isPairUri(state.uri)) {
+        ref
+            .read(pendingPairProvider.notifier)
+            .hold(PairArrival(PairLink.fromQuery(state.uri.queryParameters)));
+        return ServiceRoutes.welcomePair;
+      }
       // Before the way in's gate: an invite opens a first run too.
       if (SeerrInvite.isInviteUri(state.uri)) {
         return _inviteRedirect(state.uri, ref.read(currentSettingsProvider));
@@ -3208,6 +3220,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: 'connect',
             builder: (context, state) =>
                 const OnboardingScreen(entry: OnboardingEntry.connect),
+          ),
+          GoRoute(
+            path: 'pair',
+            builder: (context, state) => const PairReceiveScreen(),
           ),
           GoRoute(
             path: 'sign-in',

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/router.dart';
@@ -35,6 +36,8 @@ import 'package:cupola/features/sabnzbd/presentation/sabnzbd_overview_screen.dar
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:cupola/features/onboarding/presentation/requester_sign_in_screen.dart';
+import 'package:cupola/features/pairing/data/pair_session.dart';
+import 'package:cupola/features/pairing/presentation/pair_receive_screen.dart';
 import 'package:cupola/features/discover/presentation/discover_page.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/presentation/sonarr_overview_screen.dart';
@@ -92,6 +95,7 @@ import 'package:cupola/features/settings/presentation/service_settings_screen.da
 import '../test_helpers/fake_api_client.dart';
 import '../test_helpers/fake_services.dart';
 import '../test_helpers/model_builders.dart';
+import '../test_helpers/pair_fixtures.dart';
 import '../test_helpers/settings_scope.dart';
 
 void main() {
@@ -250,6 +254,104 @@ void main() {
         await tester.pump(const Duration(seconds: 6));
         await tester.pumpWidget(const SizedBox.shrink());
         container.dispose();
+      });
+    });
+
+    group('a pairing link', () {
+      // The screen takes a link from the notifier by itself, so the cases that
+      // look at the link held keep the notifier still.
+      Override still() => fixedReceive(const PairReceiveWaiting()).override;
+      final link = pairFixtureLink();
+
+      for (final (name, location) in [
+        ('as the system hands it over', link.toLink()),
+        ('as a router normalises it', '/pair?${link.toUri().query}'),
+      ]) {
+        for (final onboardingCompleted in [false, true]) {
+          testWidgets('opens the screen that copies, '
+              '${onboardingCompleted ? 'with connections' : 'on a first run'}, '
+              '$name, with the key off the location and held in memory', (
+            tester,
+          ) async {
+            final container = await _pumpRouter(
+              tester,
+              onboardingCompleted: onboardingCompleted,
+              settings: onboardingCompleted
+                  ? settingsWithServices([ServiceKey.radarr])
+                  : const SettingsModel(),
+              overrides: [still()],
+            );
+            final router = container.read(routerProvider);
+
+            router.go(location);
+            await tester.pumpAndSettle();
+
+            expect(router.state.uri.toString(), ServiceRoutes.welcomePair);
+            expect(find.byType(PairReceiveScreen), findsOneWidget);
+            // No part of the link is left in the location.
+            final seen = [
+              router.state.uri.toString(),
+              router.state.matchedLocation,
+              router.state.fullPath ?? '',
+              router.routerDelegate.currentConfiguration.uri.toString(),
+            ].join(' ');
+            expect(seen, isNot(contains(pairFixtureKey)));
+            expect(seen, isNot(contains('k=')));
+            expect(seen, isNot(contains('192.168')));
+            expect(container.read(pendingPairProvider)?.link, link);
+            await _letTheWelcomeGo(tester, container);
+          });
+        }
+      }
+
+      testWidgets('one that does not read is held as not whole', (
+        tester,
+      ) async {
+        final container = await _pumpRouter(
+          tester,
+          onboardingCompleted: false,
+          overrides: [still()],
+        );
+        final router = container.read(routerProvider);
+
+        router.go('cupola://pair?v=1&h=not-an-address&k=cut');
+        await tester.pumpAndSettle();
+
+        expect(router.state.uri.toString(), ServiceRoutes.welcomePair);
+        expect(find.byType(PairReceiveScreen), findsOneWidget);
+        expect(container.read(pendingPairProvider)?.link, isNull);
+        expect(container.read(pendingPairProvider), isNotNull);
+        await _letTheWelcomeGo(tester, container);
+      });
+
+      testWidgets('scanned, it is fetched and shown, and held nowhere', (
+        tester,
+      ) async {
+        final fetched = <Object>[];
+        final container = await _pumpRouter(
+          tester,
+          onboardingCompleted: false,
+          overrides: [
+            pairNetworkProvider.overrideWithValue(
+              PairNetwork(
+                fetch: (link) async {
+                  fetched.add(link);
+                  return pairFixturePackage();
+                },
+              ),
+            ),
+          ],
+        );
+        final router = container.read(routerProvider);
+
+        router.go(link.toLink());
+        await tester.pumpAndSettle();
+
+        expect(fetched, [link]);
+        expect(find.text('From your iPhone'), findsOneWidget);
+        expect(container.read(pendingPairProvider), isNull);
+        expect(router.state.uri.toString(), ServiceRoutes.welcomePair);
+        await _letTheWelcomeGo(tester, container);
       });
     });
 
@@ -1872,13 +1974,26 @@ void main() {
   });
 }
 
+/// The Welcome under a page opened over it, and a connection's own checks,
+/// keep timers: the tree and the container go before the test ends.
+Future<void> _letTheWelcomeGo(
+  WidgetTester tester,
+  ProviderContainer container,
+) async {
+  await tester.pump(const Duration(seconds: 6));
+  await tester.pumpWidget(const SizedBox.shrink());
+  container.dispose();
+}
+
 Future<ProviderContainer> _pumpRouter(
   WidgetTester tester, {
   SettingsModel settings = const SettingsModel(),
   bool onboardingCompleted = true,
+  List<Override> overrides = const [],
 }) async {
   final container = ProviderContainer(
     overrides: [
+      ...overrides,
       initialOnboardingCompletedProvider.overrideWith(
         (ref) => onboardingCompleted,
       ),

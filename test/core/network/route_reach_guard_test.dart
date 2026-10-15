@@ -249,6 +249,13 @@ const _exceptions = <String, ({int count, String reason})>{
         'The certificate each copied address is trusted with, copied beside '
         'it.',
   ),
+  'lib/features/pairing/presentation/pair_receive_screen.dart  .url': (
+    count: 1,
+    reason:
+        'Names each connection about to be added by the host of the address '
+        'it arrives with, before anything is written. Nothing here reaches '
+        'it.',
+  ),
   'lib/features/prowlarr/domain/prowlarr_known_application.dart  .url': (
     count: 1,
     reason:

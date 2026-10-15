@@ -33,7 +33,7 @@ Widget _notice({
 void main() {
   final red = _notice(
     tone: StatusTone.error,
-    title: "Cupola couldn't reach the other device",
+    title: "Cupola could not reach the other device",
     sentence: 'Both need to be on the same Wi-Fi.',
     verbs: const [(Lexicon.retry, null), ('Start again', null)],
   );
@@ -87,7 +87,7 @@ void main() {
         'wrap onto lines of their own',
         (_) => _notice(
           tone: StatusTone.warning,
-          title: "Cupola couldn't read what the other device sent",
+          title: "Cupola could not read what the other device sent",
           sentence: 'Make a new code on the other device.',
           verbs: const [
             (Lexicon.retry, null),
