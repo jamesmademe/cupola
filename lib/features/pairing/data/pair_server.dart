@@ -85,11 +85,13 @@ enum PairServerEnd {
 final class PairServer {
   PairServer._(this._server, this.link, this._path, this._sealed);
 
-  /// Opens a server at [address] for [sealed], under [key].
+  /// Opens a server at [address] for [sealed], under [key]; [invite] when
+  /// what is sealed is an invite shown in person, which its link says.
   static Future<PairServer> open({
     required InternetAddress address,
     required Uint8List key,
     required Uint8List sealed,
+    bool invite = false,
     Duration lifetime = const Duration(minutes: 2),
     int maxWrongTries = 3,
     DateTime Function() now = DateTime.now,
@@ -107,6 +109,7 @@ final class PairServer {
         port: server.port,
         key: key,
         closesAt: now().add(lifetime),
+        invite: invite,
       ),
       path,
       sealed,

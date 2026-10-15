@@ -220,4 +220,137 @@ void main() {
       );
     });
   });
+
+  group('an invite shown in person', () {
+    const token = CloudflareServiceToken(
+      clientId: 'sentinel-id',
+      clientSecret: 'sentinel-secret',
+    );
+    const password = ProxyPassword(
+      username: 'sentinel-user',
+      password: 'sentinel-password',
+    );
+    const operator = ServiceInstance(
+      id: 'seerr',
+      service: ServiceKey.seerr,
+      url: 'http://192.168.1.10:5055/',
+      credential: 'sentinel-key',
+      access: password,
+      away: ConnectionAddress(url: 'https://seerr.example.net', access: token),
+    );
+    const settings = SettingsModel(
+      instances: [operator],
+      trustedCertificates: {
+        'https://seerr.example.net:443':
+            'a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90',
+      },
+    );
+
+    test('carries both addresses, their pins and what each asks for', () {
+      final invite = SeerrInvite.inPerson(operator, settings);
+      expect(invite.home, 'http://192.168.1.10:5055');
+      expect(invite.away, 'https://seerr.example.net');
+      expect(invite.homePin, isNull);
+      expect(invite.awayPin, startsWith('a1b2'));
+      expect(invite.homeAccess, password);
+      expect(invite.awayAccess, token);
+      expect(invite.carriesAccess, isTrue);
+    });
+
+    test('is never written out as a link', () {
+      final invite = SeerrInvite.inPerson(operator, settings);
+      expect(invite.toUri, throwsStateError);
+      expect(invite.toLink, throwsStateError);
+      expect(invite.toString(), isNot(contains('sentinel')));
+    });
+
+    test('draws up the connection with what each address asks for, and no '
+        'key', () {
+      final draft = SeerrInvite.inPerson(operator, settings).draft('new');
+      expect(draft.id, 'new');
+      expect(draft.credential, isEmpty);
+      expect(draft.account, isNull);
+      expect(draft.access, password);
+      expect(draft.away!.access, token);
+    });
+
+    test('says when a link would do as well', () {
+      expect(invitesInPerson(operator), isTrue);
+      expect(
+        invitesInPerson(
+          const ServiceInstance(
+            id: 'seerr',
+            service: ServiceKey.seerr,
+            url: 'http://192.168.1.10:5055',
+            away: ConnectionAddress(url: 'https://seerr.example.net'),
+          ),
+        ),
+        isFalse,
+      );
+      expect(
+        invitesInPerson(
+          const ServiceInstance(
+            id: 'seerr',
+            service: ServiceKey.seerr,
+            url: 'http://192.168.1.10:5055',
+          ),
+        ),
+        isFalse,
+      );
+    });
+
+    group('fills a Seerr already here', () {
+      final invite = SeerrInvite.inPerson(operator, settings);
+      const account = SeerrAccountSignIn(
+        kind: SeerrAccountKind.local,
+        login: 'anna@example.com',
+        userId: 4,
+      );
+
+      test('with the address away it lacks, and what it asks for', () {
+        const here = ServiceInstance(
+          id: 'mine',
+          service: ServiceKey.seerr,
+          url: 'http://192.168.1.10:5055',
+          account: account,
+        );
+        final filled = invite.fill(here);
+        expect(filled.away!.url, 'https://seerr.example.net');
+        expect(filled.away!.access, token);
+        expect(filled.access, password);
+        expect(filled.account, account);
+        expect(filled.id, 'mine');
+      });
+
+      test('with what its address away asks for, when it has none', () {
+        const here = ServiceInstance(
+          id: 'mine',
+          service: ServiceKey.seerr,
+          url: 'http://192.168.1.10:5055',
+          account: account,
+          away: ConnectionAddress(url: 'https://seerr.example.net/'),
+        );
+        expect(invite.fill(here).away!.access, token);
+        expect(invite.fill(here).away!.url, 'https://seerr.example.net/');
+      });
+
+      test('never over what it has', () {
+        const own = ProxyPassword(username: 'mine', password: 'mine');
+        const here = ServiceInstance(
+          id: 'mine',
+          service: ServiceKey.seerr,
+          url: 'http://192.168.1.10:5055',
+          access: own,
+          account: account,
+          away: ConnectionAddress(url: 'https://other.example.net'),
+        );
+        expect(identical(invite.fill(here), here), isTrue);
+      });
+
+      test('and leaves it as it is when it lacks nothing', () {
+        final here = invite.draft('mine').copyWith(account: account);
+        expect(identical(invite.fill(here), here), isTrue);
+      });
+    });
+  });
 }

@@ -1,6 +1,6 @@
 # PairReceive
 
-The screen that takes everything another device has: where its code comes from, what arrived before anything is added, and the one button that adds it. Outside the shell, at `/welcome/pair`.
+The screen that takes everything another device has: where its code comes from, what arrived before anything is added, and the one button that adds it. Outside the shell, at `/welcome/pair`. It also opens an invite shown in person (`InviteSheet`), and hands it over to the sign-in.
 
 Rendered from `lib/features/pairing/presentation/pair_receive_screen.dart` (`PairReceiveScreen`) and `lib/features/pairing/presentation/pair_words.dart` by `test/design_catalog/pair_receive_catalog_test.dart`; the protocol is `lib/features/pairing/`. The catalog draws each state the notifier can stand in, with a notifier that opens no socket.
 
@@ -25,8 +25,9 @@ Framed as the sign-in with an account is (`RequesterSignInScreen`): a `Scaffold`
   - **Add**, `AppSpacing.xl` below: a filled **Add 14 services** (*Add 1 service*; with only certificates new, *Add 3 trusted certificates*), then a text **Start again** in ink. While it writes the primary is busy and cannot be tapped twice, and Start again waits.
   - When Add has nothing to write: *Everything from your iPhone is already here.* (or *Nothing to add from your iPhone.* when the package held nothing, or only services this version does not know), a filled **Done**, and Start again.
 - **Added**: the screen leaves for the Home, the shell drawn for whoever the connections make this device's person.
+- **An invite shown in person** (its link says `t=invite`): the title reads *Your invite*, the busy primary *Opening the invite*. Arrived, it goes on at once: to the sign-in, filled (`pendingInviteProvider`, never the location: it carries what a gateway asks for), or, with a Seerr here at its addresses, to that connection (the account's page, or the form when it signs in with the key), filled where it lacked the address away or what an address asks for (*Updated from the invite*, a snackbar, when anything was). Nothing that arrived wrong is copying a device: red *Cupola could not reach the other device* · *Both need to be on the same Wi-Fi.* · `Retry`; blue *This code has expired* · *Ask for a new one.*; amber *Cupola could not read the invite* · *Ask for a new code.*; amber *This came from a newer Cupola* · *Update Cupola on this device, then ask for a new code.* None offers `Start again`: the remedy is a new code from the person who showed it.
 
-Back goes one step: from a notice or from what arrived, to waiting for a link; from waiting, to the page under it (the Welcome), or with nothing under it to the Welcome on a first run and the Home otherwise.
+Back goes one step: from a notice or from what arrived, to waiting for a link (from an invite's notice, off the screen); from waiting, to the page under it (the Welcome), or with nothing under it to the Welcome on a first run and the Home otherwise.
 
 ## Behaviour
 
@@ -46,6 +47,7 @@ Each screen is drawn in the dark and the light room: the phone at 390pt, and the
 
 - Waiting for a link; fetching; on a Mac, where the link is pasted.
 - Each way a copy does not arrive: red, blue, and the three amber.
+- An invite shown in person: opening; red, with Retry; blue.
 - What arrived, with a Seerr account and a secret left behind; adding; only a certificate new and two unknown services staying behind; everything here already.
 - Text at 200%: what arrived.
 

@@ -18,6 +18,7 @@ import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/pairing/data/pair_fetch.dart';
 import 'package:cupola/features/pairing/data/pair_session.dart';
@@ -71,6 +72,10 @@ Future<ProviderContainer> _pump(
           builder: (_, _) => const Text('Welcome'),
           routes: [
             GoRoute(path: 'pair', builder: (_, _) => const PairReceiveScreen()),
+            GoRoute(
+              path: 'sign-in',
+              builder: (_, _) => const Scaffold(body: Text('Sign in')),
+            ),
           ],
         )
       else
@@ -78,6 +83,18 @@ Future<ProviderContainer> _pump(
           path: ServiceRoutes.welcomePair,
           builder: (_, _) => const PairReceiveScreen(),
         ),
+      // Where an invite shown in person goes on to.
+      GoRoute(
+        path: ServiceRoutes.settingsAccount,
+        builder: (_, state) =>
+            Scaffold(body: Text('Account ${state.uri.queryParameters['i']}')),
+      ),
+      GoRoute(
+        path: Uri.parse(ServiceRoutes.settingsFor(ServiceKey.seerr)).path,
+        builder: (_, state) => Scaffold(
+          body: Text('Seerr form ${state.uri.queryParameters['i']}'),
+        ),
+      ),
       GoRoute(
         path: ServiceRoutes.home,
         builder: (_, _) => const Scaffold(
@@ -767,6 +784,125 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(onboardingHomeStandIn), findsOneWidget);
       expect(receiver.read(currentSettingsProvider).instances, hasLength(4));
+    });
+  });
+
+  group('an invite shown in person', () {
+    testWidgets('while it opens: Your invite, and nothing of copying', (
+      tester,
+    ) async {
+      final fixed = fixedReceive(const PairReceiveFetching(invite: true));
+      await _pump(tester, overrides: [fixed.override]);
+
+      expect(find.text('Your invite'), findsOneWidget);
+      expect(find.text('Opening the invite'), findsOneWidget);
+      expect(find.text('Copy from another device'), findsNothing);
+    });
+
+    testWidgets('nothing arrived: its own words, and nothing here starts '
+        'again', (tester) async {
+      final fixed = fixedReceive(
+        const PairReceiveFailed(PairReceiveFailure.expired, invite: true),
+      );
+      await _pump(tester, overrides: [fixed.override]);
+
+      expect(find.text('Your invite'), findsOneWidget);
+      expect(find.text('This code has expired'), findsOneWidget);
+      expect(find.text('Ask for a new one.'), findsOneWidget);
+      expect(find.text('Start again'), findsNothing);
+      expect(find.byType(FilledButton), findsNothing);
+    });
+
+    testWidgets('unreachable still offers Retry, the same code', (
+      tester,
+    ) async {
+      final fixed = fixedReceive(
+        const PairReceiveFailed(PairReceiveFailure.unreachable, invite: true),
+      );
+      await _pump(tester, overrides: [fixed.override]);
+
+      expect(find.text('Both need to be on the same Wi-Fi.'), findsOneWidget);
+      await tester.tap(find.text(Lexicon.retry));
+      expect(fixed.notifier.retries, 1);
+      expect(find.text('Start again'), findsNothing);
+    });
+
+    testWidgets('what arrived wrong is the invite, said amber', (tester) async {
+      final fixed = fixedReceive(
+        const PairReceiveFailed(PairReceiveFailure.unreadable, invite: true),
+      );
+      await _pump(tester, overrides: [fixed.override]);
+
+      expect(find.text('Cupola could not read the invite'), findsOneWidget);
+      expect(find.text('Ask for a new code.'), findsOneWidget);
+    });
+
+    testWidgets('Back from one that failed leaves, rather than wait for a '
+        'link', (tester) async {
+      final fixed = fixedReceive(
+        const PairReceiveFailed(PairReceiveFailure.expired, invite: true),
+      );
+      await _pump(tester, overrides: [fixed.override]);
+
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(fixed.notifier.resets, 0);
+      expect(find.text('Welcome'), findsOneWidget);
+    });
+
+    testWidgets('arrived, with no Seerr here: on to the sign-in', (
+      tester,
+    ) async {
+      final fixed = fixedReceive(const PairReceiveFetching(invite: true));
+      await _pump(tester, overrides: [fixed.override]);
+
+      fixed.notifier.show(const PairReceiveInvited());
+      await tester.pumpAndSettle();
+      expect(find.text('Sign in'), findsOneWidget);
+    });
+
+    testWidgets('arrived, with a Seerr signed in here: its account, and it '
+        'says what changed', (tester) async {
+      final fixed = fixedReceive(const PairReceiveFetching(invite: true));
+      await _pump(tester, overrides: [fixed.override]);
+
+      fixed.notifier.show(
+        const PairReceiveInvited(
+          here: ServiceInstance(
+            id: 'mine',
+            service: ServiceKey.seerr,
+            url: 'http://192.168.1.10:5055',
+            account: SeerrAccountSignIn(
+              kind: SeerrAccountKind.local,
+              userId: 4,
+            ),
+          ),
+          updated: true,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Account mine'), findsOneWidget);
+      expect(find.text('Updated from the invite'), findsOneWidget);
+    });
+
+    testWidgets('arrived, with a Seerr on the key here: its form, and '
+        'nothing said when nothing changed', (tester) async {
+      final fixed = fixedReceive(const PairReceiveFetching(invite: true));
+      await _pump(tester, overrides: [fixed.override]);
+
+      fixed.notifier.show(
+        const PairReceiveInvited(
+          here: ServiceInstance(
+            id: 'seerr',
+            service: ServiceKey.seerr,
+            url: 'http://192.168.1.10:5055',
+            credential: 'k',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Seerr form seerr'), findsOneWidget);
+      expect(find.text('Updated from the invite'), findsNothing);
     });
   });
 }

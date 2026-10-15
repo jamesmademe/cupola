@@ -216,16 +216,18 @@ const _exceptions = <String, ({int count, String reason})>{
         'is this connection, by the address it is saved with.',
   ),
   'lib/features/discover/domain/seerr_invite.dart  .url': (
-    count: 2,
+    count: 6,
     reason:
-        'An invite names the address at home, and finds the Seerr already '
-        'here at it; the household member\'s app reaches it, never this one.',
+        'An invite names the addresses it hands over, finds the Seerr already '
+        'here at them and fills what that one lacks; the household member\'s '
+        'app reaches them, never this one.',
   ),
   'lib/features/discover/domain/seerr_invite.dart  .access': (
-    count: 1,
+    count: 3,
     reason:
-        'Whether the address at home asks for a token, said beside the '
-        'invite; the access itself never goes in it.',
+        'Whether an address asks for a token, said beside the link; shown in '
+        'person, the access is handed over, or fills the Seerr already here. '
+        'Nothing here reaches the server.',
   ),
   'lib/features/discover/domain/seerr_invite.dart  pinForUrl(': (
     count: 1,
@@ -238,16 +240,29 @@ const _exceptions = <String, ({int count, String reason})>{
         'its saved address.',
   ),
   'lib/features/pairing/domain/pair_package.dart  .url': (
-    count: 1,
+    count: 3,
     reason:
         'What another device copies: each connection with an address, by '
-        'the address it is saved with. Nothing here reaches it.',
+        'the address it is saved with, and an invite\'s two addresses and '
+        'their pins. Nothing here reaches it.',
+  ),
+  'lib/features/pairing/domain/pair_package.dart  .access': (
+    count: 1,
+    reason:
+        'What the address away of an invite shown in person asks for, read '
+        'back into the invite. Nothing here reaches it.',
   ),
   'lib/features/pairing/domain/pair_package.dart  pinForUrl(': (
     count: 1,
     reason:
         'The certificate each copied address is trusted with, copied beside '
         'it.',
+  ),
+  'lib/features/pairing/data/pair_session.dart  pinForUrl(': (
+    count: 1,
+    reason:
+        'Whether this device already trusts an address an invite vouches '
+        'for: an invite adds a pin, never one over another.',
   ),
   'lib/features/pairing/presentation/pair_receive_screen.dart  .url': (
     count: 1,

@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 
 import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/features/discover/domain/seerr_invite.dart';
 import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/connection_address.dart';
@@ -61,6 +62,12 @@ enum PairDevice {
 ///
 /// Sealed before it leaves (`PairCipher`), so the JSON here is only ever read
 /// by the device that holds the link.
+///
+/// **An invite shown in person** ([PairPackage.invite]) is the same package
+/// cut down to one Seerr: its two addresses, what each asks for in front of
+/// it, and their pins. No key, no account, nothing else of the device: the
+/// person who receives it signs in with an account of their own. Read back,
+/// a package that says it is an invite and holds anything more is refused.
 @immutable
 final class PairPackage {
   const PairPackage({
@@ -68,7 +75,36 @@ final class PairPackage {
     required this.connections,
     this.certificates = const {},
     this.unknown = 0,
+    this.invite = false,
   });
+
+  /// The invite to [seerr] shown in person, as [settings] has it
+  /// ([SeerrInvite.inPerson]): the connection without its key, and the pins
+  /// of its two addresses.
+  factory PairPackage.invite(
+    ServiceInstance seerr,
+    SettingsModel settings, {
+    required PairDevice from,
+  }) {
+    assert(seerr.service == ServiceKey.seerr, 'an invite is to a Seerr');
+    final invite = SeerrInvite.inPerson(seerr, settings);
+    final certificates = <String, String>{};
+    for (final (url, pin) in [
+      (invite.home, invite.homePin),
+      (invite.away, invite.awayPin),
+    ]) {
+      // A pin is kept only for an `https` address, which has an origin.
+      if (url != null && pin != null) {
+        certificates[UrlUtils.certOrigin(url)!] = pin;
+      }
+    }
+    return PairPackage(
+      from: from,
+      connections: [invite.draft('${ServiceKey.seerr.routeParam}-invite')],
+      certificates: certificates,
+      invite: true,
+    );
+  }
 
   /// Everything [settings] holds that another device can use: each
   /// connection with an address, in order, and the pin of every origin they
@@ -115,6 +151,32 @@ final class PairPackage {
   /// a newer Cupola on the sending device.
   final int unknown;
 
+  /// Whether this is an invite shown in person rather than everything: one
+  /// Seerr, no key, no account ([asInvite]).
+  final bool invite;
+
+  /// The invite this package is: its Seerr's addresses, what they ask for
+  /// and their pins. Null for a package of everything.
+  SeerrInvite? asInvite() {
+    if (!invite) return null;
+    final seerr = connections.single;
+    final home = UrlUtils.normalizeBaseUrl(seerr.url);
+    final awayAddress = seerr.away;
+    final away = awayAddress == null
+        ? null
+        : UrlUtils.normalizeBaseUrl(awayAddress.url);
+    String? pinOf(String? url) =>
+        url == null ? null : certificates[UrlUtils.certOrigin(url)];
+    return SeerrInvite(
+      home: home,
+      away: away,
+      homePin: pinOf(home),
+      awayPin: pinOf(away),
+      homeAccess: seerr.access,
+      awayAccess: awayAddress?.access ?? const NoAccess(),
+    );
+  }
+
   static ServiceInstance _travelling(ServiceInstance instance) {
     final account = instance.account;
     return account == null || !account.isSignedIn
@@ -127,6 +189,7 @@ final class PairPackage {
     'from': from.name,
     'connections': [for (final c in connections) _connectionToJson(c)],
     'certificates': certificates,
+    if (invite) 'invite': true,
   };
 
   /// The JSON, gzipped: what is sealed.
@@ -194,15 +257,51 @@ final class PairPackage {
       certificates[key] = value;
     }
 
+    final invite = switch (json['invite']) {
+      null => false,
+      final bool b => b,
+      _ => throw const FormatException('invite'),
+    };
+    if (invite) _checkInvite(connections, unknown, certificates);
+
     return PairPackage(
       from: from,
       connections: connections,
       certificates: certificates,
       unknown: unknown,
+      invite: invite,
     );
   }
 
   static final _fingerprint = RegExp(r'^[0-9a-f]{64}$');
+
+  /// An invite holds one Seerr, signed in with nothing, and the pins of its
+  /// own addresses: anything more did not come from an invite.
+  static void _checkInvite(
+    List<ServiceInstance> connections,
+    int unknown,
+    Map<String, String> certificates,
+  ) {
+    if (unknown != 0 || connections.length != 1) {
+      throw const FormatException('an invite holds one Seerr');
+    }
+    final seerr = connections.single;
+    if (seerr.service != ServiceKey.seerr ||
+        seerr.credential.isNotEmpty ||
+        seerr.account != null ||
+        seerr.username.isNotEmpty ||
+        seerr.viewerId.isNotEmpty ||
+        seerr.unreadSecret != null) {
+      throw const FormatException('an invite holds no key and no account');
+    }
+    final origins = {
+      UrlUtils.certOrigin(seerr.url),
+      if (seerr.away case final away?) UrlUtils.certOrigin(away.url),
+    };
+    if (!certificates.keys.every(origins.contains)) {
+      throw const FormatException('an invite pins only its own addresses');
+    }
+  }
 
   /// A connection without its id: the receiving device mints its own, since
   /// the sending device's may already name another connection there.
@@ -375,7 +474,8 @@ final class PairPackage {
   /// Counts only, never a value.
   @override
   String toString() =>
-      'PairPackage(from ${from.name}, ${connections.length} connections, '
+      'PairPackage(${invite ? 'invite, ' : ''}from ${from.name}, '
+      '${connections.length} connections, '
       '${certificates.length} certificates'
       '${unknown == 0 ? '' : ', $unknown unknown'})';
 }

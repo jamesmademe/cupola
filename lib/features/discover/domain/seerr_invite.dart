@@ -1,4 +1,5 @@
 import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/connection_address.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -18,12 +19,21 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 ///
 /// The link is `cupola://invite?v=1&home=…`, each address percent-encoded
 /// so a chat does not cut a link of its own out of it.
+///
+/// **Shown in person, it carries what a gateway asks for** ([homeAccess],
+/// [awayAccess]): an invite made with [SeerrInvite.inPerson] travels sealed,
+/// over the home network, inside a code that works once for two minutes
+/// (`PairPackage.invite`), never as a link. Still never the key. [toUri]
+/// refuses such an invite, and the receiving app holds it in memory, never
+/// in a location.
 final class SeerrInvite {
   const SeerrInvite({
     required this.home,
     this.away,
     this.homePin,
     this.awayPin,
+    this.homeAccess = const NoAccess(),
+    this.awayAccess = const NoAccess(),
   });
 
   /// The invite for [connection], as the operator's app has it: its
@@ -39,6 +49,28 @@ final class SeerrInvite {
       away: away,
       homePin: _httpsPin(home, settings),
       awayPin: away == null ? null : _httpsPin(away, settings),
+    );
+  }
+
+  /// The invite for [connection] shown in person: both addresses, the pin
+  /// [settings] keeps for each, and what each address asks for in front of
+  /// it. Never the key, never an account.
+  factory SeerrInvite.inPerson(
+    ServiceInstance connection,
+    SettingsModel settings,
+  ) {
+    final home = UrlUtils.normalizeBaseUrl(connection.url);
+    final awayAddress = connection.away;
+    final away = awayAddress == null || awayAddress.url.isEmpty
+        ? null
+        : UrlUtils.normalizeBaseUrl(awayAddress.url);
+    return SeerrInvite(
+      home: home,
+      away: away,
+      homePin: _httpsPin(home, settings),
+      awayPin: away == null ? null : _httpsPin(away, settings),
+      homeAccess: connection.access,
+      awayAccess: away == null ? const NoAccess() : awayAddress!.access,
     );
   }
 
@@ -64,14 +96,59 @@ final class SeerrInvite {
   /// The same for [away].
   final String? awayPin;
 
-  /// The connection an invite draws up under [id]: its two addresses, no
-  /// key, no account, no access.
+  /// What a gateway in front of [home] asks for: only ever in an invite
+  /// shown in person.
+  final ConnectionAccess homeAccess;
+
+  /// The same for [away].
+  final ConnectionAccess awayAccess;
+
+  /// Whether the invite carries anything a gateway asks for: what only an
+  /// invite shown in person may.
+  bool get carriesAccess => !homeAccess.isEmpty || !awayAccess.isEmpty;
+
+  /// The connection an invite draws up under [id]: its two addresses and
+  /// what they ask for, no key, no account.
   ServiceInstance draft(String id) => ServiceInstance(
     id: id,
     service: ServiceKey.seerr,
     url: home,
-    away: away == null ? null : ConnectionAddress(url: away!),
+    access: homeAccess,
+    away: away == null
+        ? null
+        : ConnectionAddress(url: away!, access: awayAccess),
   );
+
+  /// [here], a Seerr this device already has at one of the invite's
+  /// addresses, with what it lacks and the invite brings: the address away
+  /// and what it asks for, what the address at home asks for. Never in place
+  /// of anything [here] has: an address, an access, a key or an account it
+  /// already holds stays as it is.
+  ServiceInstance fill(ServiceInstance here) {
+    var filled = here;
+    if (filled.access.isEmpty &&
+        !homeAccess.isEmpty &&
+        UrlUtils.normalizeBaseUrl(filled.url) == home) {
+      filled = filled.copyWith(access: homeAccess);
+    }
+    final away = this.away;
+    if (away == null) return filled;
+    final saved = filled.away;
+    if (saved == null || saved.url.isEmpty) {
+      if (UrlUtils.normalizeBaseUrl(filled.url) != away) {
+        filled = filled.copyWith(
+          away: ConnectionAddress(url: away, access: awayAccess),
+        );
+      }
+    } else if (saved.access.isEmpty &&
+        !awayAccess.isEmpty &&
+        UrlUtils.normalizeBaseUrl(saved.url) == away) {
+      filled = filled.copyWith(
+        away: ConnectionAddress(url: saved.url, access: awayAccess),
+      );
+    }
+    return filled;
+  }
 
   /// The Seerr connection [settings] already has at one of the invite's
   /// addresses, signed in or not; null when there is none.
@@ -102,18 +179,21 @@ final class SeerrInvite {
     return null;
   }
 
-  /// The invite as a link.
-  Uri toUri() => Uri(
-    scheme: scheme,
-    host: host,
-    queryParameters: {
-      'v': version,
-      'home': home,
-      'away': ?away,
-      'homePin': ?homePin,
-      'awayPin': ?awayPin,
-    },
-  );
+  /// The invite as a link. Throws a [StateError] for an invite that carries
+  /// what a gateway asks for: that one is never written out.
+  Uri toUri() => carriesAccess
+      ? throw StateError('an invite shown in person is never a link')
+      : Uri(
+          scheme: scheme,
+          host: host,
+          queryParameters: {
+            'v': version,
+            'home': home,
+            'away': ?away,
+            'homePin': ?homePin,
+            'awayPin': ?awayPin,
+          },
+        );
 
   /// The invite as the text a person copies.
   String toLink() => toUri().toString();
@@ -190,29 +270,41 @@ final class SeerrInvite {
       other.home == home &&
       other.away == away &&
       other.homePin == homePin &&
-      other.awayPin == awayPin;
+      other.awayPin == awayPin &&
+      other.homeAccess == homeAccess &&
+      other.awayAccess == awayAccess;
 
   @override
-  int get hashCode => Object.hash(home, away, homePin, awayPin);
+  int get hashCode =>
+      Object.hash(home, away, homePin, awayPin, homeAccess, awayAccess);
 
   @override
   String toString() => 'SeerrInvite(home: $home, away: $away)';
 }
 
-/// What an invite cannot do for the household member, said beside it so the
-/// person who sends it knows before they do.
+/// What an invite's link cannot do for the household member, said beside it
+/// so the person who sends it knows before they do.
 enum SeerrInviteLimit {
   /// The server has no address away from home: the invite works at home.
   homeOnly,
 
-  /// The address away is behind a gateway that asks for a token, which an
-  /// invite never carries: it is left out, and the invite works at home.
+  /// The address away is behind a gateway that asks for a token, which a
+  /// link never carries: it is left out, and the invite works at home.
   awayBehindGateway,
 
   /// The address at home is behind a gateway that asks for a token: the
   /// household member will be asked for it.
-  homeBehindGateway,
+  homeBehindGateway;
+
+  /// Whether the limit is a token the link leaves behind: what an invite
+  /// shown in person carries ([SeerrInvite.inPerson]).
+  bool get isToken => this != homeOnly;
 }
+
+/// Whether an invite to [connection] is better shown in person: an address
+/// of it asks for a token, which a link never carries.
+bool invitesInPerson(ServiceInstance connection) =>
+    inviteLimitsOf(connection).any((limit) => limit.isToken);
 
 /// What [connection]'s invite cannot do, in the order the sheet says it.
 List<SeerrInviteLimit> inviteLimitsOf(ServiceInstance connection) {

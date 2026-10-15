@@ -9,6 +9,7 @@ import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/discover/domain/seerr_invite.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/onboarding/presentation/widgets/onboarding_parts.dart';
+import 'package:cupola/features/pairing/data/pair_session.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
@@ -33,7 +34,10 @@ import 'package:cupola/features/shell/domain/shell_audience.dart';
 /// An invite ([SeerrInvite]) fills it: opened by the invite's link, or the
 /// link pasted in the address, the server is read at once at whichever of
 /// its addresses answers, and the certificate the invite vouches for is
-/// trusted without a question.
+/// trusted without a question. An invite shown in person comes the same way
+/// from [pendingInviteProvider], where the receiving screen left it: it
+/// carries what a gateway in front of Seerr asks for, so it is never in the
+/// location, and the draft reaches the server through that gateway.
 class RequesterSignInScreen extends ConsumerStatefulWidget {
   const RequesterSignInScreen({
     super.key,
@@ -118,15 +122,20 @@ class _RequesterSignInScreenState extends ConsumerState<RequesterSignInScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.invite.isNotEmpty) {
-      final invite = SeerrInvite.fromQuery(widget.invite);
+    // Read now, let go of after the frame: a provider is not changed while
+    // the tree builds.
+    final held = widget.invite.isEmpty ? ref.read(pendingInviteProvider) : null;
+    if (widget.invite.isNotEmpty || held != null) {
+      final invite = held ?? SeerrInvite.fromQuery(widget.invite);
       if (invite == null) {
         _problemOf = '';
         _addressProblem = _brokenInvite;
       } else {
         _take(invite);
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _flow.readServer();
+          if (!mounted) return;
+          if (held != null) ref.read(pendingInviteProvider.notifier).take();
+          _flow.readServer();
         });
       }
     }

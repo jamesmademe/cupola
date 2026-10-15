@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/features/discover/domain/seerr_invite.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/pairing/data/pair_fetch.dart';
 import 'package:cupola/features/pairing/data/pair_server.dart';
@@ -12,6 +13,7 @@ import 'package:cupola/features/pairing/domain/pair_link.dart';
 import 'package:cupola/features/pairing/domain/pair_package.dart';
 import 'package:cupola/features/pairing/domain/pair_plan.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 
 /// What pairing reaches the network through: where this device's server
 /// stands, how long a code lives, how a package is fetched, and the clock.
@@ -69,6 +71,29 @@ class PendingPairNotifier extends Notifier<PairArrival?> {
 final pendingPairProvider = NotifierProvider<PendingPairNotifier, PairArrival?>(
   PendingPairNotifier.new,
 );
+
+/// Holds an invite shown in person between the receiving screen, which
+/// opened it, and the sign-in it hands over to. It carries what a gateway
+/// asks for, so it never travels in a location: the sign-in takes it from
+/// here, once.
+class PendingInviteNotifier extends Notifier<SeerrInvite?> {
+  @override
+  SeerrInvite? build() => null;
+
+  void hold(SeerrInvite invite) => state = invite;
+
+  /// The invite held, gone from here once taken.
+  SeerrInvite? take() {
+    final invite = state;
+    state = null;
+    return invite;
+  }
+}
+
+final pendingInviteProvider =
+    NotifierProvider<PendingInviteNotifier, SeerrInvite?>(
+      PendingInviteNotifier.new,
+    );
 
 // ── The device that sends ───────────────────────────────────────────────────
 
@@ -131,19 +156,26 @@ class PairOfferNotifier extends Notifier<PairOfferState> {
     return const PairOfferPreparing();
   }
 
-  /// Makes a code for everything this device has, as [from]. Closes the one
-  /// up before, if any.
-  Future<void> start({required PairDevice from}) async {
+  /// Makes a code for everything this device has, as [from]; with
+  /// [inviteTo], the id of a Seerr connection, an invite to that Seerr shown
+  /// in person instead ([PairPackage.invite]). Closes the one up before, if
+  /// any.
+  Future<void> start({required PairDevice from, String? inviteTo}) async {
     final generation = ++_generation;
     await _server?.close();
     _server = null;
     state = const PairOfferPreparing();
 
     final network = ref.read(pairNetworkProvider);
-    final package = PairPackage.everything(
-      ref.read(currentSettingsProvider),
-      from: from,
-    );
+    final settings = ref.read(currentSettingsProvider);
+    final seerr = inviteTo == null ? null : settings.instanceById(inviteTo);
+    if (inviteTo != null && seerr == null) {
+      state = const PairOfferFailed();
+      return;
+    }
+    final package = seerr == null
+        ? PairPackage.everything(settings, from: from)
+        : PairPackage.invite(seerr, settings, from: from);
     final address = await network.findAddress();
     if (generation != _generation) return;
     if (address == null) {
@@ -158,6 +190,7 @@ class PairOfferNotifier extends Notifier<PairOfferState> {
         address: address,
         key: key,
         sealed: sealed,
+        invite: package.invite,
         lifetime: network.lifetime,
         now: network.now,
       );
@@ -186,6 +219,13 @@ class PairOfferNotifier extends Notifier<PairOfferState> {
 }
 
 final pairOfferProvider =
+    NotifierProvider.autoDispose<PairOfferNotifier, PairOfferState>(
+      PairOfferNotifier.new,
+    );
+
+/// The invite sheet's own code, apart from Set up another device's: the same
+/// notifier, closed with the sheet, or as soon as the sheet turns to the link.
+final inviteOfferProvider =
     NotifierProvider.autoDispose<PairOfferNotifier, PairOfferState>(
       PairOfferNotifier.new,
     );
@@ -227,9 +267,12 @@ final class PairReceiveWaiting extends PairReceiveState {
   const PairReceiveWaiting();
 }
 
-/// Fetching from the other device.
+/// Fetching from the other device; [invite] when the link said it is an
+/// invite shown in person.
 final class PairReceiveFetching extends PairReceiveState {
-  const PairReceiveFetching();
+  const PairReceiveFetching({this.invite = false});
+
+  final bool invite;
 }
 
 /// The package arrived: [plan] is what Add would do.
@@ -239,11 +282,14 @@ final class PairReceivePreview extends PairReceiveState {
   final PairPlan plan;
 }
 
-/// Nothing arrived, for [failure].
+/// Nothing arrived, for [failure]; [invite] when the link said it is an
+/// invite shown in person.
 final class PairReceiveFailed extends PairReceiveState {
-  const PairReceiveFailed(this.failure);
+  const PairReceiveFailed(this.failure, {this.invite = false});
 
   final PairReceiveFailure failure;
+
+  final bool invite;
 
   /// Whether fetching again can still succeed: the same code, while it is
   /// open, from a device that did not answer.
@@ -255,6 +301,17 @@ final class PairReceiveAdding extends PairReceiveState {
   const PairReceiveAdding(this.plan);
 
   final PairPlan plan;
+}
+
+/// An invite shown in person arrived. With no Seerr here at its addresses
+/// ([here] null) it waits in [pendingInviteProvider] for the sign-in; with
+/// one, [here] is that connection with what it lacked filled in ([updated]
+/// when anything was).
+final class PairReceiveInvited extends PairReceiveState {
+  const PairReceiveInvited({this.here, this.updated = false});
+
+  final ServiceInstance? here;
+  final bool updated;
 }
 
 /// [plan] is written: the connections are this device's now.
@@ -308,19 +365,65 @@ class PairReceiveNotifier extends Notifier<PairReceiveState> {
     final generation = ++_generation;
     _link = link;
     _package = null;
-    state = const PairReceiveFetching();
+    state = PairReceiveFetching(invite: link.invite);
     try {
       final package = await ref.read(pairNetworkProvider).fetch(link);
       if (generation != _generation) return;
       _link = null;
+      // The link's mark is only a word; the sealed package is what was sent.
+      // The two disagree only when something is wrong with one of them.
+      if (package.invite != link.invite) {
+        state = PairReceiveFailed(
+          PairReceiveFailure.unreadable,
+          invite: link.invite,
+        );
+        return;
+      }
+      if (package.asInvite() case final invite?) {
+        await _invited(invite, generation);
+        return;
+      }
       _package = package;
       state = PairReceivePreview(
         PairPlan.of(package, ref.read(currentSettingsProvider)),
       );
     } on PairFetchException catch (e) {
       if (generation != _generation) return;
-      state = PairReceiveFailed(PairReceiveFailure.of(e.failure));
+      state = PairReceiveFailed(
+        PairReceiveFailure.of(e.failure),
+        invite: link.invite,
+      );
     }
+  }
+
+  /// An invite shown in person: held for the sign-in when no Seerr here is
+  /// at its addresses, else written into the one that is, only where it
+  /// lacks something ([SeerrInvite.fill]), with the pins of its addresses
+  /// this device does not keep yet.
+  Future<void> _invited(SeerrInvite invite, int generation) async {
+    final settings = ref.read(currentSettingsProvider);
+    final here = invite.connectedIn(settings);
+    if (here == null) {
+      ref.read(pendingInviteProvider.notifier).hold(invite);
+      state = const PairReceiveInvited();
+      return;
+    }
+    final filled = invite.fill(here);
+    var next = identical(filled, here)
+        ? settings
+        : settings.copyWithInstance(filled);
+    for (final address in filled.addresses) {
+      final pin = invite.pinFor(address);
+      if (pin != null && next.pinForUrl(address) == null) {
+        next = next.copyWithTrustedCertificate(url: address, fingerprint: pin);
+      }
+    }
+    final updated = !identical(next, settings);
+    if (updated) {
+      await ref.read(settingsProvider.notifier).updateSettings(next);
+      if (!ref.mounted || generation != _generation) return;
+    }
+    state = PairReceiveInvited(here: filled, updated: updated);
   }
 
   /// A pasted link that did not read.

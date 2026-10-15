@@ -19,8 +19,10 @@ import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/onboarding/presentation/requester_sign_in_screen.dart';
 import 'package:cupola/features/onboarding/presentation/widgets/onboarding_parts.dart';
+import 'package:cupola/features/pairing/data/pair_session.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -51,6 +53,7 @@ Future<(ProfileHarness, ProviderContainer, _Browser)> _atSignIn(
   WidgetTester tester,
   ConfigProfile profile, {
   SeerrInvite? invite,
+  SeerrInvite? held,
   CertificateProber certificateProber = neverFindsACertificate,
 }) async {
   final browser = _Browser();
@@ -86,9 +89,13 @@ Future<(ProfileHarness, ProviderContainer, _Browser)> _atSignIn(
     ],
   );
   addTearDown(container.dispose);
+  // An invite shown in person, as the receiving screen leaves it.
+  if (held != null) container.read(pendingInviteProvider.notifier).hold(held);
   final router = onboardingRouter(
     certificateProber: certificateProber,
-    initialLocation: invite == null
+    initialLocation: held != null
+        ? ServiceRoutes.welcomeSignIn
+        : invite == null
         ? ServiceRoutes.welcome
         : Uri(
             path: ServiceRoutes.welcomeSignIn,
@@ -109,7 +116,7 @@ Future<(ProfileHarness, ProviderContainer, _Browser)> _atSignIn(
     ),
   );
   await harness.settle(tester);
-  if (invite == null) {
+  if (invite == null && held == null) {
     await _tap(tester, harness, find.text('I have a Seerr account'));
   }
   return (harness, container, browser);
@@ -344,6 +351,43 @@ void main() {
       final saved = _seerr(container)!;
       expect(saved.url, WorldHosts.seerr);
       expect(saved.away?.url, away, reason: 'the invite\'s address away');
+      expect(saved.account?.isSignedIn, isTrue);
+      _expectOpenedFor(container, Audience.requester);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('shown in person, it is taken from memory once, and reaches '
+        'the server through what its gateway asks for', (tester) async {
+      const anna = WorldSeerrUsers.annaLocal;
+      const gate = CustomHeaders([(name: 'X-Gate', value: 'sentinel-gate')]);
+      final (harness, container, _) = await _atSignIn(
+        tester,
+        Profiles.p2,
+        held: const SeerrInvite(home: WorldHosts.seerr, homeAccess: gate),
+      );
+
+      expect(container.read(pendingInviteProvider), isNull);
+      // Read at once: past the address, on the ways in.
+      expect(find.text('Sign in with email'), findsOneWidget);
+      final asked = harness.network.requestsToHost('nas.home.arpa');
+      expect(asked, isNotEmpty);
+      for (final request in asked) {
+        expect(
+          request.headers.map((k, v) => MapEntry(k.toLowerCase(), v)),
+          containsPair('x-gate', 'sentinel-gate'),
+          reason: '${request.method} ${request.uri.path}',
+        );
+      }
+      expect(find.textContaining('sentinel'), findsNothing);
+
+      await _tap(tester, harness, find.text('Sign in with email'));
+      await tester.enterText(_field('Email'), anna.email);
+      await tester.enterText(_field('Password'), anna.password);
+      await _tap(tester, harness, find.widgetWithText(FilledButton, 'Sign in'));
+
+      final saved = _seerr(container)!;
+      expect(saved.access, gate);
       expect(saved.account?.isSignedIn, isTrue);
       _expectOpenedFor(container, Audience.requester);
 

@@ -15,6 +15,12 @@ import 'package:cupola/core/network/local_network_target.dart';
 /// holds no connection and no secret of a connection: it is only good, once,
 /// for the two minutes that server stays open, to someone on the same network.
 ///
+/// An invite shown in person adds `&t=invite` ([invite]): what it hands over
+/// is one Seerr and what its addresses ask for, not a whole device, and the
+/// receiving screen says so before it has fetched anything. The mark is a
+/// word, never a secret; the package says the same thing sealed, and the two
+/// must agree.
+///
 /// **Never printed, never routed.** [key] opens every key of the sending
 /// device, so [toString] names the address only, and the router takes a link
 /// off the location the moment it arrives (`/welcome/pair` holds it in memory).
@@ -25,6 +31,7 @@ final class PairLink {
     required this.port,
     required Uint8List key,
     required DateTime closesAt,
+    this.invite = false,
   }) : key = Uint8List.fromList(key),
        closesAt = DateTime.fromMillisecondsSinceEpoch(
          closesAt.millisecondsSinceEpoch ~/ 1000 * 1000,
@@ -43,6 +50,9 @@ final class PairLink {
   /// The key's length in bytes: 256 bits.
   static const keyLength = 32;
 
+  /// The value of `t` on an invite's link.
+  static const inviteMark = 'invite';
+
   /// The sending device's address on the home network.
   final InternetAddress host;
 
@@ -51,6 +61,10 @@ final class PairLink {
 
   /// The 32 bytes the path and the package's key are derived from.
   final Uint8List key;
+
+  /// Whether the code is an invite shown in person (`PairPackage.invite`)
+  /// rather than a copy of everything.
+  final bool invite;
 
   /// When the sending server closes, to the second.
   ///
@@ -80,6 +94,7 @@ final class PairLink {
       'h': authority,
       'k': _encodeKey(key),
       'x': '${closesAt.millisecondsSinceEpoch ~/ 1000}',
+      if (invite) 't': inviteMark,
     },
   );
 
@@ -99,7 +114,7 @@ final class PairLink {
   /// The link a pairing link's query describes, or null when any part of it is
   /// missing or wrong: another version, an address that is not on a home
   /// network, a port out of range, a key that is not 32 bytes, no closing
-  /// time.
+  /// time, a mark other than an invite's.
   ///
   /// Strict on purpose: the address is where this device is about to connect,
   /// so it has to be one the sending device could have opened a server on,
@@ -119,11 +134,14 @@ final class PairLink {
     if (key == null) return null;
     final closes = int.tryParse(query['x'] ?? '');
     if (closes == null || closes <= 0) return null;
+    final mark = query['t'];
+    if (mark != null && mark != inviteMark) return null;
     return PairLink(
       host: host,
       port: port,
       key: key,
       closesAt: DateTime.fromMillisecondsSinceEpoch(closes * 1000, isUtc: true),
+      invite: mark == inviteMark,
     );
   }
 
@@ -176,14 +194,16 @@ final class PairLink {
       other.host == host &&
       other.port == port &&
       other.closesAt == closesAt &&
+      other.invite == invite &&
       _sameBytes(other.key, key);
 
   @override
-  int get hashCode => Object.hash(host, port, closesAt, Object.hashAll(key));
+  int get hashCode =>
+      Object.hash(host, port, closesAt, invite, Object.hashAll(key));
 
   /// The address only, never the key.
   @override
-  String toString() => 'PairLink($authority)';
+  String toString() => 'PairLink($authority${invite ? ', invite' : ''})';
 }
 
 bool _sameBytes(List<int> a, List<int> b) {

@@ -117,4 +117,32 @@ void main() {
       expect(PairLink.mentionsPair('http://nas:5055'), isFalse);
     });
   });
+
+  group('an invite shown in person', () {
+    PairLink invite() => PairLink(
+      host: InternetAddress('192.168.1.20'),
+      port: 47213,
+      key: key,
+      closesAt: closes,
+      invite: true,
+    );
+
+    test('says so in its link, and reads back as one', () {
+      final uri = invite().toUri();
+      expect(uri.queryParameters['t'], 'invite');
+      expect(PairLink.fromQuery(uri.queryParameters), invite());
+      expect(PairLink.fromQuery(uri.queryParameters)!.invite, isTrue);
+      expect(link().toUri().queryParameters, isNot(contains('t')));
+      expect(invite(), isNot(link()));
+    });
+
+    test('a mark it does not know refuses the link', () {
+      final query = {...link().toUri().queryParameters, 't': 'everything'};
+      expect(PairLink.fromQuery(query), isNull);
+    });
+
+    test('prints that it is one, never its key', () {
+      expect(invite().toString(), 'PairLink(192.168.1.20:47213, invite)');
+    });
+  });
 }

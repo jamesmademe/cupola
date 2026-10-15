@@ -128,6 +128,23 @@ void main() {
         height: 320,
       ),
       _scene(
+        'PairReceive · an invite shown in person, opening: Your invite, and '
+        'nothing of copying a device',
+        const PairReceiveFetching(invite: true),
+        height: 280,
+      ),
+      _scene(
+        'PairReceive · an invite that did not arrive: red with Retry when the '
+        'other device did not answer, and no Start again',
+        const PairReceiveFailed(PairReceiveFailure.unreachable, invite: true),
+        height: 320,
+      ),
+      _scene(
+        'PairReceive · an invite whose code ran out: blue, ask for a new one',
+        const PairReceiveFailed(PairReceiveFailure.expired, invite: true),
+        height: 320,
+      ),
+      _scene(
         'PairReceive · what arrived: the connections by title and host, the '
         'notes that apply, Add, Start again',
         PairReceivePreview(_plan()),

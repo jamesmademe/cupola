@@ -8,6 +8,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
@@ -39,6 +40,11 @@ import 'package:cupola/features/shell/domain/shell_audience.dart';
 /// it the moment it is read, and the screen says only what the link is for.
 /// Nothing is written until *Add*, and what is written only ever adds: a
 /// connection the device already has is left as it is ([PairPlan]).
+///
+/// **An invite shown in person** arrives here too (its link says so): the
+/// screen reads *Your invite* while it fetches, and hands over to the sign-in,
+/// already filled ([pendingInviteProvider]), or to the Seerr this device
+/// already has at the invite's addresses, filled where it lacked something.
 class PairReceiveScreen extends ConsumerStatefulWidget {
   const PairReceiveScreen({super.key});
 
@@ -86,6 +92,12 @@ class _PairReceiveScreenState extends ConsumerState<PairReceiveScreen> {
 
   void _back() {
     final state = ref.read(pairReceiveProvider);
+    // An invite came from a code someone else showed: there is no step of
+    // this screen's to go back to.
+    if (state is PairReceiveFailed && state.invite) {
+      _leave();
+      return;
+    }
     if (state is! PairReceiveWaiting && state is! PairReceiveAdding) {
       ref.read(pairReceiveProvider.notifier).reset();
       return;
@@ -110,6 +122,33 @@ class _PairReceiveScreenState extends ConsumerState<PairReceiveScreen> {
 
   void _goHome() => context.go(ServiceRoutes.home);
 
+  /// Where an invite that arrived goes on: the sign-in, filled, or the Seerr
+  /// already here (the account's page, or the connection's form when it
+  /// signs in with the key), as an invite's link does.
+  void _goOn(PairReceiveInvited invited) {
+    final here = invited.here;
+    if (here == null) {
+      context.go(ServiceRoutes.welcomeSignIn);
+      return;
+    }
+    if (invited.updated) {
+      SnackBarHelper.success(context, 'Updated from the invite');
+    }
+    context.go(
+      here.account != null
+          ? ServiceRoutes.settingsAccountFor(instanceId: here.id)
+          : ServiceRoutes.settingsForConnection(ServiceKey.seerr, here.id),
+    );
+  }
+
+  /// Whether the screen is opening an invite rather than copying a device.
+  static bool _invite(PairReceiveState state) => switch (state) {
+    PairReceiveFetching(:final invite) => invite,
+    PairReceiveFailed(:final invite) => invite,
+    PairReceiveInvited() => true,
+    _ => false,
+  };
+
   @override
   Widget build(BuildContext context) {
     ref.listen<PairReceiveState>(pairReceiveProvider, (_, next) {
@@ -119,6 +158,8 @@ class _PairReceiveScreenState extends ConsumerState<PairReceiveScreen> {
         HapticFeedback.mediumImpact();
         ref.read(shellAudienceProvider.notifier).take();
         _goHome();
+      } else if (next is PairReceiveInvited) {
+        _goOn(next);
       }
     });
     final state = ref.watch(pairReceiveProvider);
@@ -150,7 +191,9 @@ class _PairReceiveScreenState extends ConsumerState<PairReceiveScreen> {
                         Semantics(
                           header: true,
                           child: Text(
-                            'Copy from another device',
+                            _invite(state)
+                                ? 'Your invite'
+                                : 'Copy from another device',
                             style: theme.textTheme.headlineSmall!.copyWith(
                               color: theme.colorScheme.onSurface,
                             ),
@@ -173,9 +216,13 @@ class _PairReceiveScreenState extends ConsumerState<PairReceiveScreen> {
   List<Widget> _body(BuildContext context, PairReceiveState state) =>
       switch (state) {
         PairReceiveWaiting() => _waiting(context),
-        PairReceiveFetching() => const [
-          SeerrSignInBusy('Fetching from the other device'),
+        PairReceiveFetching(:final invite) => [
+          SeerrSignInBusy(
+            invite ? 'Opening the invite' : 'Fetching from the other device',
+          ),
         ],
+        // The listener goes on: this frame draws the wait it ends.
+        PairReceiveInvited() => const [SeerrSignInBusy('Opening the invite')],
         PairReceiveFailed() => _failed(context, state),
         PairReceivePreview(:final plan) => _preview(context, plan),
         PairReceiveAdding(:final plan) => _preview(context, plan, adding: true),
@@ -216,7 +263,9 @@ class _PairReceiveScreenState extends ConsumerState<PairReceiveScreen> {
   }
 
   List<Widget> _failed(BuildContext context, PairReceiveFailed state) {
-    final notice = state.failure.notice;
+    final notice = state.invite
+        ? state.failure.inviteNotice
+        : state.failure.notice;
     final notifier = ref.read(pairReceiveProvider.notifier);
     return [
       NoticeLine(
@@ -226,12 +275,15 @@ class _PairReceiveScreenState extends ConsumerState<PairReceiveScreen> {
         actions: [
           if (state.retryHelps)
             noticeAction(context, Lexicon.retry, notifier.retry),
-          noticeAction(
-            context,
-            'Start again',
-            notifier.reset,
-            fill: notice.fillsStartAgain ? notice.tone : null,
-          ),
+          // An invite's remedy is a new code from the person who showed it:
+          // nothing here starts again.
+          if (!state.invite)
+            noticeAction(
+              context,
+              'Start again',
+              notifier.reset,
+              fill: notice.fillsStartAgain ? notice.tone : null,
+            ),
         ],
       ),
     ];

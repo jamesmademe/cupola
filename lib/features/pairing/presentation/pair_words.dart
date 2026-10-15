@@ -193,6 +193,40 @@ extension PairReceiveFailureWords on PairReceiveFailure {
   };
 }
 
+/// What each failure to open an invite shown in person says: the same
+/// tones as a copy's, and the remedy is the person who showed the code,
+/// asked for a new one. A link that did not read is not known to be an
+/// invite, and says what a copy's does.
+extension PairInviteFailureWords on PairReceiveFailure {
+  PairNotice get inviteNotice => switch (this) {
+    PairReceiveFailure.unreachable => const PairNotice(
+      tone: StatusTone.error,
+      headline: 'Cupola could not reach the other device',
+      sentence: 'Both need to be on the same Wi-Fi.',
+      fillsStartAgain: false,
+    ),
+    PairReceiveFailure.expired => const PairNotice(
+      tone: StatusTone.info,
+      headline: 'This code has expired',
+      sentence: 'Ask for a new one.',
+      fillsStartAgain: false,
+    ),
+    PairReceiveFailure.unreadable => const PairNotice(
+      tone: StatusTone.warning,
+      headline: 'Cupola could not read the invite',
+      sentence: 'Ask for a new code.',
+      fillsStartAgain: false,
+    ),
+    PairReceiveFailure.newer => const PairNotice(
+      tone: StatusTone.warning,
+      headline: 'This came from a newer Cupola',
+      sentence: 'Update Cupola on this device, then ask for a new code.',
+      fillsStartAgain: false,
+    ),
+    PairReceiveFailure.notWhole => notice,
+  };
+}
+
 /// The label of the primary that writes [plan]: `Add 14 services`, `Add 1
 /// service`, or `Add 3 trusted certificates` when only certificates are new.
 String pairAddLabel(PairPlan plan) => plan.toAdd.isNotEmpty
