@@ -2,6 +2,7 @@ import Flutter
 import Network
 import UIKit
 import UserNotifications
+import WidgetKit
 import workmanager_apple
 
 @main
@@ -22,6 +23,10 @@ import workmanager_apple
     // servers, the keychain and the disk the way the app does.
     WorkmanagerPlugin.setPluginRegistrantCallback { registry in
       GeneratedPluginRegistrant.register(with: registry)
+      // The run writes where the widgets read, in this engine as in the app's.
+      if let registrar = registry.registrar(forPlugin: "OutsideChannel") {
+        OutsideChannel.register(with: registrar.messenger())
+      }
     }
     WorkmanagerPlugin.registerPeriodicTask(
       withIdentifier: "com.matthwlabs.cupola.outside",
@@ -35,6 +40,42 @@ import workmanager_apple
     let messenger = engineBridge.applicationRegistrar.messenger()
     SecureClipboardChannel.register(with: messenger)
     LocalNetworkAccessChannel.register(with: messenger)
+    OutsideChannel.register(with: messenger)
+  }
+}
+
+/// What Cupola shows outside itself (`outside_native.dart`): the folder the
+/// widgets read, which only the App Group can name, and the widgets.
+enum OutsideChannel {
+  /// The group the extension reads (`outsideGroup` in
+  /// `CupolaWidgets/OutsideShelf.swift`) and both entitlements carry: change
+  /// one and the others with it, or the widgets read a folder the app never
+  /// writes.
+  static let group = "group.com.matthwlabs.cupola"
+
+  static func register(with messenger: FlutterBinaryMessenger) {
+    let channel = FlutterMethodChannel(name: "cupola/outside", binaryMessenger: messenger)
+    channel.setMethodCallHandler { call, result in
+      switch call.method {
+      case "sharedFolder":
+        // Nil when the build carries no App Group: Dart keeps the file in
+        // the app's own folder, and no widget reads it.
+        let folder = FileManager.default
+          .containerURL(forSecurityApplicationGroupIdentifier: group)?
+          .appendingPathComponent("outside", isDirectory: true)
+        result(folder?.path)
+      case "reload":
+        WidgetCenter.shared.reloadAllTimelines()
+        result(nil)
+      case "installed":
+        WidgetCenter.shared.getCurrentConfigurations { answer in
+          let any = (try? answer.get())?.isEmpty == false
+          DispatchQueue.main.async { result(any) }
+        }
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
   }
 }
 

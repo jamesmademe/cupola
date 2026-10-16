@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/features/discover/domain/library_calendar.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
@@ -63,7 +64,8 @@ void main() {
       expect(face.lead?.poster, isNotNull);
       expect(face.lead?.route, startsWith('/home/'));
       expect(face.items.single.eyebrow, 'Tomorrow');
-      expect(face.items.single.words, '20:00 · S1 E3 · not aired');
+      // A row is narrow: its day, and its code until its standing is news.
+      expect(face.items.single.words, 'S1 E3');
       expect(face.age, 'As of 14:02');
       expect(face.aged, isFalse);
     });
@@ -79,6 +81,35 @@ void main() {
       final face = faceAt(frames, DateTime(2026, 10, 17, 0, 1));
       expect(face.lead?.eyebrow, 'Today · 20:00');
       expect(face.age, 'As of yesterday 14:02');
+    });
+
+    test('a row on its way says only how far it got', () {
+      final morning = CalendarEvent(
+        identity: 'Cupertino',
+        kind: CalendarKind.episode,
+        day: DateTime(2026, 10, 16),
+        airsAt: DateTime(2026, 10, 16, 4),
+        title: 'Cupertino',
+        season: 1,
+        episode: 2,
+        state: CalendarState.inFlight(
+          mediaStatusFromQueue(
+            availability: MediaAvailability.missing,
+            monitored: true,
+            queueEntry: ArrQueueEntry(
+              pipeline: MediaPipeline.downloading,
+              progress: 0.4,
+            ),
+          ),
+        ),
+      );
+      final row = comingUpFrames(
+        [morning, tonight],
+        takenAt: takenAt,
+        pictures: picture,
+      ).first.face.items.single;
+      expect(row.words, '40%');
+      expect(row.tone, OutsideTone.blue);
     });
 
     test('what aired this morning stays a row, and the next one leads', () {

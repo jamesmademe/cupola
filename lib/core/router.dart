@@ -57,6 +57,7 @@ import 'package:cupola/features/discover/presentation/discover_page.dart';
 import 'package:cupola/features/release_search/presentation/release_search_settings_screen.dart';
 import 'package:cupola/features/settings/presentation/settings_appearance_screen.dart';
 import 'package:cupola/features/settings/presentation/settings_hints_screen.dart';
+import 'package:cupola/features/outside/domain/outside_link.dart';
 import 'package:cupola/features/outside/presentation/settings_notifications_screen.dart';
 import 'package:cupola/features/settings/presentation/settings_home_screen.dart';
 import 'package:cupola/features/settings/presentation/settings_region_screen.dart';
@@ -3192,6 +3193,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Before the way in's gate: an invite opens a first run too.
       if (SeerrInvite.isInviteUri(state.uri)) {
         return _inviteRedirect(state.uri, ref.read(currentSettingsProvider));
+      }
+      // A widget's tap: its place, which the gates below then judge like any
+      // other (a first run still goes through the way in, the requester never
+      // reaches the control room). A link that names none opens the Home.
+      if (OutsideLink.isOpenUri(state.uri)) {
+        return OutsideLink.routeOf(state.uri) ?? ServiceRoutes.home;
       }
       final path = state.uri.path;
       if (path == ServiceRoutes.legacyOnboarding) return ServiceRoutes.welcome;

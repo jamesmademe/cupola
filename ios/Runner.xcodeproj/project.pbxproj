@@ -7,19 +7,47 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0E317DA751C9B0B57697E0A3 /* CupolaWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09515DE7F2B885782504114F /* CupolaWidgets.swift */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
+		1F688CCD3947B708278366EB /* OutsideTimeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B59B166AEEA962DD2E04933 /* OutsideTimeline.swift */; };
+		31A960B84978BD89A360ED99 /* OutsideRequests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AAE41E7FB7CDE3C707EE254 /* OutsideRequests.swift */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
+		3AF85F45C0BDBB947FE3CC38 /* GeistMono-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 13E609B72763F7D4B406DFCE /* GeistMono-OFL.txt */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
+		3F17700A504CEDBB1B8E65DB /* Onest-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = A4383340AB82E3A725B39916 /* Onest-OFL.txt */; };
 		4305A3D56B204B3328724AC1 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5AB68ED2A841B3895C6158B2 /* Pods_Runner.framework */; };
 		430DDA3A210CC6082F2BB3A5 /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BCE0010FD0CC9F6B82333D6C /* Pods_RunnerTests.framework */; };
+		515C31F46984E2DD6CDBB4A0 /* OutsideSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1767F2D3304F6B2BACD4B482 /* OutsideSnapshot.swift */; };
+		55BBBB8089F6098FC2429410 /* OutsidePalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E7EA9AAD614C00D9DA430F8 /* OutsidePalette.swift */; };
+		580928CA87D6F38A22FBC685 /* CupolaWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E392A3D1F26BF62186DF6265 /* CupolaWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
+		78A461536D4402E4EE5625CB /* BricolageGrotesque-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = B0C3202B2106E311AE348F6D /* BricolageGrotesque-OFL.txt */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
+		9DE39C0633490C2697A72434 /* OutsideComingUp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAA99D17E7B3F79027BE43D0 /* OutsideComingUp.swift */; };
+		BCAAF6BBEF77FD882C50BAD5 /* OutsideShelf.swift in Sources */ = {isa = PBXBuildFile; fileRef = 250CAC6C563E186E9D1DF3B7 /* OutsideShelf.swift */; };
+		C5F14938A9461AC65D203C7B /* BricolageGrotesque.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 68AD51E42472BAB7D5271B9B /* BricolageGrotesque.ttf */; };
 		C979C2842FB2337100E61CE8 /* cupola_icon.icon in Resources */ = {isa = PBXBuildFile; fileRef = C979C2832FB2337100E61CE8 /* cupola_icon.icon */; };
+		CBD1B93CBAF0B68F01B0364A /* OutsideDownloads.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAC77811D7895C117D586AD1 /* OutsideDownloads.swift */; };
+		CD6F5644E7D96B2ED824539A /* OutsideParts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CB9882B5D14A68B1AD6BF21 /* OutsideParts.swift */; };
+		D2B3A44C027AA630C841E9DC /* OutsideWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 537CD81E54DABBFE5D90FE2C /* OutsideWidget.swift */; };
+		DC61CEDA34B2DA28E418528C /* GeistMono.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 9A174D539461E1FF84682506 /* GeistMono.ttf */; };
+		E173427A52F0D95F701D3904 /* OutsideLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A3EF85AD5B724CD50498A03 /* OutsideLink.swift */; };
+		E393C961C04C46A71B7B568D /* OutsideStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF3055B5BE7F9238FAC3C2AA /* OutsideStyle.swift */; };
+		E67990A587EEA05EE3E0C3CE /* Onest.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B0BA72A6829484B285AA56CB /* Onest.ttf */; };
+		EC65DF85975F4B58317F4D32 /* OutsideFonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ADAC32E9CC0C7D8325A4786 /* OutsideFonts.swift */; };
+		FA92C78284E3E8FC10E7E34F /* OutsideWords.swift in Sources */ = {isa = PBXBuildFile; fileRef = B902B85229E19BDE92962976 /* OutsideWords.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		00381580C0C1EF51011C7B55 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 801E2D5092579EAC093B18B6;
+			remoteInfo = CupolaWidgets;
+		};
 		331C8085294A63A400263BE5 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
@@ -30,6 +58,17 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		8AD64FDD9256677AA50A68E7 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				580928CA87D6F38A22FBC685 /* CupolaWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		9705A1C41CF9048500538489 /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -44,14 +83,27 @@
 
 /* Begin PBXFileReference section */
 		01AF9F9FB4F8DDE6FC89D462 /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
+		09515DE7F2B885782504114F /* CupolaWidgets.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CupolaWidgets.swift; sourceTree = "<group>"; };
+		0AAE41E7FB7CDE3C707EE254 /* OutsideRequests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OutsideRequests.swift; sourceTree = "<group>"; };
 		100E4BB95F7AF7A338D3F9BE /* Pods-RunnerTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.debug.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.debug.xcconfig"; sourceTree = "<group>"; };
 		107654AEC07C24F1C276D324 /* Pods-RunnerTests.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.profile.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.profile.xcconfig"; sourceTree = "<group>"; };
+		13E609B72763F7D4B406DFCE /* GeistMono-OFL.txt */ = {isa = PBXFileReference; includeInIndex = 1; name = "GeistMono-OFL.txt"; path = "../assets/fonts/GeistMono-OFL.txt"; sourceTree = "<group>"; };
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
+		1767F2D3304F6B2BACD4B482 /* OutsideSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OutsideSnapshot.swift; sourceTree = "<group>"; };
+		250CAC6C563E186E9D1DF3B7 /* OutsideShelf.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OutsideShelf.swift; sourceTree = "<group>"; };
+		2AFB813A4D9AB90E6264B516 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		331C807B294A618700263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
 		331C8081294A63A400263BE5 /* RunnerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = AppFrameworkInfo.plist; path = Flutter/AppFrameworkInfo.plist; sourceTree = "<group>"; };
+		3B59B166AEEA962DD2E04933 /* OutsideTimeline.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OutsideTimeline.swift; sourceTree = "<group>"; };
+		3E7EA9AAD614C00D9DA430F8 /* OutsidePalette.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OutsidePalette.swift; sourceTree = "<group>"; };
+		4A3EF85AD5B724CD50498A03 /* OutsideLink.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OutsideLink.swift; sourceTree = "<group>"; };
+		4CB9882B5D14A68B1AD6BF21 /* OutsideParts.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OutsideParts.swift; sourceTree = "<group>"; };
+		537CD81E54DABBFE5D90FE2C /* OutsideWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OutsideWidget.swift; sourceTree = "<group>"; };
 		5AB68ED2A841B3895C6158B2 /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		68AD51E42472BAB7D5271B9B /* BricolageGrotesque.ttf */ = {isa = PBXFileReference; includeInIndex = 1; name = BricolageGrotesque.ttf; path = ../assets/fonts/BricolageGrotesque.ttf; sourceTree = "<group>"; };
+		6ADAC32E9CC0C7D8325A4786 /* OutsideFonts.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OutsideFonts.swift; sourceTree = "<group>"; };
 		70F3B8B05D9FCD213A18C502 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
 		74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515810 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -64,12 +116,31 @@
 		97C146FD1CF9000F007C117D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		9A174D539461E1FF84682506 /* GeistMono.ttf */ = {isa = PBXFileReference; includeInIndex = 1; name = GeistMono.ttf; path = ../assets/fonts/GeistMono.ttf; sourceTree = "<group>"; };
+		A4383340AB82E3A725B39916 /* Onest-OFL.txt */ = {isa = PBXFileReference; includeInIndex = 1; name = "Onest-OFL.txt"; path = "../assets/fonts/Onest-OFL.txt"; sourceTree = "<group>"; };
+		AAA99D17E7B3F79027BE43D0 /* OutsideComingUp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OutsideComingUp.swift; sourceTree = "<group>"; };
+		AE2EB82A4B042F662513C3B2 /* Runner.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = Runner.entitlements; sourceTree = "<group>"; };
+		AF1D38645E624712DC6AAC74 /* CupolaWidgets.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = CupolaWidgets.xcconfig; sourceTree = "<group>"; };
+		B0BA72A6829484B285AA56CB /* Onest.ttf */ = {isa = PBXFileReference; includeInIndex = 1; name = Onest.ttf; path = ../assets/fonts/Onest.ttf; sourceTree = "<group>"; };
+		B0C3202B2106E311AE348F6D /* BricolageGrotesque-OFL.txt */ = {isa = PBXFileReference; includeInIndex = 1; name = "BricolageGrotesque-OFL.txt"; path = "../assets/fonts/BricolageGrotesque-OFL.txt"; sourceTree = "<group>"; };
+		B126F460076F1DD2B8EF8997 /* CupolaWidgets.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = CupolaWidgets.entitlements; sourceTree = "<group>"; };
+		B902B85229E19BDE92962976 /* OutsideWords.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OutsideWords.swift; sourceTree = "<group>"; };
+		BAC77811D7895C117D586AD1 /* OutsideDownloads.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OutsideDownloads.swift; sourceTree = "<group>"; };
 		BCE0010FD0CC9F6B82333D6C /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		C979C2832FB2337100E61CE8 /* cupola_icon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = cupola_icon.icon; sourceTree = "<group>"; };
 		CB4FF598424A7FA24C808849 /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
+		DF3055B5BE7F9238FAC3C2AA /* OutsideStyle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OutsideStyle.swift; sourceTree = "<group>"; };
+		E392A3D1F26BF62186DF6265 /* CupolaWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CupolaWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		57EDF069FB4000A9558BBC1C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		97C146EB1CF9000F007C117D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -97,6 +168,19 @@
 			path = RunnerTests;
 			sourceTree = "<group>";
 		};
+		619AF4E3F7AEB58025A4603B /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				68AD51E42472BAB7D5271B9B /* BricolageGrotesque.ttf */,
+				B0BA72A6829484B285AA56CB /* Onest.ttf */,
+				9A174D539461E1FF84682506 /* GeistMono.ttf */,
+				B0C3202B2106E311AE348F6D /* BricolageGrotesque-OFL.txt */,
+				A4383340AB82E3A725B39916 /* Onest-OFL.txt */,
+				13E609B72763F7D4B406DFCE /* GeistMono-OFL.txt */,
+			);
+			name = Fonts;
+			sourceTree = "<group>";
+		};
 		9740EEB11CF90186004384FC /* Flutter */ = {
 			isa = PBXGroup;
 			children = (
@@ -117,6 +201,8 @@
 				331C8082294A63A400263BE5 /* RunnerTests */,
 				F374ADCF9E5FAD10B6E13422 /* Pods */,
 				BD007F94E4EEC6C4670A547A /* Frameworks */,
+				FB838DF8DFEF805B36328A1F /* CupolaWidgets */,
+				619AF4E3F7AEB58025A4603B /* Fonts */,
 			);
 			sourceTree = "<group>";
 		};
@@ -125,6 +211,7 @@
 			children = (
 				97C146EE1CF9000F007C117D /* Runner.app */,
 				331C8081294A63A400263BE5 /* RunnerTests.xctest */,
+				E392A3D1F26BF62186DF6265 /* CupolaWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -141,6 +228,7 @@
 				1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */,
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
+				AE2EB82A4B042F662513C3B2 /* Runner.entitlements */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -167,6 +255,31 @@
 			path = Pods;
 			sourceTree = "<group>";
 		};
+		FB838DF8DFEF805B36328A1F /* CupolaWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				09515DE7F2B885782504114F /* CupolaWidgets.swift */,
+				2AFB813A4D9AB90E6264B516 /* Info.plist */,
+				B126F460076F1DD2B8EF8997 /* CupolaWidgets.entitlements */,
+				AF1D38645E624712DC6AAC74 /* CupolaWidgets.xcconfig */,
+				AAA99D17E7B3F79027BE43D0 /* OutsideComingUp.swift */,
+				BAC77811D7895C117D586AD1 /* OutsideDownloads.swift */,
+				6ADAC32E9CC0C7D8325A4786 /* OutsideFonts.swift */,
+				4A3EF85AD5B724CD50498A03 /* OutsideLink.swift */,
+				3E7EA9AAD614C00D9DA430F8 /* OutsidePalette.swift */,
+				4CB9882B5D14A68B1AD6BF21 /* OutsideParts.swift */,
+				0AAE41E7FB7CDE3C707EE254 /* OutsideRequests.swift */,
+				250CAC6C563E186E9D1DF3B7 /* OutsideShelf.swift */,
+				1767F2D3304F6B2BACD4B482 /* OutsideSnapshot.swift */,
+				DF3055B5BE7F9238FAC3C2AA /* OutsideStyle.swift */,
+				3B59B166AEEA962DD2E04933 /* OutsideTimeline.swift */,
+				537CD81E54DABBFE5D90FE2C /* OutsideWidget.swift */,
+				B902B85229E19BDE92962976 /* OutsideWords.swift */,
+			);
+			name = CupolaWidgets;
+			path = CupolaWidgets;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -189,6 +302,23 @@
 			productReference = 331C8081294A63A400263BE5 /* RunnerTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		801E2D5092579EAC093B18B6 /* CupolaWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C0B1E248F07C66A55CC7AFE8 /* Build configuration list for PBXNativeTarget "CupolaWidgets" */;
+			buildPhases = (
+				2F82082FBB83ED393E65208F /* Sources */,
+				57EDF069FB4000A9558BBC1C /* Frameworks */,
+				01623BEFCCD52CA711BEE0F4 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CupolaWidgets;
+			productName = CupolaWidgets;
+			productReference = E392A3D1F26BF62186DF6265 /* CupolaWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		97C146ED1CF9000F007C117D /* Runner */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 97C147051CF9000F007C117D /* Build configuration list for PBXNativeTarget "Runner" */;
@@ -199,12 +329,14 @@
 				97C146EB1CF9000F007C117D /* Frameworks */,
 				97C146EC1CF9000F007C117D /* Resources */,
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
+				8AD64FDD9256677AA50A68E7 /* Embed Foundation Extensions */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				BD03AC40326001413301AF97 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				2E32B712950FD5881CAD285B /* PBXTargetDependency */,
 			);
 			name = Runner;
 			productName = Runner;
@@ -246,11 +378,25 @@
 			targets = (
 				97C146ED1CF9000F007C117D /* Runner */,
 				331C8080294A63A400263BE5 /* RunnerTests */,
+				801E2D5092579EAC093B18B6 /* CupolaWidgets */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		01623BEFCCD52CA711BEE0F4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C5F14938A9461AC65D203C7B /* BricolageGrotesque.ttf in Resources */,
+				E67990A587EEA05EE3E0C3CE /* Onest.ttf in Resources */,
+				DC61CEDA34B2DA28E418528C /* GeistMono.ttf in Resources */,
+				78A461536D4402E4EE5625CB /* BricolageGrotesque-OFL.txt in Resources */,
+				3F17700A504CEDBB1B8E65DB /* Onest-OFL.txt in Resources */,
+				3AF85F45C0BDBB947FE3CC38 /* GeistMono-OFL.txt in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		331C807F294A63A400263BE5 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -368,6 +514,27 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		2F82082FBB83ED393E65208F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0E317DA751C9B0B57697E0A3 /* CupolaWidgets.swift in Sources */,
+				9DE39C0633490C2697A72434 /* OutsideComingUp.swift in Sources */,
+				CBD1B93CBAF0B68F01B0364A /* OutsideDownloads.swift in Sources */,
+				EC65DF85975F4B58317F4D32 /* OutsideFonts.swift in Sources */,
+				E173427A52F0D95F701D3904 /* OutsideLink.swift in Sources */,
+				55BBBB8089F6098FC2429410 /* OutsidePalette.swift in Sources */,
+				CD6F5644E7D96B2ED824539A /* OutsideParts.swift in Sources */,
+				31A960B84978BD89A360ED99 /* OutsideRequests.swift in Sources */,
+				BCAAF6BBEF77FD882C50BAD5 /* OutsideShelf.swift in Sources */,
+				515C31F46984E2DD6CDBB4A0 /* OutsideSnapshot.swift in Sources */,
+				E393C961C04C46A71B7B568D /* OutsideStyle.swift in Sources */,
+				1F688CCD3947B708278366EB /* OutsideTimeline.swift in Sources */,
+				D2B3A44C027AA630C841E9DC /* OutsideWidget.swift in Sources */,
+				FA92C78284E3E8FC10E7E34F /* OutsideWords.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		331C807D294A63A400263BE5 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -388,6 +555,12 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		2E32B712950FD5881CAD285B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = CupolaWidgets;
+			target = 801E2D5092579EAC093B18B6 /* CupolaWidgets */;
+			targetProxy = 00381580C0C1EF51011C7B55 /* PBXContainerItemProxy */;
+		};
 		331C8086294A63A400263BE5 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 97C146ED1CF9000F007C117D /* Runner */;
@@ -415,6 +588,34 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		2453B91CAF64C72B0A18CB6A /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = AF1D38645E624712DC6AAC74 /* CupolaWidgets.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = CupolaWidgets/CupolaWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = 2FPRG4ML23;
+				INFOPLIST_FILE = CupolaWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.matthwlabs.cupola.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		249021D3217E4FDB00AE95B9 /* Profile */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -473,6 +674,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = cupola_icon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				DEVELOPMENT_TEAM = 2FPRG4ML23;
 				ENABLE_BITCODE = NO;
@@ -536,6 +738,34 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Runner.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Runner";
+			};
+			name = Profile;
+		};
+		33E719D262E6066774DD7C64 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = AF1D38645E624712DC6AAC74 /* CupolaWidgets.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = CupolaWidgets/CupolaWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = 2FPRG4ML23;
+				INFOPLIST_FILE = CupolaWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.matthwlabs.cupola.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
 			};
 			name = Profile;
 		};
@@ -656,6 +886,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = cupola_icon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				DEVELOPMENT_TEAM = 2FPRG4ML23;
 				ENABLE_BITCODE = NO;
@@ -679,6 +910,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = cupola_icon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				DEVELOPMENT_TEAM = 2FPRG4ML23;
 				ENABLE_BITCODE = NO;
@@ -694,6 +926,33 @@
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
+		};
+		E59063BD80F66C39985BCF82 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = AF1D38645E624712DC6AAC74 /* CupolaWidgets.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = CupolaWidgets/CupolaWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = 2FPRG4ML23;
+				INFOPLIST_FILE = CupolaWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.matthwlabs.cupola.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
 		};
 /* End XCBuildConfiguration section */
 
@@ -724,6 +983,16 @@
 				97C147061CF9000F007C117D /* Debug */,
 				97C147071CF9000F007C117D /* Release */,
 				249021D4217E4FDB00AE95B9 /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C0B1E248F07C66A55CC7AFE8 /* Build configuration list for PBXNativeTarget "CupolaWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2453B91CAF64C72B0A18CB6A /* Release */,
+				E59063BD80F66C39985BCF82 /* Debug */,
+				33E719D262E6066774DD7C64 /* Profile */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

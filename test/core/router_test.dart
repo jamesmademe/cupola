@@ -27,6 +27,7 @@ import 'package:cupola/features/npm/presentation/npm_overview_screen.dart';
 import 'package:cupola/features/npm/presentation/npm_screen.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_overview_screen.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
+import 'package:cupola/features/outside/domain/outside_link.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_overview_screen.dart';
 import 'package:cupola/features/prowlarr/data/prowlarr_service.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_overview_screen.dart';
@@ -161,6 +162,42 @@ void main() {
       await tester.pumpAndSettle();
       expect(router.state.uri.toString(), ServiceRoutes.welcomeSignIn);
       expect(find.byType(RequesterSignInScreen), findsOneWidget);
+    });
+
+    group('a widget\'s link', () {
+      testWidgets('opens the place it names', (tester) async {
+        final container = await _pumpRouter(tester);
+        final router = container.read(routerProvider);
+
+        for (final link in [
+          OutsideLink.to(ServiceRoutes.settings).toString(),
+          '/open?to=${Uri.encodeQueryComponent(ServiceRoutes.settings)}',
+        ]) {
+          router.go(link);
+          await tester.pumpAndSettle();
+          expect(router.state.uri.toString(), ServiceRoutes.settings);
+        }
+      });
+
+      testWidgets('one that names no place of the app opens the Home', (
+        tester,
+      ) async {
+        final container = await _pumpRouter(tester);
+        final router = container.read(routerProvider);
+
+        router.go(OutsideLink.to('//evil.example').toString());
+        await tester.pumpAndSettle();
+        expect(router.state.uri.path, ServiceRoutes.home);
+      });
+
+      testWidgets('a first run still goes through the way in', (tester) async {
+        final container = await _pumpRouter(tester, onboardingCompleted: false);
+        final router = container.read(routerProvider);
+
+        router.go(OutsideLink.to(ServiceRoutes.settings).toString());
+        await tester.pumpAndSettle();
+        expect(router.state.uri.toString(), ServiceRoutes.welcome);
+      });
     });
 
     group('an invite\'s link', () {

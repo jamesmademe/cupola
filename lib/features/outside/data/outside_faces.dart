@@ -122,6 +122,17 @@ bool _hasCome(CalendarEvent event, DateTime at) =>
 bool _hasComeAt(CalendarEvent event, DateTime at) =>
     CalendarEvent.hasCome(event.day, event.airsAt, at);
 
+/// A row's words: in Coming up, not having come yet goes without saying, so
+/// a row says only its episode's code until its standing is news (it is in,
+/// it went missing), and then the whole line. One on its way says only how
+/// far it got: the blue says it moves, and the title keeps the room.
+String? _rowWords(CalendarEvent event, DateTime at) => switch (event.state) {
+  CalendarState(stand: CalendarStand.notYet) => event.code,
+  CalendarState(stand: CalendarStand.inFlight, :final percent?) =>
+    formatPercent(percent),
+  _ => event.statusLine(at),
+};
+
 OutsideItem _comingUpItem(
   CalendarEvent event,
   DateTime at,
@@ -132,13 +143,11 @@ OutsideItem _comingUpItem(
   final airs = event.airsAt;
   final state = event.state;
   return OutsideItem(
-    // The lead says the day and the time; a row says the day, and its time
-    // is in its words, as the Home's row has it.
+    // The lead says the day and the time; a row, a third of a widget wide,
+    // says the day in its own column and leaves the time to the lead.
     eyebrow: lead && airs != null ? '$day · ${formatClockTime(airs)}' : day,
     title: event.title,
-    words: !lead && airs != null
-        ? '${formatClockTime(airs)} · ${event.statusLine(at)}'
-        : event.statusLine(at),
+    words: lead ? event.statusLine(at) : _rowWords(event, at),
     tone: state.stand == CalendarStand.inFlight
         ? outsideToneOf(state.tone)
         : null,
