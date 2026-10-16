@@ -4,7 +4,7 @@
 
 # Cupola
 
-**A cupola over your lab.**
+**A Cupola over your server.**
 
 One native app for your entire self-hosted media stack, and the box it runs on.<br/>
 **17 services. iOS, Android, macOS. No cloud, no account, no middleman.**

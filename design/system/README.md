@@ -14,6 +14,15 @@ In order of precedence: when two collide, the higher one wins.
 6. **Promise only what works.** A figure without a source is `—`; a background check says when it ran (`Checked 2 h ago`), because the OS decides when that is. Better to delete a control than ship one that fails.
 7. **One authored moment per screen**, not an entrance on everything. Every animation has its Reduce Motion answer.
 
+## Who Cupola is
+
+Cupola says who it is in two sentences, and only these two: the claim, **A Cupola over your server.**, on the Welcome, and the promise, **Nothing left in the dark.**, on the close of the way in, said only when everything the visit tried has joined. A cupola is the lantern on a roof that lets light into the room below; the app is that lantern over the person's server, and the promise is what the light is for. The rest of the system already speaks this way: the two rooms, dark and paper, the lamp that is the neutral light of today, the ring that lights with what answered. The sentences live once in the code (`OnePunchline.claim`, `OnePunchline.promise`); the README, the store and every other place that says who Cupola is quote them exactly, and `test/core/identity/signature_guard_test.dart` holds it.
+
+- **Few signature points, each chosen.** The launch screen (the mark on the room's ground), the Welcome (the claim), the close (the promise and `Enter Cupola`), the foot of Settings on a phone (the mark, the claim, `Cupola 1.0.0 · Apache-2.0`), the licence page (the mark and the version), the README and the store. Nowhere else: an empty state, an error or a notification says what is true, never who Cupola is.
+- **Cupola names itself only when it is the one acting or refusing:** *Cupola does not trust this certificate*, *Cupola did not send the key over http*. Never *we*, *our* or *I*: the first person belongs to the person (`I have a Seerr account`, `Hide what I have`).
+- **It never sells.** No *seamless*, *powerful*, *simply*, *just*, *magic*, no *Welcome to Cupola*; the claim is the one sentence about itself, and it is a fact about where the app stands.
+- **It promises only what it keeps** (principle 6), in a permission prompt as anywhere: the prompt says what the permission is for, never what the app will never do. *Cupola never contacts plex.tv* was false the day a Seerr sign-in went through it.
+
 ## Words
 
 **Plain, warm, short.** Say what happened in the words of the person reading; the service's own term waits under *Why?*. People, then things. One line per fact: a count and a verb beat a paragraph.
@@ -306,7 +315,7 @@ Two families, and they never swap roles. No icon is drawn by hand; no emoji, no 
 - **Interface symbols.** **Today** Flutter's Material Icons, rounded variant, for everything that is not a service, with the outlined variant as the unselected pose of a navigation destination; only the desktop rail draws Material Symbols Rounded (at weight 300). **Direction:** Material Symbols Rounded everywhere (`material_symbols_icons`, already a dependency), setting all four axes: `wght` 400 (500 for back, the active tab, link chevrons and icons inside buttons); `FILL` 1 only for the active tab, a state glyph inside tone text, and play; `GRAD` −25 in the dark room, 0 on paper; and `opticalSize` equal to the size, since the font's default is the 48 px drawing and a 20 px icon without it is thin.
 - An icon never replaces the verb of an action. It takes the colour of the text beside it; only a state glyph inside tone text is coloured. One icon per control, before the label; a trailing icon means "goes somewhere" (a chevron, open-in-new). Icons match the text: 16 with 13, 18 with 14, 20 with 15–16, 22 in bars.
 - **Service marks** come from the `CupolaServices` font (U+E001–U+E011; SVG sources in `tool/service_glyphs/svg/`, usage in `assets/README.md`). A mark identifies a service and nothing else: monochrome, in ink on a neutral tile wherever a service is listed, one step brighter in the service's own room header. It never carries a status. TrueNAS, Unraid and Plex are deliberately not their logos (trademark policy): a drive rack, a hard disk, a film strip.
-- **The brand mark** (the cupola seen from above, six lit panes around a round window) lives in `assets/brand/` (usage in `assets/README.md`). It is artwork, the one object that brings its own colour: never redrawn, recoloured, or placed on a light ground without its dark body.
+- **The brand mark** (the cupola seen from above, six lit panes around a round window) lives in `assets/brand/` and is drawn by `CupolaMark`. It is artwork, the one object that brings its own colour: drawn as it is on either ground, never redrawn or recoloured; the dark body belongs to the app icon, not to the mark. Where it stands and at what size: `assets/README.md`.
 
 ## Do and don't
 
