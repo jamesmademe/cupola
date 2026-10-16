@@ -67,7 +67,32 @@ class MainActivity : FlutterActivity() {
     override fun onFlutterUiDisplayed() {
         super.onFlutterUiDisplayed()
         flutterDrawn = true
+        uiDisplayed = true
         findViewById<View>(android.R.id.content)?.invalidate()
+        // The link a widget's tap brought while the app was starting (below).
+        earlyLink?.let { flutterEngine?.navigationChannel?.pushRouteInformation(it) }
+        earlyLink = null
+    }
+
+    /**
+     * A link that arrived through [onNewIntent] before Flutter had drawn,
+     * to be handed to the router once it is there.
+     *
+     * Tapping a widget while the app's process is gone but its task is still
+     * in the recents makes Android start the activity again from its saved
+     * state, with the link as a new intent on top of the original one. The
+     * engine is then still starting: the router does not listen yet, and the
+     * route Flutter is told of (`FlutterActivity.onNewIntent`) reaches nothing,
+     * so the app opens on the screen it was last on and the tap is lost.
+     */
+    private var earlyLink: String? = null
+    private var uiDisplayed = false
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // An intent with no link (the launcher's, on a task already open) must
+        // not drop the one that is waiting.
+        if (!uiDisplayed) intent.dataString?.let { earlyLink = it }
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {

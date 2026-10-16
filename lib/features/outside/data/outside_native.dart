@@ -42,9 +42,12 @@ class ChannelOutsideWidgets implements OutsideWidgets {
 }
 
 /// The folder the widgets can read: the App Group's on iOS, which only the
-/// native side can name, and the app's own support folder where there is no
-/// such thing (Android's widget runs in the app's process and reads it there;
-/// a desktop has no widget and keeps it only for the notifications' memory).
+/// native side can name, and `filesDir/outside` on Android, which the
+/// `outside_channel` plugin names (the widgets run in the app's own process
+/// and read its own folder, and that folder is the one
+/// `getApplicationSupportDirectory()` points to, so the fallback below is the
+/// same place). Where there is no native side at all, a desktop has no widget
+/// and keeps the folder only for the notifications' memory.
 Future<Directory> outsideFolder() async {
   try {
     final path = await _channel.invokeMethod<String>('sharedFolder');

@@ -1,0 +1,46 @@
+group = "com.matthwlabs.cupola.outside.channel"
+version = "1.0-SNAPSHOT"
+
+rootProject.allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+apply plugin: "com.android.library"
+
+// AGP 9 has Kotlin built in; the app opts out (`android.builtInKotlin=false`
+// in android/gradle.properties), and then a module applies the Kotlin plugin
+// itself. The same test `workmanager_android` makes.
+def agpMajor = com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION.tokenize(".")[0] as int
+def builtInKotlin = agpMajor >= 9 &&
+    project.findProperty("android.builtInKotlin")?.toString() != "false"
+if (!builtInKotlin) {
+    apply plugin: "kotlin-android"
+}
+
+android {
+    namespace = "com.matthwlabs.cupola.outside.channel"
+    compileSdk = 36
+
+    sourceSets {
+        main.java.srcDirs += "src/main/kotlin"
+    }
+
+    defaultConfig {
+        // The app's own floor (android/app/build.gradle.kts).
+        minSdk = 24
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+
+    if (!builtInKotlin) {
+        kotlinOptions {
+            jvmTarget = JavaVersion.VERSION_11.toString()
+        }
+    }
+}

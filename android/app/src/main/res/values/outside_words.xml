@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The only words the widgets write themselves. Every other word on a widget is
+  in the snapshot, written by Dart (lib/features/outside/domain/outside_snapshot.dart):
+  a second copy of the app's words in Kotlin would drift from the first within a
+  release. These are word for word the ones in ios/CupolaWidgets/OutsideWords.swift,
+  which test/features/outside/native_words_test.dart holds.
+
+  What is here is what exists before the app has said anything: the widgets'
+  names and what each one is for (the picker shows them before one is added),
+  and the two sentences for a widget that has nothing to draw. Not translatable
+  because the app's own words are not.
+-->
+<resources>
+    <string name="outside_coming_up_name" translatable="false">Coming up</string>
+    <string name="outside_downloads_name" translatable="false">Downloads</string>
+    <string name="outside_requests_name" translatable="false">Your requests</string>
+
+    <string name="outside_coming_up_description" translatable="false">What airs and comes out next.</string>
+    <string name="outside_downloads_description" translatable="false">What is moving, and what is stuck.</string>
+    <string name="outside_requests_description" translatable="false">What you asked for, and when it is ready.</string>
+
+    <!-- No file yet: the app has not run since the widget was added. -->
+    <string name="outside_no_file" translatable="false">Open Cupola to fill this in.</string>
+
+    <!-- A file, but nothing in it for this widget: a requester has no calendar
+         and no queue, an operator has no requests of his own, and a calendar no
+         one set up has nothing to come. No "yet": for most of them nothing ever
+         will. -->
+    <string name="outside_kind_absent" translatable="false">Nothing to show here.</string>
+</resources>

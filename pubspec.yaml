@@ -94,6 +94,14 @@ dependencies:
   # schedulers. Its two foreground-service permissions are removed in
   # `AndroidManifest.xml`, since no task here runs as one.
   workmanager: 0.10.10
+  # The channel `cupola/outside` on Android (`outside_native.dart`), a local
+  # plugin and not a channel in MainActivity: the background read runs in an
+  # engine of WorkManager's own, which registers only the plugins of the
+  # generated registrant, so a channel on the activity's engine would not
+  # exist there and the reload that ends a run would be lost. Android only;
+  # iOS answers the same channel in `ios/Runner/AppDelegate.swift`.
+  outside_channel:
+    path: packages/outside_channel
   # SHA-256 fingerprints for trust-on-first-use TLS certificate pinning.
   crypto: ^3.0.0
   # The package another device copies its connections from: encrypted with

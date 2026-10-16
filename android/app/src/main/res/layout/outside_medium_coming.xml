@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Coming up, medium: the lead's poster at the left, its words beside it, and the
+  next things under them, at the foot, as the approved board has it. The poster is
+  as tall as the widget inside its padding, 2:3, with its corners in the
+  bitmap itself.
+
+  Text slots come in one view per tone (`words_default`, `words_green`, and so on),
+  each in that tone's own colour, and OutsideSlots shows the one the face names
+  and hides the others. The colour is the view's and not the code's because a
+  colour set from code is a colour of the moment it is set: the launcher inflates
+  this layout again when the system changes room, and only a colour resolved from
+  the resources follows it.
+-->
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/outside_ground">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:padding="@dimen/outside_space_slab_y"
+        android:baselineAligned="false">
+        <ImageView
+            android:id="@+id/poster"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="@dimen/outside_space_slab_y"
+            android:background="@drawable/outside_track_poster"
+            android:importantForAccessibility="no"
+            android:visibility="gone" />
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:baselineAligned="false">
+                <TextView
+                    style="@style/OutsideText.Label"
+                    android:id="@+id/header_leading"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="@color/outside_dim"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+                <TextView
+                    style="@style/OutsideText.Label"
+                    android:id="@+id/header_trailing"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/outside_space_sm"
+                    android:textColor="@color/outside_dim"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+            </LinearLayout>
+            <TextView
+                style="@style/OutsideText.Title"
+                android:id="@+id/title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/outside_space_xxs"
+                android:textColor="@color/outside_ink"
+                android:maxLines="2"
+                android:ellipsize="end" />
+            <TextView
+                style="@style/OutsideText.Line"
+                android:id="@+id/words_default"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/outside_dim"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:visibility="gone" />
+            <TextView
+                style="@style/OutsideText.Line"
+                android:id="@+id/words_green"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/outside_green"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:visibility="gone" />
+            <TextView
+                style="@style/OutsideText.Line"
+                android:id="@+id/words_amber"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/outside_amber"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:visibility="gone" />
+            <TextView
+                style="@style/OutsideText.Line"
+                android:id="@+id/words_blue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/outside_blue"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:visibility="gone" />
+            <TextView
+                style="@style/OutsideText.Line"
+                android:id="@+id/words_neutral"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/outside_neutral"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:visibility="gone" />
+            <LinearLayout
+                tools:ignore="UselessLeaf,NestedWeights"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+            <LinearLayout
+                android:id="@+id/rows_tight"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:divider="@drawable/outside_gap_s"
+                android:showDividers="middle" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The gap between a list's rows (`showDividers="middle"`): a divider that
+     is space and nothing else, so the first row has no margin above it. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <size android:height="@dimen/outside_space_s" />
+    <solid android:color="#00000000" />
+</shape>

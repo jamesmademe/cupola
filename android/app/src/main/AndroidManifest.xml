@@ -75,7 +75,58 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="cupola" android:host="invite"/>
             </intent-filter>
+            <!-- A widget's tap is not in this list on purpose. It opens
+                 `cupola://open?to=<route>` through an explicit intent to this
+                 activity (`OutsideLink`), which needs no filter, and a filter
+                 would let any other app or web page open the same links. -->
         </activity>
+        <!-- The widgets (android/app/src/main/kotlin/…/outside/): one provider
+             per kind, drawn by `RemoteViews` from the file the app writes. None
+             is exported: the system delivers `APPWIDGET_UPDATE` as itself, and the
+             app's own reload (`outside_channel`) is a broadcast to the provider by
+             name. -->
+        <receiver
+            android:name=".outside.OutsideComingUpWidget"
+            android:exported="false"
+            android:label="@string/outside_coming_up_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/outside_coming_up_info"/>
+        </receiver>
+        <receiver
+            android:name=".outside.OutsideDownloadsWidget"
+            android:exported="false"
+            android:label="@string/outside_downloads_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/outside_downloads_info"/>
+        </receiver>
+        <receiver
+            android:name=".outside.OutsideRequestsWidget"
+            android:exported="false"
+            android:label="@string/outside_requests_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/outside_requests_info"/>
+        </receiver>
+        <!-- The one alarm that turns a widget's frame without the app (midnight,
+             the time a thing airs): inexact and not waking the phone
+             (`AlarmManager.set(RTC, …)`), so it asks for no permission and stays
+             clear of the exact-alarm ones, as the notification comment above
+             does. It is not exported: only the alarm's own PendingIntent reaches
+             it. -->
+        <receiver
+            android:name=".outside.OutsideTick"
+            android:exported="false"/>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

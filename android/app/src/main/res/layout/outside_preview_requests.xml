@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The widget as the picker draws it before it is added (`android:previewLayout`):
+  its name and the grey bars of its shape. Never a word of its own, never an
+  invented one: what the widget will say is the app's to say, and it has not yet.
+-->
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/outside_ground">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="@dimen/outside_space_slab_y">
+        <TextView
+            style="@style/OutsideText.Title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/outside_ink"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:text="@string/outside_requests_name" />
+        <LinearLayout
+            tools:ignore="UselessLeaf,NestedWeights"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="@dimen/outside_space_sm"
+            android:baselineAligned="false">
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="10dp"
+                android:layout_weight="4"
+                android:background="@drawable/outside_track_bar" />
+            <LinearLayout
+                tools:ignore="UselessLeaf"
+                android:layout_width="0dp"
+                android:layout_height="10dp"
+                android:layout_weight="3" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="@dimen/outside_space_sm"
+            android:baselineAligned="false">
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="10dp"
+                android:layout_weight="5"
+                android:background="@drawable/outside_track_bar" />
+            <LinearLayout
+                tools:ignore="UselessLeaf"
+                android:layout_width="0dp"
+                android:layout_height="10dp"
+                android:layout_weight="2" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="@dimen/outside_space_sm"
+            android:baselineAligned="false">
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="10dp"
+                android:layout_weight="3"
+                android:background="@drawable/outside_track_bar" />
+            <LinearLayout
+                tools:ignore="UselessLeaf"
+                android:layout_width="0dp"
+                android:layout_height="10dp"
+                android:layout_weight="4" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

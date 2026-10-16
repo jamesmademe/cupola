@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A medium widget that lists: its header (what it is on the left, how old it is on
+  the right; the age is never cut, the name gives way to it), and what it lists
+  directly under the header, top-aligned, with the spare room at the foot. The
+  rows are layouts of their own (`outside_row_*`) added to `rows` or, where
+  the gap is tighter, to `rows_tight`.
+-->
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/outside_ground">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="@dimen/outside_space_slab_y">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:baselineAligned="false">
+            <TextView
+                style="@style/OutsideText.Label"
+                android:id="@+id/header_leading"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="@color/outside_dim"
+                android:maxLines="1"
+                android:ellipsize="end" />
+            <TextView
+                style="@style/OutsideText.Label"
+                android:id="@+id/header_trailing"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/outside_space_sm"
+                android:textColor="@color/outside_dim"
+                android:maxLines="1"
+                android:ellipsize="end" />
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/rows"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="@dimen/outside_space_row"
+            android:divider="@drawable/outside_gap_row"
+            android:showDividers="middle"
+            android:visibility="gone" />
+        <LinearLayout
+            android:id="@+id/rows_tight"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="@dimen/outside_space_row"
+            android:divider="@drawable/outside_gap_s"
+            android:showDividers="middle"
+            android:visibility="gone" />
+        <TextView
+            style="@style/OutsideText.Title"
+            android:id="@+id/calm"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/outside_space_row"
+            android:textColor="@color/outside_ink"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:visibility="gone" />
+    </LinearLayout>
+</FrameLayout>

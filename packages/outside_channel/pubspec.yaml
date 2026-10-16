@@ -1,0 +1,23 @@
+name: outside_channel
+description: >-
+  The `cupola/outside` channel on Android: where the widgets read their file,
+  and the order to draw them again. A plugin, and not a channel set up in
+  MainActivity, because WorkManager runs the background read in an engine of
+  its own, which registers only the plugins of the generated registrant.
+publish_to: none
+version: 0.0.1
+
+environment:
+  sdk: ^3.10.0
+  flutter: ">=3.3.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.matthwlabs.cupola.outside.channel
+        pluginClass: OutsideChannelPlugin

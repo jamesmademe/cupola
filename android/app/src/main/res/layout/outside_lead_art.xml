@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A small widget that leads with one thing, over its artwork: Coming up and Your
+  requests when the lead has a picture. The artwork fills the widget; the scrim
+  behind the words is aligned to the top of the words' own block and goes up
+  from there, so it covers a title of one line or of three, and the first line
+  of the block is never on bare artwork. The words over artwork are the same in
+  both rooms (`outside_on_art`), since a picture is dark or light whatever room
+  the phone is in; the root clips the picture to the widget's corners (from Android 12, where the
+  attribute exists: before it the corners are in the picture, OutsideShelf).
+
+  Text slots come in one view per tone (`words_default`, `words_green`, and so on),
+  each in that tone's own colour, and OutsideSlots shows the one the face names
+  and hides the others. The colour is the view's and not the code's because a
+  colour set from code is a colour of the moment it is set: the launcher inflates
+  this layout again when the system changes room, and only a colour resolved from
+  the resources follows it.
+-->
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="UnusedAttribute"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/outside_ground"
+    android:clipToOutline="true"
+    android:outlineProvider="background">
+    <ImageView
+        android:id="@+id/art"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:importantForAccessibility="no" />
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+        <ImageView
+            android:id="@+id/scrim"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignTop="@+id/foot"
+            android:layout_alignParentBottom="true"
+            android:layout_marginTop="@dimen/outside_scrim_reach"
+            android:background="@drawable/outside_scrim"
+            android:importantForAccessibility="no" />
+        <LinearLayout
+            android:id="@+id/foot"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_margin="@dimen/outside_space_slab_y"
+            android:orientation="vertical">
+            <TextView
+                style="@style/OutsideText.Label"
+                android:id="@+id/eyebrow_default"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/outside_space_xxs"
+                android:textColor="@color/outside_on_art_dim"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:visibility="gone" />
+            <TextView
+                style="@style/OutsideText.Label"
+                android:id="@+id/eyebrow_green"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/outside_space_xxs"
+                android:textColor="@color/outside_art_green"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:visibility="gone" />
+            <TextView
+                style="@style/OutsideText.Label"
+                android:id="@+id/eyebrow_amber"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/outside_space_xxs"
+                android:textColor="@color/outside_art_amber"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:visibility="gone" />
+            <TextView
+                style="@style/OutsideText.Label"
+                android:id="@+id/eyebrow_blue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/outside_space_xxs"
+                android:textColor="@color/outside_art_blue"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:visibility="gone" />
+            <TextView
+                style="@style/OutsideText.Label"
+                android:id="@+id/eyebrow_neutral"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/outside_space_xxs"
+                android:textColor="@color/outside_art_neutral"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:visibility="gone" />
+            <TextView
+                style="@style/OutsideText.Title"
+                android:id="@+id/title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/outside_on_art"
+                android:maxLines="2"
+                android:ellipsize="end" />
+            <TextView
+                style="@style/OutsideText.Data"
+                android:id="@+id/words_default"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/outside_space_xxs"
+                android:textColor="@color/outside_on_art_dim"
+                android:maxLines="2"
+                android:ellipsize="end"
+                android:visibility="gone" />
+        </LinearLayout>
+    </RelativeLayout>
+</FrameLayout>

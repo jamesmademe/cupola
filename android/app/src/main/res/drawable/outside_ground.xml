@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The widget's ground, in the room the launcher is in (outside_style.xml has
+     each room's colour), with the widget's corners. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/outside_ground" />
+    <corners android:radius="@dimen/outside_widget_radius" />
+</shape>

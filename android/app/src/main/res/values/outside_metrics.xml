@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The sizes the widgets draw with that are neither a token nor a type role
+  (outside_style.xml has those, generated from the live theme). The same as
+  OutsideMetrics in ios/CupolaWidgets/OutsideParts.swift: the picture is one.
+-->
+<resources>
+    <!-- A bar is 4dp tall and fully rounded, as the app's progress tracks are. -->
+    <dimen name="outside_bar_height">4dp</dimen>
+    <dimen name="outside_bar_radius">2dp</dimen>
+
+    <!-- The poster beside a row in Your requests, 2:3 as every poster. -->
+    <dimen name="outside_tiny_poster_width">20dp</dimen>
+    <dimen name="outside_tiny_poster_height">30dp</dimen>
+
+    <!-- The column of day names in Coming up's rows (`Tomorrow`, `Wednesday`),
+         so that the titles beside it line up, from the approved board. In sp:
+         it grows with the words it holds. -->
+    <dimen name="outside_day_column">78sp</dimen>
+
+    <!-- The scrim behind words over artwork: full strength under the whole
+         text block and a margin of 12dp above it, then a ramp of 48dp to
+         clear. The reach is the two together, as a negative margin above the
+         block's own top. -->
+    <dimen name="outside_scrim_ramp">48dp</dimen>
+    <dimen name="outside_scrim_reach">-60dp</dimen>
+
+    <!-- The widget's corners where the launcher does not round them itself
+         (before Android 12; values-v31 takes the system's own). -->
+    <dimen name="outside_widget_radius">16dp</dimen>
+</resources>

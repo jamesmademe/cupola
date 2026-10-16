@@ -45,7 +45,9 @@ import workmanager_apple
 }
 
 /// What Cupola shows outside itself (`outside_native.dart`): the folder the
-/// widgets read, which only the App Group can name, and the widgets.
+/// widgets read, which only the App Group can name, and the widgets. Android
+/// answers the same three methods in `packages/outside_channel`, a plugin
+/// because the background read runs in an engine of WorkManager's own.
 enum OutsideChannel {
   /// The group the extension reads (`outsideGroup` in
   /// `CupolaWidgets/OutsideShelf.swift`) and both entitlements carry: change

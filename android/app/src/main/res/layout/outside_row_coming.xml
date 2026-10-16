@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  One of Coming up's rows: `Tomorrow  Sprite Fright  S1 E3`, the day in its own
+  column, the title, and the rest at the right. The title is what gives way: the
+  words never truncate before it does. One node for a screen reader (the row's
+  description, set in code), its parts silenced.
+
+  Text slots come in one view per tone (`words_default`, `words_green`, and so on),
+  each in that tone's own colour, and OutsideSlots shows the one the face names
+  and hides the others. The colour is the view's and not the code's because a
+  colour set from code is a colour of the moment it is set: the launcher inflates
+  this layout again when the system changes room, and only a colour resolved from
+  the resources follows it.
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/row"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:baselineAligned="false">
+    <TextView
+        style="@style/OutsideText.Line"
+        android:id="@+id/day"
+        android:layout_width="@dimen/outside_day_column"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="@dimen/outside_space_sm"
+        android:textColor="@color/outside_dim"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:importantForAccessibility="no" />
+    <TextView
+        style="@style/OutsideText.Line"
+        android:id="@+id/title"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textColor="@color/outside_ink"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:importantForAccessibility="no" />
+    <TextView
+        style="@style/OutsideText.Data"
+        android:id="@+id/words_default"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/outside_space_sm"
+        android:textColor="@color/outside_dim"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:visibility="gone"
+        android:importantForAccessibility="no" />
+    <TextView
+        style="@style/OutsideText.Data"
+        android:id="@+id/words_green"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/outside_space_sm"
+        android:textColor="@color/outside_green"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:visibility="gone"
+        android:importantForAccessibility="no" />
+    <TextView
+        style="@style/OutsideText.Data"
+        android:id="@+id/words_amber"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/outside_space_sm"
+        android:textColor="@color/outside_amber"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:visibility="gone"
+        android:importantForAccessibility="no" />
+    <TextView
+        style="@style/OutsideText.Data"
+        android:id="@+id/words_blue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/outside_space_sm"
+        android:textColor="@color/outside_blue"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:visibility="gone"
+        android:importantForAccessibility="no" />
+    <TextView
+        style="@style/OutsideText.Data"
+        android:id="@+id/words_neutral"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/outside_space_sm"
+        android:textColor="@color/outside_neutral"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:visibility="gone"
+        android:importantForAccessibility="no" />
+</LinearLayout>

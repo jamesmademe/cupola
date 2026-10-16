@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Coming up: what airs and comes out next.
+
+  Resizable: a small layout from two cells wide and a medium one from four. The
+  guideline for a cell is 70dp less 30, so two cells are 110dp and four are
+  250dp; the code takes the medium layout from 250dp (OutsideSizes). Drawn from
+  the file the app writes and redrawn by the app's own run, never on a period of
+  the system's: updatePeriodMillis is off. The description, the preview layout
+  and the target cells are Android 12's; before it the picker shows the
+  widget's label over the app's icon, and the widget starts at its minimum size.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:targetApi="31"
+    android:description="@string/outside_coming_up_description"
+    android:initialLayout="@layout/outside_initial"
+    android:minHeight="110dp"
+    android:minResizeHeight="110dp"
+    android:minResizeWidth="110dp"
+    android:minWidth="110dp"
+    android:previewLayout="@layout/outside_preview_coming_up"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellHeight="2"
+    android:targetCellWidth="2"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

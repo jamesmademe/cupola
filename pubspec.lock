@@ -607,6 +607,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.0"
+  outside_channel:
+    dependency: "direct main"
+    description:
+      path: "packages/outside_channel"
+      relative: true
+    source: path
+    version: "0.0.1"
   package_config:
     dependency: transitive
     description:

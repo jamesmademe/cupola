@@ -1,6 +1,13 @@
 import java.io.FileInputStream
 import java.util.Properties
+import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
 
 plugins {
     id("com.android.application")
@@ -50,6 +57,62 @@ if (wantsRelease) {
         throw GradleException(
             "android/key.properties is missing required values: ${missingReleaseSigningKeys.joinToString(", ")}",
         )
+    }
+}
+
+/**
+ * Puts the app's three variable font files where a widget can draw with them.
+ *
+ * A widget is a `RemoteViews`, inflated by the launcher from this app's
+ * resources, so its faces must be `res/font/`: a Flutter asset is out of its
+ * reach. The files are the ones the app draws with (`assets/fonts/`, named in
+ * `pubspec.yaml`) and the repo holds one copy of each: this copies them into a
+ * generated resource directory under the names Android wants (lowercase, no
+ * hyphen), on every build, through the variant API below.
+ *
+ * Their SIL OFL texts stay where they are, in `assets/fonts/` (bundled into the
+ * same APK as Flutter assets and shown in the app's licence page by
+ * `LicenseRegistry`, `main.dart`). The licence asks that its text travel with
+ * the font software it covers; it does, in the one package that ships both,
+ * and a second copy of each text as a raw resource would be a copy nobody
+ * reads.
+ */
+abstract class OutsideFonts : DefaultTask() {
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val fonts: DirectoryProperty
+
+    /** The generated resource root: `font/` goes inside it. */
+    @get:OutputDirectory
+    abstract val resources: DirectoryProperty
+
+    @TaskAction
+    fun copy() {
+        val font = resources.get().asFile.resolve("font")
+        font.deleteRecursively()
+        font.mkdirs()
+        for ((source, name) in FACES) {
+            fonts.get().file(source).asFile.copyTo(font.resolve(name))
+        }
+    }
+
+    private companion object {
+        /** `assets/fonts/` file to `res/font/` file. */
+        val FACES = mapOf(
+            "BricolageGrotesque.ttf" to "bricolage_grotesque.ttf",
+            "Onest.ttf" to "onest.ttf",
+            "GeistMono.ttf" to "geist_mono.ttf",
+        )
+    }
+}
+
+val outsideFonts = tasks.register<OutsideFonts>("outsideFonts") {
+    fonts.set(layout.projectDirectory.dir("../../assets/fonts"))
+}
+
+androidComponents {
+    onVariants { variant ->
+        variant.sources.res?.addGeneratedSourceDirectory(outsideFonts, OutsideFonts::resources)
     }
 }
 

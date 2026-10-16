@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A progress bar in the `ink` tone: the track under, and the fill over it, scaled
+  to the width of the progress so that both of its ends are rounded at any
+  progress (a clip would cut the right end square). One drawable per tone because a
+  tint set from code does not follow the launcher's room: this colour is resolved
+  from the resources, where the launcher resolves it.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@android:id/background">
+        <shape android:shape="rectangle">
+            <corners android:radius="@dimen/outside_bar_radius" />
+            <solid android:color="@color/outside_track" />
+        </shape>
+    </item>
+    <item android:id="@android:id/progress">
+        <scale
+            android:scaleGravity="left"
+            android:scaleWidth="100%">
+            <shape android:shape="rectangle">
+                <corners android:radius="@dimen/outside_bar_radius" />
+                <solid android:color="@color/outside_ink" />
+            </shape>
+        </scale>
+    </item>
+</layer-list>
