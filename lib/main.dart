@@ -13,25 +13,18 @@ import 'package:cupola/core/app_identity.dart';
 import 'package:cupola/core/last_known/last_known_store.dart';
 
 import 'package:cupola/core/network/network_change.dart';
-import 'package:cupola/core/network/connection_access_registry.dart';
-import 'package:cupola/core/network/unanswered_addresses.dart';
-import 'package:cupola/core/network/pinned_image_cache.dart';
+import 'package:cupola/core/network/network_registries.dart';
 import 'package:cupola/core/platform/desktop_window.dart';
 import 'package:cupola/core/router.dart';
+import 'package:cupola/core/startup/startup_overrides.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/a11y_announce.dart';
 import 'package:cupola/core/widgets/themed_system_bars.dart';
 import 'package:cupola/features/discover/data/seerr_accounts.dart';
-import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
-import 'package:cupola/features/qbittorrent/data/qbittorrent_client_provider.dart';
-import 'package:cupola/features/qbittorrent/data/qbittorrent_refusal_store.dart';
 import 'package:cupola/features/release_search/data/release_search_bootstrap.dart';
-import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/route_probe.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/data/settings_service.dart';
-import 'package:cupola/features/settings/domain/service_key.dart';
-import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/shell/domain/startup_failure.dart';
 import 'package:cupola/features/shell/presentation/settings_back_claim.dart';
 import 'package:cupola/features/shell/presentation/startup_failure_page.dart';
@@ -69,10 +62,10 @@ Future<void> _start() async {
 
     reach(StartupStep.connections);
     await settingsService.migrateFromPlaintext();
-    final initialSettings = await _loadInitialSettings(settingsService);
+    final initialSettings = await settingsService.loadSettings();
     final onboardingCompleted = await settingsService.loadOnboardingComplete();
 
-    return _buildProviderOverrides(
+    return startupOverrides(
       prefs: prefs,
       secureSettingsStore: secureSettingsStore,
       initialSettings: initialSettings,
@@ -171,38 +164,6 @@ void _registerBundledFontLicense() {
   });
 }
 
-Future<SettingsModel> _loadInitialSettings(SettingsService settingsService) {
-  return settingsService.loadSettings();
-}
-
-// `Override` has no public name: riverpod declares it in `src/core/override.dart`
-// and `flutter_riverpod`'s export list leaves it out, so the return type cannot
-// be written without an implementation import. Same reason as the
-// `implementation_imports` ignores elsewhere in the tree.
-// ignore: strict_top_level_inference
-_buildProviderOverrides({
-  required SharedPreferences prefs,
-  required SecureSettingsStore secureSettingsStore,
-  required SettingsModel initialSettings,
-  required Map<ServiceKey, String> activeInstances,
-  required bool onboardingCompleted,
-  required LastKnownStore lastKnown,
-}) {
-  return [
-    sharedPreferencesProvider.overrideWithValue(prefs),
-    lastKnownStoreProvider.overrideWithValue(lastKnown),
-    secureSettingsStoreProvider.overrideWithValue(secureSettingsStore),
-    // A refused qBittorrent sign-in outlives the run, so a relaunch does not
-    // spend another of the five attempts its ban allows.
-    qbittorrentRefusalStoreProvider.overrideWithValue(
-      SecureQbittorrentRefusalStore(secureSettingsStore),
-    ),
-    initialSettingsProvider.overrideWithValue(initialSettings),
-    initialActiveInstancesProvider.overrideWithValue(activeInstances),
-    initialOnboardingCompletedProvider.overrideWithValue(onboardingCompleted),
-  ];
-}
-
 class CupolaApp extends ConsumerWidget {
   const CupolaApp({super.key});
 
@@ -220,35 +181,9 @@ class CupolaApp extends ConsumerWidget {
     // and the connections' readouts are asked again.
     ref.watch(networkChangeWatchProvider);
 
-    // Keeps `CertTrustRegistry` in sync for the leaf image widgets that
-    // cannot watch a provider themselves; see its doc for why. The `read`
-    // populates the snapshot before the first poster ever asks (`listen`
-    // alone only fires on a *change*); `listen`, registered every build per
-    // the standard `ref.listen` idiom, keeps it current after that.
-    CertTrustRegistry.update(
-      ref.read(currentSettingsProvider).trustedCertificates,
-    );
-    ref.listen(
-      currentSettingsProvider.select((s) => s.trustedCertificates),
-      (previous, next) => CertTrustRegistry.update(next),
-    );
-    // The same bridge for each connection's access, which an arr's artwork
-    // needs as much as its API calls: see `ConnectionAccessRegistry`.
-    ConnectionAccessRegistry.update(
-      ref.read(currentSettingsProvider).accessHeadersByAddress,
-    );
-    ref.listen(
-      currentSettingsProvider.select((s) => s.accessHeadersByAddress),
-      (previous, next) => ConnectionAccessRegistry.update(next),
-    );
-    // And for the connections neither of whose addresses answered the route
-    // probe, so a client's next request names both: see
-    // `UnansweredAddresses`.
-    UnansweredAddresses.update(ref.read(unansweredAddressesProvider));
-    ref.listen(
-      unansweredAddressesProvider,
-      (previous, next) => UnansweredAddresses.update(next),
-    );
+    // The static registries the network code reads (pins, access headers,
+    // the addresses that did not answer): see `networkRegistriesProvider`.
+    ref.watch(networkRegistriesProvider);
 
     // No DynamicColorBuilder: the palette is fixed on purpose so per-service
     // accents stay recognisable and the experience is identical on every OS.

@@ -18,6 +18,15 @@ import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/features/services/domain/in_flight.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+
+/// The four download clients: where speeds come from.
+const downloadClients = [
+  ServiceKey.qbittorrent,
+  ServiceKey.transmission,
+  ServiceKey.sabnzbd,
+  ServiceKey.nzbget,
+];
 
 /// How many rows the module draws before See all in Activity.
 const downloadsRowLimit = 4;

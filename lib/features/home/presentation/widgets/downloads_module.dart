@@ -36,14 +36,6 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
-/// The four download clients: where speeds come from.
-const _clients = [
-  ServiceKey.qbittorrent,
-  ServiceKey.transmission,
-  ServiceKey.sabnzbd,
-  ServiceKey.nzbget,
-];
-
 /// Downloads: the transfers that move and the ones that stopped, four rows,
 /// then the way to Activity.
 ///
@@ -137,13 +129,13 @@ class HomeDownloadsModule extends ConsumerWidget {
         if (!present.contains(key)) value.item,
     ];
     final rows = downloadRowsOf(data.preview, [...stuck, ...acted]);
-    final clientSetUp = _clients.any(settings.isServiceConfigured);
+    final clientSetUp = downloadClients.any(settings.isServiceConfigured);
     final subtitle = downloadsSubtitle(
       moving: data.movingCount,
       stuck: stuck.length,
       queued: data.queued.length,
       clientSetUp: clientSetUp,
-      clientSilent: coverage.failedServices.any(_clients.contains),
+      clientSilent: coverage.failedServices.any(downloadClients.contains),
       rateBytesPerSecond: data.rateBytesPerSecond,
       coverage: coverage,
     );
@@ -240,7 +232,7 @@ class HomeDownloadsModule extends ConsumerWidget {
       whole: drawing.whole,
       hasRows: rows.isNotEmpty,
     );
-    final clientSetUp = _clients.any(settings.isServiceConfigured);
+    final clientSetUp = downloadClients.any(settings.isServiceConfigured);
     final list = [
       if (rows.isEmpty) const _NothingDownloading(),
       for (final (index, item) in rows.indexed)
