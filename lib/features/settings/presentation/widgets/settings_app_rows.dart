@@ -3,11 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:cupola/core/app_identity.dart';
+import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
+import 'package:cupola/core/widgets/service_ring.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/settings/data/donation_service.dart';
@@ -82,7 +85,12 @@ List<Widget> settingsAboutRows(
       accentColor: colorScheme.onSurfaceVariant,
       onTap: () => showLicensePage(
         context: context,
-        applicationName: 'Cupola',
+        applicationName: kAppName,
+        applicationVersion: kAppVersion,
+        applicationIcon: const Padding(
+          padding: EdgeInsets.all(AppSpacing.sm),
+          child: CupolaMark.sized(56),
+        ),
         applicationLegalese: trademarkNotice,
       ),
     ),

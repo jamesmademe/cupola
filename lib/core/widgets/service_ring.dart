@@ -255,7 +255,7 @@ class _ServiceRingState extends State<ServiceRing>
                     child: SizedBox(
                       width: widget.diameter * widget.markFraction,
                       height: widget.diameter * widget.markFraction,
-                      child: const _Mark(),
+                      child: const CupolaMark(),
                     ),
                   ),
                 ),
@@ -428,16 +428,28 @@ class _NodeVisual {
 }
 
 /// The product mark (the Cupola from above): six lit window panes around the
-/// central circular window. The ring's own nodes orbit it, so the mark supplies
-/// the structure and never a second ring.
-class _Mark extends StatelessWidget {
-  const _Mark();
+/// central circular window, drawn as it is on both grounds and never recoloured.
+/// The ring's own nodes orbit it, so the mark supplies the structure and never a
+/// second ring; outside the ring it signs the foot of Settings and the licence
+/// page.
+///
+/// Decorative wherever it stands: what it signs speaks for it ([ServiceRing]
+/// publishes the ring's meaning, the signature its sentence).
+class CupolaMark extends StatelessWidget {
+  /// The mark filling its parent, as the ring's centre has it.
+  const CupolaMark({super.key}) : size = null;
+
+  /// The mark [size] points square.
+  const CupolaMark.sized(double this.size, {super.key});
+
+  final double? size;
 
   @override
   Widget build(BuildContext context) => Image.asset(
     'assets/brand/cupola_mark.png',
+    width: size,
+    height: size,
     fit: BoxFit.contain,
-    // Decorative here: [ServiceRing] already publishes the ring's meaning.
     excludeFromSemantics: true,
   );
 }

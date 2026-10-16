@@ -17,6 +17,8 @@ The ring speaks one sentence and excludes everything beneath it: *8 of 17 chosen
 
 The same file carries `OnePunchline`, Cupola's two lines, each a lockup beside the ring: `OnePunchline()` is the claim on the Welcome, *A Cupola over / your server.*, and `OnePunchline.closing()` the promise on the close, *Nothing left / in the dark.*, said only once everything the visit tried has joined (the ring is dark on the Welcome and lit with what answered on the close, which is what the promise says). Both are `displayMedium` (42, w600) at 1.10 leading in `onSurface`: the display face carries the words, not a hue. Each is the screen's heading and speaks once, as one sentence; the line break is drawn, never spoken. `OnePunchline.claim` and `OnePunchline.promise` are the brand's words in one place: anything else that says who Cupola is quotes them.
 
+And `CupolaMark`, the product mark the ring is built around: `CupolaMark()` fills its parent, as the ring's centre has it; `CupolaMark.sized(40)` signs the foot of Settings (`SettingsSignature`) and `CupolaMark.sized(56)` the licence page. It is drawn as it is on both grounds, never recoloured, and is always decorative: what it signs speaks for it. Where it may stand: `assets/README.md`.
+
 ## States in the catalog
 
 Each sheet is drawn in the dark and the light room; the onboarding ring also on the desktop.

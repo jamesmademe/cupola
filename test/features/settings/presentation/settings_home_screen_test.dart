@@ -4,6 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cupola/core/app_identity.dart';
+import 'package:cupola/core/capability/audience.dart';
+import 'package:cupola/core/widgets/service_ring.dart';
+import 'package:cupola/features/settings/presentation/widgets/settings_signature.dart';
+import 'package:cupola/features/shell/domain/shell_audience.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
@@ -224,9 +229,8 @@ void main() {
       expect(find.text('Send feedback'), findsOneWidget);
     });
 
-    testWidgets('the licence page carries the trademark notice', (
-      tester,
-    ) async {
+    testWidgets('the licence page is signed and carries the trademark '
+        'notice', (tester) async {
       await _pumpSettingsHome(tester);
 
       await tester.scrollUntilVisible(find.text('Licenses & trademarks'), 300);
@@ -235,6 +239,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(LicensePage), findsOneWidget);
+      expect(find.text(kAppName), findsOneWidget);
+      expect(find.text(kAppVersion), findsOneWidget);
+      expect(find.byType(CupolaMark), findsOneWidget);
       // Unraid's policy prescribes this sentence for every app using the name.
       expect(
         find.textContaining('Unraid® is a registered trademark of Lime'),
@@ -430,6 +437,38 @@ void main() {
       });
     });
 
+    group('the signature', () {
+      testWidgets('ends the operator\'s index, after Danger zone, and speaks '
+          'once', (tester) async {
+        final handle = tester.ensureSemantics();
+        await _pumpSettingsHome(tester);
+
+        expect(find.byType(SettingsSignature), findsOneWidget);
+        expect(find.text(OnePunchline.claim), findsOneWidget);
+        expect(find.text(kAppIdentityLine), findsOneWidget);
+        expect(
+          tester.getTopLeft(find.byType(SettingsSignature)).dy,
+          greaterThan(tester.getTopLeft(find.text('Reset app data')).dy),
+        );
+        expect(
+          find.semantics.byLabel(SettingsSignature.spoken),
+          findsOneWidget,
+        );
+        handle.dispose();
+      });
+
+      testWidgets('ends the requester\'s index too', (tester) async {
+        await _pumpSettingsHome(tester, audience: Audience.requester);
+
+        expect(find.text('Set up a service'), findsOneWidget);
+        expect(find.byType(SettingsSignature), findsOneWidget);
+        expect(
+          tester.getTopLeft(find.byType(SettingsSignature)).dy,
+          greaterThan(tester.getTopLeft(find.text('Set up a service')).dy),
+        );
+      });
+    });
+
     group('Revisit onboarding', () {
       Future<(ProviderContainer, GoRouter, SettingsService)> pumpRevisit(
         WidgetTester tester,
@@ -551,6 +590,7 @@ Future<void> _pumpSettingsHome(
   WidgetTester tester, {
   SettingsModel settings = const SettingsModel(),
   ServiceDiagnosis? diagnosis,
+  Audience? audience,
 }) async {
   final router = GoRouter(
     initialLocation: '/settings',
@@ -596,6 +636,8 @@ Future<void> _pumpSettingsHome(
     ProviderScope(
       overrides: [
         currentSettingsProvider.overrideWith((ref) => settings),
+        if (audience != null)
+          shellAudienceProvider.overrideWith(() => _FixedAudience(audience)),
         if (diagnosis != null)
           serviceDiagnosisProvider.overrideWith((ref, service) async {
             return diagnosis;
@@ -611,4 +653,14 @@ Future<void> _pumpSettingsHome(
 class _UnauthorizedFailure implements HasFailureReason {
   @override
   ServiceFailureReason get reason => ServiceFailureReason.unauthorized;
+}
+
+/// The shell drawn for one audience, whatever the connections say.
+class _FixedAudience extends ShellAudienceNotifier {
+  _FixedAudience(this._audience);
+
+  final Audience _audience;
+
+  @override
+  Audience build() => _audience;
 }

@@ -18,6 +18,7 @@ import 'package:cupola/features/settings/presentation/widgets/settings_app_rows.
 import 'package:cupola/features/settings/presentation/widgets/requester_settings_rows.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_master_detail.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_section_label.dart';
+import 'package:cupola/features/settings/presentation/widgets/settings_signature.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_summary_cards.dart';
 import 'package:cupola/features/shell/domain/settings_return.dart';
 import 'package:cupola/features/shell/domain/shell_audience.dart';
@@ -92,6 +93,7 @@ class SettingsHomeScreen extends ConsumerWidget {
                         ..._buildAboutSection(context),
                         const SizedBox(height: AppSpacing.xl),
                         ..._buildDangerZoneSection(),
+                        const SettingsSignature(),
                       ],
               ),
       ),
@@ -142,6 +144,7 @@ class SettingsHomeScreen extends ConsumerWidget {
       ),
       const SizedBox(height: AppSpacing.xl),
       const SettingsGroupCard(children: [SetUpAServiceRow()]),
+      const SettingsSignature(),
     ];
   }
 

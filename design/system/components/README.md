@@ -89,6 +89,7 @@ cards live in [`../motion/`](../motion/).
 | Onboarding | [SetupDoors](SetupDoors/README.md) | `lib/core/widgets/setup_doors.dart` |
 | Onboarding | [PairReceive](PairReceive/README.md) | `lib/features/pairing/presentation/pair_receive_screen.dart`, `lib/features/pairing/presentation/pair_words.dart` |
 | Settings | [PairOffer](PairOffer/README.md) | `lib/features/pairing/presentation/pair_offer_screen.dart`, `lib/features/pairing/presentation/pair_words.dart` |
+| Settings | [SettingsSignature](SettingsSignature/README.md) | `lib/features/settings/presentation/widgets/settings_signature.dart` |
 | Desktop shell | [CommandDeck](CommandDeck/README.md) | `lib/features/shell/presentation/desktop/command_deck.dart`, `lib/features/shell/domain/command_deck_entry.dart` |
 | Desktop shell | [DesktopNavRail](DesktopNavRail/README.md) | `lib/features/shell/presentation/desktop/desktop_nav_rail.dart`, `lib/features/shell/presentation/desktop/desktop_rail_services.dart`, `lib/features/settings/domain/nav_tab.dart` |
 | Desktop shell | [DesktopShell](DesktopShell/README.md) | `lib/features/shell/presentation/desktop/desktop_shell.dart` |
