@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- From Android 12 the system draws the launch screen itself: the mark on
+         the room's ground, as before 12. -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+        <item name="android:windowSplashScreenBackground">@color/launch_ground</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/launch_splash_mark</item>
+    </style>
+</resources>

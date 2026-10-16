@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The room's ground (color.room.ground in design/tokens/theme/light.json),
+         behind the launch mark and behind Flutter until its first frame.
+         test/core/identity/signature_guard_test.dart holds it to the token. -->
+    <color name="launch_ground">#F6F4EF</color>
+</resources>

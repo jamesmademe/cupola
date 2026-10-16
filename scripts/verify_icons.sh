@@ -176,10 +176,13 @@ for name in ("cupola_mark.svg", "cupola_icon.svg", "cupola_launcher.svg"):
                 fail(f"{path.relative_to(root)}: must be SVG with viewBox 0 0 1024 1024")
         except (OSError, ET.ParseError) as exc:
             fail(f"{path.relative_to(root)}: invalid SVG ({exc})")
+# The service marks are another family: drawn in tool/service_glyphs/svg and
+# built into the CupolaServices font, never into an icon.
+service_glyphs = root / "tool/service_glyphs/svg"
 for path in root.glob("**/*.svg"):
     if any(part.startswith(".") for part in path.parts):
         continue  # dot-directories are untracked build output
-    if path.parent != brand:
+    if path.parent not in (brand, service_glyphs):
         fail(f"unexpected SVG geometry source: {path.relative_to(root)}")
 ok("canonical SVG source policy")
 

@@ -49,6 +49,11 @@ RESVG = ["npx", "--yes", "@resvg/resvg-js-cli"]
 # Below this the cloud passes only add mud, so the simplified twin takes over.
 SIMPLE_BELOW = 64
 
+# The mark on the launch screen, in points (dp on Android): the same size on
+# every platform, centred on the room's ground.
+LAUNCH_POINTS = 112
+LAUNCH_SCALES = {"mdpi": 1, "hdpi": 1.5, "xhdpi": 2, "xxhdpi": 3, "xxxhdpi": 4}
+
 DENSITIES = {"mdpi": 48, "hdpi": 72, "xhdpi": 96, "xxhdpi": 144, "xxxhdpi": 192}
 
 # The `.icns` element types macOS reads as PNG, paired with the pixel size each
@@ -89,6 +94,8 @@ ALPHA_KEEPERS = (
     "cupola_icon_foreground.webp",
     "cupola_icon_monochrome.webp",
     "assets/brand/cupola_mark.png",
+    "LaunchImage.imageset/",
+    "/launch_mark.png",
 )
 
 # Icon Composer derives the icon's ground from this fill rather than from a
@@ -273,6 +280,17 @@ class Exporter:
 
         self.write_ico("windows/runner/resources/app_icon.ico", (16, 32, 48, 64, 128, 256))
 
+    def launch(self):
+        """The mark on the launch screen: transparent, since the storyboard and
+        the window background lay it over the room's ground."""
+        imageset = "ios/Runner/Assets.xcassets/LaunchImage.imageset"
+        for scale in (1, 2, 3):
+            suffix = "" if scale == 1 else f"@{scale}x"
+            self.emit("mark", LAUNCH_POINTS * scale, f"{imageset}/LaunchImage{suffix}.png")
+        res = "android/app/src/main/res"
+        for density, scale in LAUNCH_SCALES.items():
+            self.emit("mark", round(LAUNCH_POINTS * scale), f"{res}/drawable-{density}/launch_mark.png")
+
     def in_app(self):
         """The mark drawn inside ServiceRing: transparent, over the app surface."""
         self.emit("mark", 1024, "assets/brand/cupola_mark.png")
@@ -291,6 +309,7 @@ def main() -> int:
     exporter.apple()
     exporter.android(android_ground_xml)
     exporter.desktop_and_web()
+    exporter.launch()
     exporter.in_app()
 
     print(f"targets: {len(exporter.written)} file scritti")

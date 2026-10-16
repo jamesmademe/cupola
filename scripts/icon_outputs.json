@@ -22,19 +22,19 @@
       "path": "android/app/src/main/AndroidManifest.xml",
       "role": "Android icon entry points",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "daa558153df0ceeb20e54d30723760e6fd293fe141f241b35e2a5c63ca9f7f4b"
+      "sha256": "5c262642f4117585004e98d06920b6c4596d97ba060ba49eed43e49cde6166b3"
     },
     {
       "path": "android/app/src/main/res/drawable-night/cupola_icon_bg_gradient.xml",
       "role": "Android icon resource/config",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "30a614f424268b70c949b4b01a34689d45dd43f5cd82f21df01a78dcd8da11c3"
+      "sha256": "a36b931a2198fcb4bcc6db3ebc4b5307d999b8490a010366d53907503dc364da"
     },
     {
       "path": "android/app/src/main/res/drawable/cupola_icon_bg_gradient.xml",
       "role": "Android icon resource/config",
       "source_family": "cupola_mark.svg + cupola_launcher.svg",
-      "sha256": "fd97d22f9b67f7cbb6049a985e44e7d9ecce79dd1b35db39d44b021b74d4d234"
+      "sha256": "bb27bd49a46b3873dbed284a54bd798cf2b1f1cfdb7b471435da8eb0023bc1f0"
     },
     {
       "path": "android/app/src/main/res/mipmap-anydpi-v26/cupola_icon.xml",
@@ -262,7 +262,7 @@
       "path": "ios/Runner.xcodeproj/project.pbxproj",
       "role": "Apple active project icon config",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "ecec01459fa6eb90c89b4f4263a8adbc15bf71ee669e7899115939473585e357"
+      "sha256": "68dde6bd732003ecb1902812c2230a10fdb817dbec06aa7460c2e79be5a5dd6c"
     },
     {
       "path": "ios/Runner/cupola_icon.icon/Assets/cupola-core-dark.png",
@@ -370,7 +370,7 @@
       "path": "macos/Runner.xcodeproj/project.pbxproj",
       "role": "Apple active project icon config",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "fa1160f6f7daec02d90dc9965e438a7434af85816784169b2a9ae9622db7846b"
+      "sha256": "9ebcd0daf74b7ba94ffa428261b499885facc0a7472b5f49b19d0303c7732504"
     },
     {
       "path": "macos/Runner/cupola_icon.icon/Assets/cupola-core-dark.png",
