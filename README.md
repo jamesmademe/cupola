@@ -371,12 +371,13 @@ data to go.
 
 - **No account, no cloud, no telemetry.** Nothing is collected, and there is no
   backend to collect it.
-- **One third party, for pictures only.** Poster, backdrop and cast artwork is
+- **Two third parties, each for one thing.** Poster, backdrop and cast artwork is
   fetched straight from TMDB's CDN (`image.tmdb.org`), because that is where your
   Seerr's metadata points. Those requests carry no credential and no identifier of
   yours, but they are requests to a host that is not yours, and TMDB sees the IP
-  they come from. Everything else, metadata included, comes from your own
-  instances.
+  they come from. Signing in to Seerr with a Plex account goes through plex.tv's
+  own sign-in, once, and Cupola keeps none of the token it gets. Everything else,
+  metadata included, comes from your own instances.
 - **Secrets stay on the device.** API keys, tokens and passwords go into
   `flutter_secure_storage`: Keychain on Apple platforms, Keystore-backed on
   Android. Plaintext settings from older versions are migrated on first launch.
@@ -385,7 +386,7 @@ data to go.
   because a certificate belongs to a host and not to whichever service you reached
   through it. Two services behind the same reverse proxy are therefore trusted, and
   revoked, together. Review or forget any of them under
-  **Settings → Connections → Trusted certificates**.
+  **Settings → Security → Trusted certificates**.
 - **Pinning covers images too.** Posters and artwork use a separate HTTP stack, so
   they go through a dedicated pinned image cache rather than silently bypassing the
   pin.
@@ -520,8 +521,8 @@ Setup notes, conventions and PR expectations: [**CONTRIBUTING.md**](CONTRIBUTING
 <br/>
 No. It talks straight to your instances over LAN, VPN or a reverse proxy. There is
 no Cupola backend, so there is nothing to sign up for and nothing reporting back to
-us. The only request that leaves your network is artwork from TMDB's image CDN:
-see [Security & privacy](#security--privacy).
+us. What leaves your network is artwork from TMDB's image CDN, and plex.tv when you
+sign in to Seerr with Plex: see [Security & privacy](#security--privacy).
 </details>
 
 <details>

@@ -394,9 +394,9 @@ class PlexClient implements StreamServerClient {
   void _assertUsableToken() {
     if (inspectPlexToken(_token) == PlexTokenIssue.jsonWebToken) {
       throw const PlexException(
-        'That is a temporary plex.tv sign-in token: it expires in seven days '
-        'and can only be renewed by plex.tv, which Cupola never contacts. '
-        'Paste a device token from your server instead.',
+        'That is a temporary plex.tv sign-in token: it expires in seven days, '
+        'and only plex.tv can renew it. Paste a device token from your server '
+        'instead.',
         reason: ServiceFailureReason.unauthorized,
         tokenIssue: PlexTokenIssue.jsonWebToken,
       );

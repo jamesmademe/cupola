@@ -591,13 +591,13 @@ extension ServiceKeyExtension on ServiceKey {
           'works.',
     // Naming the *kind* of token matters more than naming the place. Plex has
     // two, and the modern one is a dead end here: a JWT expires after seven
-    // days and can only be refreshed through plex.tv, which Cupola never
-    // calls. Saying so up front beats a week of working software.
+    // days and can only be refreshed through plex.tv, which this connection
+    // never calls. Saying so up front beats a week of working software.
     ServiceKey.plex =>
       'Open any item in Plex Web, choose Get Info → View XML, and copy '
-          'the X-Plex-Token from the address bar. Cupola never contacts '
-          'plex.tv, so it needs a long-lived device token, not a temporary '
-          'one beginning "eyJ".',
+          'the X-Plex-Token from the address bar. This connection talks to '
+          'your Plex server alone, so it needs a long-lived device token, not '
+          'a temporary one beginning "eyJ" that only plex.tv can renew.',
     // The single most common reason a Transmission daemon is reachable in a
     // browser and not from a phone, and it is worth saying before the address
     // is typed rather than after a mystifying 403.

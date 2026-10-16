@@ -56,7 +56,7 @@
 		<string>_cupola-check._tcp</string>
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Cupola talks to the services running on your own network: Radarr, Sonarr, Plex, your NAS. Without this, none of them can be reached, and nothing Cupola does leaves your network.</string>
+	<string>Cupola talks to the services running on your own network: Radarr, Sonarr, Plex, your NAS. Without this, it cannot reach them.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
