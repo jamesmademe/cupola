@@ -57,6 +57,7 @@ import 'package:cupola/features/discover/presentation/discover_page.dart';
 import 'package:cupola/features/release_search/presentation/release_search_settings_screen.dart';
 import 'package:cupola/features/settings/presentation/settings_appearance_screen.dart';
 import 'package:cupola/features/settings/presentation/settings_hints_screen.dart';
+import 'package:cupola/features/outside/presentation/settings_notifications_screen.dart';
 import 'package:cupola/features/settings/presentation/settings_home_screen.dart';
 import 'package:cupola/features/settings/presentation/settings_region_screen.dart';
 import 'package:cupola/features/settings/presentation/requester_account_page.dart';
@@ -3009,6 +3010,7 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
       // way back here is Settings.
       _page('home', (state) => const EditHomePage()),
       _page('hints', (state) => const SettingsHintsScreen()),
+      _page('notifications', (state) => const SettingsNotificationsScreen()),
       _page('connections', (state) => const SettingsConnectionsScreen()),
       // The code another device copies this one's connections from: the
       // operator's, since the requester has no connection to hand over.

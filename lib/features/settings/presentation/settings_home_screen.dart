@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/features/outside/presentation/settings_notifications_screen.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/audience.dart';
@@ -134,6 +135,7 @@ class SettingsHomeScreen extends ConsumerWidget {
           _regionRow(context, settings),
           _appearanceRow(context, settings),
           const SettingsHomeRow(),
+          const SettingsNotificationsRow(),
         ],
       ),
       const SizedBox(height: AppSpacing.xl),
@@ -175,7 +177,7 @@ class SettingsHomeScreen extends ConsumerWidget {
       const SizedBox(height: AppSpacing.sm),
       SettingsGroupCard(
         children: [
-          // None of these five carries an accent. The accent slot on a settings
+          // None of these carries an accent. The accent slot on a settings
           // row is the status slot; it is where the connections card puts the
           // verdict, and Region wore `AppColors.success` while Send feedback
           // wore the amber this system reserves for a fault. A preference has
@@ -183,6 +185,7 @@ class SettingsHomeScreen extends ConsumerWidget {
           _regionRow(context, settings),
           _appearanceRow(context, settings),
           const SettingsHomeRow(),
+          const SettingsNotificationsRow(),
           SettingsCard.grouped(
             leading: const Icon(Icons.travel_explore_rounded),
             title: 'Background search',

@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/features/outside/domain/outside_notices.dart';
@@ -36,3 +39,14 @@ final outsideNoticeKindsProvider =
     NotifierProvider<OutsideNoticeKinds, Set<OutsideNoticeKind>>(
       OutsideNoticeKinds.new,
     );
+
+/// The phone the outside runs on, or null on a desktop, which has no widget
+/// and no run with the app away. A provider so a widget test, which runs on a
+/// desktop, can be either phone.
+final outsidePlatformProvider = Provider<TargetPlatform?>(
+  (ref) => Platform.isIOS
+      ? TargetPlatform.iOS
+      : Platform.isAndroid
+      ? TargetPlatform.android
+      : null,
+);

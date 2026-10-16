@@ -24,6 +24,7 @@ import 'package:cupola/features/outside/data/outside_native.dart';
 import 'package:cupola/features/outside/data/outside_settings.dart';
 import 'package:cupola/features/outside/data/outside_run.dart';
 import 'package:cupola/features/outside/data/outside_shelf.dart';
+import 'package:cupola/features/outside/data/outside_speaker.dart';
 import 'package:cupola/features/release_search/presentation/release_search_lifecycle.dart'
     show appInForegroundProvider;
 
@@ -60,6 +61,7 @@ Future<void> runOutsideInBackground() async {
     if (!container.read(onboardingCompletedProvider)) return;
     await OutsideRun(
       shelf: OutsideShelf(await outsideFolder()),
+      speaker: LocalOutsideSpeaker(),
       widgets: const ChannelOutsideWidgets(),
     ).run(
       container,

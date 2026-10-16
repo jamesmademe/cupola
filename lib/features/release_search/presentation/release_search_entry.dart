@@ -9,6 +9,8 @@ import 'package:cupola/core/router.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
+import 'package:cupola/features/outside/data/outside_speaker.dart'
+    show outsideNoticeRouteOf;
 import 'package:cupola/features/release_search/data/release_search_notifications.dart';
 import 'package:cupola/features/release_search/data/release_search_transport.dart';
 import 'package:cupola/features/release_search/domain/release_search_job.dart';
@@ -204,8 +206,16 @@ ConnectionReach? _connectionReachOf(Ref ref, ReleaseSearchTarget target) {
 /// app was killed rather than suspended, so nothing survived in memory), the
 /// route still lands on Activity, which is the honest fallback rather than a
 /// sheet for a job that no longer exists.
+///
+/// The plugin is the app's one, so this is also where a tap on what the run
+/// with the app away said lands: its payload names the row that made it
+/// (`outsideNoticeRouteOf`), and the app opens there.
 final releaseSearchNotificationsProvider = Provider(
   (ref) => ReleaseSearchNotifications(null, (payload) {
+    if (outsideNoticeRouteOf(payload) case final route?) {
+      ref.read(routerProvider).go(route);
+      return;
+    }
     if (payload != null &&
         ref.read(releaseSearchJobsProvider.notifier).jobById(payload) != null) {
       ref.read(pendingReleaseSearchJobProvider.notifier).request(payload);
