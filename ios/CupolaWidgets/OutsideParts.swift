@@ -145,11 +145,12 @@ struct OutsideLinked<Content: View>: View {
 
 /// [text] with its spaces made non-breaking inside each part between ` · `
 /// separators, so that a line breaks only at a separator and never inside a
-/// part (`2.4 MB/s`, `As of 14:02`). The separators keep their ordinary spaces.
+/// part (`2.4 MB/s`, `As of 14:02`). The space before a separator does not
+/// break either, so the dot ends its line (`aired ·`) and never starts the next.
 func outsideBreakable(_ text: String) -> String {
   text.components(separatedBy: " \u{00B7} ")
     .map { $0.replacingOccurrences(of: " ", with: "\u{00A0}") }
-    .joined(separator: " \u{00B7} ")
+    .joined(separator: "\u{00A0}\u{00B7} ")
 }
 
 /// A medium widget's first line: what it is on the left, how old it is on the
@@ -285,7 +286,10 @@ struct OutsideLeadPlate: View {
         if face.aged {
           Text(face.age).outsideType(.data).foregroundStyle(wordsColor(tone: nil))
         } else if let words = lead.words {
-          Text(words).outsideType(.data).foregroundStyle(wordsColor(tone: wordsTone))
+          // Two lines, broken only between parts: `S23 E1 · premiere · aired ·
+          // missing` cut to `aire…` on a phone said less than it knew.
+          Text(outsideBreakable(words)).outsideType(.data, lines: 2)
+            .foregroundStyle(wordsColor(tone: wordsTone))
         }
       }
       .frame(maxWidth: .infinity, alignment: .leading)

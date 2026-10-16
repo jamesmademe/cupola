@@ -172,10 +172,12 @@ internal fun rowsThatFit(available: Float, row: Float, gap: Float, limit: Int): 
 /**
  * [text] with its spaces made non-breaking inside each part between ` · `
  * separators, so that a line breaks only at a separator and never inside a part
- * (`2.4 MB/s`, `S1 E4`). The separators keep their ordinary spaces.
+ * (`2.4 MB/s`, `S1 E4`). A separator keeps the ordinary space after it.
  */
 internal fun breakable(text: String): String =
-    text.split(" · ").joinToString(" · ") { it.replace(' ', ' ') }
+    // The space before a separator does not break either: the dot ends its
+    // line (`aired ·`) and never starts the next.
+    text.split(" \u00B7 ").joinToString("\u00A0\u00B7 ") { it.replace(' ', '\u00A0') }
 
 /** A row's words in reading order, for a screen reader: one node, its parts silenced. */
 internal fun spoken(vararg parts: String?): String = parts.filterNotNull().joinToString(", ")
