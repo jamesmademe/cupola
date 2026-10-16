@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Tells the user a background release search finished. This is the only
          permission the notification plugin needs, because `zonedSchedule` is
@@ -13,6 +14,12 @@
          `MainActivity.localNetworkIsGated` keeps it inert until then, and on
          every older release the name is simply ignored. -->
     <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK"/>
+    <!-- `workmanager` declares these for its long-running workers. Cupola's one
+         task (the widgets' and notifications' read, `outside_background.dart`)
+         is a plain periodic worker and never runs as a foreground service, so
+         the app does not ask for what it does not use. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SHORT_SERVICE" tools:node="remove"/>
     <application
         android:label="Cupola"
         android:name="${applicationName}"

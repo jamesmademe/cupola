@@ -21,6 +21,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/a11y_announce.dart';
 import 'package:cupola/core/widgets/themed_system_bars.dart';
 import 'package:cupola/features/discover/data/seerr_accounts.dart';
+import 'package:cupola/features/outside/data/outside_background.dart';
 import 'package:cupola/features/outside/data/outside_keeper.dart';
 import 'package:cupola/features/release_search/data/release_search_bootstrap.dart';
 import 'package:cupola/features/settings/data/route_probe.dart';
@@ -185,8 +186,10 @@ class CupolaApp extends ConsumerWidget {
     // The static registries the network code reads (pins, access headers,
     // the addresses that did not answer): see `networkRegistriesProvider`.
     ref.watch(networkRegistriesProvider);
-    // What the widgets draw, written as the app leaves the screen.
+    // What the widgets draw, written as the app leaves the screen, and the
+    // run with the app away asked for while it serves someone.
     ref.watch(outsideKeeperProvider);
+    ref.watch(outsideScheduleProvider);
 
     // No DynamicColorBuilder: the palette is fixed on purpose so per-service
     // accents stay recognisable and the experience is identical on every OS.

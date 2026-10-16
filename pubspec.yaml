@@ -87,6 +87,13 @@ dependencies:
   # required, because `zonedSchedule` is never called, which is what keeps this
   # clear of the Play-restricted exact-alarm permissions.
   flutter_local_notifications: ^22.2.0
+  # Runs the widgets' and notifications' read with the app off the screen:
+  # Android's WorkManager every 15 minutes with a network, iOS's
+  # BGAppRefreshTask when the system allows (P-notify-honest, P-t3-scope).
+  # Pinned to an exact version: pre-1.0, and it reaches into both platforms'
+  # schedulers. Its two foreground-service permissions are removed in
+  # `AndroidManifest.xml`, since no task here runs as one.
+  workmanager: 0.10.10
   # SHA-256 fingerprints for trust-on-first-use TLS certificate pinning.
   crypto: ^3.0.0
   # The package another device copies its connections from: encrypted with

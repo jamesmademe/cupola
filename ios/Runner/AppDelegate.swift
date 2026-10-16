@@ -2,6 +2,7 @@ import Flutter
 import Network
 import UIKit
 import UserNotifications
+import workmanager_apple
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
@@ -9,12 +10,23 @@ import UserNotifications
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    // Lets a notification tapped while the app is running reach Dart. Deliberately
-    // the only iOS-side change: a background URLSession needs no UIBackgroundModes
-    // and no entitlement, so there is nothing here to justify at App Store review.
+    // Lets a notification tapped while the app is running reach Dart.
     if #available(iOS 10.0, *) {
       UNUserNotificationCenter.current().delegate = self as? UNUserNotificationCenterDelegate
     }
+    // The widgets' and notifications' read with the app off the screen
+    // (`outside_background.dart`): a BGAppRefreshTask, which iOS runs when it
+    // decides to, no sooner than fifteen minutes after the last. Registered
+    // here because iOS takes a task's handler only before launch finishes; the
+    // engine it runs in gets the app's plugins, so the read reaches the
+    // servers, the keychain and the disk the way the app does.
+    WorkmanagerPlugin.setPluginRegistrantCallback { registry in
+      GeneratedPluginRegistrant.register(with: registry)
+    }
+    WorkmanagerPlugin.registerPeriodicTask(
+      withIdentifier: "com.matthwlabs.cupola.outside",
+      earliestBeginInSeconds: NSNumber(value: 15 * 60)
+    )
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 

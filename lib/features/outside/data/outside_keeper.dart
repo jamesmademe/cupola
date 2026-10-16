@@ -5,14 +5,9 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/features/outside/data/outside_run.dart';
+import 'package:cupola/features/outside/data/outside_native.dart';
 import 'package:cupola/features/outside/data/outside_shelf.dart';
-import 'package:cupola/features/outside/domain/outside_notices.dart';
-
-/// The notification kinds the person turned on in Settings › Notifications:
-/// none until they do (P-t3-scope).
-final outsideNoticeKindsProvider = Provider<Set<OutsideNoticeKind>>(
-  (ref) => const {},
-);
+import 'package:cupola/features/outside/data/outside_settings.dart';
 
 /// How long the app's run waits for its reads: they are the screen's, loaded
 /// already, and the app has seconds once it leaves the screen.
@@ -42,7 +37,10 @@ final outsideKeeperProvider = Provider.autoDispose<void>((ref) {
     if (running) return;
     running = true;
     try {
-      await OutsideRun(shelf: OutsideShelf(await outsideFolder())).run(
+      await OutsideRun(
+        shelf: OutsideShelf(await outsideFolder()),
+        widgets: const ChannelOutsideWidgets(),
+      ).run(
         container,
         speak: false,
         enabled: container.read(outsideNoticeKindsProvider),

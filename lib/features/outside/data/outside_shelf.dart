@@ -6,31 +6,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
-import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/features/outside/domain/outside_notices.dart';
 import 'package:cupola/features/outside/domain/outside_snapshot.dart';
-
-/// The folder the widgets can read: the App Group's on iOS, which only the
-/// native side can name, and the app's own support folder where there is no
-/// such thing (Android's widget runs in the app's process and reads it there;
-/// a desktop has no widget and keeps it only for the notifications' memory).
-Future<Directory> outsideFolder() async {
-  try {
-    final path = await const MethodChannel(
-      'cupola/outside',
-    ).invokeMethod<String>('sharedFolder');
-    if (path != null && path.isNotEmpty) return Directory(path);
-  } on MissingPluginException {
-    // No native side: the folder below.
-  } on PlatformException {
-    // An App Group the build does not carry: the folder below.
-  }
-  final support = await getApplicationSupportDirectory();
-  return Directory('${support.path}/outside');
-}
 
 /// A picture's file name: what names its address, never the address, and
 /// nothing of the headers that fetched it.
