@@ -52,6 +52,11 @@ SIMPLE_BELOW = 64
 # The mark on the launch screen, in points (dp on Android): the same size on
 # every platform, centred on the room's ground.
 LAUNCH_POINTS = 112
+
+# Android 12's splash icon is a 288dp square the system draws itself. A drawable
+# that only insets the mark (`<inset>`) is drawn as nothing there, so the
+# padding is in the picture: the mark at LAUNCH_POINTS on a clear 288dp canvas.
+SPLASH_POINTS = 288
 LAUNCH_SCALES = {"mdpi": 1, "hdpi": 1.5, "xhdpi": 2, "xxhdpi": 3, "xxxhdpi": 4}
 
 DENSITIES = {"mdpi": 48, "hdpi": 72, "xhdpi": 96, "xxhdpi": 144, "xxxhdpi": 192}
@@ -96,6 +101,7 @@ ALPHA_KEEPERS = (
     "assets/brand/cupola_mark.png",
     "LaunchImage.imageset/",
     "/launch_mark.png",
+    "/launch_splash_mark.png",
 )
 
 # Icon Composer derives the icon's ground from this fill rather than from a
@@ -203,6 +209,17 @@ class Exporter:
         dest.write_bytes(b"icns" + struct.pack(">I", len(payload) + 8) + payload)
         self.written.append(rel)
 
+    def emit_centred(self, master: str, inner: int, outer: int, rel: str):
+        """[master] at [inner] pixels, centred on a clear [outer] square."""
+        dest = self.repo / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        mark = self.master(master).resize((inner, inner), Image.LANCZOS)
+        canvas = Image.new("RGBA", (outer, outer), (0, 0, 0, 0))
+        offset = (outer - inner) // 2
+        canvas.paste(mark, (offset, offset), mark)
+        canvas.save(dest, "PNG", optimize=True)
+        self.written.append(rel)
+
     def write_text(self, rel: str, text: str):
         dest = self.repo / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
@@ -290,6 +307,12 @@ class Exporter:
         res = "android/app/src/main/res"
         for density, scale in LAUNCH_SCALES.items():
             self.emit("mark", round(LAUNCH_POINTS * scale), f"{res}/drawable-{density}/launch_mark.png")
+            self.emit_centred(
+                "mark",
+                round(LAUNCH_POINTS * scale),
+                round(SPLASH_POINTS * scale),
+                f"{res}/drawable-{density}/launch_splash_mark.png",
+            )
 
     def in_app(self):
         """The mark drawn inside ServiceRing: transparent, over the app surface."""

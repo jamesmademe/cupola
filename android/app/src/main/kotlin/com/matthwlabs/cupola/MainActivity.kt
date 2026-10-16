@@ -9,14 +9,67 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.PersistableBundle
 import android.provider.Settings
+import android.view.View
+import android.view.ViewTreeObserver
 import androidx.work.WorkManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
+    /** Whether Flutter has drawn its first frame: see [holdLaunchScreen]. */
+    private var flutterDrawn = false
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        holdLaunchScreen()
+    }
+
+    /**
+     * Keeps the launch screen, Cupola's mark on the room's ground, up until
+     * Flutter has drawn something to replace it.
+     *
+     * Without this the mark is gone in a fraction of a second. The window
+     * draws its own background (`NormalTheme`, the bare ground) as soon as the
+     * activity exists, Android takes that first draw as the app being ready
+     * and drops the launch screen, and the ground stays empty until Flutter's
+     * first frame, which a debug build takes seconds to reach. Holding the
+     * window's first draw is Android's documented way to keep a launch screen
+     * longer, and it works the same before Android 12, where the launch screen
+     * is the starting window drawn from `LaunchTheme`.
+     *
+     * The ground behind Flutter stays bare on purpose: a mark there would show
+     * through whenever the surface is recreated. And the hold lets go after
+     * [LAUNCH_HOLD_LIMIT_MS] whatever happens, so a first frame that never
+     * comes cannot leave the launch screen up for good.
+     */
+    private fun holdLaunchScreen() {
+        val content = findViewById<View>(android.R.id.content) ?: return
+        val hold = object : ViewTreeObserver.OnPreDrawListener {
+            override fun onPreDraw(): Boolean {
+                if (!flutterDrawn) return false
+                content.viewTreeObserver.removeOnPreDrawListener(this)
+                return true
+            }
+        }
+        content.viewTreeObserver.addOnPreDrawListener(hold)
+        Handler(Looper.getMainLooper()).postDelayed({
+            flutterDrawn = true
+            content.invalidate()
+        }, LAUNCH_HOLD_LIMIT_MS)
+    }
+
+    override fun onFlutterUiDisplayed() {
+        super.onFlutterUiDisplayed()
+        flutterDrawn = true
+        findViewById<View>(android.R.id.content)?.invalidate()
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
@@ -204,6 +257,9 @@ class MainActivity : FlutterActivity() {
     private val pendingLocalNetwork = mutableListOf<MethodChannel.Result>()
 
     private companion object {
+        /** The longest the launch screen waits for Flutter's first frame. */
+        const val LAUNCH_HOLD_LIMIT_MS = 8_000L
+
         const val SECURE_CLIPBOARD_CHANNEL = "com.matthwlabs.cupola/secure_clipboard"
         const val LOCAL_NETWORK_CHANNEL = "com.matthwlabs.cupola/local_network"
         const val TASK_HYGIENE_CHANNEL = "com.matthwlabs.cupola/background_task_hygiene"

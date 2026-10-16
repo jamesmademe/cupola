@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Android 12's splash icon is a 288dp square drawn inside a 192dp circle: an
-     88dp inset keeps the mark at the 112dp it has on every other launch screen. -->
-<inset xmlns:android="http://schemas.android.com/apk/res/android"
-    android:drawable="@drawable/launch_mark"
-    android:inset="88dp" />

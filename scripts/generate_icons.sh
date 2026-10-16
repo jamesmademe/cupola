@@ -29,7 +29,9 @@ set -euo pipefail
 #                           an adaptive foreground for each
 #   android res/drawable*   the adaptive backgrounds, one per appearance
 #   launch screens          the mark at 112pt over the room's ground: iOS's
-#                           LaunchImage.imageset, Android's drawable-*/launch_mark
+#                           LaunchImage.imageset, Android's drawable-*/launch_mark,
+#                           and the same mark on a clear 288dp canvas for
+#                           Android 12's splash (drawable-*/launch_splash_mark)
 #   web, windows, linux     favicons, maskable icons, .ico, hicolor set
 #
 # The manifest refresh stays deliberate: --write never touches
