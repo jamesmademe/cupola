@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart'
     show getApplicationCacheDirectory;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cupola/core/app_identity.dart';
 import 'package:cupola/core/last_known/last_known_store.dart';
 
 import 'package:cupola/core/network/network_change.dart';
@@ -253,7 +254,7 @@ class CupolaApp extends ConsumerWidget {
     // accents stay recognisable and the experience is identical on every OS.
     // See AppTheme.darkTheme.
     return MaterialApp.router(
-      title: 'Cupola',
+      title: kAppName,
       theme: AppTheme.lightTheme(),
       darkTheme: AppTheme.darkTheme(),
       themeMode: themeMode,

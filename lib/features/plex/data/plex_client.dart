@@ -23,7 +23,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// Identifies Cupola to the user's server. Plex shows this in
 /// Settings → Authorized Devices, so it is a name a stranger has to recognise as
 /// theirs.
-const String kPlexProduct = 'Cupola';
+const String kPlexProduct = kAppName;
 
 /// Sent as `X-Plex-Version`.
 ///
@@ -38,7 +38,7 @@ const String kPlexProduct = 'Cupola';
 const String kPlexProductVersion = kAppVersion;
 
 /// Sent as `X-Plex-Device-Name`, i.e. the row label in Authorized Devices.
-const String kPlexDeviceName = 'Cupola';
+const String kPlexDeviceName = kAppName;
 
 /// The reason attached to a terminate call.
 ///

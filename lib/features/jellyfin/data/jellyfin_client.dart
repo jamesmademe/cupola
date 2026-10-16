@@ -5,6 +5,7 @@ import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
+import 'package:cupola/core/app_identity.dart';
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
@@ -1317,7 +1318,7 @@ const String kJellyfinMessageHeader = kJellyfinClientName;
 const int kJellyfinMessageTimeoutMs = 8000;
 
 /// What Jellyfin's Dashboard → Devices list calls this app.
-const String kJellyfinClientName = 'Cupola';
+const String kJellyfinClientName = kAppName;
 
 /// Sent as `Version` in the `Authorization` header. Cosmetic: it appears beside
 /// the client name in the server's device list, and tracks `pubspec.yaml`.
