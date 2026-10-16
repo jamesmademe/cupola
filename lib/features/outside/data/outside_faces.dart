@@ -81,17 +81,27 @@ List<OutsideFrame> comingUpFrames(
             for (final event in events)
               if (!_hasCome(event, at)) event,
           ], at);
-    final shown = rows.take(comingUpRowLimit).toList(growable: false);
+    // The widget leads with what comes next: a thing that aired this
+    // morning stays among the rows, as the Home lists it, and gives the lead
+    // to the first one still to come.
+    final next = rows.indexWhere((event) => !_hasComeAt(event, at));
+    final lead = rows.isEmpty ? null : rows[next < 0 ? 0 : next];
+    final shown = [
+      for (final event in rows)
+        if (!identical(event, lead)) event,
+    ].take(comingUpRowLimit - 1).toList(growable: false);
     return OutsideFace(
       title: 'Coming up',
       age: _age(takenAt, at),
       aged: _aged(takenAt, at),
-      lead: shown.isEmpty ? null : _comingUpItem(shown.first, at, pictures),
+      lead: lead == null ? null : _comingUpItem(lead, at, pictures),
       items: [
-        for (final event in shown.skip(1))
+        for (final event in shown)
           _comingUpItem(event, at, pictures, lead: false),
       ],
-      calm: rows.isEmpty ? comingUpCalmLine(at) : null,
+      // Only the read says nothing comes out: a drawing with nothing left to
+      // draw says nothing, as the Home's does.
+      calm: rows.isEmpty && at == takenAt ? comingUpCalmLine(at) : null,
       route: ServiceRoutes.discoverCalendar,
     );
   }
@@ -106,7 +116,10 @@ List<OutsideFrame> comingUpFrames(
 /// A thing that had not come at the read, and whose day or time has come
 /// since.
 bool _hasCome(CalendarEvent event, DateTime at) =>
-    event.state.stand == CalendarStand.notYet &&
+    event.state.stand == CalendarStand.notYet && _hasComeAt(event, at);
+
+/// Whether [event]'s day or time has come by [at], whatever came of it.
+bool _hasComeAt(CalendarEvent event, DateTime at) =>
     CalendarEvent.hasCome(event.day, event.airsAt, at);
 
 OutsideItem _comingUpItem(
@@ -184,8 +197,8 @@ List<OutsideFrame>? downloadsFrames(
       rateBytesPerSecond: data.rateBytesPerSecond,
       coverage: coverage,
     ),
-    figure: whole ? '${data.movingCount}' : null,
-    figureWords: whole ? 'moving' : null,
+    figure: _figure(data, whole),
+    figureWords: _figure(data, whole) == null ? null : 'moving',
     lead: stuck.isEmpty ? null : _downloadItem(stuck.first, live: true),
     items: [for (final item in rows) _downloadItem(item, live: true)],
     calm: calm,
@@ -206,8 +219,8 @@ List<OutsideFrame>? downloadsFrames(
       whole: whole,
       hasRows: rows.isNotEmpty,
     ),
-    figure: whole ? '${data.movingCount}' : null,
-    figureWords: whole ? 'moving' : null,
+    figure: _figure(data, whole),
+    figureWords: _figure(data, whole) == null ? null : 'moving',
     items: [for (final item in rows) _downloadItem(item, live: false)],
     age: _age(takenAt, at),
     aged: _aged(takenAt, at),
@@ -221,6 +234,12 @@ List<OutsideFrame>? downloadsFrames(
     takenAt.add(outsideAgedAfter),
   ], (at) => at.isBefore(knownFrom) ? live(at) : known(at));
 }
+
+/// The figure a small Downloads leads with: how many move, over a read that
+/// was whole, and only when something does. `0 moving` in large type is
+/// nothing to lead with: the line and the stuck one say it.
+String? _figure(ServicesInFlight data, bool whole) =>
+    whole && data.movingCount > 0 ? '${data.movingCount}' : null;
 
 OutsideItem _downloadItem(ServiceQueueItem item, {required bool live}) {
   final fault = live ? item.fault : null;

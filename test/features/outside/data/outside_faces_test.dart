@@ -81,6 +81,41 @@ void main() {
       expect(face.age, 'As of yesterday 14:02');
     });
 
+    test('what aired this morning stays a row, and the next one leads', () {
+      final morning = CalendarEvent(
+        identity: 'Cupertino',
+        kind: CalendarKind.episode,
+        day: DateTime(2026, 10, 16),
+        airsAt: DateTime(2026, 10, 16, 4),
+        title: 'Cupertino',
+        season: 1,
+        episode: 2,
+        state: const CalendarState.notYet(),
+      );
+      final face = comingUpFrames(
+        [morning, tonight],
+        takenAt: takenAt,
+        pictures: picture,
+      ).first.face;
+      expect(face.lead?.title, 'Sintel');
+      expect(face.items.single.title, 'Cupertino');
+    });
+
+    test(
+      'a drawing with nothing left says nothing, never that nothing comes',
+      () {
+        final frames = comingUpFrames(
+          [tonight],
+          takenAt: takenAt,
+          pictures: picture,
+        );
+        final after = faceAt(frames, DateTime(2026, 10, 17, 0, 1));
+        expect(after.lead, isNull);
+        expect(after.calm, isNull);
+        expect(after.age, 'As of yesterday 14:02');
+      },
+    );
+
     test('nothing in the window is said calmly', () {
       final calm = comingUpFrames(
         const [],
@@ -167,6 +202,19 @@ void main() {
         ('68%', OutsideTone.neutral),
         ('12%', OutsideTone.neutral),
       ]);
+    });
+
+    test('with nothing moving, the small one leads with no figure', () {
+      final stalled = downloadsFrames(
+        inFlight(
+          faults: [item('Charge', progress: 0, fault: InFlightFault.stalled)],
+        ),
+        takenAt: takenAt,
+        clientSetUp: true,
+        clientSilent: false,
+      )!;
+      expect(stalled.first.face.figure, isNull);
+      expect(stalled.first.face.lead?.words, 'Stuck at 0%');
     });
 
     test('nothing downloading is said only of the read it was true of', () {
