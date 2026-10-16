@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/unit_space.dart';
+import 'package:cupola/core/widgets/settings_switch_row.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
@@ -249,58 +250,18 @@ class _MasterRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
     const title = 'Background search';
     final subtitle = enabled
         ? 'A search keeps running after you leave the app.'
         : 'Searches end when you leave Cupola. Turn on to let them finish on '
               'their own.';
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.sm,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: colors.primary.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              Icons.cloud_sync_outlined,
-              size: 18,
-              color: colors.primary,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.lg),
-          Expanded(
-            child: Semantics(
-              container: true,
-              label: '$title. $subtitle',
-              child: ExcludeSemantics(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: theme.textTheme.titleSmall),
-                    Text(
-                      subtitle,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Switch(value: enabled, onChanged: (value) => onChanged(value)),
-        ],
-      ),
+    return SettingsSwitchRow(
+      icon: Icons.cloud_sync_outlined,
+      title: title,
+      description: subtitle,
+      value: enabled,
+      onChanged: (value) => onChanged(value),
     );
   }
 }
@@ -532,83 +493,23 @@ class _NotifyRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.sm,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: colors.primary.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(8),
+    final line = _permissionLine;
+    return SettingsSwitchRow(
+      icon: Icons.notifications_active_outlined,
+      title: 'Tell me when one finishes',
+      description: _subtitle,
+      // The status vocabulary's own amber for a denial, not `tertiary`, which
+      // in this theme is a palette accent and rendered a blocked permission
+      // in green.
+      note: line == null
+          ? null
+          : (
+              text: line,
+              tone: systemPermission == false ? StatusTone.warning : null,
             ),
-            child: Icon(
-              Icons.notifications_active_outlined,
-              size: 18,
-              color: colors.primary,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.lg),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Tell me when one finishes',
-                  style: theme.textTheme.titleSmall,
-                ),
-                Text(
-                  _subtitle,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
-                if (_permissionLine case final line?)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      line,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        // The status vocabulary's own amber, not `tertiary`:
-                        // which in this theme is a palette accent and rendered
-                        // a blocked permission in green. Amber rather than red
-                        // because a permission the user can switch back on is
-                        // something to fix, not something that failed.
-                        // Walked against the settings card: the raw yellow
-                        // is about 1.5:1 on paper.
-                        color: systemPermission == false
-                            ? statusToneColor(
-                                colors,
-                                StatusTone.warning,
-                                surface: colors.surfaceContainer,
-                              )
-                            : colors.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          if (busy)
-            const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          else
-            Switch(
-              value: enabled && available,
-              onChanged: available ? (value) => onChanged(value) : null,
-            ),
-        ],
-      ),
+      value: enabled && available,
+      onChanged: available ? (value) => onChanged(value) : null,
+      busy: busy,
     );
   }
 }

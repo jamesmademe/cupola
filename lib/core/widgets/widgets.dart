@@ -23,6 +23,7 @@ export 'setup_doors.dart';
 export 'qr_code_view.dart';
 export 'service_tab_bar.dart';
 export 'service_ring.dart';
+export 'settings_switch_row.dart';
 
 // States
 export 'app_empty_state.dart';

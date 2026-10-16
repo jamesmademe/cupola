@@ -6,6 +6,7 @@ import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
+import 'package:cupola/core/widgets/settings_switch_row.dart';
 import 'package:cupola/features/shell/domain/portal_hints.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_master_detail.dart';
 
@@ -48,14 +49,14 @@ class SettingsHintsScreen extends ConsumerWidget {
             ),
             SettingsGroupCard(
               children: [
-                _HintRow(
+                SettingsSwitchRow(
                   icon: Icons.swipe_up_rounded,
                   title: 'Portal',
                   description:
                       'The bar lifts once to hint at the swipe, and a tip '
                       'appears if you keep switching services the long way. '
                       'Turn back on to see both again.',
-                  enabled: enabled,
+                  value: enabled,
                   onChanged: (value) =>
                       ref.read(portalHintsProvider.notifier).setEnabled(value),
                 ),
@@ -63,64 +64,6 @@ class SettingsHintsScreen extends ConsumerWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _HintRow extends StatelessWidget {
-  const _HintRow({
-    required this.icon,
-    required this.title,
-    required this.description,
-    required this.enabled,
-    required this.onChanged,
-  });
-
-  final IconData icon;
-  final String title;
-  final String description;
-  final bool enabled;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.sm,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: colors.primary.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, size: 18, color: colors.primary),
-          ),
-          const SizedBox(width: AppSpacing.lg),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: theme.textTheme.titleSmall),
-                Text(
-                  description,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Switch(value: enabled, onChanged: onChanged),
-        ],
       ),
     );
   }
