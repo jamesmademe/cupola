@@ -266,7 +266,7 @@ class TrueNasNetworkScreen extends ConsumerWidget {
             ),
           ]),
           const SizedBox(height: AppSpacing.md),
-          const SectionHeader(title: 'Interfaces', showChevron: false),
+          const SectionHeader.inset(title: 'Interfaces', showChevron: false),
           const SizedBox(height: AppSpacing.sm),
           interfaces.when(
             loading: () => AppSkeleton.listRows(count: 2),

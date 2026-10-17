@@ -199,7 +199,7 @@ class _DetailBody extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        SectionHeader.action(
+        SectionHeader.insetAction(
           title: 'Snapshots',
           trailing: trueNasGatedButton(
             ref: ref,

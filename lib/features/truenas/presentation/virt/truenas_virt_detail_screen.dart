@@ -149,7 +149,7 @@ class _DetailBody extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        const SectionHeader(title: 'Devices', showChevron: false),
+        const SectionHeader.inset(title: 'Devices', showChevron: false),
         const SizedBox(height: AppSpacing.sm),
         devices.when(
           loading: () => AppSkeleton.listRows(count: 3),

@@ -144,7 +144,7 @@ class _AppDetailBody extends ConsumerWidget {
         ),
         if (app.portals.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
-          const SectionHeader(title: 'Portals', showChevron: false),
+          const SectionHeader.inset(title: 'Portals', showChevron: false),
           const SizedBox(height: AppSpacing.sm),
           for (final entry in app.portals.entries)
             AppCard.surfaceOutlined(
