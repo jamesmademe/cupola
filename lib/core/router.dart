@@ -2606,6 +2606,7 @@ GoRoute _streamBranchRoot(ServiceKey service, ServiceTab tab) {
           (state) => StreamItemScreen(
             service: service,
             itemId: state.pathParameters['id']!,
+            instanceId: state.uri.queryParameters['i'],
           ),
           redirect: rejectBlankId,
         ),
@@ -2618,6 +2619,7 @@ GoRoute _streamBranchRoot(ServiceKey service, ServiceTab tab) {
             service: service,
             libraryId: state.pathParameters['id']!,
             libraryTitle: state.uri.queryParameters['title'],
+            instanceId: state.uri.queryParameters['i'],
           ),
           redirect: rejectBlankId,
         ),
@@ -2658,14 +2660,29 @@ GoRoute _streamBranchRoot(ServiceKey service, ServiceTab tab) {
 /// disagreeing loud at startup and in every test that constructs one. See
 /// `_radarrBranchRoot`, which is the shape this follows.
 GoRoute _streamCapabilityRoute(ServiceKey service, ServiceTab tab) {
-  final child = _streamCapabilityScreen(service, tab);
+  // Resolved once here, with no connection, so a pair with no screen throws
+  // while the router is built; the page builder resolves it again with the
+  // connection the location names (`?i=`).
+  _streamCapabilityScreen(service, tab);
   return _titledTab(
     tab.segment,
-    (state) => ServiceTabScaffold(service: service, tab: tab, child: child),
+    (state) => ServiceTabScaffold(
+      service: service,
+      tab: tab,
+      child: _streamCapabilityScreen(
+        service,
+        tab,
+        instanceId: state.uri.queryParameters['i'],
+      ),
+    ),
   );
 }
 
-Widget _streamCapabilityScreen(ServiceKey service, ServiceTab tab) {
+Widget _streamCapabilityScreen(
+  ServiceKey service,
+  ServiceTab tab, {
+  String? instanceId,
+}) {
   return switch ((service, tab)) {
     (ServiceKey.jellyfin, ServiceTab.users) => const JellyfinUsersScreen(
       topPadding: _serviceTabTopPadding,
@@ -2676,14 +2693,16 @@ Widget _streamCapabilityScreen(ServiceKey service, ServiceTab tab) {
     (ServiceKey.jellyfin, ServiceTab.tasks) => const JellyfinTasksScreen(
       topPadding: _serviceTabTopPadding,
     ),
-    (ServiceKey.jellyfin, ServiceTab.activity) => const JellyfinActivityScreen(
+    (ServiceKey.jellyfin, ServiceTab.activity) => JellyfinActivityScreen(
       topPadding: _serviceTabTopPadding,
+      instanceId: instanceId,
     ),
     (ServiceKey.plex, ServiceTab.onDeck) => const PlexOnDeckScreen(
       topPadding: _serviceTabTopPadding,
     ),
-    (ServiceKey.plex, ServiceTab.activities) => const PlexActivitiesScreen(
+    (ServiceKey.plex, ServiceTab.activities) => PlexActivitiesScreen(
       topPadding: _serviceTabTopPadding,
+      instanceId: instanceId,
     ),
     (ServiceKey.plex, ServiceTab.devices) => const PlexDevicesScreen(
       topPadding: _serviceTabTopPadding,

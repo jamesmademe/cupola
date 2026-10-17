@@ -12,6 +12,7 @@ import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
 import 'package:cupola/features/stream/domain/stream_semantics.dart';
+import 'package:cupola/features/stream/presentation/stream_connection_provider.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_message_prompt.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_session_card.dart';
 
@@ -50,9 +51,14 @@ class StreamNowPlayingSection extends ConsumerWidget {
     super.key,
     required this.service,
     required this.sessions,
+    this.instanceId = '',
   });
 
   final ServiceKey service;
+
+  /// The connection [sessions] were read from, and where Stop, Pause and
+  /// Message go; empty is the active one.
+  final String instanceId;
   final AsyncValue<List<StreamSession>> sessions;
 
   @override
@@ -66,7 +72,9 @@ class StreamNowPlayingSection extends ConsumerWidget {
     if (service == ServiceKey.plex && sessions.hasError && !sessions.hasValue) {
       switch (plexSessionsRefusal(
         ref,
-        capabilityConnectionId(ref, ServiceKey.plex),
+        instanceId.isEmpty
+            ? capabilityConnectionId(ref, ServiceKey.plex)
+            : instanceId,
         sessions.error,
       )) {
         case PlexSessionsRefusal.ownerOnly:
@@ -94,13 +102,7 @@ class StreamNowPlayingSection extends ConsumerWidget {
             child: AsyncValueWidget<List<StreamSession>>(
               value: value,
               serviceName: service.title,
-              onRetry: () {
-                if (service == ServiceKey.jellyfin) {
-                  ref.invalidate(jellyfinSessionsProvider);
-                } else {
-                  ref.invalidate(plexSessionsProvider);
-                }
-              },
+              onRetry: () => refreshStreamSessions(ref, service, instanceId),
               isEmpty: (list) => list.isEmpty,
               emptyBuilder: const _IdleRoom(),
               data: (list) => Column(
@@ -151,7 +153,8 @@ class StreamNowPlayingSection extends ConsumerWidget {
   ) {
     if (session.id.isEmpty) return null;
 
-    if (service == ServiceKey.plex && !ref.watch(plexStopOfferedProvider(''))) {
+    if (service == ServiceKey.plex &&
+        !ref.watch(plexStopOfferedProvider(instanceId))) {
       return null;
     }
 
@@ -194,7 +197,7 @@ class StreamNowPlayingSection extends ConsumerWidget {
     WidgetRef ref,
     StreamSession session,
   ) async {
-    final client = ref.read(jellyfinClientProvider);
+    final client = ref.read(jellyfinClientForProvider(instanceId));
     try {
       if (session.isPaused) {
         await client.unpauseSession(session.id);
@@ -203,7 +206,7 @@ class StreamNowPlayingSection extends ConsumerWidget {
       }
       // Re-read rather than flipping `isPaused` here: the 204 means the command
       // was dispatched to the client, not that the client acted on it.
-      ref.invalidate(jellyfinSessionsProvider);
+      refreshStreamSessions(ref, service, instanceId);
     } catch (error) {
       if (!context.mounted) return;
       final failed = session.isPaused
@@ -231,7 +234,7 @@ class StreamNowPlayingSection extends ConsumerWidget {
 
     try {
       await ref
-          .read(jellyfinClientProvider)
+          .read(jellyfinClientForProvider(instanceId))
           .sendMessage(session.id, text: text);
       if (!context.mounted) return;
       // "Sent", never "delivered": the server relays it and the client decides
@@ -270,18 +273,14 @@ class StreamNowPlayingSection extends ConsumerWidget {
     if (!result.confirmed || !context.mounted) return;
 
     try {
-      final client = service == ServiceKey.jellyfin
-          ? ref.read(jellyfinServerProvider)
-          : ref.read(plexServerProvider);
+      final client = ref.read(
+        streamClientForProvider((service: service, instanceId: instanceId)),
+      );
       await client.stopSession(session.id);
       // Both servers only *dispatch* a stop: Jellyfin's 204 means "sent to the
       // client", which may ignore it. So the board re-reads rather than removing
       // the row optimistically and claiming something it cannot know.
-      if (service == ServiceKey.jellyfin) {
-        ref.invalidate(jellyfinSessionsProvider);
-      } else {
-        ref.invalidate(plexSessionsProvider);
-      }
+      refreshStreamSessions(ref, service, instanceId);
     } catch (error) {
       if (!context.mounted) return;
       SnackBarHelper.error(

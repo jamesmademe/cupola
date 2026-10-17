@@ -792,7 +792,11 @@ GlobalSearchResult _streamResult(
     // item itself so it can draw before its own fetch lands.
     route: switch (MediaKey.ofStreamItem(item)) {
       final key? => ServiceRoutes.mediaRoot(key, focus: instance.id),
-      null => ServiceRoutes.streamItem(instance.service, item.id),
+      null => ServiceRoutes.streamItem(
+        instance.service,
+        item.id,
+        instanceId: instance.id,
+      ),
     },
     routeExtra: MediaKey.ofStreamItem(item) == null ? item : null,
   );

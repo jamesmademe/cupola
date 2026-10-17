@@ -19,6 +19,8 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/stream_server_client.dart';
+import 'package:cupola/features/stream/presentation/stream_activity_provider.dart';
+import 'package:cupola/features/stream/presentation/stream_connection_provider.dart';
 import 'package:cupola/features/stream/presentation/stream_overview_provider.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_now_playing_section.dart';
 
@@ -40,15 +42,22 @@ class PlexOnDeckScreen extends ConsumerWidget {
 /// The client has no `/activities` contract. Live sessions are the real,
 /// operable activity it does expose, so this tab reuses the Stream session
 /// shell instead of fabricating a server-job feed.
+///
+/// [instanceId] is the connection to read (`?i=`); null, or one that is not a
+/// Plex connection, reads the active one.
 class PlexActivitiesScreen extends ConsumerWidget {
-  const PlexActivitiesScreen({super.key, this.topPadding = 0});
+  const PlexActivitiesScreen({super.key, this.topPadding = 0, this.instanceId});
 
   final double topPadding;
+  final String? instanceId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (!_isConfigured(ref)) return _notConfigured();
-    return _PlexActivitiesBody(topPadding: topPadding);
+    return _PlexActivitiesBody(
+      topPadding: topPadding,
+      instanceId: streamInstanceOf(ref, ServiceKey.plex, instanceId),
+    );
   }
 }
 
@@ -155,13 +164,22 @@ class _PlexOnDeckBody extends ConsumerWidget {
 }
 
 class _PlexActivitiesBody extends ConsumerWidget {
-  const _PlexActivitiesBody({required this.topPadding});
+  const _PlexActivitiesBody({
+    required this.topPadding,
+    required this.instanceId,
+  });
 
   final double topPadding;
+  final String instanceId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sessions = ref.watch(plexSessionsProvider);
+    final sessions = ref.watch(
+      streamSessionsForProvider((
+        service: ServiceKey.plex,
+        instanceId: instanceId,
+      )),
+    );
     // The host's two bands and the status bar the upper one consumes: this
     // page has no `SafeArea` and no app bar to take the inset off first.
     final top = topPadding + MediaQuery.paddingOf(context).top;
@@ -172,7 +190,9 @@ class _PlexActivitiesBody extends ConsumerWidget {
         !sessions.hasValue &&
         plexSessionsRefusal(
               ref,
-              capabilityConnectionId(ref, ServiceKey.plex),
+              instanceId.isEmpty
+                  ? capabilityConnectionId(ref, ServiceKey.plex)
+                  : instanceId,
               sessions.error,
             ) ==
             PlexSessionsRefusal.failure) {
@@ -183,7 +203,8 @@ class _PlexActivitiesBody extends ConsumerWidget {
           child: ServiceOfflineState.failure(
             service: ServiceKey.plex,
             error: sessions.error!,
-            onRetry: () => ref.invalidate(plexSessionsProvider),
+            onRetry: () =>
+                refreshStreamSessions(ref, ServiceKey.plex, instanceId),
           ),
         ),
       );
@@ -191,7 +212,8 @@ class _PlexActivitiesBody extends ConsumerWidget {
     return AmbientScaffold(
       accent: ServiceKey.plex.accent,
       body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(plexSessionsProvider),
+        onRefresh: () async =>
+            refreshStreamSessions(ref, ServiceKey.plex, instanceId),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(
@@ -203,6 +225,7 @@ class _PlexActivitiesBody extends ConsumerWidget {
           children: [
             StreamNowPlayingSection(
               service: ServiceKey.plex,
+              instanceId: instanceId,
               sessions: sessions,
             ),
           ],

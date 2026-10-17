@@ -5,15 +5,15 @@ import 'package:go_router/go_router.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/widgets.dart';
-import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
-import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/stream_semantics.dart';
 import 'package:cupola/features/stream/domain/stream_server_client.dart';
+import 'package:cupola/features/stream/presentation/stream_connection_provider.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_poster_tile.dart';
 
 /// One library on a media server, browsed by watch state.
@@ -41,9 +41,14 @@ class StreamLibraryScreen extends ConsumerStatefulWidget {
     required this.service,
     required this.libraryId,
     this.libraryTitle,
+    this.instanceId,
   });
 
   final ServiceKey service;
+
+  /// The connection the library is on (`?i=`): null, or one that is not a
+  /// connection of [service], reads the active one.
+  final String? instanceId;
   final String libraryId;
 
   /// Carried as a query parameter so a deep link still resolves from the path
@@ -212,9 +217,18 @@ class _StreamLibraryScreenState extends ConsumerState<StreamLibraryScreen> {
   /// could walk itself end to end inside a single fetch.
   static const int _maxPagesPerFetch = 5;
 
-  StreamServerClient get _client => widget.service == ServiceKey.jellyfin
-      ? ref.read(jellyfinServerProvider)
-      : ref.read(plexServerProvider);
+  /// The connection this browse reads: the one `?i=` names, else the active
+  /// one. Read where a fetch starts, so a connection removed meanwhile reads
+  /// as the active one.
+  String get _connection => streamInstanceFor(
+    ref.read(currentSettingsProvider),
+    widget.service,
+    widget.instanceId,
+  );
+
+  StreamServerClient get _client => ref.read(
+    streamClientForProvider((service: widget.service, instanceId: _connection)),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -243,9 +257,15 @@ class _StreamLibraryScreenState extends ConsumerState<StreamLibraryScreen> {
     // on a controller still parked in `firstPageError`, which
     // `PagedLayoutBuilder` never retries: the panel kept telling the user to
     // choose a viewer they had just chosen. Plex has no viewer to pick.
+    final connection = streamInstanceOf(ref, widget.service, widget.instanceId);
     if (widget.service == ServiceKey.jellyfin) {
-      ref.listen<String>(
-        currentSettingsProvider.select((s) => s.jellyfinUserId),
+      // The viewer of the connection being browsed, not the first one's.
+      ref.listen<String?>(
+        currentSettingsProvider.select(
+          (s) => connection.isEmpty
+              ? s.jellyfinUserId
+              : s.instanceById(connection)?.viewerId,
+        ),
         (_, _) => _restart(),
       );
     }
@@ -266,13 +286,19 @@ class _StreamLibraryScreenState extends ConsumerState<StreamLibraryScreen> {
                 controller: _paging,
                 builder: (context, state, fetchNextPage) => _LibraryGrid(
                   service: widget.service,
+                  instanceId: connection,
                   lens: _lens,
                   state: state,
                   fetchNextPage: fetchNextPage,
                   onBrowseRecent: () =>
                       _selectLens(StreamLibraryLens.recentlyAdded),
                   onChooseViewer: () => context.push(
-                    '/settings/service/${widget.service.routeParam}',
+                    connection.isEmpty
+                        ? ServiceRoutes.settingsFor(widget.service)
+                        : ServiceRoutes.settingsForConnection(
+                            widget.service,
+                            connection,
+                          ),
                   ),
                 ),
               ),
@@ -354,6 +380,7 @@ class _LensChips extends StatelessWidget {
 class _LibraryGrid extends StatelessWidget {
   const _LibraryGrid({
     required this.service,
+    required this.instanceId,
     required this.lens,
     required this.state,
     required this.fetchNextPage,
@@ -362,6 +389,7 @@ class _LibraryGrid extends StatelessWidget {
   });
 
   final ServiceKey service;
+  final String instanceId;
   final StreamLibraryLens lens;
   final PagingState<int, StreamItem> state;
   final VoidCallback fetchNextPage;
@@ -407,8 +435,12 @@ class _LibraryGrid extends StatelessWidget {
         mainAxisSpacing: AppSpacing.gridGap,
       ),
       builderDelegate: PagedChildBuilderDelegate<StreamItem>(
-        itemBuilder: (context, item, index) =>
-            StreamPosterTile(service: service, item: item, index: index),
+        itemBuilder: (context, item, index) => StreamPosterTile(
+          service: service,
+          instanceId: instanceId,
+          item: item,
+          index: index,
+        ),
         noItemsFoundIndicatorBuilder: (context) =>
             _EmptyLens(lens: lens, onBrowseRecent: onBrowseRecent),
         // Nothing arrived *and* something went wrong. The default here is the

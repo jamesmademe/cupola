@@ -521,6 +521,40 @@ void main() {
       expect(ServiceRoutes.plexItem('9421'), '/stack/plex/libraries/item/9421');
     });
 
+    test('a media server page names its connection only when given one', () {
+      // `?i=` is what lets a page read one connection without moving the
+      // lens; absent, the page reads the active one, which is what every old
+      // link and deep link means.
+      expect(
+        ServiceRoutes.jellyfinItem('abc-123', instanceId: 'cabin'),
+        '/stack/jellyfin/libraries/item/abc-123?i=cabin',
+      );
+      expect(
+        ServiceRoutes.streamItem(ServiceKey.plex, '9421', instanceId: 'plex-2'),
+        '/stack/plex/libraries/item/9421?i=plex-2',
+      );
+      expect(
+        ServiceRoutes.streamItem(ServiceKey.plex, '9421', instanceId: ''),
+        ServiceRoutes.plexItem('9421'),
+      );
+      expect(
+        ServiceRoutes.plexLibrary('3', title: 'TV Shows', instanceId: 'plex-2'),
+        '/stack/plex/libraries/3?title=TV+Shows&i=plex-2',
+      );
+      expect(
+        ServiceRoutes.jellyfinLibrary('f137a2dd', instanceId: 'cabin'),
+        '/stack/jellyfin/libraries/f137a2dd?i=cabin',
+      );
+      expect(
+        ServiceRoutes.streamActivity(ServiceKey.jellyfin, instanceId: 'cabin'),
+        '${ServiceRoutes.jellyfinActivity}?i=cabin',
+      );
+      expect(
+        ServiceRoutes.streamActivity(ServiceKey.plex),
+        ServiceRoutes.plexActivities,
+      );
+    });
+
     test('the Dockge tab roots are spelled by the tabs they mount', () {
       // The same tie every other service carries, and it has to be its own
       // case for the same reason: these are `const` literals precisely because

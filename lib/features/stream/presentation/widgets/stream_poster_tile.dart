@@ -7,11 +7,10 @@ import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
-import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/media/presentation/open_media.dart';
-import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/stream/presentation/stream_connection_provider.dart';
 import 'package:cupola/features/stream/presentation/stream_overview_provider.dart';
 
 /// One poster in a Stream library grid.
@@ -37,9 +36,14 @@ class StreamPosterTile extends ConsumerWidget {
     required this.service,
     required this.item,
     required this.index,
+    this.instanceId = '',
   });
 
   final ServiceKey service;
+
+  /// The connection the item is on; empty is the active one. What the tile
+  /// reads its artwork through and what its page opens on.
+  final String instanceId;
   final StreamItem item;
 
   /// Position in the full list, included in the Hero tag.
@@ -51,9 +55,9 @@ class StreamPosterTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final client = service == ServiceKey.jellyfin
-        ? ref.watch(jellyfinServerProvider)
-        : ref.watch(plexServerProvider);
+    final client = ref.watch(
+      streamClientForProvider((service: service, instanceId: instanceId)),
+    );
 
     final poster = item.posterPath == null
         ? null
@@ -70,7 +74,8 @@ class StreamPosterTile extends ConsumerWidget {
       excludeSemantics: true,
       child: PressableScale(
         // A movie opens on its own page, this server's copy leading.
-        onTap: () => context.openStreamItem(service, item),
+        onTap: () =>
+            context.openStreamItem(service, item, instanceId: instanceId),
         child: Stack(
           fit: StackFit.expand,
           children: [

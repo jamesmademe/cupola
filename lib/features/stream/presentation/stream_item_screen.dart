@@ -5,7 +5,6 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
-import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -14,6 +13,7 @@ import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/stream_server_client.dart';
 import 'package:cupola/features/stream/domain/stream_web_url.dart';
 import 'package:cupola/features/stream/presentation/play_with.dart';
+import 'package:cupola/features/stream/presentation/stream_connection_provider.dart';
 import 'package:cupola/features/stream/presentation/stream_overview_provider.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_poster_tile.dart';
 
@@ -30,10 +30,16 @@ class StreamItemScreen extends ConsumerWidget {
     super.key,
     required this.service,
     required this.itemId,
+    this.instanceId,
   });
 
   final ServiceKey service;
   final String itemId;
+
+  /// The connection the item is on (`?i=`): null, or one that is not a
+  /// connection of [service], reads the active one, which is what a link with
+  /// no connection means.
+  final String? instanceId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -52,9 +58,9 @@ class StreamItemScreen extends ConsumerWidget {
       );
     }
 
-    final itemAsync = service == ServiceKey.jellyfin
-        ? ref.watch(jellyfinItemProvider(itemId))
-        : ref.watch(plexItemProvider(itemId));
+    final connection = streamInstanceOf(ref, service, instanceId);
+    final itemKey = (service: service, instanceId: connection, itemId: itemId);
+    final itemAsync = ref.watch(streamItemForProvider(itemKey));
 
     return AmbientScaffold(
       accent: service.accent,
@@ -63,13 +69,7 @@ class StreamItemScreen extends ConsumerWidget {
         child: AsyncValueWidget<StreamItem?>(
           value: itemAsync,
           serviceName: service.title,
-          onRetry: () {
-            if (service == ServiceKey.jellyfin) {
-              ref.invalidate(jellyfinItemProvider(itemId));
-            } else {
-              ref.invalidate(plexItemProvider(itemId));
-            }
-          },
+          onRetry: () => refreshStreamItem(ref, itemKey),
           isEmpty: (item) => item == null,
           emptyBuilder: const AppEmptyState(
             icon: Icons.help_outline_rounded,
@@ -78,7 +78,8 @@ class StreamItemScreen extends ConsumerWidget {
                 'This item is no longer in the library, or the account this '
                 'connection uses cannot see it.',
           ),
-          data: (item) => _Body(service: service, item: item!),
+          data: (item) =>
+              _Body(service: service, instanceId: connection, item: item!),
         ),
       ),
     );
@@ -86,9 +87,14 @@ class StreamItemScreen extends ConsumerWidget {
 }
 
 class _Body extends ConsumerWidget {
-  const _Body({required this.service, required this.item});
+  const _Body({
+    required this.service,
+    required this.instanceId,
+    required this.item,
+  });
 
   final ServiceKey service;
+  final String instanceId;
   final StreamItem item;
 
   /// The poster's width beside the words: the library grid's tile, a little
@@ -98,9 +104,9 @@ class _Body extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final client = service == ServiceKey.jellyfin
-        ? ref.watch(jellyfinServerProvider)
-        : ref.watch(plexServerProvider);
+    final client = ref.watch(
+      streamClientForProvider((service: service, instanceId: instanceId)),
+    );
     final art = item.posterPath == null
         ? null
         : client.imageFor(item.posterPath!, width: 360);
@@ -141,7 +147,11 @@ class _Body extends ConsumerWidget {
             children: [
               _Head(item: item, art: art, words: words),
               const SizedBox(height: AppSpacing.lg),
-              _HandoffButton(service: service, item: item),
+              _HandoffButton(
+                service: service,
+                instanceId: instanceId,
+                item: item,
+              ),
               if (overview != null && overview.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.lg),
                 Text(overview, style: theme.textTheme.bodyMedium),
@@ -151,7 +161,7 @@ class _Body extends ConsumerWidget {
         ),
         if (item.kind.hasChildren) ...[
           const SizedBox(height: AppSpacing.xl),
-          _Children(service: service, itemId: item.id),
+          _Children(service: service, instanceId: instanceId, itemId: item.id),
         ],
       ],
     );
@@ -297,30 +307,38 @@ class _StateRow extends StatelessWidget {
 /// settled that a section belongs to the screen it is rendered in, and one accent
 /// lights a screen at a time.
 class _HandoffButton extends ConsumerWidget {
-  const _HandoffButton({required this.service, required this.item});
+  const _HandoffButton({
+    required this.service,
+    required this.instanceId,
+    required this.item,
+  });
 
   final ServiceKey service;
+
+  /// The connection the item is on; empty is the active one.
+  final String instanceId;
   final StreamItem item;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // The connection the lens is on, not the first one saved: with two
-    // Jellyfins the item on screen came from the one the lens chose, and the
-    // handoff has to open that server.
+    // The connection the page was opened on, else the one the lens is on,
+    // else the first saved: with two Jellyfins the item on screen came from
+    // one of them, and the handoff has to open that server.
     // At the address that connection is reached at now: away from home, the
     // one at home would not open.
-    final lens =
-        ref.watch(activeInstanceProvider(service))?.id ??
-        ref.watch(currentSettingsProvider).primaryOf(service)?.id;
-    final baseUrl = lens == null
+    final connectionId = _connectionId(ref);
+    final baseUrl = connectionId == null
         ? ''
-        : ref.watch(connectionReachProvider(lens))?.url ?? '';
+        : ref.watch(connectionReachProvider(connectionId))?.url ?? '';
 
     // Plex's web client addresses an item by server identity as well as by key, so
     // without the machine identifier there is no URL to build. The button is absent
     // rather than broken.
     final machineId = service == ServiceKey.plex
-        ? ref.watch(plexCapabilitiesProvider).value?.machineIdentifier
+        ? ref
+              .watch(plexCapabilitiesForProvider(instanceId))
+              .value
+              ?.machineIdentifier
         : null;
     if (baseUrl.isEmpty) return const SizedBox.shrink();
     if (service == ServiceKey.plex &&
@@ -342,6 +360,11 @@ class _HandoffButton extends ConsumerWidget {
     );
   }
 
+  String? _connectionId(WidgetRef ref) => instanceId.isNotEmpty
+      ? instanceId
+      : ref.watch(activeInstanceProvider(service))?.id ??
+            ref.watch(currentSettingsProvider).primaryOf(service)?.id;
+
   /// Opens the item on this connection: in the app the viewer chooses, on a
   /// phone, for Jellyfin (`playWith`); in the browser otherwise.
   Future<void> _open(
@@ -350,9 +373,11 @@ class _HandoffButton extends ConsumerWidget {
     String baseUrl,
     String? machineId,
   ) {
+    final settings = ref.read(currentSettingsProvider);
     final server =
+        (instanceId.isEmpty ? null : settings.instanceById(instanceId)) ??
         ref.read(activeInstanceProvider(service)) ??
-        ref.read(currentSettingsProvider).primaryOf(service);
+        settings.primaryOf(service);
     if (server == null) return Future.value();
     return playWith(
       context,
@@ -380,16 +405,24 @@ class _HandoffButton extends ConsumerWidget {
 /// show looks like what it is (one more thing you can enter) rather than as a
 /// list row that happens to navigate.
 class _Children extends ConsumerWidget {
-  const _Children({required this.service, required this.itemId});
+  const _Children({
+    required this.service,
+    required this.instanceId,
+    required this.itemId,
+  });
 
   final ServiceKey service;
+  final String instanceId;
   final String itemId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final childrenAsync = service == ServiceKey.jellyfin
-        ? ref.watch(jellyfinItemChildrenProvider(itemId))
-        : ref.watch(plexChildrenProvider(itemId));
+    final childrenKey = (
+      service: service,
+      instanceId: instanceId,
+      itemId: itemId,
+    );
+    final childrenAsync = ref.watch(streamChildrenForProvider(childrenKey));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -401,13 +434,7 @@ class _Children extends ConsumerWidget {
             value: childrenAsync,
             service: service,
             consequence: 'what is inside is not shown',
-            onRetry: () {
-              if (service == ServiceKey.jellyfin) {
-                ref.invalidate(jellyfinItemChildrenProvider(itemId));
-              } else {
-                ref.invalidate(plexChildrenProvider(itemId));
-              }
-            },
+            onRetry: () => refreshStreamChildren(ref, childrenKey),
             isEmpty: (list) => list.isEmpty,
             emptyBuilder: const AppEmptyState.compact(
               icon: Icons.inbox_outlined,
@@ -426,6 +453,7 @@ class _Children extends ConsumerWidget {
               ),
               itemBuilder: (context, index) => StreamPosterTile(
                 service: service,
+                instanceId: instanceId,
                 item: list[index],
                 index: index,
               ),

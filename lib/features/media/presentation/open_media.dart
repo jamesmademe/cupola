@@ -89,17 +89,28 @@ extension OpenMedia on BuildContext {
   /// Opens an item a media server listed: a movie or a series on its own
   /// page, with the copy of the connection that listed it leading (the
   /// service's lens); anything else on the server's own page.
-  Future<void> openStreamItem(ServiceKey service, StreamItem item) =>
-      switch (MediaKey.ofStreamItem(item)) {
-        final key? => openMedia(
-          key,
-          focus: ProviderScope.containerOf(
-            this,
-            listen: false,
-          ).read(activeInstanceProvider(service))?.id,
-        ),
-        null => push(ServiceRoutes.streamItem(service, item.id)),
-      };
+  ///
+  /// [instanceId] is the connection that listed the item: it leads in place of
+  /// the lens, and rides the server's page as `?i=`, so opening a row from one
+  /// connection never moves the lens.
+  Future<void> openStreamItem(
+    ServiceKey service,
+    StreamItem item, {
+    String instanceId = '',
+  }) => switch (MediaKey.ofStreamItem(item)) {
+    final key? => openMedia(
+      key,
+      focus: instanceId.isNotEmpty
+          ? instanceId
+          : ProviderScope.containerOf(
+              this,
+              listen: false,
+            ).read(activeInstanceProvider(service))?.id,
+    ),
+    null => push(
+      ServiceRoutes.streamItem(service, item.id, instanceId: instanceId),
+    ),
+  };
 
   /// Pushes a person's page under the tab the user is on, as a title opened
   /// here would be (`ServiceRoutes.person`), and on a tablet beside the list

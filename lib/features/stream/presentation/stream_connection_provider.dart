@@ -1,0 +1,146 @@
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:cupola/core/providers/provider_retry.dart';
+import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
+import 'package:cupola/features/plex/presentation/plex_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/stream/domain/stream_server_client.dart';
+import 'package:cupola/features/stream/presentation/stream_activity_provider.dart';
+
+/// The connection a Jellyfin or Plex page was asked to read, from its route's
+/// `?i=`.
+///
+/// Empty is the service's active connection: an old link, a deep link, a page
+/// opened from somewhere that does not know a connection. A value that names
+/// no connection of [service] (removed since the link was made, or another
+/// service's) is empty too, so a stale link opens on the active connection
+/// rather than on an error about a connection that no longer exists.
+String streamInstanceFor(
+  SettingsModel settings,
+  ServiceKey service,
+  String? requested,
+) {
+  final id = requested?.trim() ?? '';
+  if (id.isEmpty) return '';
+  final instance = settings.instanceById(id);
+  return instance != null && instance.service == service ? id : '';
+}
+
+/// [streamInstanceFor] for a widget.
+String streamInstanceOf(WidgetRef ref, ServiceKey service, String? requested) =>
+    streamInstanceFor(ref.watch(currentSettingsProvider), service, requested);
+
+/// A media server's client for one named connection; empty is the active one.
+///
+/// The active connection's own id collapses onto [jellyfinServerProvider] or
+/// [plexServerProvider], so a page opened without `?i=` and one opened with
+/// the active connection's id read one client, and an override of either
+/// still reaches both. Every other connection takes its own client, which
+/// takes its address, access and certificate pin from that connection's route
+/// (`watchTransport`).
+final streamClientForProvider =
+    Provider.family<StreamServerClient, StreamConnection>((ref, key) {
+      final isJellyfin = key.service == ServiceKey.jellyfin;
+      final lens = ref.watch(activeInstanceProvider(key.service))?.id ?? '';
+      if (key.instanceId.isEmpty || key.instanceId == lens) {
+        return isJellyfin
+            ? ref.watch(jellyfinServerProvider)
+            : ref.watch(plexServerProvider);
+      }
+      return isJellyfin
+          ? ref.watch(jellyfinClientForProvider(key.instanceId))
+          : ref.watch(plexClientForProvider(key.instanceId));
+    });
+
+/// One item on one connection, and where it is looked up.
+typedef StreamItemKey = ({
+  ServiceKey service,
+  String instanceId,
+  String itemId,
+});
+
+/// One item at any depth, read from the connection [StreamItemKey.instanceId]
+/// names, the active one when empty.
+final streamItemForProvider = FutureProvider.autoDispose
+    .family<StreamItem?, StreamItemKey>((ref, key) {
+      final isJellyfin = key.service == ServiceKey.jellyfin;
+      final lens = ref.watch(activeInstanceProvider(key.service))?.id ?? '';
+      if (key.instanceId.isEmpty || key.instanceId == lens) {
+        return isJellyfin
+            ? ref.watch(jellyfinItemProvider(key.itemId).future)
+            : ref.watch(plexItemProvider(key.itemId).future);
+      }
+      final client = ref.watch(
+        streamClientForProvider((
+          service: key.service,
+          instanceId: key.instanceId,
+        )),
+      );
+      final cancelToken = CancelToken();
+      ref.onDispose(cancelToken.cancel);
+      return client.getItem(key.itemId, cancelToken: cancelToken);
+    }, retry: noProviderRetry);
+
+/// What is inside one item (seasons, episodes, tracks), read like
+/// [streamItemForProvider].
+final streamChildrenForProvider = FutureProvider.autoDispose
+    .family<List<StreamItem>, StreamItemKey>((ref, key) {
+      final isJellyfin = key.service == ServiceKey.jellyfin;
+      final lens = ref.watch(activeInstanceProvider(key.service))?.id ?? '';
+      if (key.instanceId.isEmpty || key.instanceId == lens) {
+        return isJellyfin
+            ? ref.watch(jellyfinItemChildrenProvider(key.itemId).future)
+            : ref.watch(plexChildrenProvider(key.itemId).future);
+      }
+      final client = ref.watch(
+        streamClientForProvider((
+          service: key.service,
+          instanceId: key.instanceId,
+        )),
+      );
+      final cancelToken = CancelToken();
+      ref.onDispose(cancelToken.cancel);
+      return client.getChildren(key.itemId, cancelToken: cancelToken);
+    }, retry: noProviderRetry);
+
+/// Re-reads the playbacks of one connection: its own read and, when it is the
+/// active one, the cache the service's other pages share.
+void refreshStreamSessions(
+  WidgetRef ref,
+  ServiceKey service,
+  String instanceId,
+) {
+  ref.invalidate(
+    streamSessionsForProvider((service: service, instanceId: instanceId)),
+  );
+  ref.invalidate(
+    service == ServiceKey.jellyfin
+        ? jellyfinSessionsProvider
+        : plexSessionsProvider,
+  );
+}
+
+/// Asks again for one item: its own read and the active connection's cache
+/// it collapses onto.
+void refreshStreamItem(WidgetRef ref, StreamItemKey key) {
+  ref.invalidate(streamItemForProvider(key));
+  ref.invalidate(
+    key.service == ServiceKey.jellyfin
+        ? jellyfinItemProvider(key.itemId)
+        : plexItemProvider(key.itemId),
+  );
+}
+
+/// Asks again for what is inside one item, like [refreshStreamItem].
+void refreshStreamChildren(WidgetRef ref, StreamItemKey key) {
+  ref.invalidate(streamChildrenForProvider(key));
+  ref.invalidate(
+    key.service == ServiceKey.jellyfin
+        ? jellyfinItemChildrenProvider(key.itemId)
+        : plexChildrenProvider(key.itemId),
+  );
+}

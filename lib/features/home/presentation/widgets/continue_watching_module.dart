@@ -27,8 +27,6 @@ import 'package:cupola/features/media/presentation/open_media.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
-import 'package:cupola/features/services/presentation/dashboard_sections.dart'
-    show bringUnderLens;
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/shell/domain/settings_return.dart';
@@ -280,7 +278,7 @@ class ContinueWatchingRow extends ConsumerWidget {
       ],
     );
 
-    Future<void> open() => openResume(context, ref, row);
+    Future<void> open() => openResume(context, row);
 
     return Semantics(
       container: true,
@@ -408,17 +406,17 @@ class _WhoAreYou extends ConsumerWidget {
 
 /// A row's page: a movie's or a series' Media page with the connection it is
 /// on leading, else the item's own page on its server.
-Future<void> openResume(
-  BuildContext context,
-  WidgetRef ref,
-  ResumeRow row,
-) async {
+Future<void> openResume(BuildContext context, ResumeRow row) async {
   final key = MediaKey.ofStreamItem(row.item);
   if (key != null) {
     await context.openMedia(key, focus: row.instanceId);
     return;
   }
-  await bringUnderLens(ref, row.service, row.instanceId);
-  if (!context.mounted) return;
-  await context.pushMounted(ServiceRoutes.streamItem(row.service, row.item.id));
+  await context.pushMounted(
+    ServiceRoutes.streamItem(
+      row.service,
+      row.item.id,
+      instanceId: row.instanceId,
+    ),
+  );
 }

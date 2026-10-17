@@ -119,7 +119,7 @@ class HomeFeaturedModule extends ConsumerWidget {
     final line = slide.line(now);
     final label = joinSpokenParts([slide.title, spokenFromDotted(line)]);
     final details = switch (slide) {
-      FeaturedResume(:final row) => () => openResume(context, ref, row),
+      FeaturedResume(:final row) => () => openResume(context, row),
       FeaturedArrival(:final entry) => () => openArrived(context, entry),
       FeaturedToday(:final event) => () => _openToday(context, event),
     };

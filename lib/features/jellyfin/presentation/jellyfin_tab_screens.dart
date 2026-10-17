@@ -14,6 +14,8 @@ import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/stream/presentation/stream_activity_provider.dart';
+import 'package:cupola/features/stream/presentation/stream_connection_provider.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_now_playing_section.dart';
 
 /// Read-only household users from Jellyfin's `/Users` endpoint.
@@ -113,26 +115,42 @@ class JellyfinTasksScreen extends ConsumerWidget {
 /// Jellyfin's historical `/System/ActivityLog/Entries` endpoint is not present
 /// in the client contract. This tab therefore renders the real activity Cupola
 /// can operate today (live sessions) through the existing Stream shell.
+///
+/// [instanceId] is the connection to read (`?i=`); null, or one that is not a
+/// Jellyfin connection, reads the active one.
 class JellyfinActivityScreen extends ConsumerWidget {
-  const JellyfinActivityScreen({super.key, this.topPadding = 0});
+  const JellyfinActivityScreen({
+    super.key,
+    this.topPadding = 0,
+    this.instanceId,
+  });
 
   final double topPadding;
+  final String? instanceId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (!_isConfigured(ref)) return _notConfigured();
-    return _JellyfinActivityBody(topPadding: topPadding);
+    return _JellyfinActivityBody(
+      topPadding: topPadding,
+      instanceId: streamInstanceOf(ref, ServiceKey.jellyfin, instanceId),
+    );
   }
 }
 
 class _JellyfinActivityBody extends ConsumerWidget {
-  const _JellyfinActivityBody({required this.topPadding});
+  const _JellyfinActivityBody({
+    required this.topPadding,
+    required this.instanceId,
+  });
 
   final double topPadding;
+  final String instanceId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sessions = ref.watch(jellyfinSessionsProvider);
+    final connection = (service: ServiceKey.jellyfin, instanceId: instanceId);
+    final sessions = ref.watch(streamSessionsForProvider(connection));
     // The host's two bands and the status bar the upper one consumes: this
     // page has no `SafeArea` and no app bar to take the inset off first.
     final top = topPadding + MediaQuery.paddingOf(context).top;
@@ -146,7 +164,8 @@ class _JellyfinActivityBody extends ConsumerWidget {
           child: ServiceOfflineState.failure(
             service: ServiceKey.jellyfin,
             error: sessions.error!,
-            onRetry: () => ref.invalidate(jellyfinSessionsProvider),
+            onRetry: () =>
+                refreshStreamSessions(ref, ServiceKey.jellyfin, instanceId),
           ),
         ),
       );
@@ -154,7 +173,8 @@ class _JellyfinActivityBody extends ConsumerWidget {
     return AmbientScaffold(
       accent: ServiceKey.jellyfin.accent,
       body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(jellyfinSessionsProvider),
+        onRefresh: () async =>
+            refreshStreamSessions(ref, ServiceKey.jellyfin, instanceId),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(
@@ -166,6 +186,7 @@ class _JellyfinActivityBody extends ConsumerWidget {
           children: [
             StreamNowPlayingSection(
               service: ServiceKey.jellyfin,
+              instanceId: instanceId,
               sessions: sessions,
             ),
             if (ref.watch(jellyfinLacksAdministratorProvider))

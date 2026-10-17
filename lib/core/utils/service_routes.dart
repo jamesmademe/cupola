@@ -156,15 +156,29 @@ class ServiceRoutes {
   /// following [discoverGenre]: a deep link has to resolve from the path alone, but
   /// a caller that already knows the name can spare the destination a fetch
   /// before its first frame.
-  static String jellyfinLibrary(String id, {String? title}) =>
-      _streamLibrary(jellyfinLibraries, id, title);
-  static String plexLibrary(String id, {String? title}) =>
-      _streamLibrary(plexLibraries, id, title);
+  ///
+  /// [instanceId] names the connection the library is on (`?i=`), and only when
+  /// given: without it the page reads the service's active connection, which is
+  /// what an old link or a deep link means.
+  static String jellyfinLibrary(
+    String id, {
+    String? title,
+    String? instanceId,
+  }) => _streamLibrary(jellyfinLibraries, id, title, instanceId);
+  static String plexLibrary(String id, {String? title, String? instanceId}) =>
+      _streamLibrary(plexLibraries, id, title, instanceId);
 
-  static String _streamLibrary(String base, String id, String? title) {
-    final route = '$base/$id';
+  static String _streamLibrary(
+    String base,
+    String id,
+    String? title,
+    String? instanceId,
+  ) {
     final name = title?.trim() ?? '';
-    return name.isEmpty ? route : _withQuery(route, {'title': name});
+    return _withQuery('$base/$id', {
+      'title': name.isEmpty ? null : name,
+      'i': instanceId,
+    });
   }
 
   /// One item at any depth of the tree: film, show, season or episode.
@@ -174,12 +188,30 @@ class ServiceRoutes {
   /// `RouteUtils.safeIntParam`. Both are single path segments containing no `/`,
   /// which is why this stays a path route rather than taking
   /// [truenasDataset]'s query-parameter escape hatch.
-  static String jellyfinItem(String id) => '$jellyfinItemBase/$id';
-  static String plexItem(String id) => '$plexItemBase/$id';
+  ///
+  /// [instanceId] is the connection the item is on (`?i=`), appended only when
+  /// given. The path alone still resolves, on the service's active connection.
+  static String jellyfinItem(String id, {String? instanceId}) =>
+      _withQuery('$jellyfinItemBase/$id', {'i': instanceId});
+  static String plexItem(String id, {String? instanceId}) =>
+      _withQuery('$plexItemBase/$id', {'i': instanceId});
 
   /// [jellyfinItem] or [plexItem], by [service].
-  static String streamItem(ServiceKey service, String id) =>
-      service == ServiceKey.jellyfin ? jellyfinItem(id) : plexItem(id);
+  static String streamItem(
+    ServiceKey service,
+    String id, {
+    String? instanceId,
+  }) => service == ServiceKey.jellyfin
+      ? jellyfinItem(id, instanceId: instanceId)
+      : plexItem(id, instanceId: instanceId);
+
+  /// A media server's page of playbacks, on connection [instanceId] when
+  /// given (`?i=`), else on the active one.
+  static String streamActivity(ServiceKey service, {String? instanceId}) =>
+      _withQuery(
+        service == ServiceKey.plex ? plexActivities : jellyfinActivity,
+        {'i': instanceId},
+      );
 
   // ── TrueNAS sections ──────────────────────────────────────────────────────
   static const truenasDashboard = '$truenas/dashboard';

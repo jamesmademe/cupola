@@ -754,7 +754,10 @@ void main() {
         // service_routes_test. What this case is about is that the row opens the
         // item it names. A literal here only makes it break the next time the
         // route moves, which is how it broke this time.
-        expect(row.route, ServiceRoutes.jellyfinItem('id-Dune'));
+        expect(
+          row.route,
+          ServiceRoutes.jellyfinItem('id-Dune', instanceId: 'jellyfin'),
+        );
         // No plus and no "In library": every row here is already on the server
         // that listed it, and a media server is not a library this app writes to.
         expect(row.addRequest, isNull);
@@ -822,7 +825,10 @@ void main() {
       expect(rows.first.routeExtra, isNull);
       // A movie with no TMDB id stays on the server's own page; a series
       // with one opens on its own.
-      expect(rows[1].route, ServiceRoutes.jellyfinItem('id-Home video'));
+      expect(
+        rows[1].route,
+        ServiceRoutes.jellyfinItem('id-Home video', instanceId: 'jellyfin'),
+      );
       expect(
         rows[2].route,
         ServiceRoutes.mediaRoot(const MediaKey.tv(94605), focus: 'jellyfin'),

@@ -15,7 +15,6 @@ import 'package:cupola/features/home/presentation/widgets/home_module_frame.dart
 import 'package:cupola/features/home/presentation/widgets/home_module_parts.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
-import 'package:cupola/features/services/presentation/dashboard_sections.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/presentation/stream_activity_provider.dart';
@@ -101,7 +100,7 @@ class HomeNowPlayingModule extends ConsumerWidget {
           if (sessions.length > shown.length)
             HomeModuleLink(
               label: 'See all ${sessions.length}',
-              onTap: () => _openSessions(context, ref, shown.first),
+              onTap: () => _openSessions(context, shown.first),
             ),
         ],
       ),
@@ -131,7 +130,7 @@ class NowPlayingRow extends ConsumerWidget {
     final title = nowPlayingTitle(session);
     final line = nowPlayingLine(session);
 
-    Future<void> open() => _openSessions(context, ref, row);
+    void open() => _openSessions(context, row);
 
     return Semantics(
       container: true,
@@ -220,16 +219,8 @@ class _Initial extends StatelessWidget {
 }
 
 /// The media server's page of playbacks, on the connection serving [row].
-Future<void> _openSessions(
-  BuildContext context,
-  WidgetRef ref,
-  StreamActivityRow row,
-) async {
-  await bringUnderLens(ref, row.service, row.instanceId);
-  if (!context.mounted) return;
+void _openSessions(BuildContext context, StreamActivityRow row) {
   context.go(
-    row.service == ServiceKey.plex
-        ? ServiceRoutes.plexActivities
-        : ServiceRoutes.jellyfinActivity,
+    ServiceRoutes.streamActivity(row.service, instanceId: row.instanceId),
   );
 }

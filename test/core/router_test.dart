@@ -1378,6 +1378,85 @@ void main() {
       );
     });
 
+    testWidgets('?i= reaches the media server page that reads it', (
+      tester,
+    ) async {
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      router.go(ServiceRoutes.plexItem('9421', instanceId: 'plex-2'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<StreamItemScreen>(find.byType(StreamItemScreen))
+            .instanceId,
+        'plex-2',
+      );
+
+      router.go(ServiceRoutes.jellyfinLibrary('f137a2dd', instanceId: 'cabin'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<StreamLibraryScreen>(find.byType(StreamLibraryScreen))
+            .instanceId,
+        'cabin',
+      );
+
+      router.go(
+        ServiceRoutes.streamActivity(ServiceKey.jellyfin, instanceId: 'cabin'),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<JellyfinActivityScreen>(find.byType(JellyfinActivityScreen))
+            .instanceId,
+        'cabin',
+      );
+
+      router.go(
+        ServiceRoutes.streamActivity(ServiceKey.plex, instanceId: 'plex-2'),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<PlexActivitiesScreen>(find.byType(PlexActivitiesScreen))
+            .instanceId,
+        'plex-2',
+      );
+
+      // Without it a deep link resolves from the path alone, on the active
+      // connection.
+      router.go(ServiceRoutes.plexItem('9421'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<StreamItemScreen>(find.byType(StreamItemScreen))
+            .instanceId,
+        isNull,
+      );
+    });
+
+    testWidgets('the pre-tab item spelling keeps ?i= across its hop', (
+      tester,
+    ) async {
+      final container = await _pumpRouter(tester);
+      final router = container.read(routerProvider);
+
+      router.go('${ServiceRoutes.jellyfin}/item/abc-123?i=cabin');
+      await tester.pumpAndSettle();
+
+      expect(
+        router.state.uri.toString(),
+        ServiceRoutes.jellyfinItem('abc-123', instanceId: 'cabin'),
+      );
+      expect(
+        tester
+            .widget<StreamItemScreen>(find.byType(StreamItemScreen))
+            .instanceId,
+        'cabin',
+      );
+    });
+
     testWidgets('the item literal beats the library id that follows it', (
       tester,
     ) async {
