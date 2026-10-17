@@ -66,7 +66,7 @@ class _TaskGroup extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionHeader.inset(title: kind.label, showChevron: false),
+        SectionHeader.flush(title: kind.label, showChevron: false),
         const SizedBox(height: AppSpacing.sm),
         TrueNasAsyncBody.inline(
           value: tasks,

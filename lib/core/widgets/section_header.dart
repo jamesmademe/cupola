@@ -58,8 +58,8 @@ class SectionHeader extends StatelessWidget {
 
   /// Whether the header adds the page's horizontal inset itself.
   ///
-  /// True for every constructor but [SectionHeader.inset] and
-  /// [SectionHeader.insetAction], which sit in a body the page has already
+  /// True for every constructor but [SectionHeader.flush] and
+  /// [SectionHeader.flushAction], which sit in a body the page has already
   /// inset.
   final bool _carriesInset;
 
@@ -101,7 +101,7 @@ class SectionHeader extends StatelessWidget {
   /// so its title lines up with the rows under it instead of sitting at twice
   /// the inset. Never wrap a [SectionHeader] in horizontal padding instead;
   /// `test/core/widgets/section_header_inset_guard_test.dart` holds that.
-  const SectionHeader.inset({
+  const SectionHeader.flush({
     super.key,
     required this.title,
     this.onTap,
@@ -114,8 +114,8 @@ class SectionHeader extends StatelessWidget {
        _carriesInset = false;
 
   /// [SectionHeader.action] for a body that is already inset: see
-  /// [SectionHeader.inset].
-  const SectionHeader.insetAction({
+  /// [SectionHeader.flush].
+  const SectionHeader.flushAction({
     super.key,
     required this.title,
     required this.trailing,
@@ -128,7 +128,7 @@ class SectionHeader extends StatelessWidget {
        _carriesInset = false,
        assert(
          trailing != null,
-         'SectionHeader.insetAction needs a trailing control',
+         'SectionHeader.flushAction needs a trailing control',
        );
 
   @override

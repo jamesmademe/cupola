@@ -9,7 +9,7 @@ import '../../test_helpers/code_scan.dart';
 /// horizontal component around it puts the title at twice the page inset, out
 /// of line with the rows under it and with every other header. Where the body
 /// is already inset (a `ListView(padding: …horizontal…)`), the header is built
-/// with `SectionHeader.inset` / `SectionHeader.insetAction`, which drop their
+/// with `SectionHeader.flush` / `SectionHeader.flushAction`, which drop their
 /// own side padding, so the title lines up with the rows.
 ///
 /// A source scan, because the regression is one plausible wrapper in a diff.
@@ -78,7 +78,7 @@ void main() {
       isEmpty,
       reason:
           'SectionHeader pads its own sides. Drop the horizontal Padding (keep '
-          'a vertical one), or build the header with SectionHeader.inset when '
+          'a vertical one), or build the header with SectionHeader.flush when '
           'the body around it is already inset.',
     );
   });

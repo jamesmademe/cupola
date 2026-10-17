@@ -327,7 +327,7 @@ class _DashboardBody extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.md),
 
-        const SectionHeader.inset(title: 'Network', showChevron: false),
+        const SectionHeader.flush(title: 'Network', showChevron: false),
         const SizedBox(height: AppSpacing.sm),
         _NetworkCard(
           metrics: metrics,
@@ -335,12 +335,12 @@ class _DashboardBody extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.md),
 
-        const SectionHeader.inset(title: 'Pool health', showChevron: false),
+        const SectionHeader.flush(title: 'Pool health', showChevron: false),
         const SizedBox(height: AppSpacing.sm),
         _PoolHealthCard(pools: data.pools),
         const SizedBox(height: AppSpacing.md),
 
-        SectionHeader.inset(
+        SectionHeader.flush(
           title: 'Alerts${alerts.isEmpty ? '' : ' (${alerts.length})'}',
           showChevron: false,
         ),

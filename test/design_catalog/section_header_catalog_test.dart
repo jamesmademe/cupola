@@ -39,7 +39,7 @@ void main() {
         width: 360,
       ),
       CatalogScene(
-        'SectionHeader.inset · in a body the page already insets: the title '
+        'SectionHeader.flush · in a body the page already insets: the title '
         'lines up with the rows, where the default would sit at twice the '
         'inset',
         (_) => Padding(
@@ -47,7 +47,7 @@ void main() {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SectionHeader.inset(
+              const SectionHeader.flush(
                 title: 'Interfaces',
                 showChevron: false,
               ),

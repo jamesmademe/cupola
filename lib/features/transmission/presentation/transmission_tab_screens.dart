@@ -947,7 +947,7 @@ class _SettingsSection extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      SectionHeader.inset(title: title, showChevron: false),
+      SectionHeader.flush(title: title, showChevron: false),
       const SizedBox(height: AppSpacing.sm),
       SettingsGroupCard(children: children),
     ],

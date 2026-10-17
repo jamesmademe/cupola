@@ -146,7 +146,7 @@ class _PoolDetailBody extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        const SectionHeader.inset(title: 'Topology', showChevron: false),
+        const SectionHeader.flush(title: 'Topology', showChevron: false),
         const SizedBox(height: AppSpacing.sm),
         if (!pool.hasTopology)
           AppCard.surfaceOutlined(
