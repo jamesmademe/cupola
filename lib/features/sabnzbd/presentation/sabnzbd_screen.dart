@@ -133,7 +133,7 @@ class _SabnzbdDashboard extends ConsumerWidget {
               _SabnzbdActionsBar(queueAsync: queueAsync),
               const SizedBox(height: AppSpacing.sm),
               SectionHeader(
-                title: 'Downloading',
+                title: 'Queue',
                 subtitle: sabnzbdQueueCountLabel(queue),
                 showChevron: false,
               ),
@@ -265,7 +265,7 @@ class _SabnzbdActionsBar extends ConsumerWidget {
                             : 'Queue stopped',
                         failureMessage: paused
                             ? 'Could not resume the queue'
-                            : 'Could not pause the queue',
+                            : 'Could not stop the queue',
                         invalidate: _sabnzbdInvalidateAfterAction,
                       );
                     },
@@ -275,7 +275,7 @@ class _SabnzbdActionsBar extends ConsumerWidget {
                     : Icons.pause_rounded,
                 size: 18,
               ),
-              label: Text(paused ?? false ? 'Resume all' : 'Pause all'),
+              label: Text(paused ?? false ? 'Resume all' : 'Stop all'),
             ),
           ),
         ],
@@ -449,7 +449,7 @@ class _QueueTile extends ConsumerWidget {
           ref,
           action: (c) => c.pauseJob(slot.nzoId),
           successMessage: 'Job stopped',
-          failureMessage: 'Could not pause the job',
+          failureMessage: 'Could not stop the job',
           invalidate: _sabnzbdInvalidateAfterAction,
         );
       case DownloadQueueCommand.resume:

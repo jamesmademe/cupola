@@ -28,13 +28,13 @@ void main() {
     expect(find.byType(ServiceKpiPeek), findsOneWidget);
 
     // What is moving, how it is filed, how the daemon is set up, what landed.
-    // The mobile board is what fixes this order: it keeps Transferring
+    // The mobile board is what fixes this order: it keeps the Queue
     // immediately under the readouts and lets the rest fall below the fold.
     expect(
       tester
           .widgetList<SectionHeader>(find.byType(SectionHeader))
           .map((header) => header.title),
-      ['Transferring', 'Labels', 'Session', 'Finished today'],
+      ['Queue', 'Labels', 'Session', 'Finished today'],
     );
   });
 

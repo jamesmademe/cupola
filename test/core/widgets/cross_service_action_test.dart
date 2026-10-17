@@ -388,8 +388,7 @@ Future<GoRouter> _pumpGated(
   return router;
 }
 
-String _location(GoRouter router) =>
-    router.routerDelegate.currentConfiguration.uri.toString();
+String _location(GoRouter router) => router.state.uri.toString();
 
 /// The shapes a write takes in the three gated services, each held to the same
 /// four rules: reachable, dimmed, hinted, and answering a tap with the fix.

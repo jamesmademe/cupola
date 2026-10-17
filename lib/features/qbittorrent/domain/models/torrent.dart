@@ -77,6 +77,11 @@ enum TorrentState {
   }
 }
 
+/// The key under which the sync keeps [Torrent.resumedOn] on a torrent's
+/// merged entry. qBittorrent sends no such key; the prefix keeps it from ever
+/// meeting one it adds.
+const String kQbittorrentResumedOn = 'cupola_resumed_on';
+
 class Torrent {
   final String hash;
   final String name;
@@ -108,6 +113,11 @@ class Torrent {
   final int dlLimit;
   final int upLimit;
   final int lastActivity;
+
+  /// When Cupola saw this torrent leave a stopped state, in epoch seconds; 0
+  /// when it never did. Not a qBittorrent field: the sync writes it down
+  /// ([kQbittorrentResumedOn]), because the server keeps no restart date.
+  final int resumedOn;
   final int seedingTime;
   final int timeActive;
   final int downloaded;
@@ -144,6 +154,7 @@ class Torrent {
     this.dlLimit = -1,
     this.upLimit = -1,
     this.lastActivity = 0,
+    this.resumedOn = 0,
     this.seedingTime = 0,
     this.timeActive = 0,
     this.downloaded = 0,
@@ -184,6 +195,7 @@ class Torrent {
       dlLimit: parseInt(json['dl_limit']),
       upLimit: parseInt(json['up_limit']),
       lastActivity: parseInt(json['last_activity']),
+      resumedOn: parseInt(json[kQbittorrentResumedOn]),
       seedingTime: parseInt(json['seeding_time']),
       timeActive: parseInt(json['time_active']),
       downloaded: parseInt(json['downloaded']),

@@ -553,7 +553,7 @@ class DownloadQueueActionsMenu extends StatelessWidget {
         else
           const PopupMenuItem(
             value: DownloadQueueCommand.pause,
-            child: Text('Pause'),
+            child: Text('Stop'),
           ),
         const PopupMenuItem(
           value: DownloadQueueCommand.delete,

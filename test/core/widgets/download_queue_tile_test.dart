@@ -196,8 +196,8 @@ void main() {
     testWidgets('offers the half of the toggle the job is not already in', (
       tester,
     ) async {
-      // A running job is offered Pause and a paused one Resume, never both,
-      // and never the one it is already doing. Pause is a download-client
+      // A running job is offered Stop and a stopped one Resume, never both,
+      // and never the one it is already doing. Stop is a download-client
       // capability, which is why this menu has it and no \*arr queue row does.
       await tester.pumpWidget(
         host(
@@ -219,7 +219,7 @@ void main() {
       await tester.tap(find.byType(DownloadQueueActionsMenu));
       await tester.pumpAndSettle();
 
-      expect(find.text('Pause'), findsOneWidget);
+      expect(find.text('Stop'), findsOneWidget);
       expect(find.text('Resume'), findsNothing);
     });
 

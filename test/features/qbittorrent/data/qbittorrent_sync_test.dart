@@ -250,4 +250,68 @@ void main() {
 
     expect(data.torrents.single.hash, 'c0ffee');
   });
+
+  group('the moment a stopped torrent starts again', () {
+    final now = DateTime.utc(2026, 10, 17, 21);
+    final nowSeconds = now.millisecondsSinceEpoch ~/ 1000;
+
+    setUp(() => sync = QbittorrentSync(_client(server), clock: () => now));
+
+    test('is written down when the state leaves a stopped one', () async {
+      server.script
+        ..add({
+          'rid': 1,
+          'full_update': true,
+          'torrents': {'aaa': _torrent('Ubuntu', state: 'stoppedDL')},
+        })
+        ..add({
+          'rid': 2,
+          'torrents': {
+            'aaa': {'state': 'stalledDL'},
+          },
+        });
+
+      final before = await sync.read();
+      final after = await sync.read();
+
+      expect(before.torrent('aaa')!.resumedOn, 0);
+      expect(after.torrent('aaa')!.resumedOn, nowSeconds);
+    });
+
+    test('is not invented for a torrent first seen running', () async {
+      server.script.add({
+        'rid': 1,
+        'full_update': true,
+        'torrents': {'aaa': _torrent('Ubuntu', state: 'stalledDL')},
+      });
+
+      expect((await sync.read()).torrent('aaa')!.resumedOn, 0);
+    });
+
+    test('survives a full update that names the torrent again', () async {
+      server.script
+        ..add({
+          'rid': 1,
+          'full_update': true,
+          'torrents': {'aaa': _torrent('Ubuntu', state: 'pausedDL')},
+        })
+        ..add({
+          'rid': 2,
+          'torrents': {
+            'aaa': {'state': 'downloading'},
+          },
+        })
+        ..add({
+          'rid': 1,
+          'full_update': true,
+          'torrents': {'aaa': _torrent('Ubuntu', state: 'stalledDL')},
+        });
+
+      await sync.read();
+      await sync.read();
+      final data = await sync.read();
+
+      expect(data.torrent('aaa')!.resumedOn, nowSeconds);
+    });
+  });
 }

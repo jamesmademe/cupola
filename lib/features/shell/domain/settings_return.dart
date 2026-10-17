@@ -25,14 +25,22 @@ class SettingsReturn extends Notifier<NavTab?> {
   void set(NavTab? tab) => state = tab;
 }
 
-/// Opens Settings from wherever [context] is, remembering the tab it was
-/// opened from: at its root, or at [to] inside it (a service's setup form),
-/// whose way back leads to the root and from there to the tab.
+/// Opens Settings from wherever [context] is: at its root, remembering the
+/// tab it was opened from, or at [to] inside it (a service's setup form).
+///
+/// A form is pushed over the page that asked for it, so its back and its Save
+/// land on that page in one step. Going to it left the person at the root of
+/// Settings after the save, one more back away from where they started, and
+/// lost the way back altogether wherever the caller forgot this function.
 void openSettings(
   BuildContext context,
   WidgetRef ref, {
   String to = ServiceRoutes.settings,
 }) {
+  if (to != ServiceRoutes.settings) {
+    context.push(to);
+    return;
+  }
   final index = StatefulNavigationShell.maybeOf(context)?.currentIndex;
   final from = index == null ? null : NavTab.values[index];
   ref

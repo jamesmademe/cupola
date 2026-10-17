@@ -74,15 +74,15 @@ class TorrentSelectionBar extends ConsumerWidget {
                 ),
               ),
               IconButton(
-                // See the detail screen's Pause: an action, not a fault.
+                // See the detail screen's Stop: an action, not a fault.
                 icon: const Icon(Icons.pause_rounded),
-                tooltip: 'Pause',
+                tooltip: 'Stop',
                 onPressed: () => runTorrentAction(
                   context,
                   ref,
                   action: (service) =>
                       service.pauseTorrents(selectedHashes.toList()),
-                  failureMessage: 'Could not pause',
+                  failureMessage: 'Could not stop the torrents',
                   invalidate: [torrentsProvider, allTorrentsProvider],
                 ),
               ),

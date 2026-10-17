@@ -31,7 +31,7 @@ class QbittorrentOverflowMenu extends ConsumerWidget {
           value: _QbOverflowAction.pauseAll,
           child: ListTile(
             leading: Icon(Icons.pause_rounded),
-            title: Text('Pause all'),
+            title: Text('Stop all'),
             contentPadding: EdgeInsets.zero,
           ),
         ),

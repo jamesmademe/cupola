@@ -854,7 +854,7 @@ class _NotSetUpCell extends StatelessWidget {
       // The service's own setup form, like every other `Set up X`: the
       // connections list made the user find, a second time, the service
       // they had just tapped.
-      onTap: () => context.go(ServiceRoutes.setUp(service)),
+      onTap: () => context.push(ServiceRoutes.setUp(service)),
       pressFeedback: AppCardPressFeedback.scale,
       semanticLabel: service.title,
       semanticValue: servicesNotSetUpCellLabel,

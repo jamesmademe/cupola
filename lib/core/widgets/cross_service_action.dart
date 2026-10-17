@@ -269,7 +269,7 @@ class CrossServiceAction extends ConsumerWidget {
       // is the *specific* fix: this service's own setup form, where its setup
       // note is printed: the one place every `Set up X` goes.
       actionLabel: Lexicon.setUp(target.title),
-      onAction: () => context.go(ServiceRoutes.setUp(target)),
+      onAction: () => context.push(ServiceRoutes.setUp(target)),
     );
 
     final builder = this.builder;
@@ -366,8 +366,9 @@ void _showCapabilityBlocked(
     context,
     message,
     actionLabel: service.capabilityFixLabel,
-    onAction: () =>
-        context.go(ServiceRoutes.settingsForConnection(service, connectionId)),
+    onAction: () => context.push(
+      ServiceRoutes.settingsForConnection(service, connectionId),
+    ),
   );
 }
 

@@ -12,7 +12,7 @@ Rendered from `lib/core/widgets/download_queue_tile.dart`, with the qBittorrent 
 - Bar (only when `progress` is non-null): 4 above, a 4pt `LinearProgressIndicator` clipped to `AppRadius.xs`, track `surfaceContainerHighest`, value in the blue tone (in progress: `statusToneColor(info)` walked against the track); a stale sample (`sampleAge`) drains it to `onSurfaceVariant`.
 - Second line: 4 above, `bodySmall` with tabular figures in `onSurfaceVariant`, one line, ellipsised: the optional `subtitleLead` (the Usenet pair's state and category), then whatever the client counts down (ETA, remaining size), joined by ` · `. A time is `formatTimeSpan`'s, the brand book's units with a no-break space: *12 min*, *2 h 10 min*, *1 d 5 h*, never *12m*; at 390 the longest of them fits beside a size (the long-wait scene), and it is the title that ellipsises.
 - Metrics (optional): 4 above, 12 apart; an 8pt dot, 4, and the value in `labelSmall` tabular, both in the primary ink when `accented`, else `onSurfaceVariant`.
-- Menu (`DownloadQueueActionsMenu`, the Usenet pair): a `PopupMenuButton` with an 18pt `more_vert_rounded`, tooltip *Actions for* and the job's name (`subject`), offering *Pause* or *Resume*, then *Delete job*.
+- Menu (`DownloadQueueActionsMenu`, the Usenet pair): a `PopupMenuButton` with an 18pt `more_vert_rounded`, tooltip *Actions for* and the job's name (`subject`), offering *Stop* or *Resume* (the verb of the row's *Stopped*), then *Delete job*.
 
 ## States
 

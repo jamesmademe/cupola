@@ -178,8 +178,10 @@ class NotConfiguredPlaceholder extends StatelessWidget {
       message: "Add its address and credentials in Settings.",
       // `Set up X`, to the service's own setup form: the one place every
       // way in goes. Only a name that is no service keeps the Settings root.
+      // Pushed, not gone to: the form's back and its Save return to the page
+      // that asked, where a `go` left the person in Settings.
       action: FilledButton.icon(
-        onPressed: () => context.go(
+        onPressed: () => context.push(
           key == null ? ServiceRoutes.settings : ServiceRoutes.setUp(key),
         ),
         icon: const Icon(Icons.add_link_rounded, size: 18),

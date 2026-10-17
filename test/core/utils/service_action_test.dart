@@ -102,10 +102,7 @@ void main() {
 
     await tester.tap(find.widgetWithText(SnackBarAction, 'Update the key'));
     await tester.pumpAndSettle();
-    expect(
-      router.routerDelegate.currentConfiguration.uri.toString(),
-      '/settings/service/unraid?i=unraid',
-    );
+    expect(router.state.uri.toString(), '/settings/service/unraid?i=unraid');
   });
 
   testWidgets('a 401 marks nothing and reads as a failure', (tester) async {

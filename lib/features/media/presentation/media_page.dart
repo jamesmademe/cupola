@@ -209,9 +209,9 @@ class _MediaPageState extends ConsumerState<MediaPage> {
       retry: rows,
     ),
     MediaRowWay.setUp ||
-    MediaRowWay.add => () => context.go(ServiceRoutes.setUp(row.service)),
+    MediaRowWay.add => () => context.push(ServiceRoutes.setUp(row.service)),
     MediaRowWay.retry => () => retryMediaRow(ref, mediaKey, row),
-    MediaRowWay.fix => () => context.go(
+    MediaRowWay.fix => () => context.push(
       ServiceRoutes.settingsForConnection(row.service, view.connectionId ?? ''),
     ),
     MediaRowWay.review => () async {

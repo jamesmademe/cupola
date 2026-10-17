@@ -740,7 +740,7 @@ class _ActionsTab extends ConsumerWidget {
           label: const Text('Force resume'),
         ),
         const SizedBox(height: AppSpacing.sm),
-        // Pause is an action the user chooses, not a state the client reports,
+        // Stop is an action the user chooses, not a state the client reports,
         // so it wears no status tone at all: amber here said "something is
         // wrong" about a button, and hardcoded its ink black to survive it.
         FilledButton.icon(
@@ -749,14 +749,14 @@ class _ActionsTab extends ConsumerWidget {
             ref,
             action: (service) => service.pauseTorrents([torrent.hash]),
             successMessage: StateWord.stopped.label,
-            failureMessage: 'Could not pause',
+            failureMessage: 'Could not stop the torrent',
             invalidate: [torrentsProvider, allTorrentsProvider],
           ),
           icon: const Icon(Icons.pause_rounded, size: 18),
-          label: const Text('Pause'),
+          label: const Text('Stop'),
         ),
         const SizedBox(height: AppSpacing.sm),
-        // The theme's own fill, like Pause above it: red means unreachable
+        // The theme's own fill, like Stop above it: red means unreachable
         // and nothing else, and the confirmation says what Delete will do.
         FilledButton.icon(
           onPressed: () => _confirmDeleteSingle(context, ref, torrent),

@@ -427,12 +427,12 @@ class _NoStreamService extends StatelessWidget {
             children: [
               FilledButton(
                 onPressed: () =>
-                    context.go(ServiceRoutes.setUp(ServiceKey.jellyfin)),
+                    context.push(ServiceRoutes.setUp(ServiceKey.jellyfin)),
                 child: Text(Lexicon.setUp(ServiceKey.jellyfin.title)),
               ),
               OutlinedButton(
                 onPressed: () =>
-                    context.go(ServiceRoutes.setUp(ServiceKey.plex)),
+                    context.push(ServiceRoutes.setUp(ServiceKey.plex)),
                 child: Text(Lexicon.setUp(ServiceKey.plex.title)),
               ),
             ],

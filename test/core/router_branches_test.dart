@@ -739,4 +739,24 @@ void main() {
       });
     }
   });
+
+  testWidgets('Set up X from a service page comes back to it', (tester) async {
+    final page = ServiceRoutes.forService(ServiceKey.bazarr);
+    final router = await pumpRouter(tester, at: page);
+    final landed = router.state.uri.path;
+    expect(landed, startsWith(page));
+
+    // What `NotConfiguredPlaceholder` and a cross-service control do: the
+    // form is pushed over the page that asked, in whichever branch it lives.
+    router.push(ServiceRoutes.setUp(ServiceKey.bazarr));
+    await tester.pumpAndSettle();
+    expect(router.state.uri.path, ServiceRoutes.setUp(ServiceKey.bazarr));
+
+    // What the form's back button and its Save both do.
+    router.pop();
+    await tester.pumpAndSettle();
+
+    expect(router.state.uri.path, landed);
+    expect(tester.takeException(), isNull);
+  });
 }

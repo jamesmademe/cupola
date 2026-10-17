@@ -97,7 +97,7 @@ void showCapabilityRefusal(BuildContext context, CapabilityTarget capability) {
     context,
     capability.copy.refusal,
     actionLabel: capability.service.capabilityFixLabel,
-    onAction: () => router?.go(
+    onAction: () => router?.push(
       ServiceRoutes.settingsForConnection(
         capability.service,
         capability.connectionId,

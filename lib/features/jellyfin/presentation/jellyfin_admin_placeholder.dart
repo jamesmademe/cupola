@@ -50,7 +50,7 @@ class JellyfinAdminPlaceholder extends StatelessWidget {
               'administrator can list $what; use an API key or an '
               'administrator\'s sign-in to see them here.',
           action: FilledButton.icon(
-            onPressed: () => context.go(
+            onPressed: () => context.push(
               ServiceRoutes.settingsForConnection(
                 ServiceKey.jellyfin,
                 connectionId,

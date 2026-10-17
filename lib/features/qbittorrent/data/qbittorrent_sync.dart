@@ -61,9 +61,11 @@ class QbittorrentMainData {
 /// same point. An answer that says `full_update` replaces everything, which is
 /// how the server starts over after a restart or a new session.
 class QbittorrentSync {
-  QbittorrentSync(this._client);
+  QbittorrentSync(this._client, {DateTime Function()? clock})
+    : _clock = clock ?? DateTime.now;
 
   final QbittorrentClient _client;
+  final DateTime Function() _clock;
 
   int _rid = 0;
   final Map<String, Map<String, dynamic>> _raw = {};
@@ -133,11 +135,13 @@ class QbittorrentSync {
     if (torrents is Map) {
       for (final MapEntry(:key, :value) in torrents.entries) {
         if (key is! String || value is! Map) continue;
-        final merged = full ? <String, dynamic>{} : {...?_raw[key]};
+        final before = _raw[key];
+        final merged = full ? <String, dynamic>{} : {...?before};
         merged
           ..addAll(value.cast<String, dynamic>())
           // The hash is the entry's key, not one of its fields.
           ..['hash'] = key;
+        _stampResume(merged, before);
         changed[key] = merged;
       }
     }
@@ -166,6 +170,26 @@ class QbittorrentSync {
     }
     _rid = parseInt(answer['rid']);
   }
+
+  /// Writes down when this copy saw a stopped torrent start again.
+  ///
+  /// qBittorrent keeps no such date: `last_activity` is the last byte, so a
+  /// torrent stopped for weeks and started a minute ago, still waiting for a
+  /// peer, read as stuck for weeks. The moment the state leaves a stopped one
+  /// is the only witness, so it is kept on the entry ([kQbittorrentResumedOn])
+  /// and survives a full update, which starts the merge from nothing.
+  void _stampResume(Map<String, dynamic> merged, Map<String, dynamic>? before) {
+    final seen = before?[kQbittorrentResumedOn];
+    if (seen != null) merged.putIfAbsent(kQbittorrentResumedOn, () => seen);
+    if (before == null) return;
+    if (_isStopped(before['state']) && !_isStopped(merged['state'])) {
+      merged[kQbittorrentResumedOn] = _clock().millisecondsSinceEpoch ~/ 1000;
+    }
+  }
+
+  static bool _isStopped(Object? state) =>
+      state is String &&
+      (state.startsWith('paused') || state.startsWith('stopped'));
 
   QbittorrentMainData _snapshot() => QbittorrentMainData(
     torrents: _torrents.values.toList(growable: false),

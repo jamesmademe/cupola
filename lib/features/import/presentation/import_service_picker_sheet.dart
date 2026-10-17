@@ -142,7 +142,7 @@ class _ImportServicePickerSheet extends ConsumerWidget {
         onTap: () {
           final router = GoRouter.of(context);
           Navigator.of(context).pop();
-          router.go(ServiceRoutes.setUp(service));
+          router.push(ServiceRoutes.setUp(service));
         },
       ),
     );

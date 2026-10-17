@@ -142,7 +142,7 @@ class _TransferringSection extends ConsumerWidget {
 
     return ServiceOverviewSection.bleed(
       service: ServiceKey.transmission,
-      title: 'Transferring',
+      title: 'Queue',
       subtitle: transmissionTransferringSubtitle(all),
       destination: ServiceTab.queue,
       // `.bleed()`, because `DownloadQueueTile` carries its own `AppSpacing.lg`
@@ -157,8 +157,8 @@ class _TransferringSection extends ConsumerWidget {
       child: AsyncValueWidget<List<TransmissionTorrent>>.bleedSection(
         value: rows,
         service: ServiceKey.transmission,
-        consequence: 'what it is transferring is not shown',
-        loadingLabel: 'Loading what Transmission is transferring',
+        consequence: 'the queue is not shown',
+        loadingLabel: 'Loading the Transmission queue',
         onRetry: () => ref.invalidate(transmissionTorrentsProvider),
         skeleton: const Padding(
           padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),

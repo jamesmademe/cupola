@@ -40,8 +40,10 @@ Torrent _qb(
   String state, {
   int lastActivity = 0,
   int addedOn = 0,
+  int resumedOn = 0,
   double progress = 0,
 }) => Torrent.fromJson({
+  kQbittorrentResumedOn: resumedOn,
   'hash': 'abc',
   'name': 'Big.Buck.Bunny.2008.1080p.BluRay',
   'state': state,
@@ -321,6 +323,20 @@ void main() {
           ),
           now: _now,
         ),
+        const InFlightReading.moving(),
+      );
+    });
+
+    test('qBittorrent: a torrent stopped for weeks and started again waits '
+        'from when Cupola saw it start', () {
+      final resumed = _qb(
+        'stalledDL',
+        lastActivity: _secondsAgo(const Duration(days: 26)),
+        addedOn: _secondsAgo(const Duration(days: 40)),
+        resumedOn: _secondsAgo(const Duration(minutes: 10)),
+      );
+      expect(
+        qbittorrentInFlight(resumed, now: _now),
         const InFlightReading.moving(),
       );
     });

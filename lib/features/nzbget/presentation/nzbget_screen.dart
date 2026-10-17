@@ -130,7 +130,7 @@ class _NzbgetDashboard extends ConsumerWidget {
               const _NzbgetActionsBar(),
               const SizedBox(height: AppSpacing.sm),
               SectionHeader(
-                title: 'Downloading',
+                title: 'Queue',
                 subtitle: nzbgetQueueCountLabel(groups?.length),
                 showChevron: false,
               ),
@@ -256,7 +256,7 @@ class _NzbgetActionsBar extends ConsumerWidget {
                             : 'Downloads stopped',
                         failureMessage: paused
                             ? 'Could not resume downloads'
-                            : 'Could not pause downloads',
+                            : 'Could not stop downloads',
                         invalidate: _nzbgetInvalidateAfterAction,
                       );
                     },
@@ -266,7 +266,7 @@ class _NzbgetActionsBar extends ConsumerWidget {
                     : Icons.pause_rounded,
                 size: 18,
               ),
-              label: Text(paused ?? false ? 'Resume all' : 'Pause all'),
+              label: Text(paused ?? false ? 'Resume all' : 'Stop all'),
             ),
           ),
         ],
@@ -397,7 +397,7 @@ class _QueueTile extends ConsumerWidget {
           ref,
           action: (c) => c.pauseGroup(group.nzbId),
           successMessage: 'Job stopped',
-          failureMessage: 'Could not pause the job',
+          failureMessage: 'Could not stop the job',
           invalidate: _nzbgetInvalidateAfterAction,
         );
       case DownloadQueueCommand.resume:

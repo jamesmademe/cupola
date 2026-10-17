@@ -233,7 +233,7 @@ class CapabilityBannerSlot extends ConsumerWidget {
     return CapabilityBanner(
       message: copy.bannerFor(grant, restricted),
       actionLabel: _service.capabilityFixLabel,
-      onFix: () => context.go(
+      onFix: () => context.push(
         ServiceRoutes.settingsForConnection(_service, connectionId),
       ),
     );

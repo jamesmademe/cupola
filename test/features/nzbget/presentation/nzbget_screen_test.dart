@@ -100,9 +100,7 @@ class _DeletingNzbget implements NzbgetClient {
 
 String? _queueSubtitle(WidgetTester tester) => tester
     .widget<SectionHeader>(
-      find.byWidgetPredicate(
-        (w) => w is SectionHeader && w.title == 'Downloading',
-      ),
+      find.byWidgetPredicate((w) => w is SectionHeader && w.title == 'Queue'),
     )
     .subtitle;
 
@@ -171,7 +169,7 @@ void main() {
     );
     await tester.pump();
 
-    final toggle = _buttonWithText('Pause all');
+    final toggle = _buttonWithText('Stop all');
     expect(toggle, findsOneWidget);
     expect(tester.widget<FilledButton>(toggle).onPressed, isNull);
 

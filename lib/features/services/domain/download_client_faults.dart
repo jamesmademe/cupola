@@ -140,7 +140,8 @@ InFlightReading? transmissionInFlight(
 /// has arrived.
 ///
 /// `stalledDL` is a stall once nothing has arrived for [stuckAfter], by
-/// `last_activity` (or `added_on` for a torrent that never received a byte):
+/// `last_activity` (or `added_on` for a torrent that never received a byte, or
+/// the moment Cupola saw it start again, [Torrent.resumedOn], if later):
 /// qBittorrent sets it at any instant the payload rate is zero, so on its own
 /// it is a slow moment, not a fault. `metaDL`, fetching the torrent's
 /// metadata, is the same: it waits on peers, and a magnet nobody answers sits
@@ -168,6 +169,7 @@ InFlightReading? qbittorrentInFlight(Torrent torrent, {required DateTime now}) {
   final idle = idleSince(
     lastActivity: torrent.lastActivity,
     added: torrent.addedOn,
+    started: torrent.resumedOn,
   );
   return switch (TorrentState.fromString(state)) {
     TorrentState.downloading => const InFlightReading.moving(),

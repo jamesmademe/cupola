@@ -852,7 +852,7 @@ class _WithoutSeerr extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.lg),
                 FilledButton(
                   onPressed: () =>
-                      context.go(ServiceRoutes.setUp(ServiceKey.seerr)),
+                      context.push(ServiceRoutes.setUp(ServiceKey.seerr)),
                   child: Text(Lexicon.setUp(ServiceKey.seerr.title)),
                 ),
               ],
