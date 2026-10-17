@@ -166,6 +166,43 @@ void main() {
     expect(find.textContaining('Sonarr figures unavailable'), findsOneWidget);
   });
 
+  testWidgets('a card keeps its figure while a refresh reads it again', (
+    tester,
+  ) async {
+    // The first read answers at once; the refresh's takes a second, the
+    // stretch in which the card used to go back to the shimmer.
+    var reads = 0;
+    await _pumpPage(
+      tester,
+      _Page.stack,
+      signalPairFuture: (service) async {
+        if (service != ServiceKey.radarr) return null;
+        if (reads++ > 0) await Future<void>.delayed(const Duration(seconds: 1));
+        return null;
+      },
+    );
+    await tester.pump();
+    final radarr = find.byKey(const ValueKey('service-matrix-cell-radarr'));
+    await tester.scrollUntilVisible(radarr, 200);
+    expect(
+      find.descendant(of: radarr, matching: find.textContaining('movies')),
+      findsWidgets,
+    );
+
+    ProviderScope.containerOf(tester.element(radarr)).invalidate(_signalSource);
+    await tester.pump();
+
+    expect(
+      find.descendant(of: radarr, matching: find.byType(ShimmerPlaceholder)),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: radarr, matching: find.textContaining('movies')),
+      findsWidgets,
+    );
+    await tester.pump(const Duration(seconds: 2));
+  });
+
   for (final page in _Page.values) {
     group('with nothing set up, the ${page.name}', () {
       // The front door until something answers, on the first tab and on the
@@ -1196,6 +1233,11 @@ List<String> _regionsOnPage(WidgetTester tester) {
 /// `serviceSummaryProvider` because the header counts **connections**, so a
 /// fixture that only answers the per-service probe would leave it saying
 /// "checking" forever.
+/// What the stubbed signals read from, as the real ones read the KPIs: a test
+/// that invalidates it makes them *reload*, which is what a pull to refresh
+/// does, where invalidating them directly would be a refresh.
+final _signalSource = FutureProvider<ServiceSignalPair?>((ref) async => null);
+
 Future<void> _pumpPage(
   WidgetTester tester,
   _Page page, {
@@ -1235,6 +1277,7 @@ Future<void> _pumpPage(
     ),
     serviceSignalPairProvider.overrideWith(
       (ref, service) async =>
+          await ref.watch(_signalSource.future) ??
           await signalPairFuture?.call(service) ??
           switch (service) {
             ServiceKey.radarr => const ServiceSignalPair(

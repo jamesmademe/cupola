@@ -778,7 +778,10 @@ class ServiceMatrixCell extends ConsumerWidget {
               ? ref.watch(foldedServiceSignalPairProvider(service))
               : ref.watch(serviceSignalPairProvider(service)))
         : null;
-    final signals = signalState?.asData?.value;
+    // `value`, not `asData`: a pull to refresh reloads every signal, and
+    // `asData` is null while one reloads, so every cell went back to the
+    // shimmer for a figure it was still holding.
+    final signals = signalState?.value;
     // A figure that failed is not a figure still coming. Both left `signals`
     // null, and null drew the shimmer, so a service that answered its probe
     // and then failed its read shimmered for good: a Dockge whose stack push
