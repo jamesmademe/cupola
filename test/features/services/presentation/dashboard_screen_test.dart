@@ -369,7 +369,7 @@ void main() {
     testWidgets('the age is bucketed, never in seconds', (tester) async {
       await _pumpPage(tester, _Page.stack);
       final line = _textContaining(tester, 'answering');
-      expect(line, contains('refreshed just now'));
+      expect(line, contains('checked just now'));
       expect(line, isNot(contains('second')));
     });
   });

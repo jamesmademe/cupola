@@ -7,6 +7,8 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/utils/unit_space.dart';
+
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -461,19 +463,19 @@ void main() {
 
       expect(
         health.ageLabel(at.add(const Duration(seconds: 45))),
-        'refreshed just now',
+        'checked just now',
       );
       expect(
         health.ageLabel(at.add(const Duration(minutes: 1))),
-        'refreshed 1 minute ago',
+        'checked ${withUnit(1, 'min')} ago',
       );
       expect(
         health.ageLabel(at.add(const Duration(minutes: 6))),
-        'refreshed 6 minutes ago',
+        'checked ${withUnit(6, 'min')} ago',
       );
       expect(
         health.ageLabel(at.add(const Duration(hours: 2))),
-        'refreshed 2 hours ago',
+        'checked ${withUnit(2, 'h')} ago',
       );
     });
 
@@ -484,7 +486,7 @@ void main() {
       );
 
       expect(health.ageLabel(at), isNull);
-      expect(health.sentenceAt(at), isNot(contains('refreshed')));
+      expect(health.sentenceAt(at), isNot(contains('checked')));
     });
   });
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/dot_separator.dart';
+import 'package:cupola/core/utils/sample_age.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/connection_reach_provider.dart';
@@ -153,7 +154,9 @@ class StackHealth {
     return [?headline, ...qualifiers, ?age].join(dotSeparator);
   }
 
-  /// `refreshed just now`, `refreshed 6 minutes ago`: **never** seconds.
+  /// `checked just now`, `checked 6 min ago`: **never** seconds, and in the
+  /// app's own units ([formatDurationAge]), so the Stack and every other age in
+  /// the app say minutes the same way.
   ///
   /// A readout that counts seconds invites the reader to watch it count, and the
   /// probes behind this are minutes apart. Null while a probe is still out: the
@@ -162,15 +165,7 @@ class StackHealth {
     final at = checkedAt;
     if (at == null) return null;
     final elapsed = now.difference(at);
-    if (elapsed.isNegative || elapsed.inMinutes < 1) {
-      return 'refreshed just now';
-    }
-    final minutes = elapsed.inMinutes;
-    if (minutes == 1) return 'refreshed 1 minute ago';
-    if (minutes < 60) return 'refreshed $minutes minutes ago';
-    final hours = elapsed.inHours;
-    if (hours == 1) return 'refreshed 1 hour ago';
-    return 'refreshed $hours hours ago';
+    return 'checked ${formatDurationAge(elapsed.isNegative ? Duration.zero : elapsed)}';
   }
 }
 

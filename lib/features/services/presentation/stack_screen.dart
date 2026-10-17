@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,7 +8,7 @@ import 'package:cupola/core/lifecycle/refresh_on_return.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
-import 'package:cupola/core/widgets/glass_app_bar.dart';
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/nothing_set_up.dart';
@@ -67,19 +69,6 @@ class StackScreen extends ConsumerWidget {
         // No accent passed: the room on this screen is lit by the neutral lamp,
         // like every room with no artwork. The fleet below is seventeen
         // services, and each is named by its mark and its title, never a hue.
-        // "Stack", because the crumb and the tab both say Stack and the app
-        // bar is *where you are*. The h1 below is what you are looking at:
-        // the fleet. The two are different sentences.
-        appBar: GlassAppBar(
-          title: const Text('Stack'),
-          actions: [
-            IconButton(
-              tooltip: 'Settings',
-              icon: const Icon(Icons.settings_outlined),
-              onPressed: () => openSettings(context, ref),
-            ),
-          ],
-        ),
         body: allUnconfigured
             ? NothingSetUpView(bottomPadding: bottomPadding)
             : RefreshIndicator(
@@ -87,7 +76,7 @@ class StackScreen extends ConsumerWidget {
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: EdgeInsets.only(bottom: bottomPadding),
-                  //  * the header is one line of StackHealth under the h1, and
+                  //  * the header is one line of StackHealth under the title, and
                   //    it is neutral when clear: no permanent green
                   //  * the band is absent unless something stopped answering
                   //  * the stack is the instrument and the launcher
@@ -103,60 +92,95 @@ class StackScreen extends ConsumerWidget {
   }
 }
 
-/// The h1 and the one line under it.
+/// The title and the one line under it, in the shape Activity's header has:
+/// the page's name as the screen title, its one control beside it, and the
+/// line that says how the fleet stands.
 ///
-/// `Your stack`, not `Stack`. The tab and the crumb already say Stack twice
-/// over; the h1 is the one line on the screen that can say what is being looked
-/// at instead of where you are, and the fleet *is* the subject here.
+/// The title is `Stack`, said once. It used to be an app bar saying `Stack`
+/// over an h1 saying `Your stack`: two headings for one screen.
 ///
-/// The sentence under it is [StackHealth]'s, counting **connections folded per
+/// The sentence is [StackHealth]'s, counting **connections folded per
 /// service** rather than the lensed summary, so a Radarr with one of its two
 /// connections dark reads as *degraded* rather than inheriting whichever answer
-/// the lens happened to be pointing at.
-class _StackHeadline extends ConsumerWidget {
+/// the lens happened to be pointing at. Its age is redrawn every minute: an age
+/// that stays where it was when the page was built is a claim that stops being
+/// true while the page is open.
+class _StackHeadline extends ConsumerStatefulWidget {
   const _StackHeadline();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+  ConsumerState<_StackHeadline> createState() => _StackHeadlineState();
+}
+
+class _StackHeadlineState extends ConsumerState<_StackHeadline> {
+  Timer? _minute;
+
+  @override
+  void initState() {
+    super.initState();
+    _minute = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _minute?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
     final health = ref.watch(stackHealthProvider);
     final sentence = health.sentenceAt(DateTime.now());
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.sm,
-        AppSpacing.lg,
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.gutter,
+        MediaQuery.paddingOf(context).top + AppSpacing.sm,
+        AppSpacing.xs,
         AppSpacing.sm,
       ),
-      child: Semantics(
-        container: true,
-        header: true,
-        label: 'Your stack',
-        value: spokenFromDotted(sentence),
-        excludeSemantics: true,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Your stack',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                color: colorScheme.onSurface,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Semantics(
+                  header: true,
+                  child: Text(
+                    'Stack',
+                    style: AppType.screen.copyWith(color: room.ink),
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Settings',
+                icon: Icon(Icons.settings_outlined, color: room.ink),
+                onPressed: () => openSettings(context, ref),
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: AppSpacing.md),
+            child: Semantics(
+              label: spokenFromDotted(sentence),
+              excludeSemantics: true,
+              child: Text(
+                sentence,
+                // Neutral, always: no permanent green. A stack that is entirely
+                // healthy says so in words and spends no colour on it; the tone
+                // this page has to spare belongs to the one card that is not.
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
-            const SizedBox(height: 2),
-            Text(
-              sentence,
-              // Neutral, always: no permanent green. A stack that is entirely
-              // healthy says so in words and spends no colour on it; the tone
-              // this page has to spare belongs to the one card that is not.
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
