@@ -95,6 +95,8 @@ does.
 </table>
 </details>
 
+<p align="center"><img src="screenshots/desktop.png" alt="Discover on macOS, with the navigation rail and the Activity inspector" /><br/><sub><b>On the desktop</b> · the same app, with a navigation rail, a command palette and an inspector</sub></p>
+
 Light and dark are both first-class themes. Neither is an inverted afterthought.
 Every screenshot is the app running against real services, not a mock-up.
 
