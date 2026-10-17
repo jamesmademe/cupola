@@ -62,7 +62,7 @@ class QbittorrentRssScreen extends ConsumerWidget {
             FloatingNavBarMetrics.getScrollViewBottomPadding(context),
           ),
           children: [
-            SectionHeader(
+            SectionHeader.inset(
               title: 'Feeds',
               subtitle: feeds.hasValue ? '${feeds.requireValue.length}' : null,
               showChevron: false,
@@ -70,7 +70,7 @@ class QbittorrentRssScreen extends ConsumerWidget {
             const SizedBox(height: AppSpacing.sm),
             _FeedsSection(value: feeds),
             const SizedBox(height: AppSpacing.xl),
-            SectionHeader(
+            SectionHeader.inset(
               title: 'Automatic download rules',
               subtitle: rules.hasValue ? '${rules.requireValue.length}' : null,
               showChevron: false,
