@@ -89,10 +89,17 @@ final sabnzbdQueueProvider = FutureProvider<SabnzbdQueue>((ref) async {
 }, retry: noProviderRetry);
 
 /// Recent completed/failed downloads.
+/// How many jobs the History tab asks for: SABnzbd's most recent, and the tab
+/// says so when the page comes back full, rather than reading as the whole
+/// history.
+const sabnzbdHistoryTabLimit = 20;
+
 final sabnzbdHistoryProvider = FutureProvider<List<SabnzbdHistorySlot>>((
   ref,
 ) async {
-  return ref.watch(sabnzbdClientProvider).getHistory();
+  return ref
+      .watch(sabnzbdClientProvider)
+      .getHistory(limit: sabnzbdHistoryTabLimit);
 }, retry: noProviderRetry);
 
 /// Aggregate transfer statistics (total downloaded, etc.).

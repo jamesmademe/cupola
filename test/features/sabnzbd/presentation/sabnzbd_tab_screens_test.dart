@@ -140,6 +140,47 @@ void main() {
     expect(find.textContaining('Showing'), findsNothing);
   });
 
+  testWidgets('a full page of history says it is the latest, not the whole', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      screen: const SabnzbdHistoryScreen(),
+      overrides: [
+        sabnzbdHistoryProvider.overrideWith(
+          (ref) async => [
+            for (var i = 0; i < sabnzbdHistoryTabLimit; i++)
+              SabnzbdHistorySlot(
+                nzoId: 'job$i',
+                name: 'Release $i',
+                status: 'Completed',
+                category: 'tv',
+                bytes: 1024,
+                completed: null,
+              ),
+          ],
+        ),
+      ],
+    );
+
+    await tester.scrollUntilVisible(
+      find.textContaining('SABnzbd keeps the rest'),
+      300,
+      scrollable: find
+          .descendant(
+            of: find.byType(ListView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    expect(
+      find.text(
+        'The latest $sabnzbdHistoryTabLimit jobs. SABnzbd keeps the rest.',
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('servers keep configuration when volume stats fail', (
     tester,
   ) async {

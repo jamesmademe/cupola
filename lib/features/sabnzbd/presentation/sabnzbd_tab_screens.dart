@@ -86,6 +86,7 @@ class _SabnzbdHistoryScreenState extends ConsumerState<SabnzbdHistoryScreen> {
   }
 
   Widget _historyBody(List<SabnzbdHistorySlot> history) {
+    final full = history.length >= sabnzbdHistoryTabLimit;
     final visible = switch (_filter) {
       _SabnzbdHistoryFilter.all => history,
       _SabnzbdHistoryFilter.completed =>
@@ -123,10 +124,22 @@ class _SabnzbdHistoryScreenState extends ConsumerState<SabnzbdHistoryScreen> {
           AppSpacing.lg,
           FloatingNavBarMetrics.getScrollViewBottomPadding(context),
         ),
-        itemCount: visible.length,
+        // A full page is a window, not the history: the last line says so.
+        itemCount: visible.length + (full ? 1 : 0),
         separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-        itemBuilder: (context, index) =>
-            _SabnzbdHistoryRow(item: visible[index]),
+        itemBuilder: (context, index) => index < visible.length
+            ? _SabnzbdHistoryRow(item: visible[index])
+            : Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                child: Text(
+                  'The latest $sabnzbdHistoryTabLimit jobs. SABnzbd keeps '
+                  'the rest.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: CupolaThemeColors.of(context).dimText,
+                  ),
+                ),
+              ),
       ),
     );
   }
