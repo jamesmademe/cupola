@@ -7,11 +7,13 @@ import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/presentation/widgets/cert_trust_content.dart';
 
-const _cert = ServerCertificate(
+final _cert = ServerCertificate(
   fingerprint:
       'ab12cd34ef56ab12cd34ef56ab12cd34ef56ab12cd34ef56ab12cd34ef56ab1',
   subject: 'CN=nas.local',
   issuer: 'CN=nas.local',
+  validFrom: DateTime(2026, 10, 13, 20, 41, 18),
+  validTo: DateTime(2027, 10, 13, 20, 41, 18),
 );
 
 Widget _host(Widget child) => MaterialApp(
@@ -24,6 +26,10 @@ void main() {
     test('drops the https:// prefix, since every origin carries one', () {
       expect(displayOrigin('https://nas.local:8443'), 'nas.local:8443');
     });
+
+    test('drops the default port nobody typed', () {
+      expect(displayOrigin('https://nas.local:443'), 'nas.local');
+    });
   });
 
   group('CertTrustContent', () {
@@ -32,7 +38,7 @@ void main() {
     ) async {
       await tester.pumpWidget(
         _host(
-          const CertTrustContent(
+          CertTrustContent(
             origin: 'https://nas.local:8443',
             probe: (certificate: _cert, rotated: false),
           ),
@@ -48,6 +54,10 @@ void main() {
       expect(find.textContaining('nas.local:8443'), findsOneWidget);
       expect(find.text('Subject'), findsOneWidget);
       expect(find.text('SHA-256'), findsOneWidget);
+      // Dates as a person reads them, not as `DateTime.toString` prints them.
+      expect(find.text('Oct 13, 2026'), findsOneWidget);
+      expect(find.text('Oct 13, 2027'), findsOneWidget);
+      expect(find.textContaining('20:41:18'), findsNothing);
       // Nothing to compare against on a first trust.
       expect(find.text('Previously trusted'), findsNothing);
     });
@@ -59,7 +69,7 @@ void main() {
 
       await tester.pumpWidget(
         _host(
-          const CertTrustContent(
+          CertTrustContent(
             origin: 'https://nas.local:8443',
             probe: (certificate: _cert, rotated: false),
             invitedFingerprint: invited,
@@ -113,7 +123,7 @@ void main() {
 
       await tester.pumpWidget(
         _host(
-          const CertTrustContent(
+          CertTrustContent(
             origin: 'https://nas.local:8443',
             probe: (certificate: _cert, rotated: true),
             previousFingerprint: previous,
@@ -143,7 +153,7 @@ void main() {
 
       await tester.pumpWidget(
         _host(
-          const CertTrustContent(
+          CertTrustContent(
             origin: 'https://nas.local:8443',
             probe: (certificate: _cert, rotated: false),
           ),
@@ -156,7 +166,7 @@ void main() {
 
       await tester.pumpWidget(
         _host(
-          const CertTrustContent(
+          CertTrustContent(
             origin: 'https://nas.local:8443',
             probe: (certificate: _cert, rotated: true),
           ),
@@ -211,7 +221,7 @@ void main() {
     ) async {
       await tester.pumpWidget(
         _host(
-          const CertTrustContent(
+          CertTrustContent(
             origin: 'https://nas.local:8443',
             probe: (certificate: _cert, rotated: false),
             sharedWith: [ServiceKey.sonarr, ServiceKey.prowlarr],
@@ -228,7 +238,7 @@ void main() {
     ) async {
       await tester.pumpWidget(
         _host(
-          const CertTrustContent(
+          CertTrustContent(
             origin: 'https://nas.local:8443',
             probe: (certificate: _cert, rotated: false),
           ),

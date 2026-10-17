@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:cupola/core/utils/date_format.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
@@ -9,8 +10,13 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// The `host:port` an origin string shows a human, dropping the `https://`
 /// every origin carries (every entry in [SettingsModel.trustedCertificates]
 /// is built by [UrlUtils.certOrigin], which always returns that scheme).
-String displayOrigin(String origin) =>
-    origin.startsWith('https://') ? origin.substring(8) : origin;
+///
+/// The default port goes too: `nas.local`, never `nas.local:443`, a number
+/// nobody typed and the origin key carries only because it is normalised.
+String displayOrigin(String origin) {
+  final bare = origin.startsWith('https://') ? origin.substring(8) : origin;
+  return bare.endsWith(':443') ? bare.substring(0, bare.length - 4) : bare;
+}
 
 /// The trust decision for one TLS origin, shared by the modal dialog
 /// (settings) and the inline card (onboarding) so the same certificate reads
@@ -158,12 +164,14 @@ class CertTrustContent extends StatelessWidget {
         if (cert.validFrom != null)
           _CertRow(
             label: 'Valid from',
-            value: cert.validFrom!.toLocal().toString(),
+            value: formatMediumDate(
+              cert.validFrom!.toLocal().toIso8601String(),
+            ),
           ),
         if (cert.validTo != null)
           _CertRow(
             label: 'Valid until',
-            value: cert.validTo!.toLocal().toString(),
+            value: formatMediumDate(cert.validTo!.toLocal().toIso8601String()),
           ),
         _CertRow(
           label: 'SHA-256',
