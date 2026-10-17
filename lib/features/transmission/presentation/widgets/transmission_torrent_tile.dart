@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:cupola/core/utils/dot_separator.dart';
+import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/widgets/download_queue_tile.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
@@ -62,8 +64,14 @@ class TransmissionTorrentTile extends StatelessWidget {
       // there is nothing left to arrive and the ratio is what the user is
       // actually watching. The rates moved to the metric row and the status to
       // the chip, so this line no longer repeats either.
+      // While it moves, how long the rest will take beside what is left, as
+      // the other clients' rows say it; no estimate, no clause.
       subtitle: incoming
-          ? torrent.remainingLabel
+          ? [
+              torrent.remainingLabel,
+              if (torrent.eta > 0 && torrent.rateDownload > 0)
+                formatTimeSpan(Duration(seconds: torrent.eta)),
+            ].join(dotSeparator)
           : 'Ratio ${torrent.ratioLabel}',
       progress: _drawsBar ? torrent.progress : null,
       percentage: wholePercent(torrent.progress * 100),
