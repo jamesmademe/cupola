@@ -288,15 +288,12 @@ class SeerrSignInFlow extends ChangeNotifier {
       final trust = await _trustedCertificateFor(error);
       if (_disposed) return;
       if (trust == _Trust.trusted) return readServer(again: again);
-      return _stop(
-        switch (trust) {
-          _Trust.declined => SeerrSignInNotice.certificateDeclined,
-          // The port serves http: what a handshake it never spoke says.
-          _Trust.plainHttp => SeerrSignInNotice.noSecureConnection,
-          _ => SeerrSignInNotice.ofServerRead(error, url: _connection.url),
-        },
-        retry: () => readServer(again: again),
-      );
+      return _stop(switch (trust) {
+        _Trust.declined => SeerrSignInNotice.certificateDeclined,
+        // The port serves http: what a handshake it never spoke says.
+        _Trust.plainHttp => SeerrSignInNotice.noSecureConnection,
+        _ => SeerrSignInNotice.ofServerRead(error, url: _connection.url),
+      }, retry: () => readServer(again: again));
     }
     if (_disposed) return;
     final closed = SeerrSignInNotice.ofMethods(facts.signIn);
