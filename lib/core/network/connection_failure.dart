@@ -55,6 +55,17 @@ enum ServiceFailureReason {
   /// The TLS handshake failed: untrusted, expired or mismatched certificate.
   tls,
 
+  /// The address says https and the port answered in plain http: the
+  /// handshake met a reply that is not TLS at all (BoringSSL's
+  /// `WRONG_VERSION_NUMBER`), the usual sign of an http port, like TrueNAS's
+  /// 80 or 81 beside its HTTPS 443 or 8443.
+  ///
+  /// Amber: the server is there, and the address names the wrong port or
+  /// scheme. Never [tls], whose remedy is trusting a certificate: no
+  /// certificate was ever sent, so the probe finds nothing to trust and
+  /// "test again" would loop.
+  plainHttp,
+
   /// Reached the service, which rejected the credentials or the API key.
   unauthorized,
 
@@ -546,10 +557,22 @@ ServiceFailureReason classifyConnectionFailure(
   // knows, and only that one is the amber [ServiceFailureReason.timeout].
   if (error is TimeoutException) return ServiceFailureReason.unreachable;
   // HandshakeException extends TlsException, so this covers both.
-  if (error is TlsException) return ServiceFailureReason.tls;
+  if (error is TlsException) return _fromTls(error);
   if (error is SocketException) return ServiceFailureReason.unreachable;
   if (error is FormatException) return ServiceFailureReason.invalidResponse;
   return fallback;
+}
+
+/// A failed handshake is a certificate question unless the reply was not TLS
+/// at all: BoringSSL, which Dart uses on every platform, says
+/// `WRONG_VERSION_NUMBER` when the first bytes back are not a TLS record, and
+/// an http server's `HTTP/1.1 400` is exactly that. nginx, Kestrel (every arr),
+/// Jellyfin, Node and Transmission all answer this way on an http port.
+ServiceFailureReason _fromTls(TlsException error) {
+  final said = '${error.message} ${error.osError?.message ?? ''}';
+  return said.contains('WRONG_VERSION_NUMBER')
+      ? ServiceFailureReason.plainHttp
+      : ServiceFailureReason.tls;
 }
 
 /// Heuristic for the services that report an auth failure inside a 200 body
@@ -612,7 +635,7 @@ ServiceFailureReason _fromDio(
     case DioExceptionType.unknown:
       // Dio buries the real cause here; unwrap one level.
       final inner = error.error;
-      if (inner is TlsException) return ServiceFailureReason.tls;
+      if (inner is TlsException) return _fromTls(inner);
       if (inner is SocketException) return ServiceFailureReason.unreachable;
       if (inner is TimeoutException) return ServiceFailureReason.unreachable;
       // Dio decodes the body after the reply arrived, so a decode failure is
@@ -708,6 +731,7 @@ String failureLabel(
   ServiceFailureReason.csrfRefused => 'Security token refused',
   ServiceFailureReason.timeout => 'Timed out',
   ServiceFailureReason.tls => 'Certificate not trusted',
+  ServiceFailureReason.plainHttp => 'No https on this port',
   ServiceFailureReason.notFound => 'API not at this address',
   ServiceFailureReason.redirected => 'Redirected elsewhere',
   ServiceFailureReason.accessGateway => switch (gateway) {
@@ -759,6 +783,7 @@ String failureHeadline(
     '$subject was reached but did not reply in time',
   ServiceFailureReason.tls =>
     '$subject has a certificate Cupola does not trust',
+  ServiceFailureReason.plainHttp => '$subject answered in plain http',
   ServiceFailureReason.notFound => '$subject is not at this address',
   ServiceFailureReason.redirected =>
     '$subject answered with a redirect Cupola will not follow',
@@ -812,6 +837,7 @@ String? failureGroupHeadline(
     '$subjects were reached but did not reply in time',
   ServiceFailureReason.tls =>
     '$subjects have certificates Cupola does not trust',
+  ServiceFailureReason.plainHttp => '$subjects answered in plain http',
   ServiceFailureReason.notFound => '$subjects are not at their addresses',
   ServiceFailureReason.redirected =>
     '$subjects answered with redirects Cupola will not follow',
@@ -862,6 +888,7 @@ String? failureRemedy(
       gateway.credentialsSent ? 'Check the password' : 'Add the password',
   },
   ServiceFailureReason.tls => 'Check the certificate',
+  ServiceFailureReason.plainHttp => 'Check the port',
   ServiceFailureReason.insecureTransport => 'Change the address',
   ServiceFailureReason.unreachable ||
   ServiceFailureReason.unreachableAtBoth ||
@@ -896,7 +923,10 @@ bool failureRetryHelps(
   ServiceFailureReason.secretUnread ||
   ServiceFailureReason.sessionEnded ||
   // Nothing was asked, and asking again from here asks nothing either.
-  ServiceFailureReason.onlyAtHome => false,
+  ServiceFailureReason.onlyAtHome ||
+  // The port serves http, and it will not start serving https while the
+  // page is open: the address has to change.
+  ServiceFailureReason.plainHttp => false,
   ServiceFailureReason.csrfRefused ||
   ServiceFailureReason.unreachable ||
   // Retry knocks at both addresses again (`retryDashboardServices`).
@@ -1036,6 +1066,9 @@ String connectionFailureSentence(
     ServiceFailureReason.timeout => 'It may be busy. Retry in a moment.',
     ServiceFailureReason.tls =>
       'If its certificate changed, trust it again in its settings.',
+    ServiceFailureReason.plainHttp =>
+      'Its address names a port that serves http. Use the one that serves '
+          'https.',
     ServiceFailureReason.unauthorized =>
       remedyBeside
           ? 'The server answered and refused the saved credentials.'

@@ -244,6 +244,73 @@ void main() {
     });
   });
 
+  group('https to a port that speaks plain http', () {
+    // What dart:io raises on nginx, Kestrel, Jellyfin or Transmission's http
+    // port, verbatim.
+    const plainReply = HandshakeException(
+      'Handshake error in client',
+      OSError('\n\tWRONG_VERSION_NUMBER(tls_record.cc:127)'),
+    );
+
+    test('is a port without https, not a certificate to trust', () {
+      expect(
+        classifyConnectionFailure(plainReply),
+        ServiceFailureReason.plainHttp,
+      );
+      expect(
+        classifyConnectionFailure(
+          _wrapping(plainReply, DioExceptionType.connectionError),
+        ),
+        ServiceFailureReason.plainHttp,
+      );
+      expect(
+        classifyConnectionFailure(
+          _wrapping(plainReply, DioExceptionType.unknown),
+        ),
+        ServiceFailureReason.plainHttp,
+      );
+    });
+
+    test('a handshake that failed any other way stays a certificate', () {
+      expect(
+        classifyConnectionFailure(
+          const HandshakeException(
+            'Handshake error in client',
+            OSError('CERTIFICATE_VERIFY_FAILED: self signed certificate'),
+          ),
+        ),
+        ServiceFailureReason.tls,
+      );
+      expect(
+        classifyConnectionFailure(
+          const HandshakeException('Connection terminated during handshake'),
+        ),
+        ServiceFailureReason.tls,
+      );
+    });
+
+    test('is an amber fault, with the port to check and no retry', () {
+      const reason = ServiceFailureReason.plainHttp;
+      expect(failureTone(reason), StatusTone.warning);
+      expect(failureLabel(reason), 'No https on this port');
+      expect(
+        failureHeadline(reason, subject: 'TrueNAS'),
+        'TrueNAS answered in plain http',
+      );
+      expect(
+        failureGroupHeadline(reason, subjects: 'Radarr, Sonarr'),
+        'Radarr, Sonarr answered in plain http',
+      );
+      expect(failureRemedy(reason), 'Check the port');
+      expect(failureRetryHelps(reason), isFalse);
+      expect(
+        connectionFailureSentence(plainReply, remedyBeside: true),
+        'Its address names a port that serves http. Use the one that serves '
+        'https.',
+      );
+    });
+  });
+
   group('connectionFailureDetail', () {
     test('reads the sentence off the failure itself', () {
       expect(

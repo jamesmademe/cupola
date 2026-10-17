@@ -123,6 +123,7 @@ class TransmissionAddReport {
         ServiceFailureReason.unreachable ||
         ServiceFailureReason.unreachableAtBoth ||
         ServiceFailureReason.tls ||
+        ServiceFailureReason.plainHttp ||
         ServiceFailureReason.localNetworkBlocked ||
         ServiceFailureReason.unauthorized ||
         // The password never left the device's storage.

@@ -100,6 +100,7 @@ abstract class ServiceFake {
       case PlainBehaviour.didNotAnswer:
       case PlainBehaviour.timesOut:
       case PlainBehaviour.untrustedTls:
+      case PlainBehaviour.plainHttpPort:
         return null;
     }
   }

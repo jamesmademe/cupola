@@ -279,6 +279,7 @@ class _FoundRow {
       ),
       ServiceFailureReason.notFound ||
       ServiceFailureReason.redirected ||
+      ServiceFailureReason.plainHttp ||
       ServiceFailureReason.insecureTransport => (
         _Remedy.address,
         failureRemedy(reason, gateway: diagnosis?.gateway)!,

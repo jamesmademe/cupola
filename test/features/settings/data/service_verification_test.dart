@@ -431,6 +431,11 @@ void main() {
         expect(certProbeWorthwhile(reason), isTrue, reason: '$reason');
       }
     });
+
+    test('a port that answered in plain http sent no certificate to find', () {
+      expect(certProbeWorthwhile(ServiceFailureReason.plainHttp), isFalse);
+      expect(localNetworkCouldExplain(ServiceFailureReason.plainHttp), isFalse);
+    });
   });
 
   group('worstDiagnosis', () {
@@ -509,6 +514,25 @@ void main() {
       );
       expect(redirected, contains('redirect'));
       expect(redirected, contains('Radarr'));
+    });
+
+    test('a port in plain http names the https port; TrueNAS has no http '
+        'way out', () {
+      final truenas = connectionFailureMessage(
+        ServiceKey.truenas,
+        ServiceFailureReason.plainHttp,
+      );
+      expect(truenas, contains('HTTPS port'));
+      expect(truenas, contains('443'));
+      expect(truenas, isNot(contains('http://')));
+
+      final radarr = connectionFailureMessage(
+        ServiceKey.radarr,
+        ServiceFailureReason.plainHttp,
+      );
+      expect(radarr, contains('plain http, not https'));
+      expect(radarr, contains('http:// for an address used only at home'));
+      expect(radarr, isNot(contains('certificate')));
     });
 
     test('every reason has a sentence, and no two collide', () {

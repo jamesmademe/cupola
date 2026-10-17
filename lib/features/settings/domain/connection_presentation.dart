@@ -343,6 +343,8 @@ IconData failureIcon(ServiceFailureReason reason) => switch (reason) {
   ServiceFailureReason.accessGateway => Icons.lock_person_rounded,
   ServiceFailureReason.localNetworkBlocked => Icons.wifi_lock_rounded,
   ServiceFailureReason.tls => Icons.gpp_bad_rounded,
+  // An open lock: the port answered, without encryption.
+  ServiceFailureReason.plainHttp => Icons.no_encryption_rounded,
   ServiceFailureReason.timeout => Icons.timer_off_rounded,
   ServiceFailureReason.serverError => Icons.report_gmailerrorred_rounded,
   ServiceFailureReason.invalidResponse => Icons.code_off_rounded,

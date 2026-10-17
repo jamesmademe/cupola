@@ -101,7 +101,11 @@ class SeerrSignInNotice {
     }
     // No certificate to show (the flow asks about one before this): the
     // classification's words would send to settings a first run has none of.
-    if (reason == ServiceFailureReason.tls) return noSecureConnection;
+    // A port that answered in plain http is the commonest way to get here.
+    if (reason == ServiceFailureReason.tls ||
+        reason == ServiceFailureReason.plainHttp) {
+      return noSecureConnection;
+    }
     if (_answeredAsSomethingElse(error)) {
       return SeerrSignInNotice._(
         SeerrSignInNoticeKind.notSeerr,

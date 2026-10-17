@@ -68,6 +68,9 @@ sealed class ConnectionBehaviour {
   /// The host's TLS is not trusted. See [PlainBehaviour.untrustedTls].
   static const untrustedTls = PlainBehaviour.untrustedTls;
 
+  /// The port speaks plain http. See [PlainBehaviour.plainHttpPort].
+  static const plainHttpPort = PlainBehaviour.plainHttpPort;
+
   /// The server refuses the credential. See [PlainBehaviour.refusesKey].
   static const refusesKey = PlainBehaviour.refusesKey;
 
@@ -238,12 +241,16 @@ enum PlainBehaviour implements ConnectionBehaviour {
   timesOut,
 
   /// The host opens a connection and its TLS handshake is refused, as a
-  /// self-signed certificate nothing trusts is, or `https://` to a port that
-  /// speaks plain http: `HandshakeException` on every request, which the app
-  /// classifies as a certificate failure. A plain connection to the port
-  /// still opens (`ProfileNetwork.reach`). Whether there is a certificate to
-  /// show is the test's certificate prober's to say.
+  /// self-signed certificate nothing trusts is: `HandshakeException` on every
+  /// request, which the app classifies as a certificate failure. A plain
+  /// connection to the port still opens (`ProfileNetwork.reach`). Whether
+  /// there is a certificate to show is the test's certificate prober's to say.
   untrustedTls,
+
+  /// `https://` to a port that speaks plain http: the handshake meets an
+  /// http reply, and BoringSSL says `WRONG_VERSION_NUMBER`, which the app
+  /// classifies as a port without https. A plain connection still opens.
+  plainHttpPort,
 
   /// The server answers and refuses the credential, each service in its own
   /// way (401, 403, qBittorrent's `200 Fails.`, SABnzbd's `status: false`,

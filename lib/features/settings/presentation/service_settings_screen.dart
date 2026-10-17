@@ -568,7 +568,9 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
 
   /// When [result] failed in a way a certificate could explain, offers to
   /// trust the certificate of [route]'s address as typed, and tests that
-  /// address again. Null when nothing was offered, or nothing trusted.
+  /// address again. Null when no certificate arrived to offer; [result] with
+  /// the certificate attached when it was offered and not trusted, so the
+  /// panel can offer it again ([_reviewCertificate]).
   ///
   /// Skipped once the server has answered (a rejected key rules the
   /// certificate out), and for an address away that did not answer at all:
@@ -582,28 +584,51 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     }
     if (route == ConnectionRoute.away && _isSilent(result)) return null;
     final settings = _updateServiceSettings(ref.read(currentSettingsProvider));
+    final (:url, :pin) = _typedAddress(settings, route);
+    if (url.isEmpty) return null;
+    final probe = await widget.certificateProber(
+      url,
+      pinnedFingerprint: pin ?? '',
+    );
+    if (probe == null || !mounted) return null;
+    return _offerTrust(result.withCertificateProbe(probe), route);
+  }
+
+  /// [route]'s address as the fields hold it, the one the test went to, and
+  /// the certificate already trusted at its origin.
+  ({String url, String? pin}) _typedAddress(
+    SettingsModel settings,
+    ConnectionRoute route,
+  ) {
     final tested = settings.instanceById(_target.id) ?? _target;
     final url = route == ConnectionRoute.away
         ? tested.away?.url ?? ''
         : tested.url;
-    if (url.isEmpty) return null;
-    final previousPin = settings.pinForUrl(url);
-    final probe = await widget.certificateProber(
-      url,
-      pinnedFingerprint: previousPin ?? '',
-    );
-    if (probe == null || !mounted) return null;
+    return (url: url, pin: settings.pinForUrl(url));
+  }
+
+  /// Shows the certificate [result] carries and, once it is trusted, tests
+  /// [route]'s address again. [result] itself when it is not trusted.
+  Future<ServiceDiagnosis> _offerTrust(
+    ServiceDiagnosis result,
+    ConnectionRoute route,
+  ) async {
+    final probe = result.certificateProbe;
+    if (probe == null) return result;
+    final settings = _updateServiceSettings(ref.read(currentSettingsProvider));
+    final tested = settings.instanceById(_target.id) ?? _target;
+    final (:url, :pin) = _typedAddress(settings, route);
     final trust = await showCertTrustDialog(
       context,
       origin: UrlUtils.certOrigin(url) ?? url,
       probe: probe,
-      previousFingerprint: previousPin,
+      previousFingerprint: pin,
       sharedWith: settings
           .servicesSharingOriginOf(url)
           .where((s) => s != service)
           .toList(),
     );
-    if (!trust || !mounted) return null;
+    if (!trust || !mounted) return result;
     await ref
         .read(settingsProvider.notifier)
         .updateSettings(
@@ -614,7 +639,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
                 fingerprint: probe.certificate.fingerprint,
               ),
         );
-    if (!mounted) return null;
+    if (!mounted) return result;
     // The retest goes to the same connection and the same address the first
     // test did: `diagnoseService` folds every connection of the service, so
     // it could answer about a sibling never part of this trust decision.
@@ -624,6 +649,27 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       retried,
       route: route,
     );
+  }
+
+  /// `Check the certificate` under a panel whose certificate was offered and
+  /// not trusted: the same question again, without testing first.
+  Future<void> _reviewCertificate(ConnectionRoute route) async {
+    final shown = route == ConnectionRoute.away ? _awayTestResult : _testResult;
+    if (shown == null || shown.certificateProbe == null || _testing) return;
+    setState(() => _testing = true);
+    try {
+      final next = await _offerTrust(shown, route);
+      if (!mounted || identical(next, shown)) return;
+      setState(() {
+        if (route == ConnectionRoute.away) {
+          _awayTestResult = next;
+        } else {
+          _testResult = next;
+        }
+      });
+    } finally {
+      if (mounted) setState(() => _testing = false);
+    }
   }
 
   /// Whether [result] is an address that did not answer at all, which the
@@ -1495,7 +1541,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       // it was sent) says so verbatim, and everything else falls back to the
       // reason-derived sentence exactly as before.
       ServiceConnectionStatus.disconnected ||
-      ServiceConnectionStatus.checking => result.messageFor(service),
+      ServiceConnectionStatus.checking => _failureLine(result),
     };
     // A Cloudflare service token's test says what Access did with it.
     final tested = route == ConnectionRoute.away
@@ -1529,6 +1575,26 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       addresses: [?address],
     );
 
+    if (result.reason == ServiceFailureReason.tls &&
+        result.certificateProbe != null) {
+      // Outside the banner for the reason the local network's button is:
+      // the banner is one live region, and a button inside it is unreachable.
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          banner,
+          const SizedBox(height: AppSpacing.sm),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: FilledButton(
+              onPressed: _testing ? null : () => _reviewCertificate(route),
+              style: remedyFillStyle(context),
+              child: Text(failureRemedy(ServiceFailureReason.tls)!),
+            ),
+          ),
+        ],
+      );
+    }
     if (result.reason != ServiceFailureReason.localNetworkBlocked) {
       return banner;
     }
@@ -1552,6 +1618,28 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
         ),
       ],
     );
+  }
+
+  /// What the panel says under a failure: the failure's own sentence, except
+  /// for a certificate, where it depends on what the probe found. The
+  /// failure's sentence asks to test again for a certificate Cupola will
+  /// offer; after the test that is either the certificate already offered, or
+  /// none, and promising one would loop.
+  String _failureLine(ServiceDiagnosis result) {
+    if (result.reason != ServiceFailureReason.tls) {
+      return result.messageFor(service);
+    }
+    return switch (result.certificateProbe) {
+      null =>
+        'The secure connection broke off before a certificate arrived. '
+            'Check that this port serves https.',
+      (rotated: true, certificate: _) =>
+        '${service.title} sent a different certificate from the one you '
+            'trusted. Check it before trusting it.',
+      _ =>
+        '${service.title} sent a certificate this device does not trust. If '
+            'it is your own, check it and trust it.',
+    };
   }
 
   /// Takes the user to the toggle. When the host cannot get there, the route is

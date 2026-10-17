@@ -556,6 +556,11 @@ class ProfileNetwork {
       ConnectionBehaviour.untrustedTls => const HandshakeException(
         'CERTIFICATE_VERIFY_FAILED: self signed certificate',
       ),
+      // What dart:io says on an http port, verbatim.
+      ConnectionBehaviour.plainHttpPort => const HandshakeException(
+        'Handshake error in client',
+        OSError('\n\tWRONG_VERSION_NUMBER(tls_record.cc:127)'),
+      ),
       _ => null,
     };
   }

@@ -863,6 +863,7 @@ bool localNetworkCouldExplain(ServiceFailureReason? reason) => switch (reason) {
   ServiceFailureReason.serverError ||
   ServiceFailureReason.invalidResponse ||
   ServiceFailureReason.tls ||
+  ServiceFailureReason.plainHttp ||
   // Refused before dialling: the OS was never asked for anything.
   ServiceFailureReason.insecureTransport ||
   // Already attributed; asking again would only re-confirm it.
@@ -941,7 +942,10 @@ bool certProbeWorthwhile(ServiceFailureReason? reason) => switch (reason) {
   ServiceFailureReason.insecureTransport ||
   // Not asked, away from home: the probe would dial the address at home
   // the route already found silent.
-  ServiceFailureReason.onlyAtHome => false,
+  ServiceFailureReason.onlyAtHome ||
+  // The port answered in plain http: no certificate was sent, and the probe
+  // would meet the same reply.
+  ServiceFailureReason.plainHttp => false,
   _ => true,
 };
 
@@ -1025,6 +1029,15 @@ String connectionFailureMessage(
       return 'The HTTPS certificate could not be verified. If '
           '${service.title} uses a self-signed certificate, test again and '
           'confirm the certificate when Cupola offers to trust it.';
+    case ServiceFailureReason.plainHttp:
+      // TrueNAS revokes a key sent over http, so its only way out is the
+      // HTTPS port; for the others an http:// address at home is as good.
+      return service == ServiceKey.truenas
+          ? 'This port serves plain http, not https. Use the HTTPS port in '
+                "TrueNAS's GUI settings: 443 unless it was changed."
+          : 'This port serves plain http, not https. Use the port '
+                '${service.title} serves https on, or http:// for an address '
+                'used only at home.';
     case ServiceFailureReason.unauthorized:
       // The why, not the what again: the title above it already says the key
       // was refused, so this says where the right one comes from.
