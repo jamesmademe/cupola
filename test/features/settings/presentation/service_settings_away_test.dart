@@ -407,7 +407,7 @@ void main() {
       );
 
       final line = find.text(
-        'Trusted self-signed certificate for radarr.example.net:443.',
+        'Trusted self-signed certificate for radarr.example.net.',
       );
       expect(line, findsOneWidget);
       expect(
