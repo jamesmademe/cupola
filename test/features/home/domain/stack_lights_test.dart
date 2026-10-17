@@ -80,7 +80,7 @@ void main() {
         ],
         faults: const [],
       );
-      expect(lights.line, '1 of 3 answering · 2 timed out');
+      expect(lights.line, '1 of 3 answering\u00A0· 2 timed out');
       // Its probe's fault is the same fact: said once, as timed out.
       expect(
         stackLightsOf(
@@ -89,7 +89,7 @@ void main() {
           ],
           faults: [_fault(ServiceKey.radarr, DecisionKind.connectionFault)],
         ).line,
-        '0 of 1 answering · 1 timed out',
+        '0 of 1 answering\u00A0· 1 timed out',
       );
       expect(lights.stuck, [ServiceKey.radarr, ServiceKey.sonarr]);
       expect(lights.silent, isEmpty);
@@ -112,7 +112,7 @@ void main() {
           _fault(ServiceKey.qbittorrent, DecisionKind.stalledDownload),
         ],
       );
-      expect(lights.line, '4 of 4 answering · 3 faults');
+      expect(lights.line, '4 of 4 answering\u00A0· 3 faults');
       expect(lights.faultLine, 'Faults: Sonarr, qBittorrent and TrueNAS');
       expect(lights.silent, isEmpty);
     });
@@ -147,7 +147,7 @@ void main() {
           ),
         ],
       );
-      expect(lights.line, '3 of 3 answering · 3 faults');
+      expect(lights.line, '3 of 3 answering\u00A0· 3 faults');
       expect(lights.faultLine, 'Faults: Radarr, Sonarr and Lidarr');
     });
 
@@ -163,7 +163,7 @@ void main() {
           _fault(ServiceKey.sonarr, DecisionKind.serviceHealth),
         ],
       );
-      expect(lights.line, '2 of 2 answering · 1 fault');
+      expect(lights.line, '2 of 2 answering\u00A0· 1 fault');
       expect(lights.faultLine, 'Faults: Sonarr');
     });
 
@@ -184,7 +184,7 @@ void main() {
         ],
         faults: const [],
       );
-      expect(lights.line, '7 of 7 answering · 7 faults');
+      expect(lights.line, '7 of 7 answering\u00A0· 7 faults');
       expect(
         lights.faultLine,
         'Faults: Radarr, Sonarr, Lidarr, Prowlarr, Bazarr and 2 others',
@@ -224,7 +224,7 @@ void main() {
         ],
         faults: const [],
       );
-      expect(lights.line, '1 of 2 answering · 1 checking');
+      expect(lights.line, '1 of 2 answering\u00A0· 1 checking');
     });
   });
 
@@ -244,7 +244,7 @@ void main() {
       );
       expect(lights.configured, 1);
       expect(lights.onlyAtHome, [ServiceKey.sabnzbd]);
-      expect(lights.line, '1 of 1 answering · 1 only at home');
+      expect(lights.line, '1 of 1 answering\u00A0· 1 only at home');
       expect(lights.spoken, 'Answering: Radarr. Only at home: SABnzbd.');
     });
   });

@@ -8,6 +8,7 @@ import 'package:cupola/core/network/pinned_image_cache.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/title_light.dart';
 import 'package:cupola/core/utils/date_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/utils/string_utils.dart';
@@ -212,7 +213,7 @@ class _MediaEpisodeSheetState extends ConsumerState<MediaEpisodeSheet> {
             'Season ${episode.season}',
             'Episode ${episode.number}',
             ?aired,
-          ].join(' · '),
+          ].join(dotSeparator),
           style: AppType.meta
               .weight(FontWeight.w400)
               .copyWith(color: room.inkSecondary),
@@ -234,7 +235,7 @@ class _MediaEpisodeSheetState extends ConsumerState<MediaEpisodeSheet> {
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Text(
-                  'TMDB · ${countLabel(facts.voteCount, 'vote')}',
+                  'TMDB\u00A0· ${countLabel(facts.voteCount, 'vote')}',
                   style: AppType.meta
                       .weight(FontWeight.w400)
                       .copyWith(color: room.inkTertiary),
@@ -304,7 +305,7 @@ class _MediaEpisodeSheetState extends ConsumerState<MediaEpisodeSheet> {
                         seriesId: sonarr.seriesId,
                         seasonNumber: record.seasonNumber,
                         label:
-                            '${truncateTitle(widget.seriesTitle)} · '
+                            '${truncateTitle(widget.seriesTitle)}\u00A0· '
                             '${formatArrEpisodeCode(record.seasonNumber, record.episodeNumber)}',
                       ).stampedWith(sonarr.connection.id),
                     ),
@@ -468,7 +469,7 @@ class _ServerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final room = CupolaRoom.of(context);
     final picture = item.video?.resolution;
-    final where = ['On $serverName', ?picture].join(' · ');
+    final where = ['On $serverName', ?picture].join(dotSeparator);
     final state = item.isPlayed
         ? 'Watched'
         : item.isInProgress
@@ -592,7 +593,7 @@ class _FileRow extends ConsumerWidget {
       if (file.cutoffNotMet)
         cutoff == null ? 'Below the cutoff' : 'Below the $cutoff cutoff',
       ?imported,
-    ].join(' · ');
+    ].join(dotSeparator);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.row),
       child: Row(

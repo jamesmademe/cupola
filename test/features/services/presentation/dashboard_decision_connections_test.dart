@@ -154,8 +154,8 @@ void main() {
       expect(read.decisions.map((d) => d.title).toSet(), {'Cedar Index'});
       expect(read.decisions.map((d) => d.id).toSet(), hasLength(2));
       expect(read.decisions.map((d) => d.detail), [
-        'Failing · Prowlarr 1',
-        'Failing · Prowlarr Tower',
+        'Failing\u00A0· Prowlarr 1',
+        'Failing\u00A0· Prowlarr Tower',
       ]);
       expect(read.coverage.answered, hasLength(2));
     });
@@ -171,7 +171,7 @@ void main() {
           _failingIndexer(network, WorldIds.prowlarrTower);
         },
       );
-      expect(_detail('Failing · Prowlarr Tower'), findsOne);
+      expect(_detail('Failing\u00A0· Prowlarr Tower'), findsOne);
 
       await tester.tap(
         _control('prowlarr-${WorldIds.prowlarrTower}-3', 'Test'),
@@ -195,7 +195,7 @@ void main() {
         before: (network) => _failingIndexer(network, WorldIds.prowlarrTower),
       );
 
-      await tester.tap(_detail('Failing · Prowlarr Tower'));
+      await tester.tap(_detail('Failing\u00A0· Prowlarr Tower'));
       await harness.settle(tester);
 
       expect(opened(), ServiceRoutes.prowlarrIndexer(3));
@@ -223,7 +223,7 @@ void main() {
       },
     );
     expect(
-      _detail('Certificate expires in 9 days · Nginx Proxy Manager Home'),
+      _detail('Certificate expires in 9 days\u00A0· Nginx Proxy Manager Home'),
       findsOne,
     );
 

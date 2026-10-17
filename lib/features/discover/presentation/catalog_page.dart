@@ -12,6 +12,7 @@ import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
@@ -294,7 +295,7 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
                     'Scores from TMDB',
                     if (count != null && _query.base != CatalogBase.trending)
                       count,
-                  ].join(' · '),
+                  ].join(dotSeparator),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: CupolaThemeColors.of(context).dimText,
                   ),
@@ -387,7 +388,7 @@ class _Controls extends ConsumerWidget {
         ),
       if (query.filters)
         SelectionPill(
-          label: 'Rating 7+ · $catalogVoteFloor+ votes',
+          label: 'Rating 7+\u00A0· $catalogVoteFloor+ votes',
           selected: query.rated,
           onTap: () => onChanged(query.withRated(!query.rated)),
         ),

@@ -1083,5 +1083,5 @@ class ConfigProfile {
   );
 
   @override
-  String toString() => '$id · $title';
+  String toString() => '$id\u00A0· $title';
 }

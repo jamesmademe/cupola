@@ -65,14 +65,14 @@ void main() {
       final mine = _read(_request(status: 1, media: 2));
       expect(mine.stage, MyRequestStage.waiting);
       expect(mine.state, 'Waiting for approval');
-      expect(mine.detail(_now), 'Asked 2\u00A0h ago · Standard');
+      expect(mine.detail(_now), 'Asked 2\u00A0h ago\u00A0· Standard');
       expect(mine.stage.tone, StatusTone.info);
       expect(mine.watchAt, isNull);
 
       final yesterday = _read(
         _request(status: 1, is4k: true, asked: const Duration(hours: 30)),
       );
-      expect(yesterday.detail(_now), 'Asked yesterday · 4K');
+      expect(yesterday.detail(_now), 'Asked yesterday\u00A0· 4K');
     });
 
     test('downloading: the figure and when it should be ready', () {

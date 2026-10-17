@@ -1,3 +1,4 @@
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
@@ -88,7 +89,7 @@ class DiscoverDetailViewModel {
   });
 
   String get metadataLine =>
-      [genres, networks].where((value) => value.isNotEmpty).join(' · ');
+      [genres, networks].where((value) => value.isNotEmpty).join(dotSeparator);
 
   bool get hasManageableMedia => mediaInfo?['id'] != null;
 
@@ -125,7 +126,7 @@ class DiscoverDetailViewModel {
       return null;
     }
 
-    return parts.join(' · ');
+    return parts.join(dotSeparator);
   }
 
   WatchProviderRegion? watchProvidersForRegion(String region) {

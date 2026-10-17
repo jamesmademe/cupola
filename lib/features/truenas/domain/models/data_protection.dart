@@ -69,24 +69,24 @@ class TrueNasProtectionTask {
       case TrueNasTaskKind.snapshot:
         title = stringOrNull(json['dataset']) ?? 'Snapshot task';
         final schema = stringOrNull(json['naming_schema']) ?? '';
-        final recursive = json['recursive'] == true ? ' · recursive' : '';
+        final recursive = json['recursive'] == true ? '\u00A0· recursive' : '';
         subtitle = '$schema$recursive';
       case TrueNasTaskKind.replication:
         title = stringOrNull(json['name']) ?? 'Replication';
         subtitle =
-            '${stringOrNull(json['direction']) ?? ''} · '
+            '${stringOrNull(json['direction']) ?? ''}\u00A0· '
             '${stringOrNull(json['transport']) ?? ''}';
         state = stringOrNull(mapOrNull(json['state'])?['state']);
       case TrueNasTaskKind.cloudSync:
         title = stringOrNull(json['description']) ?? 'Cloud sync';
         subtitle =
-            '${stringOrNull(json['direction']) ?? ''} · '
+            '${stringOrNull(json['direction']) ?? ''}\u00A0· '
             '${stringOrNull(json['path']) ?? ''}';
         state = stringOrNull(mapOrNull(json['job'])?['state']);
       case TrueNasTaskKind.rsync:
         title = stringOrNull(json['path']) ?? 'Rsync task';
         final host = stringOrNull(json['remotehost']) ?? '';
-        subtitle = '${stringOrNull(json['direction']) ?? ''} · $host';
+        subtitle = '${stringOrNull(json['direction']) ?? ''}\u00A0· $host';
       case TrueNasTaskKind.scrub:
         poolName =
             stringOrNull(json['pool_name']) ??

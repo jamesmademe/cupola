@@ -495,7 +495,7 @@ void main() {
 
       expect(kpis['Movies']!.value, '0');
       expect(kpis['Queue']!.value, ServiceKpi.unavailableValue);
-      expect(kpis['Queue']!.note, startsWith('Queue · '));
+      expect(kpis['Queue']!.note, startsWith('Queue\u00A0· '));
       expect(kpis['Movies']!.note, isNull);
     });
   });

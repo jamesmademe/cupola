@@ -272,8 +272,8 @@ List<LidarrAttentionItem> lidarrQueueFaults(
       items.add(
         LidarrAttentionItem(
           kind: LidarrAttentionKind.stalled,
-          headline: '${StateWord.stuck.label} · $title',
-          spokenHeadline: '${StateWord.stuck.label} · $spokenTitle',
+          headline: '${StateWord.stuck.label}\u00A0· $title',
+          spokenHeadline: '${StateWord.stuck.label}\u00A0· $spokenTitle',
           detail: joinDisplayParts([
             stringOrNull(record['downloadClient']),
             message,
@@ -288,8 +288,8 @@ List<LidarrAttentionItem> lidarrQueueFaults(
       items.add(
         LidarrAttentionItem(
           kind: LidarrAttentionKind.importFailed,
-          headline: 'Import failed · $title',
-          spokenHeadline: 'Import failed · $spokenTitle',
+          headline: 'Import failed\u00A0· $title',
+          spokenHeadline: 'Import failed\u00A0· $spokenTitle',
           detail: joinDisplayParts([message, age]),
         ),
       );

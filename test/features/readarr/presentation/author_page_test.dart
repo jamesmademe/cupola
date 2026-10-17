@@ -56,7 +56,7 @@ void main() {
     expect(_name('Jules Verne'), findsOneWidget);
     expect(find.text('JV'), findsOneWidget);
     expect(
-      find.text('7\u00A0books · 6\u00A0on disk · 1\u00A0wanted'),
+      find.text('7\u00A0books\u00A0· 6\u00A0on disk\u00A0· 1\u00A0wanted'),
       findsOneWidget,
     );
     expect(
@@ -82,8 +82,8 @@ void main() {
     );
     expect(find.text('1876'), findsOneWidget);
 
-    expect(find.text('Wanted · no file yet'), findsOneWidget);
-    expect(find.text('1863 · quality profile eBook'), findsOneWidget);
+    expect(find.text('Wanted\u00A0· no file yet'), findsOneWidget);
+    expect(find.text('1863\u00A0· quality profile eBook'), findsOneWidget);
     expect(find.text('Search for this book'), findsOneWidget);
 
     expect(
@@ -133,7 +133,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Wanted · no file yet'), findsNothing);
+    expect(find.text('Wanted\u00A0· no file yet'), findsNothing);
     expect(find.text('Unknown'), findsNWidgets(2));
 
     await harness.unmount(tester);

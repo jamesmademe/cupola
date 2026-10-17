@@ -81,7 +81,7 @@ void main() {
           const MediaDetailSectionLabel(
             label: 'Episodes',
             accent: _kSonarr,
-            count: '41 of 48 · 5 seasons',
+            count: '41 of 48\u00A0· 5 seasons',
           ),
         ),
       );
@@ -92,7 +92,7 @@ void main() {
       expect(
         tester.getSemantics(find.byType(MediaDetailSectionLabel)),
         containsSemantics(
-          label: 'Episodes, 41 of 48 · 5 seasons',
+          label: 'Episodes, 41 of 48\u00A0· 5 seasons',
           isHeader: true,
         ),
       );

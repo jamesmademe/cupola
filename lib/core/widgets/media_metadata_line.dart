@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:cupola/core/utils/dot_separator.dart';
+
 class MediaMetadataLine extends StatelessWidget {
   final List<String> items;
   final TextAlign textAlign;
@@ -17,7 +19,7 @@ class MediaMetadataLine extends StatelessWidget {
     final joined = items
         .map((item) => item.trim())
         .where((item) => item.isNotEmpty)
-        .join(' · ');
+        .join(dotSeparator);
 
     if (joined.isEmpty) {
       return const SizedBox.shrink();

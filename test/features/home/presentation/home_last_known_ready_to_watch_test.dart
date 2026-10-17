@@ -69,12 +69,12 @@ void main() {
       // No skeleton: the title she last saw, how she asked for it, the way to
       // watch it and Details, and the one line.
       expect(find.text('Sintel'), findsOne);
-      expect(find.text('Ready to watch · since Saturday'), findsOne);
+      expect(find.text('Ready to watch\u00A0· since Saturday'), findsOne);
       expect(find.textContaining('You asked for it on Wednesday'), findsOne);
       expect(find.textContaining('TMDB 7.1'), findsOne);
       expect(find.text('Watch'), findsOne);
       expect(find.text('Details'), findsOne);
-      expect(find.text('As of 20:53 · checking now'), findsOne);
+      expect(find.text('As of 20:53\u00A0· checking now'), findsOne);
 
       answer.complete([
         requesterRequest(

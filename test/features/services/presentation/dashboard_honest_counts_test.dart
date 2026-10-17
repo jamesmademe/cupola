@@ -45,13 +45,15 @@ void main() {
     // Sintel on the 4K waits its turn: said apart, after what is stuck. It
     // was counted among the moving (`5 moving`) before.
     expect(
-      find.text('4 moving · 1 stuck · 1 queued · 40.4\u00A0MB/s'),
+      find.text(
+        '4 moving\u00A0· 1 stuck\u00A0· 1 queued\u00A0· 40.4\u00A0MB/\u2060s',
+      ),
       findsOne,
     );
     // Four titles: the HD's Coffee Run and Sintel, the 4K's Spring and Tears
     // of Steel. The HD's older copy of Tears of Steel is outside the week, and
     // Sonarr's episode is of a series that was already there.
-    expect(_inArrived(find.text('Last 7 days · 4 new')), findsOne);
+    expect(_inArrived(find.text('Last 7 days\u00A0· 4 new')), findsOne);
     expect(find.textContaining('Not in the total'), findsNothing);
     expect(find.byType(FaultNote), findsNothing);
 
@@ -76,13 +78,17 @@ void main() {
     // set up did not answer, and the rate of the others would understate it.
     // Sintel's record says `queued`, and nothing else reads it: it is one of
     // the queued, not of the moving.
-    expect(find.text('4 moving · 1 stuck · 1 queued · —'), findsOne);
+    expect(
+      find.text('4 moving\u00A0· 1 stuck\u00A0· 1 queued\u00A0· —'),
+      findsOne,
+    );
     const inFlightNote = 'Not in the total: Lidarr, SABnzbd, qBittorrent';
     expect(find.text(inFlightNote), findsOne);
 
     // Arrived counts titles over the libraries that answered, names them, and
     // says under the heading which one did not.
-    const arrivedLine = 'Last 7 days · 4 from Radarr 1, Radarr 4K and Sonarr';
+    const arrivedLine =
+        'Last 7 days\u00A0· 4 from Radarr 1, Radarr 4K and Sonarr';
     expect(_inArrived(find.text(arrivedLine)), findsOne);
     expect(_inArrived(find.text('Lidarr did not answer.')), findsOne);
 
@@ -148,7 +154,7 @@ void main() {
 
     expect(find.text('0 downloading'), findsNothing);
     expect(find.text('0 imported'), findsNothing);
-    expect(find.text('Last 7 days · 0 new'), findsNothing);
+    expect(find.text('Last 7 days\u00A0· 0 new'), findsNothing);
     // No source answered, so the module states no figure at all, not even
     // the dash: its heading stands over the fault, which says why.
     expect(find.textContaining('downloading'), findsNothing);

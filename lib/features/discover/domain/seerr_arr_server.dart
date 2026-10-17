@@ -320,8 +320,8 @@ class SeerrApproveTarget {
         : serversRead
         ? null
         : "Seerr's $_kind";
-    if (to == null) return 'Approved · Seerr has no $_kind for it';
-    return 'Approved · sent to $to';
+    if (to == null) return 'Approved\u00A0· Seerr has no $_kind for it';
+    return 'Approved\u00A0· sent to $to';
   }
 
   /// What the approve confirmation says about where [title] goes.

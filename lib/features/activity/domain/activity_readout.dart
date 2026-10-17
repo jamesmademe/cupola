@@ -6,6 +6,7 @@ import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart' show StatusTone;
 import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/utils/date_format.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
 
 /// One fact of the readout: a figure, set large, and its words after it.
@@ -104,7 +105,7 @@ String? lastDownloadFinished(DateTime? at, {required DateTime now}) {
 /// megabytes a second, 1 stuck`.
 String spokenActivityReadout(List<ActivityReadoutPart> parts) => parts
     .map(
-      (part) => part.words.endsWith('/s')
+      (part) => endsWithRate(part.words)
           ? spokenBytesPerSecond('${part.figure} ${part.words}')
           : part.spoken,
     )

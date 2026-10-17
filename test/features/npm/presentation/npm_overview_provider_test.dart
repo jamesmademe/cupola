@@ -120,7 +120,7 @@ void main() {
       expect(items, hasLength(1));
       expect(items.single.kind, NpmAttentionKind.nginxRefused);
       expect(items.single.tone, StatusTone.warning);
-      expect(items.single.headline, 'nginx refused · photos.example.net');
+      expect(items.single.headline, 'nginx refused\u00A0· photos.example.net');
       expect(
         items.single.detail,
         'nginx: [emerg] invalid port in "listen" directive',
@@ -170,7 +170,7 @@ void main() {
       expect(items, isEmpty);
       expect(
         row.detail,
-        'http://immich.lan:2283 · serving · not reachable from this device',
+        'http://immich.lan:2283\u00A0· serving\u00A0· not reachable from this device',
       );
       expect(row.tone, StatusTone.success);
     });
@@ -188,7 +188,7 @@ void main() {
 
       expect(items.single.kind, NpmAttentionKind.certificateExpired);
       expect(items.single.tone, StatusTone.warning);
-      expect(items.single.detail, "Let's Encrypt · expired 4 days ago");
+      expect(items.single.detail, "Let's Encrypt\u00A0· expired 4 days ago");
     });
 
     test(
@@ -212,9 +212,9 @@ void main() {
         expect(items.single.kind, NpmAttentionKind.certificateExpired);
         expect(
           items.single.headline,
-          'Certificate expired · photos.example.net',
+          'Certificate expired\u00A0· photos.example.net',
         );
-        expect(items.single.detail, "Let's Encrypt · expired today");
+        expect(items.single.detail, "Let's Encrypt\u00A0· expired today");
         // And it is counted once, not once as expired and again as expiring.
         expect(items, hasLength(1));
       },
@@ -242,7 +242,7 @@ void main() {
       // window is one whose renewal has not completed.
       expect(
         items.single.detail,
-        '9 days left · seerr.example.net · photos.example.net · '
+        '9 days left\u00A0· seerr.example.net\u00A0· photos.example.net\u00A0· '
         'renewal has not completed',
       );
     });
@@ -386,7 +386,7 @@ void main() {
 
       expect(
         rows.single.detail,
-        'http://plex.lan:32400 · serving · TLS · access list',
+        'http://plex.lan:32400\u00A0· serving\u00A0· TLS\u00A0· access list',
       );
     });
 
@@ -407,7 +407,7 @@ void main() {
         npmProxyHostsSubtitle([
           for (var i = 0; i < 23; i++) _host(id: i),
         ], _report(const {}, checked: 8, total: 23)),
-        '23 · 8 of 23 enabled checked from this device',
+        '23\u00A0· 8 of 23 enabled checked from this device',
       );
     });
 
@@ -422,7 +422,7 @@ void main() {
           _host(id: 23, enabled: false),
           _host(id: 24, enabled: false),
         ], _report(const {}, checked: 8, total: 23)),
-        '25 · 8 of 23 enabled checked from this device',
+        '25\u00A0· 8 of 23 enabled checked from this device',
       );
     });
 
@@ -478,14 +478,14 @@ void main() {
         _cert(name: 'photos', expiresIn: const Duration(hours: -6)),
       ], now).single;
       expect(row.tone, StatusTone.warning);
-      expect(row.detail, "Let's Encrypt · expired today");
+      expect(row.detail, "Let's Encrypt\u00A0· expired today");
     });
 
     test('an undated certificate speaks the em dash rather than a number', () {
       final row = npmCertificateRows([
         _cert(name: 'wildcard', expiresOn: null),
       ], now).single;
-      expect(row.detail, "Let's Encrypt · —");
+      expect(row.detail, "Let's Encrypt\u00A0· —");
       expect(row.spoken, "wildcard, Let's Encrypt, —");
     });
   });
@@ -498,7 +498,7 @@ void main() {
           _cert(expiresIn: const Duration(days: 12)),
           _cert(expiresIn: const Duration(days: 150)),
         ], now),
-        '3 · 2 expiring',
+        '3\u00A0· 2 expiring',
       );
     });
 
@@ -515,7 +515,7 @@ void main() {
           _cert(expiresIn: const Duration(days: 9)),
           _cert(expiresIn: const Duration(days: 150)),
         ], now),
-        '4 · 2 expired · 1 expiring',
+        '4\u00A0· 2 expired\u00A0· 1 expiring',
       );
     });
 
@@ -524,7 +524,7 @@ void main() {
         npmCertificatesSubtitle([
           _cert(expiresIn: const Duration(hours: -6)),
         ], now),
-        '1 · 1 expired',
+        '1\u00A0· 1 expired',
       );
     });
 

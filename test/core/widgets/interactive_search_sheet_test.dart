@@ -242,7 +242,7 @@ void main() {
     testWidgets('summarises the result counts', (tester) async {
       await _pumpSheet(tester, releases: _sampleReleases);
 
-      expect(find.text('3 releases · 2 approved'), findsOneWidget);
+      expect(find.text('3 releases\u00A0· 2 approved'), findsOneWidget);
     });
 
     testWidgets('filters by title query', (tester) async {
@@ -253,7 +253,7 @@ void main() {
 
       expect(find.text('Movie.2024.2160p.REMUX'), findsOneWidget);
       expect(find.text('Movie.2024.1080p.WEB-DL'), findsNothing);
-      expect(find.text('1 of 3 releases · 2 approved'), findsOneWidget);
+      expect(find.text('1 of 3 releases\u00A0· 2 approved'), findsOneWidget);
     });
 
     testWidgets('hides rejected releases behind the Approved only chip', (
@@ -265,7 +265,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Movie.2024.720p.Rejected'), findsNothing);
-      expect(find.text('2 of 3 releases · 2 approved'), findsOneWidget);
+      expect(find.text('2 of 3 releases\u00A0· 2 approved'), findsOneWidget);
     });
 
     testWidgets('offers a way back when filters exclude everything', (
@@ -281,7 +281,7 @@ void main() {
       await tester.tap(find.text('Clear filters'));
       await tester.pumpAndSettle();
 
-      expect(find.text('3 releases · 2 approved'), findsOneWidget);
+      expect(find.text('3 releases\u00A0· 2 approved'), findsOneWidget);
     });
 
     testWidgets('shows an empty state when no release was returned', (

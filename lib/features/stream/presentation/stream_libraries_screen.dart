@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -326,7 +327,7 @@ class _LibraryRow extends StatelessWidget {
       final scanned = _scannedLabel(library.lastScannedAt);
       if (scanned != null) parts.add(scanned);
     }
-    return parts.join(' · ');
+    return parts.join(dotSeparator);
   }
 
   static String? _scannedLabel(DateTime? at) {

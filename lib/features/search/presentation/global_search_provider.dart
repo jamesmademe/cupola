@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/models/media_preview.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
@@ -552,7 +553,7 @@ GlobalSearchResult _seerrResult(
     service: ServiceKey.seerr,
     id: item.id,
     title: item.title,
-    subtitle: [type, year].where((part) => part.isNotEmpty).join(' · '),
+    subtitle: [type, year].where((part) => part.isNotEmpty).join(dotSeparator),
     imageUrl: imageUrl,
     imageHeaders: null,
     tags: [type, if (year.isNotEmpty) year],
@@ -626,7 +627,7 @@ GlobalSearchResult _radarrResult(
     subtitle: [
       if (item.year > 0) item.year.toString(),
       if (inLibrary) _inLibraryTag,
-    ].join(' · '),
+    ].join(dotSeparator),
     imageUrl: image.url,
     imageHeaders: image.headers,
     tags: ['Movie', if (inLibrary) _inLibraryTag],
@@ -690,7 +691,7 @@ GlobalSearchResult _sonarrResult(
       if (item.year > 0) item.year.toString(),
       item.status,
       if (inLibrary) _inLibraryTag,
-    ].join(' · '),
+    ].join(dotSeparator),
     imageUrl: image.url,
     imageHeaders: image.headers,
     tags: ['Series', item.status, if (inLibrary) _inLibraryTag],

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/app_card.dart';
@@ -246,7 +247,7 @@ class _SearchHeadroomCardState extends ConsumerState<SearchHeadroomCard> {
         ..add(TextSpan(text: _short(h.longestSuccess!), style: figure));
     }
     if (h.earliestCutoff != null) {
-      if (spans.isNotEmpty) spans.add(const TextSpan(text: ' · '));
+      if (spans.isNotEmpty) spans.add(const TextSpan(text: dotSeparator));
       spans
         ..add(const TextSpan(text: 'earliest cut-off seen '))
         ..add(TextSpan(text: _short(h.earliestCutoff!), style: figure));

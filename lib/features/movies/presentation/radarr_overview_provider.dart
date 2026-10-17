@@ -266,7 +266,7 @@ List<RadarrAttentionItem> radarrQueueFaults(
       items.add(
         RadarrAttentionItem(
           kind: RadarrAttentionKind.stalled,
-          headline: '${StateWord.stuck.label} · $title',
+          headline: '${StateWord.stuck.label}\u00A0· $title',
           detail: joinDisplayParts([
             stringOrNull(record['downloadClient']),
             message,
@@ -281,7 +281,7 @@ List<RadarrAttentionItem> radarrQueueFaults(
       items.add(
         RadarrAttentionItem(
           kind: RadarrAttentionKind.importFailed,
-          headline: 'Import failed · $title',
+          headline: 'Import failed\u00A0· $title',
           detail: joinDisplayParts([message, age]),
         ),
       );

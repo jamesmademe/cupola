@@ -45,7 +45,7 @@ void main() {
       'connections',
     );
     expect(panel.tone, StatusTone.warning);
-    expect(panel.source, 'Radarr · qBittorrent');
+    expect(panel.source, 'Radarr\u00A0· qBittorrent');
     expect(panel.release, 'Big.Buck.Bunny.2008.1080p.BluRay');
     expect(panel.actions, [
       MediaCopyAction.tryAnother,
@@ -118,7 +118,7 @@ void main() {
       ),
       record: _record,
     );
-    expect(panel.headline, 'Downloading · 62%');
+    expect(panel.headline, 'Downloading\u00A0· 62%');
     expect(panel.tone, isNull);
     expect(panel.progress, 0.62);
     expect(panel.actions, isEmpty);
@@ -129,7 +129,7 @@ void main() {
       const MediaStatusInfo(availability: MediaAvailability.missing),
       searchedAt: DateTime(2026, 10, 4, 20, 53),
     );
-    expect(panel.headline, 'In Radarr · searching');
+    expect(panel.headline, 'In Radarr\u00A0· searching');
     expect(panel.status, 'Radarr asked your indexers at 20:53');
     expect(panel.busy, isTrue);
     expect(panel.actions, [MediaCopyAction.chooseRelease]);
@@ -139,26 +139,26 @@ void main() {
     final missing = _panel(
       const MediaStatusInfo(availability: MediaAvailability.missing),
     );
-    expect(missing.headline, 'In Radarr · missing');
+    expect(missing.headline, 'In Radarr\u00A0· missing');
     expect(missing.actions.first, MediaCopyAction.automaticSearch);
 
     final unmonitored = _panel(
       const MediaStatusInfo(availability: MediaAvailability.missing),
       monitored: false,
     );
-    expect(unmonitored.headline, 'In Radarr · not monitored');
+    expect(unmonitored.headline, 'In Radarr\u00A0· not monitored');
     expect(unmonitored.actions.first, MediaCopyAction.monitor);
 
     expect(
       _panel(
         const MediaStatusInfo(availability: MediaAvailability.upgradable),
       ).headline,
-      'In Radarr · cutoff unmet',
+      'In Radarr\u00A0· cutoff unmet',
     );
     final unreleased = _panel(
       const MediaStatusInfo(availability: MediaAvailability.unavailable),
     );
-    expect(unreleased.headline, 'In Radarr · not out yet');
+    expect(unreleased.headline, 'In Radarr\u00A0· not out yet');
     expect(unreleased.actions, isEmpty);
   });
 }

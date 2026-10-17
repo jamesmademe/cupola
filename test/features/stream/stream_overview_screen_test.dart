@@ -103,7 +103,7 @@ void main() {
     final header = tester.widget<SectionHeader>(
       find.widgetWithText(SectionHeader, 'Libraries'),
     );
-    expect(header.subtitle, '3 libraries · Movies scanning');
+    expect(header.subtitle, '3 libraries\u00A0· Movies scanning');
   });
 
   testWidgets('a scan in progress speaks one sentence', (tester) async {
@@ -248,7 +248,7 @@ void main() {
     );
 
     expect(find.text('Severance'), findsOneWidget);
-    expect(find.text('S02E05 · 30% in'), findsOneWidget);
+    expect(find.text('S02E05\u00A0· 30% in'), findsOneWidget);
   });
 
   testWidgets('a Plex with nothing part-watched rests', (tester) async {
@@ -275,7 +275,7 @@ void main() {
           id: '12',
           title:
               'A Series With An Extremely Long Title That Nobody Abbreviates',
-          subtitle: 'S02E05 · Woe’s Hollow',
+          subtitle: 'S02E05\u00A0· Woe’s Hollow',
           progress: 0.42,
         ),
       ],

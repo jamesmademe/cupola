@@ -192,7 +192,7 @@ void main() {
       );
       expect(nightShift.service, ServiceKey.sonarr);
       // Night Shift's own record: series 2, never Cosmos Laundromat.
-      expect(nightShift.title, startsWith('Night Shift · S'));
+      expect(nightShift.title, startsWith('Night Shift\u00A0· S'));
       expect(nightShift.mediaId, 2);
       expect(nightShift.clientService, ServiceKey.transmission);
       expect(nightShift.clientInstanceId, WorldIds.transmission);
@@ -293,8 +293,11 @@ void main() {
       String detailOf(String title) =>
           decisions.decisions.singleWhere((d) => d.title == title).detail;
 
-      expect(detailOf('Big.Buck.Bunny.2008.720p.WEB'), contains('1 peer ·'));
-      expect(detailOf('Coffee.Run.2020.720p.WEB'), contains('1 seed ·'));
+      expect(
+        detailOf('Big.Buck.Bunny.2008.720p.WEB'),
+        contains('1 peer\u00A0·'),
+      );
+      expect(detailOf('Coffee.Run.2020.720p.WEB'), contains('1 seed\u00A0·'));
     });
 
     testWidgets('P4 on Home: the line sums both clients', (tester) async {
@@ -303,7 +306,9 @@ void main() {
       // qBittorrent's 22.4 MB/s and Transmission's 3: one speed, and the
       // Sonarr grab Transmission moves is counted once among the four.
       expect(
-        _inDownloads(find.text('4 moving · 1 stuck · 25.4\u00A0MB/s')),
+        _inDownloads(
+          find.text('4 moving\u00A0· 1 stuck\u00A0· 25.4\u00A0MB/\u2060s'),
+        ),
         findsOneWidget,
       );
 
@@ -370,7 +375,9 @@ void main() {
       // (`5 moving`) and is now said apart, after what is stuck.
       expect(
         _inDownloads(
-          find.text('4 moving · 3 stuck · 1 queued · 40.4\u00A0MB/s'),
+          find.text(
+            '4 moving\u00A0· 3 stuck\u00A0· 1 queued\u00A0· 40.4\u00A0MB/\u2060s',
+          ),
         ),
         findsOneWidget,
       );

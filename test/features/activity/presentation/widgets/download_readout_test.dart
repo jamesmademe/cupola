@@ -22,7 +22,7 @@ Widget _readout(List<RateSample> trace) => MaterialApp(
         stand: DownloadStand.downloading,
         percent: '0%',
         progress: 0,
-        pace: '0\u00A0B/s',
+        pace: '0\u00A0B/\u2060s',
         steps: const [],
         trace: trace,
         watched: const Duration(seconds: 5),

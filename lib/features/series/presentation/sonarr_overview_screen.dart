@@ -200,7 +200,7 @@ class _AiringSection extends ConsumerWidget {
       // has, so a series airing twice this week is one row here, and calling
       // these episodes would be short by exactly the ones it cannot see.
       subtitle:
-          'next $sonarrAiringDays days · ${count == null ? '—' : '$count series'}',
+          'next $sonarrAiringDays days\u00A0· ${count == null ? '—' : '$count series'}',
       destination: ServiceTab.calendar,
       child: AsyncValueWidget<SonarrAiringWeek>.section(
         value: week,
@@ -578,7 +578,7 @@ class _HistoryRow extends StatelessWidget {
         margin: const EdgeInsets.only(top: 5),
         decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
       ),
-      title: '${entry.subject} · ${entry.event.toLowerCase()}',
+      title: '${entry.subject}\u00A0· ${entry.event.toLowerCase()}',
       detail: entry.detail,
     );
   }

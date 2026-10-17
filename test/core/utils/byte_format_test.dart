@@ -137,17 +137,23 @@ void main() {
 
   group('formatBytesPerSecond', () {
     test('appends the rate suffix at every magnitude', () {
-      expect(formatBytesPerSecond(0), '0\u00A0B/s');
-      expect(formatBytesPerSecond(512), '512\u00A0B/s');
-      expect(formatBytesPerSecond(2097152), '2.0\u00A0MB/s');
+      expect(formatBytesPerSecond(0), '0\u00A0B/\u2060s');
+      expect(formatBytesPerSecond(512), '512\u00A0B/\u2060s');
+      expect(formatBytesPerSecond(2097152), '2.0\u00A0MB/\u2060s');
     });
 
     test('follows the same rule: one decimal, whole from 100, promoted', () {
-      expect(formatBytesPerSecond((4.2 * _mib).round()), '4.2\u00A0MB/s');
-      expect(formatBytesPerSecond((15.5 * _mib).round()), '15.5\u00A0MB/s');
-      expect(formatBytesPerSecond(120 * _mib), '120\u00A0MB/s');
-      expect(formatBytesPerSecond((1023.96 * _kib).round()), '1.0\u00A0MB/s');
-      expect(formatBytesPerSecond(-2 * _mib), '-2.0\u00A0MB/s');
+      expect(formatBytesPerSecond((4.2 * _mib).round()), '4.2\u00A0MB/\u2060s');
+      expect(
+        formatBytesPerSecond((15.5 * _mib).round()),
+        '15.5\u00A0MB/\u2060s',
+      );
+      expect(formatBytesPerSecond(120 * _mib), '120\u00A0MB/\u2060s');
+      expect(
+        formatBytesPerSecond((1023.96 * _kib).round()),
+        '1.0\u00A0MB/\u2060s',
+      );
+      expect(formatBytesPerSecond(-2 * _mib), '-2.0\u00A0MB/\u2060s');
     });
   });
 
@@ -170,10 +176,10 @@ void main() {
 
   group('formatKilobytesPerSecond', () {
     test('reads SABnzbd kbpersec', () {
-      expect(formatKilobytesPerSecond(0), '0\u00A0B/s');
-      expect(formatKilobytesPerSecond(512), '512\u00A0KB/s');
-      expect(formatKilobytesPerSecond(2048.5), '2.0\u00A0MB/s');
-      expect(formatKilobytesPerSecond(50 * 1024), '50.0\u00A0MB/s');
+      expect(formatKilobytesPerSecond(0), '0\u00A0B/\u2060s');
+      expect(formatKilobytesPerSecond(512), '512\u00A0KB/\u2060s');
+      expect(formatKilobytesPerSecond(2048.5), '2.0\u00A0MB/\u2060s');
+      expect(formatKilobytesPerSecond(50 * 1024), '50.0\u00A0MB/\u2060s');
     });
   });
 

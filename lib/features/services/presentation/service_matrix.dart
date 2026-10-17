@@ -78,6 +78,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
@@ -489,7 +490,7 @@ class _DomainBand extends ConsumerWidget {
               ...qualifiers,
               if (onlyAtHome > 0) '$onlyAtHome ${StateWord.onlyAtHome.inline}',
               if (notSetUp > 0) '$notSetUp not set up',
-            ].join(' · ');
+            ].join(dotSeparator);
     }
     return serviceDomainHealthLine(
       clean: clean,
@@ -509,7 +510,7 @@ class _DomainBand extends ConsumerWidget {
     final dim =
         theme.extension<CupolaThemeColors>()?.dimText ??
         colorScheme.onSurfaceVariant;
-    final parts = health?.split(' · ') ?? const <String>[];
+    final parts = health == null ? const <String>[] : splitParts(health);
 
     return Padding(
       // Generous above, tight below: the gap that separates this header from the
@@ -547,7 +548,7 @@ class _DomainBand extends ConsumerWidget {
                 children: [
                   for (final (index, part) in parts.indexed)
                     Text(
-                      index < parts.length - 1 ? '$part ·' : part,
+                      index < parts.length - 1 ? '$part\u00A0·' : part,
                       style: theme.textTheme.bodySmall?.copyWith(color: dim),
                     ),
                 ],

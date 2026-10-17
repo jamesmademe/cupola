@@ -9,6 +9,7 @@ import 'package:cupola/core/capability/connection_capability.dart';
 import 'package:cupola/core/status/silence_age.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/date_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/npm/data/npm_upstream_probe.dart';
 import 'package:cupola/features/npm/domain/models/npm_models.dart';
@@ -208,7 +209,7 @@ String? _proxyHostSubtitle(
   NpmUpstreamReport? report,
 ) {
   if (hosts == null) return null;
-  return ['${hosts.length}', ?report?.coverage].join(' · ');
+  return ['${hosts.length}', ?report?.coverage].join(dotSeparator);
 }
 
 class _NpmSection extends ConsumerWidget {
@@ -427,7 +428,7 @@ class _AccessListList extends ConsumerWidget {
                       '$hosts ${hosts == 1 ? 'host' : 'hosts'}',
                     '${list.clients.length} IP ${list.clients.length == 1 ? 'rule' : 'rules'}',
                     if (list.passAuth) 'basic auth',
-                  ].join(' · ');
+                  ].join(dotSeparator);
                   return _NpmReadOnlyTile(
                     icon: Icons.shield_outlined,
                     title: list.name,
@@ -469,8 +470,8 @@ class _AuditLogList extends ConsumerWidget {
                       : formatRelativeDateTime(entry.createdOn!);
                   return _NpmReadOnlyTile(
                     icon: Icons.history_rounded,
-                    title: '${entry.action} · $target',
-                    detail: [entry.objectType, ?time].join(' · '),
+                    title: '${entry.action}\u00A0· $target',
+                    detail: [entry.objectType, ?time].join(dotSeparator),
                   );
                 })
                 .toList(growable: false),
@@ -691,7 +692,7 @@ class _ProxyHostTile extends ConsumerWidget {
       if (down) 'not reachable from this device',
       if (host.hasCertificate) 'TLS',
       if (host.hasAccessList) 'Access list',
-    ].join(' · ');
+    ].join(dotSeparator);
 
     final hasFault = host.errorText.isNotEmpty;
     final detailText = host.errorText.isNotEmpty ? host.errorText : detail;
@@ -847,7 +848,7 @@ class _ProxyHostMenu extends ConsumerWidget {
           value: 'advanced',
           child: Text(
             host.advancedConfigLines > 0
-                ? 'Advanced · ${host.advancedConfigLines} lines'
+                ? 'Advanced\u00A0· ${host.advancedConfigLines} lines'
                 : 'Advanced Nginx config…',
           ),
         ),
@@ -975,7 +976,7 @@ class _CertificateTile extends ConsumerWidget {
         'Expires in $days days',
       if (cert.renewalNotCompleting(now))
         'renewal has not run, Let\'s Encrypt renews from 30 days out',
-    ].join(' · ');
+    ].join(dotSeparator);
 
     return Padding(
       padding: const EdgeInsets.symmetric(

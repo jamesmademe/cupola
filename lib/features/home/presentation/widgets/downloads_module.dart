@@ -380,7 +380,7 @@ class DownloadRow extends ConsumerWidget {
     final title =
         item.connectionName == null || item.clientService == item.service
         ? item.title
-        : '${item.title} · ${serviceWithConnection(item.service, item.connectionName, joiner: ' ')}';
+        : '${item.title}\u00A0· ${serviceWithConnection(item.service, item.connectionName, joiner: ' ')}';
     final release = item.names.machineName;
     final showsRelease =
         release != null && release.isNotEmpty && release != item.title;

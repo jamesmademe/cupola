@@ -6,7 +6,7 @@ void main() {
     test('replaces visual dot separators with commas', () {
       expect(
         downloadRowValue(
-          subtitle: 'Movie · Furiosa.2024.2160p.WEB-DL-GROUP',
+          subtitle: 'Movie\u00A0· Furiosa.2024.2160p.WEB-DL-GROUP',
           percent: 75,
           warning: null,
         ),
@@ -156,7 +156,7 @@ void main() {
         ],
         onlyAtHome: 4,
       ),
-      '0 of 2 clean · Radarr needs a look · Sonarr needs a look · 1 other · '
+      '0 of 2 clean\u00A0· Radarr needs a look\u00A0· Sonarr needs a look\u00A0· 1 other\u00A0· '
       '4 only at home',
     );
   });

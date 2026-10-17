@@ -272,7 +272,7 @@ void main() {
       expect(remux.needsAttention, isFalse);
       expect(
         remux.transcodeReasonLabel,
-        'audio TrueHD → E-AC3 · container rewrap to MKV',
+        'audio TrueHD → E-AC3\u00A0· container rewrap to MKV',
       );
     });
 

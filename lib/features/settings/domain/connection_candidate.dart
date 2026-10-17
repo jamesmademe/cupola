@@ -110,7 +110,7 @@ class ConnectionCandidate {
   /// Where it was heard of, and what is left to do: `Seerr knows it · key
   /// found`, or `Prowlarr knows it · paste its key`.
   String get knownLine =>
-      '${source.service.title} knows it · '
+      '${source.service.title} knows it\u00A0· '
       '${hasKey ? 'key found' : 'paste its key'}';
 
   /// Where this device should try it: [reportedUrl], or the source's own

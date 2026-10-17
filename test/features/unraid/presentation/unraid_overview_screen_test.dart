@@ -112,7 +112,7 @@ void main() {
     final array = tester.widget<SectionHeader>(
       find.widgetWithText(SectionHeader, 'Array'),
     );
-    expect(array.subtitle, 'started · 1 disk · 1 above 45\u00A0°C');
+    expect(array.subtitle, 'started\u00A0· 1 disk\u00A0· 1 above 45\u00A0°C');
 
     // …and the deliberate stop is counted as backlog, in the plain census. It
     // is never called a failure: painting a stop the user chose the same amber
@@ -120,10 +120,12 @@ void main() {
     final docker = tester.widget<SectionHeader>(
       find.widgetWithText(SectionHeader, 'Docker'),
     );
-    expect(docker.subtitle, '1 container · 1 stopped');
+    expect(docker.subtitle, '1 container\u00A0· 1 stopped');
     expect(find.textContaining('failed'), findsNothing);
     expect(
-      find.semantics.byLabel('plex, stopped on purpose · exit 0 · 2 days ago'),
+      find.semantics.byLabel(
+        'plex, stopped on purpose\u00A0· exit 0\u00A0· 2 days ago',
+      ),
       findsOneWidget,
     );
   });
@@ -141,7 +143,7 @@ void main() {
     final docker = tester.widget<SectionHeader>(
       find.widgetWithText(SectionHeader, 'Docker'),
     );
-    expect(docker.subtitle, '14 containers · 14 running');
+    expect(docker.subtitle, '14 containers\u00A0· 14 running');
     expect(
       find.byType(ServiceOverviewRow),
       // Five containers, two disks, two system facts.

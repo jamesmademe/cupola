@@ -289,7 +289,7 @@ class ServiceInstance {
   /// Call [SettingsModel.connectionTitle] instead wherever a sentence names a
   /// connection; it applies the same rule as the rest of the app.
   String get displayTitle =>
-      label.isEmpty ? service.title : '${service.title} · $label';
+      label.isEmpty ? service.title : '${service.title}\u00A0· $label';
 
   /// [clearAccount] takes the account off, back to the key; setting an
   /// [account] is the other way.

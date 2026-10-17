@@ -46,7 +46,7 @@ void main() {
     ),
   ];
   String title(ServiceInstance connection) =>
-      connection.label.isEmpty ? 'Radarr' : 'Radarr · ${connection.label}';
+      connection.label.isEmpty ? 'Radarr' : 'Radarr\u00A0· ${connection.label}';
 
   group('SeerrMediaCopy.fromMediaInfo', () {
     test('reads both copies, the standard one first', () {
@@ -93,7 +93,7 @@ void main() {
 
       expect(bound.server, same(uhd));
       expect(bound.connection?.id, 'radarr-4k00001');
-      expect(bound.serverName(connectionTitle: title), 'Radarr · 4K');
+      expect(bound.serverName(connectionTitle: title), 'Radarr\u00A0· 4K');
     });
 
     test('a row with no server id means the default server of its copy', () {

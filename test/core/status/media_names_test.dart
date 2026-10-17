@@ -21,14 +21,14 @@ void main() {
           'series': {'title': 'Cosmos Laundromat'},
           'episode': {'seasonNumber': 2, 'episodeNumber': 4},
         }, machineName: 'Cosmos.Laundromat.S02E04.1080p.WEB').title,
-        startsWith('Cosmos Laundromat · S'),
+        startsWith('Cosmos Laundromat\u00A0· S'),
       );
       expect(
         MediaNames.ofRecord({
           'album': {'title': 'Nosferatu'},
           'artist': {'artistName': 'Hans Erdmann'},
         }, machineName: 'Hans.Erdmann-Nosferatu-FLAC').title,
-        'Nosferatu · Hans Erdmann',
+        'Nosferatu\u00A0· Hans Erdmann',
       );
     });
 

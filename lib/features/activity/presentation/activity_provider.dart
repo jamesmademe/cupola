@@ -9,6 +9,7 @@ import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_names.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
@@ -1250,7 +1251,7 @@ GlobalActivityItem _requestItem(
     instanceId: connection.instanceId,
     instanceLabel: connection.label,
     title: title,
-    subtitle: [requester, type].whereType<String>().join(' · '),
+    subtitle: [requester, type].whereType<String>().join(dotSeparator),
     status: resolveRequestStatus(request),
     sortDate: DateTime.tryParse(request.createdAt),
     request: request,
@@ -1404,7 +1405,7 @@ String _subtitleFor(
     GlobalActivityKind.missing || GlobalActivityKind.cutoff => [
       _serviceKeyFor(serviceType).title,
       _wantedContext(serviceType, item),
-    ].whereType<String>().join(' · '),
+    ].whereType<String>().join(dotSeparator),
     GlobalActivityKind.request => _serviceKeyFor(serviceType).title,
   };
 }
@@ -1430,7 +1431,7 @@ String _figuresFor(GlobalActivityKind kind, Map<String, dynamic> item) {
       return [
         if (size != '—') size,
         if (left != '—' && left.isNotEmpty) '$left left',
-      ].join(' · ');
+      ].join(dotSeparator);
     case GlobalActivityKind.history:
       // \*arr files the imported file's size under `data`, not at the top
       // level where the queue keeps it.

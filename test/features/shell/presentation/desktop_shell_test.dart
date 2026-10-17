@@ -250,7 +250,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.text('Radarr · 4K'), findsNothing);
+      expect(find.text('Radarr\u00A0· 4K'), findsNothing);
       final radarr = find.bySemanticsLabel('Radarr, four-k.lan');
       expect(radarr, findsOneWidget);
       final semantics = tester.getSemantics(radarr).getSemanticsData();

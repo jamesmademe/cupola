@@ -112,19 +112,19 @@ List<String> _order(WidgetTester tester, List<String> titles) {
 }
 
 const _moving = [
-  'Cosmos Laundromat · S2 E4',
+  'Cosmos Laundromat\u00A0· S2 E4',
   'Sprite Fright',
   'Elephants Dream',
-  'Cosmos Laundromat · S2 E5',
+  'Cosmos Laundromat\u00A0· S2 E5',
 ];
 
 /// The table's rows as the queue reads them first: three moving, and Cosmos
 /// S2 E5 stopped at the foot. Once resumed, the queue puts it first.
-const _stoppedTitle = 'Cosmos Laundromat · S2 E5';
+const _stoppedTitle = 'Cosmos Laundromat\u00A0· S2 E5';
 const _drawn = [
   'Sprite Fright',
   'Elephants Dream',
-  'Cosmos Laundromat · S2 E4',
+  'Cosmos Laundromat\u00A0· S2 E4',
   _stoppedTitle,
 ];
 
@@ -164,7 +164,7 @@ List<ServiceQueueItem> _queue({required bool resumed}) {
       hash: 'b2e0c3d4e5f60718293a4b5c6d7e8f9012345790',
     ),
     _download(
-      'Cosmos Laundromat · S2 E4',
+      'Cosmos Laundromat\u00A0· S2 E4',
       '3',
       hash: WorldDownloads.cosmosS02E04.id,
     ),
@@ -194,7 +194,7 @@ void main() {
         expect(_inTable(find.text(column)), findsOneWidget, reason: column);
       }
       expect(_inTable(find.text('62%')), findsOneWidget);
-      expect(_inTable(find.text('4.2\u00A0MB/s')), findsOneWidget);
+      expect(_inTable(find.text('4.2\u00A0MB/\u2060s')), findsOneWidget);
       expect(_inTable(find.text('11\u00A0min')), findsOneWidget);
       expect(_inTable(find.text('around 21:04')), findsOneWidget);
       expect(_inTable(find.text('Stuck at 47%')), findsOneWidget);
@@ -221,19 +221,19 @@ void main() {
 
       await _tap(tester, _inTable(find.text('Progress')));
       expect(_order(tester, _moving), [
-        'Cosmos Laundromat · S2 E4',
+        'Cosmos Laundromat\u00A0· S2 E4',
         'Sprite Fright',
         'Elephants Dream',
-        'Cosmos Laundromat · S2 E5',
+        'Cosmos Laundromat\u00A0· S2 E5',
       ]);
       expect(_inTable(find.byIcon(Icons.arrow_downward_rounded)), findsOne);
 
       await _tap(tester, _inTable(find.text('Progress')));
       expect(_order(tester, _moving), [
-        'Cosmos Laundromat · S2 E5',
+        'Cosmos Laundromat\u00A0· S2 E5',
         'Elephants Dream',
         'Sprite Fright',
-        'Cosmos Laundromat · S2 E4',
+        'Cosmos Laundromat\u00A0· S2 E4',
       ]);
       expect(_inTable(find.byIcon(Icons.arrow_upward_rounded)), findsOne);
 
@@ -358,7 +358,7 @@ void main() {
       expect(
         _inTable(
           find.text(
-            'Radarr 1 → qBittorrent · 4.2\u00A0MB/s · 11\u00A0min left · '
+            'Radarr 1 → qBittorrent\u00A0· 4.2\u00A0MB/\u2060s\u00A0· 11\u00A0min left\u00A0· '
             'Anna asked',
           ),
         ),
@@ -474,7 +474,7 @@ void main() {
         _stoppedTitle,
         'Sprite Fright',
         'Elephants Dream',
-        'Cosmos Laundromat · S2 E4',
+        'Cosmos Laundromat\u00A0· S2 E4',
       ]);
 
       await _close(tester, harness, container);
@@ -510,7 +510,7 @@ void main() {
 
       await _tap(tester, _inTable(find.text('Title')));
       expect(_order(tester, _drawn), [
-        'Cosmos Laundromat · S2 E4',
+        'Cosmos Laundromat\u00A0· S2 E4',
         _stoppedTitle,
         'Elephants Dream',
         'Sprite Fright',

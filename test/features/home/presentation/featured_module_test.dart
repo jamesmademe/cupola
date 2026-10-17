@@ -170,7 +170,7 @@ void main() {
     expect(find.text('Queue'), findsOne);
     // Beside Resume and Play, and leading the slide of today's release.
     expect(find.text('Details'), findsNWidgets(3));
-    expect(find.text('Out on digital today · downloading 62%'), findsOne);
+    expect(find.text('Out on digital today\u00A0· downloading 62%'), findsOne);
   });
 
   testWidgets('an arrival no server holds leads with Details alone, and one '

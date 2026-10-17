@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_history_format.dart';
@@ -262,7 +263,7 @@ class _ProwlarrHistoryRow extends StatelessWidget {
     final title = prowlarrHistoryTitle(item);
     final source = prowlarrHistorySource(item);
     final when = item.date == null ? null : prowlarrRelativeTime(item.date!);
-    final detail = [source, when].whereType<String>().join(' · ');
+    final detail = [source, when].whereType<String>().join(dotSeparator);
     final spoken = [
       title,
       style.label,

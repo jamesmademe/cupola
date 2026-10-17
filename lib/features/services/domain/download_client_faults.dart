@@ -10,6 +10,7 @@
 /// Pure and top-level, so each mapping is testable without a container.
 library;
 
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
@@ -363,7 +364,7 @@ InFlightReading sabnzbdSlotInFlight(
         ? const InFlightReading.held()
         : InFlightReading.fault(
             InFlightFault.stalled,
-            reason: reasons.toSet().join(' · '),
+            reason: reasons.toSet().join(dotSeparator),
           );
   }
   if (stoppedByDisk) {

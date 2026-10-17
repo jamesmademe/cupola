@@ -54,7 +54,7 @@ void main() {
   test('the scan catches each spelling and passes comments over', () {
     const planted = '''
 final a = 'S\${season}E\${episode}';
-final b = 'S\$season · E\$episode';
+final b = 'S\$season\u00A0· E\$episode';
 final c = 'Severance S02E04';
 final d = 'E\${n.toString().padLeft(2, '0')}';
 // A comment naming S02E04 is not copy.

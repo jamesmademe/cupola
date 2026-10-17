@@ -3,6 +3,7 @@
 /// that repairs it.
 library;
 
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/string_utils.dart';
@@ -28,7 +29,7 @@ List<String> poolEvidence(String disk, TrueNasPool pool) {
       'Pool ${pool.name}',
       pool.healthy ? 'Healthy' : capitalizeFirst(pool.status.toLowerCase()),
       if (used != null) formatPercent(wholePercent(used * 100)),
-    ].join(' · '),
+    ].join(dotSeparator),
     if (member != null)
       [
         'Disk $disk',
@@ -36,7 +37,7 @@ List<String> poolEvidence(String disk, TrueNasPool pool) {
           errors == 1 ? '1 error' : '$errors errors'
         else
           capitalizeFirst(member.status.toLowerCase()),
-      ].join(' · '),
+      ].join(dotSeparator),
   ];
 }
 
@@ -56,7 +57,7 @@ String scanningLine(TrueNasPool pool) {
     if (percent != null) formatPercent(percent.floor()),
     if (left != null && left > 0)
       'about ${formatTimeSpan(Duration(seconds: left))} left',
-  ].join(' · ');
+  ].join(dotSeparator);
 }
 
 /// The confirmation a scrub asks: it reads the whole pool, for hours.

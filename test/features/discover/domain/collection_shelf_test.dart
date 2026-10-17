@@ -55,12 +55,12 @@ void main() {
   });
 
   test('the line under the name', () {
-    expect(shelf.summary, 'Collection · 5 movies · 2006–2022');
+    expect(shelf.summary, 'Collection\u00A0· 5 movies\u00A0· 2006–2022');
     expect(
       CollectionShelf.of(
         CollectionDetail(id: 1, name: 'One', parts: [part(1, 'A')]),
       ).summary,
-      'Collection · 1 movie',
+      'Collection\u00A0· 1 movie',
     );
   });
 

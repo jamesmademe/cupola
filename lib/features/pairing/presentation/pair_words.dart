@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/features/pairing/data/pair_server.dart';
 import 'package:cupola/features/pairing/data/pair_session.dart';
 import 'package:cupola/features/pairing/domain/pair_package.dart';
@@ -239,7 +240,7 @@ String pairPlanCounts(PairPlan plan) => [
   if (plan.toAdd.isNotEmpty) pairServices(plan.toAdd.length),
   if (plan.certificates.isNotEmpty) pairCertificates(plan.certificates.length),
   if (plan.alreadyHere.isNotEmpty) '${plan.alreadyHere.length} already here',
-].join(' · ');
+].join(dotSeparator);
 
 /// The notes under the connections that arrive, only the ones that apply.
 List<String> pairPlanNotes(PairPlan plan) => [

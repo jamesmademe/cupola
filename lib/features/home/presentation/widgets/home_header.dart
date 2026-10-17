@@ -7,6 +7,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/date_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/discover/presentation/library_calendar_provider.dart';
@@ -97,7 +98,7 @@ class HomeHeader extends ConsumerWidget {
                       TextSpan(
                         style: monthStyle,
                         children: [
-                          TextSpan(text: '$month · '),
+                          TextSpan(text: '$month\u00A0· '),
                           WidgetSpan(
                             alignment: PlaceholderAlignment.middle,
                             child: Padding(
@@ -135,7 +136,7 @@ String homeHealthLine(StackHealth health) {
     if (health.checking > 0) '${health.checking} checking',
     if (health.onlyAtHome > 0)
       '${health.onlyAtHome} ${StateWord.onlyAtHome.inline}',
-  ].join(' · ');
+  ].join(dotSeparator);
 }
 
 /// [homeHealthLine] as a screen reader says it: `12 of 12 services
@@ -145,7 +146,7 @@ String spokenHealthLine(StackHealth health) {
   if (health.checking >= health.configured) return line;
   return line
       .replaceFirst(' answering', ' services answering')
-      .replaceAll(' · ', ', ');
+      .replaceAll(dotSeparator, ', ');
 }
 
 /// The stack's light: green while everything answers, amber over a fault or

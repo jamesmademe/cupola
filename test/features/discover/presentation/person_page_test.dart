@@ -168,7 +168,7 @@ void main() {
       // TMDB answers with `1965-04-04`; the page used to print it raw, on a
       // surface where the Seerr title one tap away said `Apr 4, 1965`.
       expect(
-        find.text('Born Apr 4, 1965 · Manhattan, New York, USA'),
+        find.text('Born Apr 4, 1965\u00A0· Manhattan, New York, USA'),
         findsOneWidget,
       );
       expect(find.text('Died Jan 9, 2099'), findsOneWidget);
@@ -217,7 +217,7 @@ void main() {
         tester.getTopLeft(find.text('Dynamo Dream')).dy,
         lessThan(tester.getTopLeft(find.text('Project London')).dy),
       );
-      expect(find.text('2019 · Series'), findsOneWidget);
+      expect(find.text('2019\u00A0· Series'), findsOneWidget);
       expect(
         find.bySemanticsLabel(RegExp(r'^Add Dynamo Dream to Sonarr')),
         findsOneWidget,

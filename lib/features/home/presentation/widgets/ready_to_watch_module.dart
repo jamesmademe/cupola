@@ -76,7 +76,7 @@ class HomeReadyToWatchModule extends ConsumerWidget {
     void details() => openMyRequest(context, lead);
     final eyebrow = switch (lead.arrivedAt) {
       final at? =>
-        '${Lexicon.readyToWatch} · since ${sinceWords(at, now: now)}',
+        '${Lexicon.readyToWatch}\u00A0· since ${sinceWords(at, now: now)}',
       null => Lexicon.readyToWatch,
     };
     final line = lead.askedLine(now);
@@ -152,7 +152,7 @@ class _AlsoReady extends StatelessWidget {
       final at? => '${Lexicon.onTheServer} since ${sinceWords(at, now: now)}',
       null => Lexicon.onTheServer,
     };
-    final heading = 'Also ready · ${mine.title}';
+    final heading = 'Also ready\u00A0· ${mine.title}';
     return Semantics(
       container: true,
       button: true,

@@ -100,7 +100,7 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text('Radarr 4K · Searching your indexers'), findsOne);
+      expect(find.text('Radarr 4K\u00A0· Searching your indexers'), findsOne);
       expect(
         find.bySemanticsLabel('Sintel. Searching on Radarr 4K.'),
         findsOne,

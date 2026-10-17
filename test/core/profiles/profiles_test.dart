@@ -152,7 +152,7 @@ void main() {
       expect(p6.settings.hasMultipleInstances(ServiceKey.sonarr), isTrue);
       expect(
         p6.settings.connectionTitle(WorldIds.radarr4k, ServiceKey.radarr),
-        'Radarr · 4K',
+        'Radarr\u00A0· 4K',
       );
       expect(p6.has(ServiceKey.plex), isTrue);
       expect(p6.has(ServiceKey.jellyfin), isFalse);

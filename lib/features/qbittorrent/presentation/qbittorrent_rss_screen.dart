@@ -287,7 +287,7 @@ class _RuleRow extends StatelessWidget {
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
-                      '$match · $category',
+                      '$match\u00A0· $category',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(

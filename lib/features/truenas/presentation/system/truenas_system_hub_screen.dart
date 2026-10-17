@@ -113,7 +113,7 @@ class TrueNasSystemHubScreen extends StatelessWidget {
                   ),
                 ),
                 icon: const Icon(Icons.bug_report_rounded, size: 18),
-                label: const Text('Diagnostics · debug builds only'),
+                label: const Text('Diagnostics\u00A0· debug builds only'),
               ),
             ],
           ],

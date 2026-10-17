@@ -503,8 +503,8 @@ class _RowState extends State<_Row> {
             _RowButton(
               icon: item.held ? Icons.play_arrow_rounded : Icons.stop_rounded,
               tooltip: item.held
-                  ? 'Resume · picks up where it stopped'
-                  : 'Stop · keeps what has arrived',
+                  ? 'Resume\u00A0· picks up where it stopped'
+                  : 'Stop\u00A0· keeps what has arrived',
               onPressed: widget.busy ? null : widget.onStop,
             ),
           Builder(

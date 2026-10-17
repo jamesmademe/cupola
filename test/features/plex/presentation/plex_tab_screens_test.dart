@@ -87,7 +87,7 @@ void main() {
     );
 
     expect(find.text('Severance'), findsOneWidget);
-    expect(find.text('S02E05 · 30% in'), findsOneWidget);
+    expect(find.text('S02E05\u00A0· 30% in'), findsOneWidget);
     expect(find.semantics.byLabel('Severance'), findsOneWidget);
   });
 

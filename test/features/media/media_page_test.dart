@@ -489,7 +489,7 @@ void main() {
 
     await tester.tap(lead);
     await _answer(tester);
-    expect(find.text('Metropolis · 1927'), findsOneWidget);
+    expect(find.text('Metropolis\u00A0· 1927'), findsOneWidget);
     expect(find.text('Instance'), findsOneWidget);
     expect(find.text('HD-1080p'), findsOneWidget);
     expect(find.text('/mnt/tank/media/films'), findsOneWidget);
@@ -549,7 +549,7 @@ void main() {
     await tester.tap(find.widgetWithText(TextButton, 'Add to Radarr instead'));
     await _answer(tester);
     expect(find.text('Request Metropolis'), findsNothing);
-    expect(find.text('Metropolis · 1927'), findsOneWidget);
+    expect(find.text('Metropolis\u00A0· 1927'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Add and search'), findsOneWidget);
     // One time only: the choice on the device is still Seerr.
     final container = ProviderScope.containerOf(
@@ -573,13 +573,13 @@ void main() {
     );
     await tester.tap(find.widgetWithText(FilledButton, 'Add to Radarr'));
     await _answer(tester);
-    expect(find.text('Metropolis · 1927'), findsOneWidget);
+    expect(find.text('Metropolis\u00A0· 1927'), findsOneWidget);
 
     await tester.tap(
       find.widgetWithText(TextButton, 'Request through Seerr instead'),
     );
     await _answer(tester);
-    expect(find.text('Metropolis · 1927'), findsNothing);
+    expect(find.text('Metropolis\u00A0· 1927'), findsNothing);
     expect(find.text('Request Metropolis'), findsOneWidget);
 
     await harness.unmount(tester);
@@ -631,14 +631,16 @@ void main() {
     await tester.ensureVisible(row);
     await tester.tap(row);
     await tester.pump();
-    final fourK = find.bySemanticsLabel('Remove from Radarr · 4K');
+    final fourK = find.bySemanticsLabel('Remove from Radarr\u00A0· 4K');
     expect(find.bySemanticsLabel('Remove from Radarr 1'), findsOneWidget);
     expect(fourK, findsOneWidget);
 
     await tester.tap(fourK);
     await tester.pumpAndSettle();
     expect(
-      find.text('Radarr · 4K stops looking for it. Radarr 1 keeps its copy.'),
+      find.text(
+        'Radarr\u00A0· 4K stops looking for it. Radarr 1 keeps its copy.',
+      ),
       findsOneWidget,
     );
     await tester.tap(find.text('Keep it'));
@@ -657,7 +659,7 @@ void main() {
     final harness = await _pump(tester, Profiles.p1, WorldTitles.bigBuckBunny);
 
     expect(find.text('Stuck at 47%'), findsOneWidget);
-    expect(find.text('Radarr 1 · qBittorrent'), findsOneWidget);
+    expect(find.text('Radarr 1\u00A0· qBittorrent'), findsOneWidget);
     expect(
       find.byWidgetPredicate(
         (widget) =>
@@ -839,7 +841,7 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.bySemanticsLabel('Search releases on Radarr · 4K'),
+      find.bySemanticsLabel('Search releases on Radarr\u00A0· 4K'),
       findsOneWidget,
     );
 
@@ -863,7 +865,7 @@ void main() {
 
     expect(find.text('${WorldPeople.anna} asked for it'), findsOneWidget);
     expect(
-      find.textContaining(RegExp(r'^Waiting for approval · ')),
+      find.textContaining(RegExp(r'^Waiting for approval\u00A0· ')),
       findsOneWidget,
     );
     expect(find.widgetWithText(FilledButton, 'Add to Radarr'), findsNothing);
@@ -1002,14 +1004,14 @@ void main() {
 
       expect(find.text('Resume S2 E3'), findsOneWidget);
       expect(
-        find.text('The Second Cycle · 5\u00A0min\u00A0left'),
+        find.text('The Second Cycle\u00A0· 5\u00A0min\u00A0left'),
         findsOneWidget,
       );
       expect(
-        find.textContaining('Series · 2015– · 3\u00A0seasons'),
+        find.textContaining('Series\u00A0· 2015–\u00A0· 3\u00A0seasons'),
         findsOneWidget,
       );
-      expect(find.textContaining('S3 E1 · premiere at'), findsOneWidget);
+      expect(find.textContaining('S3 E1\u00A0· premiere at'), findsOneWidget);
       expect(find.text('Sonarr looks for it once it airs'), findsOneWidget);
       // Two scores: TMDB's, and Rotten Tomatoes' through Seerr.
       expect(find.text('88'), findsOneWidget);
@@ -1106,11 +1108,11 @@ void main() {
       await _answer(tester);
 
       expect(
-        find.textContaining('Season 2 · Episode 3 · aired'),
+        find.textContaining('Season 2\u00A0· Episode 3\u00A0· aired'),
         findsOneWidget,
       );
       expect(find.text('8.1'), findsOneWidget);
-      expect(find.text('TMDB · 37 votes'), findsOneWidget);
+      expect(find.text('TMDB\u00A0· 37 votes'), findsOneWidget);
       expect(find.text('On Jellyfin'), findsOneWidget);
       expect(find.widgetWithText(FilledButton, 'Resume'), findsOneWidget);
       expect(find.text('In Sonarr'), findsOneWidget);
@@ -1121,12 +1123,15 @@ void main() {
       expect(find.textContaining('Search for'), findsNothing);
       expect(find.text('Choose a release'), findsOneWidget);
       // Bazarr's languages for it.
-      expect(find.text('English on disk · Italian wanted'), findsOneWidget);
+      expect(
+        find.text('English on disk\u00A0· Italian wanted'),
+        findsOneWidget,
+      );
 
       // The next one, a step away.
       await tester.tap(find.byTooltip('Next episode, E4'));
       await _answer(tester);
-      expect(find.textContaining('Season 2 · Episode 4'), findsOneWidget);
+      expect(find.textContaining('Season 2\u00A0· Episode 4'), findsOneWidget);
 
       await harness.unmount(tester);
     });
@@ -1185,9 +1190,9 @@ void main() {
       final files = find.text('Files & quality');
       await tester.ensureVisible(files);
       await _answer(tester);
-      expect(find.text('13 files · 720p WEB, 1080p WEB'), findsOneWidget);
+      expect(find.text('13 files\u00A0· 720p WEB, 1080p WEB'), findsOneWidget);
       expect(
-        find.textContaining(RegExp(r'^Last imported S2 E3 · ')),
+        find.textContaining(RegExp(r'^Last imported S2 E3\u00A0· ')),
         findsOneWidget,
       );
 
@@ -1199,12 +1204,12 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Standard'), findsOneWidget);
-      expect(find.text('10 of 10 on disk · 720p WEB'), findsOneWidget);
-      expect(find.text('8 episodes · not aired'), findsOneWidget);
+      expect(find.text('10 of 10 on disk\u00A0· 720p WEB'), findsOneWidget);
+      expect(find.text('8 episodes\u00A0· not aired'), findsOneWidget);
       expect(find.text('Import a file'), findsOneWidget);
 
       // A season stops being looked for, and its episodes with it.
-      final second = find.text('3 of 10 on disk · 720p WEB, 1080p WEB');
+      final second = find.text('3 of 10 on disk\u00A0· 720p WEB, 1080p WEB');
       await tester.ensureVisible(second);
       await tester.tap(second);
       await _answer(tester);
@@ -1290,13 +1295,13 @@ void main() {
       await tester.tap(history);
       await _answer(tester);
       expect(
-        find.textContaining('Imported · S2 E3 · 1080p WEB'),
+        find.textContaining('Imported\u00A0· S2 E3\u00A0· 1080p WEB'),
         findsOneWidget,
       );
 
       final subtitles = find.text('Subtitles');
       await tester.ensureVisible(subtitles);
-      expect(find.text('EN · IT wanted on 3 episodes'), findsOneWidget);
+      expect(find.text('EN\u00A0· IT wanted on 3 episodes'), findsOneWidget);
       await tester.tap(subtitles);
       await tester.pumpAndSettle();
       expect(
@@ -1432,7 +1437,10 @@ void main() {
         find.widgetWithText(FilledButton, 'Watch on Jellyfin'),
         findsOneWidget,
       );
-      expect(find.text('S1 available · S2 partly available'), findsOneWidget);
+      expect(
+        find.text('S1 available\u00A0· S2 partly available'),
+        findsOneWidget,
+      );
       expect(find.text('Add Jellyfin to Cupola'), findsOneWidget);
 
       await harness.unmount(tester);
@@ -1540,8 +1548,8 @@ void main() {
         height: 3600,
       );
 
-      expect(find.text('S1 · 7.8'), findsOneWidget);
-      expect(find.text('S2 · 8.2'), findsOneWidget);
+      expect(find.text('S1\u00A0· 7.8'), findsOneWidget);
+      expect(find.text('S2\u00A0· 8.2'), findsOneWidget);
       // One cell width for every season, measured on the longest: a season
       // of few episodes is not drawn in fatter bars than its neighbour.
       final widths = {
@@ -1563,20 +1571,20 @@ void main() {
       await tester.tap(find.text('Episodes graph'));
       await _answer(tester);
       expect(find.text('Votes from TMDB, per episode.'), findsOneWidget);
-      expect(find.text('S2 E6 · The Seventh Cycle'), findsOneWidget);
-      expect(find.text('31 votes · Missing'), findsOneWidget);
+      expect(find.text('S2 E6\u00A0· The Seventh Cycle'), findsOneWidget);
+      expect(find.text('31 votes\u00A0· Missing'), findsOneWidget);
       expect(
         find.textContaining(
-          'Season 2 is the stronger one · 8.2 against 7.8 · 4 of its '
+          'Season 2 is the stronger one\u00A0· 8.2 against 7.8\u00A0· 4 of its '
           'episodes have few votes',
         ),
         findsOneWidget,
       );
 
       // The best opens its own sheet.
-      await tester.tap(find.text('S2 E6 · The Seventh Cycle'));
+      await tester.tap(find.text('S2 E6\u00A0· The Seventh Cycle'));
       await _answer(tester);
-      expect(find.textContaining('Season 2 · Episode 6'), findsOneWidget);
+      expect(find.textContaining('Season 2\u00A0· Episode 6'), findsOneWidget);
 
       await harness.unmount(tester);
     });
@@ -1729,26 +1737,23 @@ void main() {
       expect(chosen.right, lessThanOrEqualTo(390));
     });
 
-    test(
-      'a running time and a season count keep their words on their line',
-      () {
-        const movie = MediaIdentity(
-          title: 'Fight Club',
-          year: '1999',
-          runtime: '2 h 19 min',
-          directors: ['David Fincher'],
-          genres: ['Drama'],
-        );
-        expect(
-          movie.metaLine,
-          'David Fincher · 1999 · 2\u00A0h\u00A019\u00A0min · Drama',
-        );
-        const series = MediaIdentity(
-          title: 'Breaking Bad',
-          series: (span: '2008–2013', seasons: 5),
-        );
-        expect(series.metaLine, 'Series · 2008–2013 · 5\u00A0seasons');
-      },
-    );
+    test('a running time and a season count keep their words on their line', () {
+      const movie = MediaIdentity(
+        title: 'Fight Club',
+        year: '1999',
+        runtime: '2 h 19 min',
+        directors: ['David Fincher'],
+        genres: ['Drama'],
+      );
+      expect(
+        movie.metaLine,
+        'David Fincher\u00A0· 1999\u00A0· 2\u00A0h\u00A019\u00A0min\u00A0· Drama',
+      );
+      const series = MediaIdentity(
+        title: 'Breaking Bad',
+        series: (span: '2008–2013', seasons: 5),
+      );
+      expect(series.metaLine, 'Series\u00A0· 2008–2013\u00A0· 5\u00A0seasons');
+    });
   });
 }

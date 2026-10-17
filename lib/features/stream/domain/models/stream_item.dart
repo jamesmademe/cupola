@@ -10,6 +10,8 @@ library;
 
 import 'package:flutter/foundation.dart';
 
+import 'package:cupola/core/utils/dot_separator.dart';
+
 enum StreamItemKind {
   movie,
   series,
@@ -132,7 +134,7 @@ class StreamVideo {
   }
 
   /// `2160p · HDR10`: what the row says of the picture, or empty.
-  String get words => [?resolution, ?range].join(' · ');
+  String get words => [?resolution, ?range].join(dotSeparator);
 
   /// Jellyfin's `VideoRangeType` (or, from older servers, `VideoRange`) in the
   /// app's words.

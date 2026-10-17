@@ -73,7 +73,7 @@ void main() {
     expect(deletes.single.uri.queryParameters['blocklist'], 'true');
     expect(deletes.single.uri.queryParameters['removeFromClient'], 'true');
     final note = find.textContaining(
-      RegExp(r'^Dropped · Radarr.* is looking for another'),
+      RegExp(r'^Dropped\u00A0· Radarr.* is looking for another'),
     );
     expect(note, findsOneWidget);
     expect(find.text('Try another download'), findsNothing);
@@ -96,7 +96,9 @@ void main() {
     await harness.settle(tester);
 
     expect(
-      find.text('Hidden until tomorrow 20:53 · it comes back if nothing moves'),
+      find.text(
+        'Hidden until tomorrow 20:53\u00A0· it comes back if nothing moves',
+      ),
       findsOneWidget,
     );
     expect(harness.network.requests.where(_queueDelete), isEmpty);

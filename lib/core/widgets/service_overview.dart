@@ -6,6 +6,7 @@ import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/widgets/section_header.dart';
@@ -409,7 +410,7 @@ class ServiceOverviewIdentity extends ConsumerWidget {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             Text(
-              facts.join(' · '),
+              facts.join(dotSeparator),
               style: AppTheme.chrome(
                 context,
                 size: 12,

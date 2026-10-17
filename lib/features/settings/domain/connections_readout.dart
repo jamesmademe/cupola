@@ -142,10 +142,10 @@ class ConnectionsReadout {
   /// what `describeConnection` returns), not a synonym invented for a summary.
   String get summary {
     final line = StringBuffer('$setUp of $registrySize set up');
-    if (setUp > 0) line.write(' · $answering answering');
-    if (checking > 0) line.write(' · checking $checking');
+    if (setUp > 0) line.write('\u00A0· $answering answering');
+    if (checking > 0) line.write('\u00A0· checking $checking');
     if (onlyAtHome > 0) {
-      line.write(' · $onlyAtHome ${StateWord.onlyAtHome.inline}');
+      line.write('\u00A0· $onlyAtHome ${StateWord.onlyAtHome.inline}');
     }
     return line.toString();
   }

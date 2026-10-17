@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
@@ -291,7 +292,7 @@ class _DefinitionRow extends StatelessWidget {
                         Padding(
                           padding: const EdgeInsets.only(top: AppSpacing.xs),
                           child: Text(
-                            badges.join(' · '),
+                            badges.join(dotSeparator),
                             style: Theme.of(context).textTheme.labelSmall
                                 ?.copyWith(
                                   color: Theme.of(

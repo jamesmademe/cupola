@@ -126,21 +126,24 @@ void main() {
 
       expect(find.text('Jan Morgenstern'), findsOneWidget);
       expect(
-        find.text('3\u00A0albums on disk · 1\u00A0announced'),
+        find.text('3\u00A0albums on disk\u00A0· 1\u00A0announced'),
         findsOneWidget,
       );
       expect(find.text('JM'), findsOneWidget);
       expect(find.text('Coming'), findsOneWidget);
       expect(
         find.textContaining(
-          RegExp(r'^Out \w{3} \d{1,2} \w{3}.* · not out yet$'),
+          RegExp(r'^Out \w{3} \d{1,2} \w{3}.*\u00A0· not out yet$'),
         ),
         findsOneWidget,
       );
       expect(find.text("Lidarr looks for it once it's out"), findsOneWidget);
       expect(find.text('On disk'), findsOneWidget);
       expect(find.text('3 albums'), findsOneWidget);
-      expect(find.text('2010 · 5 tracks · 21\u00A0min'), findsOneWidget);
+      expect(
+        find.text('2010\u00A0· 5 tracks\u00A0· 21\u00A0min'),
+        findsOneWidget,
+      );
       expect(find.text('Complete'), findsNWidgets(3));
       // Newest first.
       final sintel = tester.getTopLeft(find.text('Sintel')).dy;
@@ -205,7 +208,7 @@ void main() {
       );
 
       expect(
-        find.text('2\u00A0albums on disk · 1\u00A0wanted'),
+        find.text('2\u00A0albums on disk\u00A0· 1\u00A0wanted'),
         findsOneWidget,
       );
       expect(find.text('Wanted'), findsNWidgets(2));
@@ -463,7 +466,7 @@ void main() {
 
       await harness.settle(tester);
       expect(
-        find.text('3\u00A0albums on disk · 1\u00A0announced'),
+        find.text('3\u00A0albums on disk\u00A0· 1\u00A0announced'),
         findsOneWidget,
       );
 

@@ -176,8 +176,8 @@ void main() {
 
     // Each Radarr card says which Radarr: the 4K's, and the HD's, which
     // nobody named before there were two.
-    expect(_lineOf('Spring'), '2\u00A0h ago · Radarr 4K');
-    expect(_lineOf('Coffee Run'), '2\u00A0h ago · Radarr 1');
+    expect(_lineOf('Spring'), '2\u00A0h ago\u00A0· Radarr 4K');
+    expect(_lineOf('Coffee Run'), '2\u00A0h ago\u00A0· Radarr 1');
     // The card is one button, and speaks its title and its line.
     expect(find.bySemanticsLabel('Spring, 2\u00A0h ago, Radarr 4K'), findsOne);
     // The name is one line, and the card keeps its width and its 16:9 art.
@@ -206,7 +206,7 @@ void main() {
     expect(_lineOf('Night Shift'), '3\u00A0h ago');
     expect(_inRail(find.text('Sonarr')), findsNothing);
     expect(_inRail(find.text('Tears of Steel')), findsOne);
-    expect(_lineOf('Tears of Steel'), 'Yesterday · Radarr 4K');
+    expect(_lineOf('Tears of Steel'), 'Yesterday\u00A0· Radarr 4K');
     expect(tester.takeException(), isNull);
 
     handle.dispose();

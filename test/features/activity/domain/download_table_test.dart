@@ -176,14 +176,17 @@ void main() {
       ));
       expect(
         downloadProgressCell(_download('A', queued: true, startsIn: 360)),
-        (text: 'Queued · starts in about 6\u00A0min', tone: StatusTone.info),
+        (
+          text: 'Queued\u00A0· starts in about 6\u00A0min',
+          tone: StatusTone.info,
+        ),
       );
       expect(downloadProgressCell(_download('A', progress: null)).text, '—');
     });
 
     test('Speed and Left read while it moves, the dash otherwise', () {
       final moving = _download('A', rate: 4404019, eta: 660);
-      expect(downloadSpeedCell(moving), '4.2\u00A0MB/s');
+      expect(downloadSpeedCell(moving), '4.2\u00A0MB/\u2060s');
       expect(downloadLeftCell(moving, now: _now), (
         left: '11\u00A0min',
         around: 'around 21:04',
@@ -205,7 +208,7 @@ void main() {
       });
       expect(
         downloadRouteLine(_download('A'), request: anna, now: _now),
-        'Radarr → qBittorrent · Anna asked',
+        'Radarr → qBittorrent\u00A0· Anna asked',
       );
       expect(
         downloadRouteLine(
@@ -213,7 +216,7 @@ void main() {
           request: anna,
           now: _now,
         ),
-        'Radarr → qBittorrent · nothing for 3\u00A0h',
+        'Radarr → qBittorrent\u00A0· nothing for 3\u00A0h',
       );
     });
 
@@ -224,7 +227,7 @@ void main() {
           now: _now,
           withFigures: true,
         ),
-        'Radarr → qBittorrent · 4.2\u00A0MB/s · 11\u00A0min left',
+        'Radarr → qBittorrent\u00A0· 4.2\u00A0MB/\u2060s\u00A0· 11\u00A0min left',
       );
     });
   });

@@ -67,7 +67,7 @@ String lidarrArtistCaption(LidarrArtist artist) {
       ? 'complete'
       : '$missing track${missing == 1 ? '' : 's'} missing';
 
-  return albumTerm == null ? completeness : '$albumTerm \u00b7 $completeness';
+  return albumTerm == null ? completeness : '$albumTerm\u00A0· $completeness';
 }
 
 class MusicScreen extends ConsumerWidget {

@@ -122,7 +122,7 @@ void main() {
       expect(section.total, 3);
       expect(
         section.subtitle,
-        '1 downloading · 1 post-processing · 2.1\u00A0GB left · about 12\u00A0min',
+        '1 downloading\u00A0· 1 post-processing\u00A0· 2.1\u00A0GB left\u00A0· about 12\u00A0min',
       );
     });
 
@@ -195,7 +195,7 @@ void main() {
 
       // Never "0%": that reading says "stuck", which nobody established.
       expect(row.percentLabel, isNull);
-      expect(row.detail, 'tv · downloading');
+      expect(row.detail, 'tv\u00A0· downloading');
       expect(row.spoken, 'Sizeless, tv, downloading');
     });
 
@@ -215,7 +215,7 @@ void main() {
       expect(row.percentLabel, isNull);
       // The size the server *did* report still prints. It is a fact, and the
       // only one of the two that was answered.
-      expect(row.detail, 'tv · downloading · 4.8\u00A0GB');
+      expect(row.detail, 'tv\u00A0· downloading\u00A0· 4.8\u00A0GB');
     });
 
     test('a row is one sentence, with the dots read as commas', () {
@@ -229,7 +229,7 @@ void main() {
       );
 
       expect(row.percentLabel, '56%');
-      expect(row.detail, 'tv · downloading · 4.8\u00A0GB');
+      expect(row.detail, 'tv\u00A0· downloading\u00A0· 4.8\u00A0GB');
       expect(
         row.spoken,
         'Silo.S03E01.2160p.WEB-DL, tv, downloading, 4.8\u00A0GB, 56 percent',
@@ -408,7 +408,7 @@ void main() {
       expect(section.completed, 6);
       expect(section.failed, 1);
       expect(section.warned, 0);
-      expect(section.subtitle, 'today · 6 completed · 1 failed');
+      expect(section.subtitle, 'today\u00A0· 6 completed\u00A0· 1 failed');
       expect(section.rows, hasLength(nzbgetHistoryTodayLimit));
     });
 
@@ -423,8 +423,8 @@ void main() {
       ], now: now);
 
       final row = section.rows.single;
-      expect(row.headline, 'Sugar.S02E01.1080p.WEB-DL · failed');
-      expect(row.detail, 'par repair · tv · 3\u00A0h ago');
+      expect(row.headline, 'Sugar.S02E01.1080p.WEB-DL\u00A0· failed');
+      expect(row.detail, 'par repair\u00A0· tv\u00A0· 3\u00A0h ago');
       expect(
         row.spoken,
         'Sugar.S02E01.1080p.WEB-DL, failed, par repair, tv, 3\u00A0h ago',
@@ -452,10 +452,10 @@ void main() {
 
         expect(section.failed, 1);
         expect(section.completed, 1);
-        expect(section.subtitle, 'today · 1 completed · 1 failed');
+        expect(section.subtitle, 'today\u00A0· 1 completed\u00A0· 1 failed');
         // Older than the success beside it, and still first.
         expect(section.rows.map((row) => row.name), ['Sugar', 'Andor']);
-        expect(section.rows.first.headline, 'Sugar · failed');
+        expect(section.rows.first.headline, 'Sugar\u00A0· failed');
         expect(section.rows.first.tone, StatusTone.warning);
       },
     );

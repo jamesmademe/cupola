@@ -4,6 +4,7 @@ import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -79,7 +80,7 @@ class BazarrSubtitleLanguageWrap extends StatelessWidget {
                       [
                         if (lang.forced) 'forced',
                         if (lang.hi) 'hi',
-                      ].join(' · '),
+                      ].join(dotSeparator),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),

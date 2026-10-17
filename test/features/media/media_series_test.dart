@@ -115,7 +115,7 @@ void main() {
       ]);
       final fault = views.last;
       expect(fault.shape, MediaRowShape.fault);
-      expect(fault.state, 'S1 · S2 E1–E2 · 12 upgrades need import');
+      expect(fault.state, 'S1\u00A0· S2 E1–E2\u00A0· 12 upgrades need import');
       expect(fault.tone, StatusTone.warning);
       expect(fault.action, 'Review the imports');
       expect(fault.way, MediaRowWay.review);
@@ -129,7 +129,7 @@ void main() {
           now: now,
           rows: rows,
         ).single.detail,
-        'S1 10 of 10 · S2 3 of 10',
+        'S1 10 of 10\u00A0· S2 3 of 10',
       );
     });
 
@@ -144,7 +144,7 @@ void main() {
         rows: rows,
       ).single;
 
-      expect(view.detail, 'English on disk · S2 E1–E3');
+      expect(view.detail, 'English on disk\u00A0· S2 E1–E3');
       expect(view.state, 'Italian wanted');
     });
 
@@ -177,14 +177,17 @@ void main() {
           ),
       };
 
-      expect(mediaSeriesFilesSummary(series, null), '13 files · 8.3\u00A0GB');
+      expect(
+        mediaSeriesFilesSummary(series, null),
+        '13 files\u00A0· 8.3\u00A0GB',
+      );
       expect(
         mediaSeriesFilesSummary(series, files.values),
-        '13 files · 720p WEB, 1080p WEB',
+        '13 files\u00A0· 720p WEB, 1080p WEB',
       );
       expect(
         mediaSeriesLastImport(copy.episodes, files, now: now),
-        startsWith('Last imported S2 E3 · '),
+        startsWith('Last imported S2 E3\u00A0· '),
       );
       expect(mediaSeriesLastImport(copy.episodes, null), isEmpty);
 
@@ -195,9 +198,9 @@ void main() {
         now: now,
       );
       expect(seasons.map((s) => (s.label, s.detail, s.aired)), [
-        ('Season 1', '10 of 10 on disk · 720p WEB', true),
-        ('Season 2', '3 of 10 on disk · 720p WEB, 1080p WEB', true),
-        ('Season 3', '8 episodes · not aired', false),
+        ('Season 1', '10 of 10 on disk\u00A0· 720p WEB', true),
+        ('Season 2', '3 of 10 on disk\u00A0· 720p WEB, 1080p WEB', true),
+        ('Season 3', '8 episodes\u00A0· not aired', false),
       ]);
     });
 
@@ -242,11 +245,11 @@ void main() {
 
     expect(
       mediaEpisodeSubtitles(episode(1, present: [english], missing: [italian])),
-      'English on disk · Italian wanted',
+      'English on disk\u00A0· Italian wanted',
     );
     expect(
       mediaEpisodeSubtitles(episode(2, missing: [english, italian, german])),
-      'EN · IT · DE wanted',
+      'EN\u00A0· IT\u00A0· DE wanted',
     );
     expect(mediaEpisodeSubtitles(episode(3)), isNull);
     expect(
@@ -255,7 +258,7 @@ void main() {
         episode(2, present: [english], missing: [italian]),
         episode(3, present: [english, italian]),
       ]),
-      'EN · IT wanted on 2 episodes',
+      'EN\u00A0· IT wanted on 2 episodes',
     );
   });
 

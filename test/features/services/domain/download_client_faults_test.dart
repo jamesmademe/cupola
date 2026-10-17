@@ -510,7 +510,7 @@ void main() {
         ),
         const InFlightReading.fault(
           InFlightFault.stalled,
-          reason: 'Duplicate · Too large',
+          reason: 'Duplicate\u00A0· Too large',
         ),
       );
     });

@@ -6,6 +6,7 @@ library;
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/utils/date_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/features/activity/domain/activity_download.dart';
@@ -229,13 +230,13 @@ RemoveConfirmation removeConfirmation(ServiceQueueItem item) {
 String stuckActionNote(StuckAction action, ServiceQueueItem item) =>
     switch (action) {
       StuckAction.tryAnotherDownload =>
-        'Dropped · ${arrName(item)} is looking for another download',
+        'Dropped\u00A0· ${arrName(item)} is looking for another download',
       StuckAction.lookForPeers =>
-        'Asked again · ${clientName(item)} is looking for peers',
+        'Asked again\u00A0· ${clientName(item)} is looking for peers',
       StuckAction.remove =>
-        'Removed · ${item.sentenceTitle} stays in your wanted list',
+        'Removed\u00A0· ${item.sentenceTitle} stays in your wanted list',
       // Kept waiting says until when: [keptWaitingNote].
-      StuckAction.keepWaiting => 'Hidden · it comes back if nothing moves',
+      StuckAction.keepWaiting => 'Hidden\u00A0· it comes back if nothing moves',
       StuckAction.openClient => '',
     };
 
@@ -249,7 +250,7 @@ String keptWaitingNote(DateTime until, {required DateTime now}) {
   final when = day == today
       ? formatClockTime(local)
       : 'tomorrow ${formatClockTime(local)}';
-  return 'Hidden until $when · it comes back if nothing moves';
+  return 'Hidden until $when\u00A0· it comes back if nothing moves';
 }
 
 /// The proof under the release: `Nothing for 3 h · Radarr → qBittorrent`,
@@ -263,4 +264,4 @@ String stuckProof(ServiceQueueItem item, {required DateTime now}) => [
   else
     StateWord.stuck.label,
   downloadRoute(item),
-].join(' · ');
+].join(dotSeparator);

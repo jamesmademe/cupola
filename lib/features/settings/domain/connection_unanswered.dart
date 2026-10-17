@@ -39,5 +39,5 @@ class ConnectionUnanswered
 /// The two addresses nothing answered at, one a line, as the red names them:
 /// `At home · nas.home.arpa:7878` and `Away · radarr.example.net`.
 String unansweredAddressLines({required String home, required String away}) =>
-    'At home · ${UrlUtils.hostInProse(home)}\n'
-    'Away · ${UrlUtils.hostInProse(away)}';
+    'At home\u00A0· ${UrlUtils.hostInProse(home)}\n'
+    'Away\u00A0· ${UrlUtils.hostInProse(away)}';

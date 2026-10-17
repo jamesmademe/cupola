@@ -10,6 +10,7 @@
 library;
 
 import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 
@@ -610,7 +611,7 @@ class UnraidDockerContainer {
       condition.label,
       if (exitCode != null) 'exit $exitCode',
       if (age.isNotEmpty) age,
-    ].join(' · ');
+    ].join(dotSeparator);
   }
 
   /// Reads the condition, exit code and age out of Docker's status line.

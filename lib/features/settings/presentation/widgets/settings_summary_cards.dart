@@ -304,7 +304,7 @@ class _BackgroundSearchSummaryCard extends ConsumerWidget {
     final canRunInBackground = backgroundSearchSupported(platform: platform);
 
     final caps =
-        '${settings.concurrency} at a time · give up after '
+        '${settings.concurrency} at a time\u00A0· give up after '
         '${withUnit(settings.timeout.inMinutes, 'min')}';
 
     return _SummaryCard(
@@ -313,10 +313,10 @@ class _BackgroundSearchSummaryCard extends ConsumerWidget {
         SettingsCard.grouped(
           leading: const Icon(Icons.travel_explore_rounded),
           title: canRunInBackground
-              ? '${settings.backgroundEnabled ? 'On' : 'Off'} · $caps'
+              ? '${settings.backgroundEnabled ? 'On' : 'Off'}\u00A0· $caps'
               // Not a fault and not a setting: a desktop app is not suspended,
               // so there is nothing here to hand to the OS.
-              : 'Not needed here, the app keeps running · $caps',
+              : 'Not needed here, the app keeps running\u00A0· $caps',
           semanticHint: 'opens background search settings',
           onTap: () => context.push('/settings/background-search'),
         ),

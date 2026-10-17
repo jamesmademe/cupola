@@ -95,7 +95,7 @@ MediaCopyPanel mediaCopyPanel({
   DateTime? searchedAt,
 }) {
   final client = stringOrNull(record?['downloadClient']);
-  final source = client == null ? name : '$name · $client';
+  final source = client == null ? name : '$name\u00A0· $client';
   final release = stringOrNull(record?['title']);
   final size = doubleOrNull(record?['size']);
   final left = doubleOrNull(record?['sizeleft']);
@@ -190,7 +190,7 @@ MediaCopyPanel mediaCopyPanel({
       return MediaCopyPanel(
         headline: percent == null
             ? 'Downloading'
-            : 'Downloading · ${formatPercent(percent)}',
+            : 'Downloading\u00A0· ${formatPercent(percent)}',
         source: source,
         sentence: '$name imports it when it is done.',
         release: release,
@@ -218,7 +218,7 @@ MediaCopyPanel mediaCopyPanel({
 
   if (searchedAt != null) {
     return MediaCopyPanel(
-      headline: 'In $name · searching',
+      headline: 'In $name\u00A0· searching',
       status: '$name asked your indexers at ${formatClockTime(searchedAt)}',
       sentence:
           '$name grabs the best release it finds and Activity shows it. To '
@@ -229,18 +229,18 @@ MediaCopyPanel mediaCopyPanel({
   }
   if (!monitored) {
     return MediaCopyPanel(
-      headline: 'In $name · not monitored',
+      headline: 'In $name\u00A0· not monitored',
       sentence: '$name lists it and never looks for it.',
       actions: const [MediaCopyAction.monitor, MediaCopyAction.chooseRelease],
     );
   }
   return switch (status.availability) {
     MediaAvailability.unavailable => MediaCopyPanel(
-      headline: 'In $name · not out yet',
+      headline: 'In $name\u00A0· not out yet',
       sentence: '$name looks for it once it is out.',
     ),
     MediaAvailability.upgradable => MediaCopyPanel(
-      headline: 'In $name · cutoff unmet',
+      headline: 'In $name\u00A0· cutoff unmet',
       sentence:
           'The file is below the quality its profile asks for, so $name keeps '
           'looking.',
@@ -250,7 +250,7 @@ MediaCopyPanel mediaCopyPanel({
       ],
     ),
     _ => MediaCopyPanel(
-      headline: 'In $name · missing',
+      headline: 'In $name\u00A0· missing',
       sentence:
           '$name grabs it when a release turns up. To look now, search; to '
           'pick one yourself, choose a release.',

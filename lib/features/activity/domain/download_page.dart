@@ -5,6 +5,7 @@ library;
 
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/byte_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/string_utils.dart' show capitalizeFirst;
@@ -142,7 +143,7 @@ String? downloadPaceLine(
           'ready around ${aroundWords(now.add(Duration(seconds: eta)), now: now)}',
         ],
       ];
-      if (parts.isNotEmpty) return parts.join(' · ');
+      if (parts.isNotEmpty) return parts.join(dotSeparator);
       return switch (arrivedOfTotal(item)) {
         final arrived? => '$arrived arrived',
         null => null,
@@ -197,7 +198,7 @@ String downloadMetaLine(
         now: now,
       ),
     if (who != null && who.isNotEmpty) '$who asked for it',
-  ].join(' · ');
+  ].join(dotSeparator);
 }
 
 /// `out on digital today`, `in cinemas today`, `out on disc today`, for the
@@ -269,29 +270,29 @@ List<DownloadStep> downloadStepsOf(
   final download = switch (stand) {
     DownloadStand.downloading => (
       name: 'Downloading',
-      detail: percent == null ? client : '$client · $percent',
+      detail: percent == null ? client : '$client\u00A0· $percent',
       state: DownloadStepState.now,
     ),
     DownloadStand.queued => (
       name: 'Downloading',
-      detail: '$client · queued',
+      detail: '$client\u00A0· queued',
       state: DownloadStepState.now,
     ),
     DownloadStand.stopped => (
       name: 'Downloading',
       // No figure: the readout above says `62% Stopped`, and the longer
       // detail wrapped and moved the page under the finger that stopped it.
-      detail: '$client · stopped',
+      detail: '$client\u00A0· stopped',
       state: DownloadStepState.stopped,
     ),
     DownloadStand.stuck => (
       name: 'Downloading',
-      detail: '$client · stuck$at',
+      detail: '$client\u00A0· stuck$at',
       state: DownloadStepState.fault,
     ),
     DownloadStand.failed => (
       name: 'Downloading',
-      detail: '$client · failed',
+      detail: '$client\u00A0· failed',
       state: DownloadStepState.fault,
     ),
     DownloadStand.needsImport => (
@@ -360,7 +361,7 @@ List<DownloadFact> downloadFactsOf(
     if (profile != null && profile.trim().isNotEmpty)
       (
         label: 'Profile',
-        value: '${profile.trim()} · ${arrName(item)}',
+        value: '${profile.trim()}\u00A0· ${arrName(item)}',
         machine: false,
         address: null,
       ),
@@ -421,7 +422,7 @@ bool canStopDownload(ServiceQueueItem item) =>
 /// `since you opened this · 4 min`: how long the speed has been watched.
 String rateTraceCaption(Duration watched) => watched.inMinutes < 1
     ? 'since you opened this'
-    : 'since you opened this · ${withUnit(watched.inMinutes, 'min')}';
+    : 'since you opened this\u00A0· ${withUnit(watched.inMinutes, 'min')}';
 
 /// One reading of a download's speed, taken when the queue was read.
 typedef RateSample = ({DateTime at, int bytesPerSecond});

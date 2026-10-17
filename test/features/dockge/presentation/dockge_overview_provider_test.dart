@@ -56,7 +56,7 @@ void main() {
       expect(rows.single.tone, StatusTone.neutral);
       expect(rows.single.headline, '1 stack is stopped');
       // Dockge does not say whether the stop was intended, so the row says so.
-      expect(rows.single.detail, 'bazarr · Dockge does not say why');
+      expect(rows.single.detail, 'bazarr\u00A0· Dockge does not say why');
     });
 
     test('a stopped row states no age, because nothing here is dated', () {
@@ -81,7 +81,7 @@ void main() {
       expect(rows.single.headline, '4 stacks are stopped');
       expect(
         rows.single.detail,
-        'alpha, bravo, charlie and 1 more · Dockge does not say why',
+        'alpha, bravo, charlie and 1 more\u00A0· Dockge does not say why',
       );
     });
 
@@ -106,7 +106,7 @@ void main() {
       expect(rows.single.headline, '2 stacks are inactive');
       expect(
         rows.single.detail,
-        'archive, templates · brought down, or never started',
+        'archive, templates\u00A0· brought down, or never started',
       );
     });
 
@@ -125,7 +125,7 @@ void main() {
 
       expect(rows.single.tone, StatusTone.neutral);
       expect(rows.single.headline, '1 stack reports no state');
-      expect(rows.single.detail, 'ghost · Dockge did not say');
+      expect(rows.single.detail, 'ghost\u00A0· Dockge did not say');
     });
 
     test('stopped, inactive and unknown come in that order, and running stacks '
@@ -155,7 +155,7 @@ void main() {
       // truncated, and the count is the half that cannot be dropped.
       expect(
         rows.single.detail,
-        'a, b, c and 2 more · brought down, or never started',
+        'a, b, c and 2 more\u00A0· brought down, or never started',
       );
     });
   });
@@ -177,7 +177,7 @@ void main() {
         _stack('immich', tags: ['media']),
       ]);
 
-      expect(rows.single.detail, 'running · media');
+      expect(rows.single.detail, 'running\u00A0· media');
       expect(rows.single.spoken, 'immich, running, media');
     });
 
@@ -210,7 +210,7 @@ void main() {
 
       expect(
         rows.first.detail,
-        'this connection · online · showing its stacks',
+        'this connection\u00A0· online\u00A0· showing its stacks',
       );
       expect(rows.first.isSelected, isTrue);
     });
@@ -223,7 +223,10 @@ void main() {
 
       expect(rows.first.isSelected, isFalse);
       expect(rows.last.isSelected, isTrue);
-      expect(rows.last.detail, 'nas.lan:5001 · online · showing its stacks');
+      expect(
+        rows.last.detail,
+        'nas.lan:5001\u00A0· online\u00A0· showing its stacks',
+      );
     });
 
     test('an agent that is not answering is the one red in this feature', () {

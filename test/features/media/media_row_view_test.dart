@@ -41,7 +41,7 @@ void main() {
     expect(words, hasLength(5));
     expect(
       words.first,
-      startsWith('Jellyfin. 2160p · HDR10 · Watched. Available'),
+      startsWith('Jellyfin. 2160p\u00A0· HDR10\u00A0· Watched. Available'),
     );
     expect(words[3], contains('DE wanted'));
   });
@@ -67,12 +67,12 @@ void main() {
     // Past a week, the date; the day after, yesterday: the voice of every
     // other row about a request, not a date even for one asked an hour ago.
     final words = await _words(Profiles.p1, WorldTitles.tearsOfSteel);
-    expect(words.last, startsWith('Seerr. Anna · Sat 12 Sep.'));
+    expect(words.last, startsWith('Seerr. Anna\u00A0· Sat 12 Sep.'));
     final nextDay = await _words(
       Profiles.p1,
       WorldTitles.tearsOfSteel,
       now: DateTime(2026, 9, 13, 18),
     );
-    expect(nextDay.last, startsWith('Seerr. Anna · yesterday.'));
+    expect(nextDay.last, startsWith('Seerr. Anna\u00A0· yesterday.'));
   });
 }

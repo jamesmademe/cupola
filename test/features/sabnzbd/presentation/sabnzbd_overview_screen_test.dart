@@ -89,8 +89,11 @@ void main() {
       ),
     );
 
-    expect(find.text('today · 6 completed · 1 failed'), findsOneWidget);
-    expect(find.text('2 jobs · 1.0\u00A0GB'), findsOneWidget);
+    expect(
+      find.text('today\u00A0· 6 completed\u00A0· 1 failed'),
+      findsOneWidget,
+    );
+    expect(find.text('2 jobs\u00A0· 1.0\u00A0GB'), findsOneWidget);
   });
 
   testWidgets('a header over a cut page states a floor, not a day', (
@@ -112,7 +115,7 @@ void main() {
     );
 
     expect(
-      find.text('today · $sabnzbdHistoryPageSize+ completed'),
+      find.text('today\u00A0· $sabnzbdHistoryPageSize+ completed'),
       findsOneWidget,
     );
   });
@@ -151,7 +154,10 @@ void main() {
 
       // Stated, because pausing is the user's own decision: the one fact the
       // readout band cannot show now that Speed reads a legitimate 0 B/s.
-      expect(find.text('1 job · 1.0\u00A0GB · stopped'), findsOneWidget);
+      expect(
+        find.text('1 job\u00A0· 1.0\u00A0GB\u00A0· stopped'),
+        findsOneWidget,
+      );
     },
   );
 

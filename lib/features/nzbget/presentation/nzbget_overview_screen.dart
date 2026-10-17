@@ -159,7 +159,7 @@ class _HistorySection extends ConsumerWidget {
       // over an unanswered question is a claim nobody made, and on this
       // section it would be the *reassuring* claim, which is the worse of the
       // two mistakes.
-      subtitle: data == null ? 'today · —' : data.subtitle,
+      subtitle: data == null ? 'today\u00A0· —' : data.subtitle,
       destination: ServiceTab.history,
       child: AsyncValueWidget<NzbgetHistorySection>.section(
         value: section,

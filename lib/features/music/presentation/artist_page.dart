@@ -13,6 +13,7 @@ import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/title_light.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/utils/string_utils.dart';
@@ -563,7 +564,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
       albumId: album.id,
       artistId: artist.id,
       label:
-          '${truncateTitle(artist.artistName)} · ${truncateTitle(album.title)}',
+          '${truncateTitle(artist.artistName)}\u00A0· ${truncateTitle(album.title)}',
     ).stampedWith(_instanceId),
   );
 
@@ -856,7 +857,7 @@ class _AlbumRow extends StatelessWidget {
       title: album.title,
       // An album not out yet says when, and nothing else: its tracks and
       // length are Lidarr's guess.
-      facts: coming ? null : albumFacts(album).join(' · '),
+      facts: coming ? null : albumFacts(album).join(dotSeparator),
       state: state,
       detail: detail,
       spoken: [

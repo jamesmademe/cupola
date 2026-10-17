@@ -505,7 +505,7 @@ class NzbgetHistoryEntry {
   StatusTone get tone => outcome.tone;
 
   /// `Sugar.S02E01 · failed`.
-  String get headline => '$name · ${outcome.label}';
+  String get headline => '$name\u00A0· ${outcome.label}';
 
   String get spoken =>
       joinSpokenParts([name, outcome.label, spokenFromDotted(detail)]);

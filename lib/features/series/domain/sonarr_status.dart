@@ -113,7 +113,7 @@ String? sonarrSeasonSummary(SonarrSeason season) {
   final onDisk = season.episodeFileCount;
   final aired = onDisk == null ? '$expected' : '$onDisk of $expected';
   if (season.hasUnairedEpisodes) {
-    return '$aired aired · $total total';
+    return '$aired aired\u00A0· $total total';
   }
 
   return '$aired episodes';

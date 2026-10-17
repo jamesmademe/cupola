@@ -1,3 +1,4 @@
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -457,7 +458,7 @@ class ManualImportItem {
       episodeSummary,
       tracks.isEmpty ? null : '${tracks.length} tracks',
     ].whereType<String>();
-    return parts.isEmpty ? 'Needs assignment' : parts.join(' · ');
+    return parts.isEmpty ? 'Needs assignment' : parts.join(dotSeparator);
   }
 
   String get qualityLabel {

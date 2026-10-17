@@ -151,21 +151,25 @@ void main() {
     expect(find.byType(DownloadPage), findsOneWidget);
     expect(_onPage(find.text('Sprite Fright')), findsOneWidget);
     expect(
-      _onPage(find.text('2021 · out on digital today · Anna asked for it')),
+      _onPage(
+        find.text('2021\u00A0· out on digital today\u00A0· Anna asked for it'),
+      ),
       findsOneWidget,
     );
     expect(_onPage(find.text('62%')), findsOneWidget);
     expect(_onPage(find.text('Downloading')), findsNWidgets(2));
     expect(
       _onPage(
-        find.text('4.2\u00A0MB/s · 11\u00A0min left · ready around 21:04'),
+        find.text(
+          '4.2\u00A0MB/\u2060s\u00A0· 11\u00A0min left\u00A0· ready around 21:04',
+        ),
       ),
       findsOneWidget,
     );
     for (final step in ['Grabbed', 'Import', 'On Jellyfin']) {
       expect(_onPage(find.text(step)), findsOneWidget, reason: step);
     }
-    expect(_onPage(find.text('qBittorrent · 62%')), findsOneWidget);
+    expect(_onPage(find.text('qBittorrent\u00A0· 62%')), findsOneWidget);
     expect(_onPage(find.text('around 21:04')), findsOneWidget);
 
     expect(_onPage(find.text('Open Sprite Fright')), findsOneWidget);
@@ -176,9 +180,15 @@ void main() {
       _onPage(find.text(machineNameWithBreaks('Sprite.Fright.2021.1080p.WEB'))),
       findsOneWidget,
     );
-    expect(_onPage(find.textContaining('HD-1080p · Radarr')), findsOneWidget);
+    expect(
+      _onPage(find.textContaining('HD-1080p\u00A0· Radarr')),
+      findsOneWidget,
+    );
     expect(_onPage(find.text('Folder')), findsOneWidget);
-    expect(_onPage(find.textContaining('qBittorrent · nas')), findsOneWidget);
+    expect(
+      _onPage(find.textContaining('qBittorrent\u00A0· nas')),
+      findsOneWidget,
+    );
 
     await _close(tester, harness, container);
   });
@@ -242,7 +252,9 @@ void main() {
       await _answer(tester);
       expect(
         _onPage(
-          find.text('4.2\u00A0MB/s · 11\u00A0min left · ready around 21:04'),
+          find.text(
+            '4.2\u00A0MB/\u2060s\u00A0· 11\u00A0min left\u00A0· ready around 21:04',
+          ),
         ),
         findsOneWidget,
       );

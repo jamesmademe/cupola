@@ -153,7 +153,7 @@ void main() {
     test('the line under the figure says how fast and until when', () {
       expect(
         downloadPaceLine(_sprite(), now: _now),
-        '4.2\u00A0MB/s · 11\u00A0min left · ready around 21:04',
+        '4.2\u00A0MB/\u2060s\u00A0· 11\u00A0min left\u00A0· ready around 21:04',
       );
       expect(
         downloadPaceLine(_sprite(rate: null, eta: null), now: _now),
@@ -215,7 +215,7 @@ void main() {
         'asked', () {
       expect(
         downloadMetaLine(_sprite(), request: _annasRequest(), now: _now),
-        '2021 · out on digital today · Anna asked for it',
+        '2021\u00A0· out on digital today\u00A0· Anna asked for it',
       );
       expect(
         downloadMetaLine(
@@ -235,12 +235,12 @@ void main() {
             title: const QueueTitle(
               name: 'Cosmos Laundromat',
               year: 2015,
-              episode: 'S2 E4 · The Second Cycle',
+              episode: 'S2 E4\u00A0· The Second Cycle',
             ),
           ),
           now: _now,
         ),
-        'S2 E4 · The Second Cycle',
+        'S2 E4\u00A0· The Second Cycle',
       );
       expect(downloadMetaLine(_handAdded, now: _now), isEmpty);
     });
@@ -261,7 +261,7 @@ void main() {
       ]);
       expect(steps.map((step) => step.detail), [
         'Radarr → qBittorrent',
-        'qBittorrent · 62%',
+        'qBittorrent\u00A0· 62%',
         'Radarr, when it finishes',
         'around 21:04',
       ]);
@@ -278,7 +278,7 @@ void main() {
         _sprite(fault: InFlightFault.stalled),
         now: _now,
       );
-      expect(stuck[1].detail, 'qBittorrent · stuck at 62%');
+      expect(stuck[1].detail, 'qBittorrent\u00A0· stuck at 62%');
       expect(stuck[1].state, DownloadStepState.fault);
       expect(stuck, hasLength(3));
 
@@ -308,7 +308,7 @@ void main() {
       );
       expect(facts.map((fact) => '${fact.label}: ${fact.value}'), [
         'Release: Sprite.Fright.2021.1080p.WEB',
-        'Profile: HD-1080p · Radarr',
+        'Profile: HD-1080p\u00A0· Radarr',
         'Folder: /mnt/tank/media/movies',
         'Client: qBittorrent',
       ]);
@@ -405,7 +405,7 @@ void main() {
       );
       expect(
         rateTraceCaption(const Duration(minutes: 4, seconds: 10)),
-        'since you opened this · 4\u00A0min',
+        'since you opened this\u00A0· 4\u00A0min',
       );
     });
   });
@@ -445,7 +445,7 @@ void main() {
       };
       final title = QueueTitle.ofRecord(record)!;
       expect(title.name, 'Cosmos Laundromat');
-      expect(title.episode, 'S2 E4 · The Second Cycle');
+      expect(title.episode, 'S2 E4\u00A0· The Second Cycle');
       expect(title.folder, '/mnt/tank/media/series');
       // A pack names its series and no episode.
       expect(QueueTitle.ofRecord(record, single: false)!.episode, isNull);

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/activity/data/activity_answered.dart';
 import 'package:cupola/features/activity/data/activity_live.dart';
@@ -175,7 +176,7 @@ class _Heading extends StatelessWidget {
         children: [
           if (meta.isNotEmpty)
             Semantics(
-              label: meta.replaceAll(' · ', ', '),
+              label: meta.replaceAll(dotSeparator, ', '),
               excludeSemantics: true,
               child: Wrap(
                 crossAxisAlignment: WrapCrossAlignment.center,

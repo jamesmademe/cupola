@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/utils/date_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/string_utils.dart';
@@ -248,7 +249,11 @@ class _DeviceRow extends StatelessWidget {
     final lastSeen = device.lastActivityAt == null
         ? 'Last seen unavailable'
         : 'Last seen ${formatRelativeDateTime(device.lastActivityAt!)}';
-    final detail = [owner, if (client.isNotEmpty) client, lastSeen].join(' · ');
+    final detail = [
+      owner,
+      if (client.isNotEmpty) client,
+      lastSeen,
+    ].join(dotSeparator);
     return ServiceRecordRow(
       icon: Icons.devices_other_rounded,
       tone: StatusTone.neutral,
@@ -277,7 +282,7 @@ class _TaskRow extends StatelessWidget {
       started,
       ?duration,
       if (task.errorMessage.trim().isNotEmpty) task.errorMessage.trim(),
-    ].join(' · ');
+    ].join(dotSeparator);
     final name = task.name.trim().isEmpty ? 'Unnamed task' : task.name.trim();
     return ServiceRecordRow(
       icon: presentation.icon,
@@ -293,13 +298,13 @@ class _TaskRow extends StatelessWidget {
 
 String _usersSummary(List<JellyfinUserDto> users) {
   final disabled = users.where((user) => user.isDisabled).length;
-  final suffix = disabled == 0 ? '' : ' · $disabled disabled';
+  final suffix = disabled == 0 ? '' : '\u00A0· $disabled disabled';
   return '${countLabel(users.length, 'user')}$suffix';
 }
 
 String _tasksSummary(List<JellyfinScheduledTask> tasks) {
   final running = tasks.where((task) => task.isRunning).length;
-  final suffix = running == 0 ? '' : ' · $running running';
+  final suffix = running == 0 ? '' : '\u00A0· $running running';
   return '${tasks.length} scheduled$suffix';
 }
 
@@ -310,7 +315,7 @@ String _tasksSummary(List<JellyfinScheduledTask> tasks) {
     final progress = task.progress;
     final suffix = progress == null
         ? ''
-        : ' · ${formatPercent(progress.clamp(0, 100))}';
+        : '\u00A0· ${formatPercent(progress.clamp(0, 100))}';
     return (
       label: 'Running$suffix',
       tone: StatusTone.info,

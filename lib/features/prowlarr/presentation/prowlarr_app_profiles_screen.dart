@@ -6,6 +6,7 @@ import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_action.dart';
 import 'package:cupola/core/utils/service_routes.dart';
@@ -158,7 +159,7 @@ class _ProfileRow extends StatelessWidget {
     final summary = [
       enabled.isEmpty ? 'nothing enabled' : enabled.join(', '),
       'min ${profile.minimumSeeders} seeders',
-    ].join(' · ');
+    ].join(dotSeparator);
 
     return Padding(
       padding: const EdgeInsets.symmetric(

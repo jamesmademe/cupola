@@ -1,4 +1,5 @@
 import 'package:cupola/core/models/rating_source.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
@@ -105,13 +106,13 @@ class MediaIdentity {
       if (seasons != null && seasons > 0)
         countLabel(seasons, 'season').replaceAll(' ', unitSpace),
       ...genres.take(2),
-    ].join(' · '),
+    ].join(dotSeparator),
     null => [
       if (directors.isNotEmpty) directors.first,
       ?year,
       if ((runtime ?? '').isNotEmpty) runtime!.replaceAll(' ', unitSpace),
       if (genres.isNotEmpty) genres.first,
-    ].join(' · '),
+    ].join(dotSeparator),
   };
 
   /// The credits under the overview: `Directed by …` · `written by …` ·
@@ -120,7 +121,7 @@ class MediaIdentity {
     if (directors.isNotEmpty) 'Directed by ${directors.join(', ')}',
     if (writers.isNotEmpty) 'written by ${writers.join(', ')}',
     ...studios,
-  ].join(' · ');
+  ].join(dotSeparator);
 
   /// The identity [rows] carry: the first Seerr's that answered, else the
   /// first arr copy's own record, else the first media server's item, else

@@ -149,11 +149,11 @@ class _TransmissionLabelsScreenState
                 values: [null, ...labels],
                 selected: selected,
                 labelBuilder: (label) {
-                  if (label == null) return 'All · ${torrents.length}';
+                  if (label == null) return 'All\u00A0· ${torrents.length}';
                   final count = tallies
                       .firstWhere((item) => item.label == label)
                       .count;
-                  return '$label · $count';
+                  return '$label\u00A0· $count';
                 },
                 onSelected: (label) => setState(() => _selectedLabel = label),
               ),

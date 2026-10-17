@@ -140,7 +140,7 @@ class LocalOutsideSpeaker implements OutsideSpeaker {
         id: kind.name.hashCode,
         title: kind.label,
         // The Needs you banner's own shape: the first, and how many more.
-        body: '${notices.first.body} · +$more',
+        body: '${notices.first.body}\u00A0· +$more',
         notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
             channel.id,

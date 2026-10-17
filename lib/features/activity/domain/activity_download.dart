@@ -47,7 +47,7 @@ String? nothingForWords(DateTime? since, {required DateTime now}) {
 /// where its client estimates it (SABnzbd), `Queued` elsewhere.
 String queuedWords(int? startsInSeconds) {
   if (startsInSeconds == null || startsInSeconds <= 0) return 'Queued';
-  return 'Queued · starts in about '
+  return 'Queued\u00A0· starts in about '
       '${formatTimeSpan(Duration(seconds: startsInSeconds))}';
 }
 
@@ -97,5 +97,5 @@ String? requestLine(
       : aroundWords(now.add(Duration(seconds: eta)), now: now);
   return ready == null
       ? "$who's request"
-      : "$who's request · ready around $ready";
+      : "$who's request\u00A0· ready around $ready";
 }

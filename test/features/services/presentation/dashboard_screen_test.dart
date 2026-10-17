@@ -306,7 +306,7 @@ void main() {
       );
 
       expect(
-        find.textContaining('1 of 1 answering · 1 degraded'),
+        find.textContaining('1 of 1 answering\u00A0· 1 degraded'),
         findsOneWidget,
       );
     });
@@ -918,7 +918,7 @@ void main() {
 
       // What moves says how far it got and how long it has left.
       expect(find.text('Dune: Part Two'), findsOneWidget);
-      expect(find.text('92% · 3\u00A0min'), findsOneWidget);
+      expect(find.text('92%\u00A0· 3\u00A0min'), findsOneWidget);
       // What stopped is a row too, saying where, and in amber: a fault. A
       // transfer no arr asked for has nothing to search again, so its
       // remedy is Needs you's: qBittorrent asks the trackers again.
@@ -935,7 +935,7 @@ void main() {
         ),
       );
       // It is not moving: the line counts it apart from what is.
-      expect(find.text('1 moving · 1 stuck'), findsOneWidget);
+      expect(find.text('1 moving\u00A0· 1 stuck'), findsOneWidget);
       expect(find.textContaining('2 moving'), findsNothing);
       // And it is still a decision: Needs you leads with it.
       expect(find.text('The Zone of Interest is stuck'), findsOneWidget);
@@ -994,7 +994,7 @@ void main() {
       expect(find.text('Nothing is downloading'), findsOneWidget);
       expect(find.text('Nothing moving'), findsOneWidget);
       expect(
-        find.text('18 need a manual import · in Needs you'),
+        find.text('18 need a manual import\u00A0· in Needs you'),
         findsOneWidget,
       );
       expect(find.textContaining('stall'), findsNothing);
@@ -1069,8 +1069,8 @@ void main() {
 
       await _scrollTo(tester, find.text('Downloads'));
 
-      expect(find.text('1 moving · —'), findsOneWidget);
-      expect(find.textContaining('B/s'), findsNothing);
+      expect(find.text('1 moving\u00A0· —'), findsOneWidget);
+      expect(find.textContaining('B/\u2060s'), findsNothing);
     });
 
     testWidgets('the line sums the rate once per client', (tester) async {
@@ -1088,7 +1088,7 @@ void main() {
 
       // Both rows belong to the same client, which reported 1 MB/s for its whole
       // queue, not 2.
-      expect(find.text('2 moving · 1.0\u00A0MB/s'), findsOneWidget);
+      expect(find.text('2 moving\u00A0· 1.0\u00A0MB/\u2060s'), findsOneWidget);
     });
   });
 
@@ -1109,7 +1109,7 @@ void main() {
       );
 
       await _scrollTo(tester, find.text('Arrived'));
-      expect(find.text('Last 7 days · 2 new'), findsOneWidget);
+      expect(find.text('Last 7 days\u00A0· 2 new'), findsOneWidget);
       // A failed import is Needs you's, and Arrived says nothing of it.
       expect(find.textContaining('failed'), findsNothing);
     });
@@ -1419,7 +1419,7 @@ DashboardDecision _stall(
   id: 'stall-$title',
   service: ServiceKey.radarr,
   title: title,
-  detail: 'Stalled · Radarr',
+  detail: 'Stalled\u00A0· Radarr',
   occurredAt: at,
   requiresService: requires,
 );
@@ -1434,7 +1434,7 @@ DashboardDecision _blocked(
   id: 'blocked-$title',
   service: ServiceKey.radarr,
   title: title,
-  detail: 'Import blocked · Radarr',
+  detail: 'Import blocked\u00A0· Radarr',
   occurredAt: at,
   actionId: actionId,
   instanceId: instanceId,
@@ -1446,7 +1446,7 @@ DashboardDecision _request(String title, {required DateTime at}) =>
       id: 'request-$title',
       service: ServiceKey.seerr,
       title: title,
-      detail: 'Seerr · nadia',
+      detail: 'Seerr\u00A0· nadia',
       occurredAt: at,
       actionId: 1,
     );

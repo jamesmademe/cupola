@@ -71,9 +71,9 @@ void main() {
       isEmpty,
       reason:
           'Copy here uses a word the brand book bans. Use the lexicon '
-          '(StateWord, Lexicon, failureLabel/failureHeadline): Answering · '
-          'Did not answer · Not set up · Set up X · Retry · Stuck · Stopped · '
-          'Waiting for approval · Could not (never the contraction, never '
+          '(StateWord, Lexicon, failureLabel/failureHeadline): Answering\u00A0· '
+          'Did not answer\u00A0· Not set up\u00A0· Set up X\u00A0· Retry\u00A0· Stuck\u00A0· Stopped\u00A0· '
+          'Waiting for approval\u00A0· Could not (never the contraction, never '
           '"Failed to"). The app writes American English: color, catalog, '
           'canceled, organize. A word '
           'that is not the banned state goes in '
@@ -93,7 +93,7 @@ void main() {
       isEmpty,
       reason:
           'An em dash between words is punctuation, and the app has none: '
-          'rewrite with a full stop, a colon, a comma or " · ". The dash '
+          'rewrite with a full stop, a colon, a comma or "\u00A0· ". The dash '
           'stays only as the placeholder of a figure nobody could read '
           '(Lexicon.noFigure), and a range takes the en dash: S2 E4–E5.',
     );
@@ -119,10 +119,10 @@ void main() {
         '\u2014 in the queue',
         '\u2014 / 24',
         '\u2014s',
-        'today · \u2014',
+        'today\u00A0· \u2014',
         'Queue: \u2014',
         '↓ \u2014 ↑ \u2014',
-        '$copyHole · \u2014 free',
+        '$copyHole\u00A0· \u2014 free',
         // The en dash is the range's, and not this guard's business.
         'S2 E4–E5',
       ]) {

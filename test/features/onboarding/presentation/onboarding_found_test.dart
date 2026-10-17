@@ -660,7 +660,7 @@ void main() {
         pin: null,
       ));
       expect(find.text('Answering'), findsOneWidget);
-      expect(find.text('nas.home.arpa:7879 · https'), findsOneWidget);
+      expect(find.text('nas.home.arpa:7879\u00A0· https'), findsOneWidget);
       // What the person typed is not the source's guess: the found address
       // is no longer printed.
       expect(find.textContaining('own host'), findsNothing);
@@ -711,13 +711,13 @@ void main() {
       expect(find.text('nas.home.arpa:7878'), findsOneWidget);
       expect(
         find.text(
-          "Seerr has radarr:7878 · Seerr's own host, with Radarr's port",
+          "Seerr has radarr:7878\u00A0· Seerr's own host, with Radarr's port",
         ),
         findsOneWidget,
       );
       expect(
         find.text(
-          "Seerr has sonarr:8989 · Seerr's own host, with Sonarr's port",
+          "Seerr has sonarr:8989\u00A0· Seerr's own host, with Sonarr's port",
         ),
         findsOneWidget,
       );
@@ -1204,7 +1204,7 @@ void main() {
 
       expect(
         find.bySemanticsLabel(
-          'Radarr 4K, nas.home.arpa:7879 · https, key included. Answering',
+          'Radarr 4K, nas.home.arpa:7879\u00A0· https, key included. Answering',
         ),
         findsOneWidget,
       );
@@ -1260,7 +1260,7 @@ void main() {
 
       expect(
         find.bySemanticsLabel(
-          "Radarr, nas.home.arpa:7878, key included. Seerr has radarr:7878 · "
+          "Radarr, nas.home.arpa:7878, key included. Seerr has radarr:7878\u00A0· "
           "Seerr's own host, with Radarr's port. Answering",
         ),
         findsOneWidget,

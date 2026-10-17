@@ -156,7 +156,7 @@ void main() {
         _request(5, status: 3),
       ]);
 
-      expect(everyonesSummary(requests), '3 processing · 2 declined');
+      expect(everyonesSummary(requests), '3 processing\u00A0· 2 declined');
     });
 
     test('either half alone', () {
@@ -224,7 +224,7 @@ void main() {
     test('downloading: the state, then when it should be ready', () {
       expect(
         line(_request(1, media: 3, progress: 0.62)),
-        'Downloading 62% · ready around 21:10',
+        'Downloading 62%\u00A0· ready around 21:10',
       );
     });
 
@@ -274,7 +274,7 @@ void main() {
     });
 
     test('the detail leads in the lower case after a middle dot', () {
-      expect(line(_request(1, media: 3)), 'On its way · being fetched');
+      expect(line(_request(1, media: 3)), 'On its way\u00A0· being fetched');
     });
   });
 

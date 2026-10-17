@@ -7,6 +7,7 @@ import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/title_light.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
@@ -177,7 +178,7 @@ class MediaEpisodesGraphPanel extends ConsumerWidget {
                               :final String day,
                             ) when starting == season.number)
                               day,
-                          ].join(' · '),
+                          ].join(dotSeparator),
                           style: AppType.meta
                               .weight(FontWeight.w600)
                               .copyWith(color: room.inkSecondary),
@@ -218,13 +219,13 @@ class MediaEpisodesGraphPanel extends ConsumerWidget {
                 TextSpan(
                   children: [
                     TextSpan(
-                      text: 'Best · ${_bestOf(best)}',
+                      text: 'Best\u00A0· ${_bestOf(best)}',
                       style: AppType.label.copyWith(color: room.ink),
                     ),
                     if (stronger != null)
                       TextSpan(
                         text:
-                            ' · season ${stronger.season} is the stronger one',
+                            '\u00A0· season ${stronger.season} is the stronger one',
                         style: AppType.label
                             .weight(FontWeight.w400)
                             .copyWith(color: room.inkSecondary),
@@ -305,7 +306,7 @@ class MediaEpisodesGraphSheet extends ConsumerWidget {
                 formatSeasonCode(season.number),
                 if (season.average case final average?)
                   average.toStringAsFixed(1),
-              ].join(' · '),
+              ].join(dotSeparator),
               style: AppType.meta
                   .weight(FontWeight.w600)
                   .copyWith(color: room.inkSecondary),
@@ -413,14 +414,14 @@ class MediaEpisodesGraphSheet extends ConsumerWidget {
                         [
                           formatEpisodeCode(best.season, best.number),
                           ?best.name,
-                        ].join(' · '),
+                        ].join(dotSeparator),
                         style: AppType.row.copyWith(color: room.ink),
                       ),
                       Text(
                         [
                           countLabel(best.voteCount, 'vote'),
                           ?bestState,
-                        ].join(' · '),
+                        ].join(dotSeparator),
                         style: secondary,
                       ),
                     ],
@@ -503,7 +504,7 @@ class MediaEpisodesGraphSheet extends ConsumerWidget {
                 text: [
                   '',
                   for (final episode in graph.best) _bestOf(episode),
-                ].join(' · '),
+                ].join(dotSeparator),
                 style: secondary,
               ),
             ],
@@ -525,7 +526,7 @@ class MediaEpisodesGraphSheet extends ConsumerWidget {
                         '${stronger.other.toStringAsFixed(1)}',
                     if (stronger.fewVotes > 0)
                       '${stronger.fewVotes} of its episodes have few votes',
-                  ].join(' · '),
+                  ].join(dotSeparator),
                   style: secondary,
                 ),
               ],

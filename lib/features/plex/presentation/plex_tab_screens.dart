@@ -6,6 +6,7 @@ import 'package:cupola/core/capability/connection_capability.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/date_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -347,8 +348,10 @@ class _DeviceRow extends StatelessWidget {
       icon: Icons.devices_other_rounded,
       tone: StatusTone.neutral,
       title: name,
-      detail: '$product · $platform · $lastSeen',
-      trailing: device.provides.isEmpty ? '—' : device.provides.join(' · '),
+      detail: '$product\u00A0· $platform\u00A0· $lastSeen',
+      trailing: device.provides.isEmpty
+          ? '—'
+          : device.provides.join(dotSeparator),
       semanticLabel: '$name, $product, $platform, $provides, $lastSeen',
     );
   }
@@ -376,7 +379,7 @@ class _PlaylistRow extends StatelessWidget {
     final itemLabel = itemCount == null
         ? 'Items unavailable'
         : countLabel(itemCount, 'item');
-    final detail = [media, ?duration, updated].join(' · ');
+    final detail = [media, ?duration, updated].join(dotSeparator);
     return ServiceRecordRow(
       icon: playlist.smart
           ? Icons.auto_awesome_rounded

@@ -4,6 +4,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/date_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
@@ -224,7 +225,7 @@ class MediaHistoryLine extends StatelessWidget {
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Text(
-                words.join(' · '),
+                words.join(dotSeparator),
                 style: AppType.meta
                     .weight(FontWeight.w400)
                     .copyWith(color: room.inkSecondary),

@@ -4,6 +4,7 @@ library;
 
 import 'package:cupola/core/utils/arr_activity_display.dart'
     show arrEpisodeCode;
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 
 /// The movie, or the series and its episode, a queue record embeds
@@ -43,7 +44,7 @@ class QueueTitle {
     return QueueTitle(
       name: stringOrNull(media['title'])?.trim(),
       year: year == null || year <= 0 ? null : year,
-      episode: code == null ? null : [code, ?episodeTitle].join(' · '),
+      episode: code == null ? null : [code, ?episodeTitle].join(dotSeparator),
       qualityProfileId: profile == null || profile <= 0 ? null : profile,
       folder: libraryFolderOf(media),
       inCinemas: _date(media['inCinemas']),

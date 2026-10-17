@@ -42,7 +42,7 @@ void main() {
       (item) =>
           item.downloadId?.toLowerCase() == WorldDownloads.cosmosS02E04.id,
     );
-    expect(cosmos.names.title, startsWith('Cosmos Laundromat · S'));
+    expect(cosmos.names.title, startsWith('Cosmos Laundromat\u00A0· S'));
     expect(cosmos.names.machineName, 'Cosmos.Laundromat.S02E04.1080p.WEB');
   });
 

@@ -295,7 +295,7 @@ void main() {
       const pack = ServiceQueueItem(
         service: ServiceKey.sonarr,
         id: '1518635975',
-        title: 'Cupertino · 8 episodes',
+        title: 'Cupertino\u00A0· 8 episodes',
         subject: 'Cupertino S1 E1–E8',
         progress: 1,
         clientLabel: 'qBittorrent',
@@ -315,26 +315,26 @@ void main() {
       final item = _stuck();
       expect(
         stuckActionNote(StuckAction.tryAnotherDownload, item),
-        'Dropped · Radarr is looking for another download',
+        'Dropped\u00A0· Radarr is looking for another download',
       );
       expect(
         stuckActionNote(StuckAction.lookForPeers, item),
-        'Asked again · qBittorrent is looking for peers',
+        'Asked again\u00A0· qBittorrent is looking for peers',
       );
       expect(
         stuckActionNote(StuckAction.remove, item),
-        'Removed · Big Buck Bunny stays in your wanted list',
+        'Removed\u00A0· Big Buck Bunny stays in your wanted list',
       );
     });
 
     test('kept waiting says until when', () {
       expect(
         keptWaitingNote(_now.add(const Duration(hours: 24)), now: _now),
-        'Hidden until tomorrow 20:53 · it comes back if nothing moves',
+        'Hidden until tomorrow 20:53\u00A0· it comes back if nothing moves',
       );
       expect(
         keptWaitingNote(DateTime(2026, 10, 9, 23, 10), now: _now),
-        'Hidden until 23:10 · it comes back if nothing moves',
+        'Hidden until 23:10\u00A0· it comes back if nothing moves',
       );
     });
   });
@@ -342,15 +342,15 @@ void main() {
   test('the proof: how long, and which way the bytes travel', () {
     expect(
       stuckProof(_stuck(), now: _now),
-      'Nothing for 3\u00A0h · Radarr → qBittorrent',
+      'Nothing for 3\u00A0h\u00A0· Radarr → qBittorrent',
     );
     expect(
       stuckProof(_stuck(fault: InFlightFault.failed), now: _now),
-      'Failed · Radarr → qBittorrent',
+      'Failed\u00A0· Radarr → qBittorrent',
     );
     expect(
       stuckProof(_stuck(idle: null), now: _now),
-      'Stuck · Radarr → qBittorrent',
+      'Stuck\u00A0· Radarr → qBittorrent',
     );
   });
 }

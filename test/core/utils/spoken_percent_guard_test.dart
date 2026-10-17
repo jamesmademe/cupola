@@ -132,7 +132,7 @@ Widget e() => Semantics(label: spokenPercent(p), child: x);
         'Sprite Fright, 62 percent, tv',
       );
       expect(
-        spokenFromDotted('4.4 GB · 62% · 3 min left'),
+        spokenFromDotted('4.4 GB\u00A0· 62%\u00A0· 3 min left'),
         isNot(contains('%')),
       );
     });

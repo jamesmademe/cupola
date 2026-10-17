@@ -135,7 +135,9 @@ List<String> _sections(WidgetTester tester) => [
   for (final section in tester.widgetList<ActivitySection>(
     find.byType(ActivitySection),
   ))
-    section.meta == null ? section.title : '${section.title} · ${section.meta}',
+    section.meta == null
+        ? section.title
+        : '${section.title}\u00A0· ${section.meta}',
 ];
 
 List<String> _titles(WidgetTester tester) => [
@@ -218,12 +220,12 @@ void main() {
       final harness = await _pump(tester, Profiles.p1, ActivityTab.all);
 
       expect(_sections(tester), [
-        'Needs you · 3 faults · 3 requests',
-        "Everyone's requests · 5 total",
-        'Watching now · Jellyfin',
-        'Downloads · 4 moving · 1 stuck',
-        'Up next · 1 queued',
-        'Finished today · 3',
+        'Needs you\u00A0· 3 faults\u00A0· 3 requests',
+        "Everyone's requests\u00A0· 5 total",
+        'Watching now\u00A0· Jellyfin',
+        'Downloads\u00A0· 4 moving\u00A0· 1 stuck',
+        'Up next\u00A0· 1 queued',
+        'Finished today\u00A0· 3',
       ]);
 
       await harness.unmount(tester);
@@ -238,7 +240,7 @@ void main() {
         'Activity',
         '4 moving',
         '·',
-        '40.4 MB/s',
+        '40.4 MB/\u2060s',
         '·',
         '1 stuck',
       ]);
@@ -306,7 +308,7 @@ void main() {
           .where((d) => d.kind == DecisionKind.pendingRequest)
           .length;
       expect((faults, requests), (3, 3));
-      expect(find.text('3 faults · 3 requests'), findsOneWidget);
+      expect(find.text('3 faults\u00A0· 3 requests'), findsOneWidget);
       expect(find.text('3 requests wait for your approval'), findsOneWidget);
       // Every fault is a card with its way out, every request a row with
       // Approve and Decline.
@@ -352,7 +354,10 @@ void main() {
         );
       }
       expect(find.text('Ready to watch since 17:53'), findsOneWidget);
-      expect(find.text('Downloading 62% · ready around 21:04'), findsOneWidget);
+      expect(
+        find.text('Downloading 62%\u00A0· ready around 21:04'),
+        findsOneWidget,
+      );
       expect(find.text('All 8 requests'), findsOneWidget);
       expect(find.text('2 processing'), findsOneWidget);
 
@@ -404,7 +409,10 @@ void main() {
       ) async {
         final harness = await lostPage(tester, count: 120);
 
-        expect(_sections(tester), contains("Everyone's requests · 120 total"));
+        expect(
+          _sections(tester),
+          contains("Everyone's requests\u00A0· 120 total"),
+        );
         expect(find.text('All 120 requests'), findsOneWidget);
         expect(find.text('50 total'), findsNothing);
         // What is tallied over the rows that came is short of the whole, so
@@ -419,7 +427,10 @@ void main() {
       ) async {
         final harness = await lostPage(tester, count: null);
 
-        expect(_sections(tester), contains("Everyone's requests · 50+ total"));
+        expect(
+          _sections(tester),
+          contains("Everyone's requests\u00A0· 50+ total"),
+        );
         expect(find.text('All 50+ requests'), findsOneWidget);
         expect(find.text('50 total'), findsNothing);
 
@@ -480,7 +491,7 @@ void main() {
     ) async {
       final harness = await _pump(tester, Profiles.p1, ActivityTab.all);
 
-      expect(find.text('Anna · Sintel'), findsOneWidget);
+      expect(find.text('Anna\u00A0· Sintel'), findsOneWidget);
       expect(find.text('Jellyfin'), findsWidgets);
 
       await harness.unmount(tester);
@@ -550,14 +561,14 @@ void main() {
       final harness = await _pump(tester, Profiles.p1, ActivityTab.downloads);
 
       expect(_sections(tester), [
-        'Downloads · 4 moving · 1 stuck',
-        'Up next · 1 queued',
+        'Downloads\u00A0· 4 moving\u00A0· 1 stuck',
+        'Up next\u00A0· 1 queued',
       ]);
       final order = [
-        'Cosmos Laundromat · S2 E4',
+        'Cosmos Laundromat\u00A0· S2 E4',
         'Sprite Fright',
         'Elephants Dream',
-        'Cosmos Laundromat · S2 E5',
+        'Cosmos Laundromat\u00A0· S2 E5',
         'Big Buck Bunny',
       ];
       final ys = [
@@ -570,11 +581,17 @@ void main() {
       expect(find.text('nothing for 3\u00A0h'), findsOneWidget);
       // Which way the bytes go, and a moving row's own speed.
       expect(find.text('Radarr 4K → SABnzbd'), findsNWidgets(2));
-      expect(find.text('12.1\u00A0MB/s'), findsOneWidget);
+      expect(find.text('12.1\u00A0MB/\u2060s'), findsOneWidget);
       // Whose request brought it, and when it should be ready.
-      expect(find.text("Anna's request · ready around 21:04"), findsOneWidget);
+      expect(
+        find.text("Anna's request\u00A0· ready around 21:04"),
+        findsOneWidget,
+      );
       // Up next: when SABnzbd says it starts, and who asked.
-      expect(find.text('Queued · starts in about 6\u00A0min'), findsOneWidget);
+      expect(
+        find.text('Queued\u00A0· starts in about 6\u00A0min'),
+        findsOneWidget,
+      );
       expect(find.text("Anna's request"), findsOneWidget);
 
       await harness.unmount(tester);
@@ -590,7 +607,7 @@ void main() {
 
       // Big Buck Bunny, and Elephants Dream and Sintel on the 4K.
       expect(_readout(tester), contains('3 stuck'));
-      expect(_sections(tester), contains(startsWith('Downloads · ')));
+      expect(_sections(tester), contains(startsWith('Downloads\u00A0· ')));
       expect(
         _sections(tester).firstWhere((line) => line.startsWith('Downloads')),
         endsWith('3 stuck'),
@@ -737,7 +754,7 @@ void main() {
         ],
       );
       expect(find.byType(ActivityDownloadRow), findsOneWidget);
-      expect(_sections(tester), ['Downloads · 1 moving']);
+      expect(_sections(tester), ['Downloads\u00A0· 1 moving']);
 
       ProviderScope.containerOf(
         tester.element(find.byType(ActivityPage)),
@@ -747,7 +764,7 @@ void main() {
 
       // Mid-read the row and the count are the last answer's.
       expect(find.byType(ActivityDownloadRow), findsOneWidget);
-      expect(_sections(tester), ['Downloads · 1 moving']);
+      expect(_sections(tester), ['Downloads\u00A0· 1 moving']);
       expect(find.text('Nothing is downloading'), findsNothing);
 
       gate.complete();
@@ -957,9 +974,9 @@ void main() {
       final harness = await _pump(tester, Profiles.p1, ActivityTab.history);
 
       expect(_sections(tester), [
-        'Today · 3',
-        'Yesterday · 1',
-        'Wed 7 Oct · 1',
+        'Today\u00A0· 3',
+        'Yesterday\u00A0· 1',
+        'Wed 7 Oct\u00A0· 1',
       ]);
       // Nothing of the other views.
       expect(find.byType(ActivityDownloadRow), findsNothing);
@@ -1015,7 +1032,7 @@ void main() {
       );
       await _mount(tester, harness, ActivityTab.history);
 
-      expect(_sections(tester).first, 'Today · 4');
+      expect(_sections(tester).first, 'Today\u00A0· 4');
       expect(find.text('Download failed 14:02'), findsOneWidget);
       expect(find.text('Aborted by the client'), findsOneWidget);
       // Beside the imports, newest first: the failure is the oldest of the
@@ -1241,8 +1258,8 @@ void main() {
       expect(find.text('Not in the total: qBittorrent'), findsWidgets);
       // The torrents' rates are not in the sum: what SABnzbd reports alone.
       final words = _readout(tester).toList();
-      expect(words, contains('18.0 MB/s'));
-      expect(words, isNot(contains('40.4 MB/s')));
+      expect(words, contains('18.0 MB/\u2060s'));
+      expect(words, isNot(contains('40.4 MB/\u2060s')));
 
       await harness.unmount(tester);
     });
@@ -1350,7 +1367,10 @@ void main() {
       );
 
       // Four moving and the stuck one in the world, and the two grabs.
-      expect(_sections(tester).first, 'Downloads · 6 moving · 1 stuck');
+      expect(
+        _sections(tester).first,
+        'Downloads\u00A0· 6 moving\u00A0· 1 stuck',
+      );
       expect(find.text('Sonarr 1 → qBittorrent'), findsWidgets);
       expect(find.text('Sonarr Anime → qBittorrent'), findsOneWidget);
 
@@ -1433,7 +1453,7 @@ void main() {
       expect(find.textContaining('did not answer'), findsNothing);
       expect(
         _sections(tester).firstWhere((line) => line.startsWith('Needs you')),
-        'Needs you · 3 faults · 3 requests',
+        'Needs you\u00A0· 3 faults\u00A0· 3 requests',
       );
       // And the note under the title is the amber one, not the red.
       final note = find.ancestor(
@@ -1645,8 +1665,11 @@ void main() {
 
   group('needsYouMeta and requestsWaitLine', () {
     test('each kind counted apart, a request is not a fault', () {
-      expect(needsYouMeta(faults: 3, requests: 2), '3 faults · 2 requests');
-      expect(needsYouMeta(faults: 1, requests: 1), '1 fault · 1 request');
+      expect(
+        needsYouMeta(faults: 3, requests: 2),
+        '3 faults\u00A0· 2 requests',
+      );
+      expect(needsYouMeta(faults: 1, requests: 1), '1 fault\u00A0· 1 request');
       expect(needsYouMeta(faults: 4, requests: 0), '4 faults');
       expect(needsYouMeta(faults: 0, requests: 1), '1 request');
       expect(needsYouMeta(faults: 0, requests: 0), isEmpty);

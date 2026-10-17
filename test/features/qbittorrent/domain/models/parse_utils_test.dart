@@ -88,25 +88,25 @@ void main() {
   });
 
   group('formatSpeed', () {
-    test('returns 0 B/s for non-positive values', () {
-      expect(formatSpeed(0), '0\u00A0B/s');
-      expect(formatSpeed(-1), '0\u00A0B/s');
+    test('returns 0 B/\u2060s for non-positive values', () {
+      expect(formatSpeed(0), '0\u00A0B/\u2060s');
+      expect(formatSpeed(-1), '0\u00A0B/\u2060s');
     });
 
-    test('formats KB/s', () {
-      expect(formatSpeed(2048), '2.0\u00A0KB/s');
+    test('formats KB/\u2060s', () {
+      expect(formatSpeed(2048), '2.0\u00A0KB/\u2060s');
     });
 
     test('reads the one ladder, matching the other services KPI cells', () {
       // SABnzbd and NZBGet render their rates from the same ladder, and all
       // three land in the same /services grid.
-      expect(formatSpeed(52 * 1024 * 1024), '52.0\u00A0MB/s');
-      expect(formatSpeed(120 * 1024 * 1024), '120\u00A0MB/s');
-      expect(formatSpeed(512), '512\u00A0B/s');
+      expect(formatSpeed(52 * 1024 * 1024), '52.0\u00A0MB/\u2060s');
+      expect(formatSpeed(120 * 1024 * 1024), '120\u00A0MB/\u2060s');
+      expect(formatSpeed(512), '512\u00A0B/\u2060s');
     });
 
-    test('formats GB/s', () {
-      expect(formatSpeed(3 * 1024 * 1024 * 1024), '3.0\u00A0GB/s');
+    test('formats GB/\u2060s', () {
+      expect(formatSpeed(3 * 1024 * 1024 * 1024), '3.0\u00A0GB/\u2060s');
     });
   });
 
@@ -173,13 +173,13 @@ void main() {
       expect(formatLimit(-1024), '∞');
     });
 
-    test('zero is bare 0 (not 0 B/s)', () {
+    test('zero is bare 0 (not 0 B/\u2060s)', () {
       expect(formatLimit(0), '0');
     });
 
     test('positive defers to formatSpeed', () {
-      expect(formatLimit(2048), '2.0\u00A0KB/s');
-      expect(formatLimit(5 * 1024 * 1024), '5.0\u00A0MB/s');
+      expect(formatLimit(2048), '2.0\u00A0KB/\u2060s');
+      expect(formatLimit(5 * 1024 * 1024), '5.0\u00A0MB/\u2060s');
     });
   });
 

@@ -299,7 +299,7 @@ const _monoUses = <({String file, int uses, String prints})>[
         'lib/features/release_search/presentation/widgets/release_search_job_card.dart',
     uses: 1,
     prints:
-        'the raw diagnostic behind a failed search (`HTTP 502 · nginx`, a '
+        'the raw diagnostic behind a failed search (`HTTP 502\u00A0· nginx`, a '
         'Dio error type name): a code, as returned',
   ),
   (

@@ -225,7 +225,7 @@ void main() {
       // misleading at once.
       expect(
         sonarrSeasonSummary(_season(episodeCount: 8, fileCount: 8, total: 12)),
-        '8 of 8 aired · 12 total',
+        '8 of 8 aired\u00A0· 12 total',
       );
     });
 
@@ -257,7 +257,7 @@ void main() {
           sonarrSeasonSummary(
             parsed({'episodeCount': 10, 'totalEpisodeCount': 12}),
           ),
-          '10 aired · 12 total',
+          '10 aired\u00A0· 12 total',
         );
       });
 

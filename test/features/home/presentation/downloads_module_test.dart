@@ -111,12 +111,15 @@ void main() {
       ),
     );
 
-    expect(find.textContaining(RegExp(r'^1 moving · 1 stuck · ')), findsOne);
+    expect(
+      find.textContaining(RegExp(r'^1 moving\u00A0· 1 stuck\u00A0· ')),
+      findsOne,
+    );
     expect(find.text('Stuck at 47%'), findsOne);
-    expect(find.text('50% · 10\u00A0min'), findsOne);
+    expect(find.text('50%\u00A0· 10\u00A0min'), findsOne);
     // The blocked import is no download: named once, and left to Needs you.
     expect(find.text('Cosmos'), findsNothing);
-    expect(find.text('1 needs a manual import · in Needs you'), findsOne);
+    expect(find.text('1 needs a manual import\u00A0· in Needs you'), findsOne);
     expect(
       tester.getTopLeft(find.text('Sprite Fright')).dy,
       lessThan(tester.getTopLeft(find.text('Big Buck Bunny')).dy),
@@ -152,7 +155,10 @@ void main() {
       ),
     );
 
-    expect(find.textContaining(RegExp(r'^1 moving · 1 queued · ')), findsOne);
+    expect(
+      find.textContaining(RegExp(r'^1 moving\u00A0· 1 queued\u00A0· ')),
+      findsOne,
+    );
     expect(find.text('Sprite Fright'), findsOne);
     expect(find.text('Sintel'), findsNothing);
   });

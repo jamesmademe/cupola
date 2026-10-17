@@ -337,14 +337,14 @@ void main() {
       expect(layout.summary, '9 modules');
       expect(
         layout.switched(HomeModule.requests, on: false).summary,
-        '8 modules · Requests hidden',
+        '8 modules\u00A0· Requests hidden',
       );
       expect(
         layout
             .switched(HomeModule.requests, on: false)
             .switched(HomeModule.setUpNext, on: false)
             .summary,
-        '7 modules · 2 hidden',
+        '7 modules\u00A0· 2 hidden',
       );
       // A module that starts off is added, not unhidden.
       expect(

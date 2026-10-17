@@ -25,7 +25,7 @@ void main() {
 
     expect(find.text(CollectionTally.invitationTitle), findsOneWidget);
     expect(
-      find.text('${SeerrFake.collectionName} · 5 of 8 on your server'),
+      find.text('${SeerrFake.collectionName}\u00A0· 5 of 8 on your server'),
       findsOneWidget,
     );
     expect(find.text('2 on the way'), findsOneWidget);

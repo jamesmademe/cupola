@@ -4,6 +4,7 @@ import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/date_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/discover/domain/library_calendar.dart';
@@ -89,7 +90,7 @@ class CalendarRow extends StatelessWidget {
         : event.lead();
     final leadWords = lead.under == null
         ? lead.lead
-        : '${lead.lead} · ${lead.under}';
+        : '${lead.lead}\u00A0· ${lead.under}';
 
     // The dot sits on the first line of the status, however many it takes.
     final firstLine =
@@ -111,7 +112,7 @@ class CalendarRow extends StatelessWidget {
         Flexible(
           child: Text(
             _home && event.airsAt != null
-                ? '${formatClockTime(event.airsAt!)} · ${event.statusLine(now)}'
+                ? '${formatClockTime(event.airsAt!)}\u00A0· ${event.statusLine(now)}'
                 : event.statusLine(now),
             maxLines: stacked ? 3 : 2,
             overflow: TextOverflow.ellipsis,
@@ -138,7 +139,7 @@ class CalendarRow extends StatelessWidget {
               const SizedBox(width: AppSpacing.xs),
               Flexible(
                 child: Text(
-                  event.sources.join(' · '),
+                  event.sources.join(dotSeparator),
                   maxLines: stacked ? 3 : 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppType.meta.copyWith(color: room.inkTertiary),

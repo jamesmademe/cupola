@@ -186,7 +186,7 @@ void main() {
     );
     expect(find.byType(QrCodeView), findsOneWidget);
     expect(tester.getSize(find.byType(QrCodeView)), const Size.square(232));
-    expect(find.text('Rossi Movies · nas.home.arpa:5055'), findsOneWidget);
+    expect(find.text('Rossi Movies\u00A0· nas.home.arpa:5055'), findsOneWidget);
     expect(
       find.text(
         'Sent as a message, they paste it where Cupola asks where their '
@@ -254,7 +254,7 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.text('Rossi · nas.home.arpa:5055'), findsOneWidget);
+    expect(find.text('Rossi\u00A0· nas.home.arpa:5055'), findsOneWidget);
     expect(_qrData(tester), before, reason: 'the code does not change');
     expect(tester.getTopLeft(find.byType(QrCodeView)), codeAt);
     expect(tester.getTopLeft(find.bySubtype<FilledButton>()), buttonAt);
@@ -497,7 +497,10 @@ void main() {
       expect(code.host, 'pair');
       expect(code.queryParameters['t'], 'invite');
       expect(tester.getSize(find.byType(QrCodeView)), const Size.square(232));
-      expect(find.text('Rossi Movies · nas.home.arpa:5055'), findsOneWidget);
+      expect(
+        find.text('Rossi Movies\u00A0· nas.home.arpa:5055'),
+        findsOneWidget,
+      );
       expect(find.text('Closes in 2:00'), findsOneWidget);
       expect(
         find.text(

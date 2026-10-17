@@ -59,7 +59,7 @@ void main() {
     expect(jellyfin.single.name, 'Cabin');
     expect(
       GlobalSearchServiceResults(leg: jellyfin.single).laneTitle,
-      'Jellyfin · Cabin',
+      'Jellyfin\u00A0· Cabin',
     );
   });
 

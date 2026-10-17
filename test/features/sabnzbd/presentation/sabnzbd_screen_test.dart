@@ -282,7 +282,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Downloading · 12\u00A0min · 1.0\u00A0GB left of 4.0\u00A0GB'),
+      find.text(
+        'Downloading\u00A0· 12\u00A0min\u00A0· 1.0\u00A0GB left of 4.0\u00A0GB',
+      ),
       findsOneWidget,
     );
   });
@@ -313,7 +315,9 @@ void main() {
 
     expect(find.textContaining('Paused'), findsNothing);
     expect(
-      find.text('Stopped · 12\u00A0min · 1.0\u00A0GB left of 4.0\u00A0GB'),
+      find.text(
+        'Stopped\u00A0· 12\u00A0min\u00A0· 1.0\u00A0GB left of 4.0\u00A0GB',
+      ),
       findsOneWidget,
     );
   });
@@ -341,7 +345,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Downloading · 12\u00A0min · 1.0\u00A0GB left'),
+      find.text('Downloading\u00A0· 12\u00A0min\u00A0· 1.0\u00A0GB left'),
       findsOneWidget,
     );
     expect(find.textContaining('of 0\u00A0B'), findsNothing);
@@ -610,12 +614,18 @@ void main() {
         expect(find.text('Dune.Part.Two.2024.2160p'), findsOneWidget);
         expect(find.textContaining(eta), findsNothing);
         // The state stays: it is still what SABnzbd last said.
-        expect(find.text('Downloading · as of 6\u00A0min ago'), findsOneWidget);
+        expect(
+          find.text('Downloading\u00A0· as of 6\u00A0min ago'),
+          findsOneWidget,
+        );
 
         // And the age moves with the minutes.
         now = now.add(const Duration(minutes: 1));
         await tester.pump(const Duration(minutes: 1));
-        expect(find.text('Downloading · as of 7\u00A0min ago'), findsOneWidget);
+        expect(
+          find.text('Downloading\u00A0· as of 7\u00A0min ago'),
+          findsOneWidget,
+        );
 
         // Back: the countdown returns, the age goes, and so does the clock.
         container.read(probeDown.notifier).state = false;

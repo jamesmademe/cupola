@@ -72,7 +72,7 @@ void main() {
       // connection; the summary must not coin a second one ("connected",
       // "online") for the same state.
       expect(
-        find.text('1 of ${ServiceKey.values.length} set up · 1 answering'),
+        find.text('1 of ${ServiceKey.values.length} set up\u00A0· 1 answering'),
         findsOneWidget,
       );
     });
@@ -92,7 +92,7 @@ void main() {
       );
 
       expect(
-        find.text('2 of ${ServiceKey.values.length} set up · 2 answering'),
+        find.text('2 of ${ServiceKey.values.length} set up\u00A0· 2 answering'),
         findsOneWidget,
       );
       expect(find.text('Radarr'), findsNothing);
@@ -110,7 +110,7 @@ void main() {
       );
 
       expect(
-        find.text('1 of ${ServiceKey.values.length} set up · 0 answering'),
+        find.text('1 of ${ServiceKey.values.length} set up\u00A0· 0 answering'),
         findsOneWidget,
       );
       // The failing services are grouped by the state they are in and named,

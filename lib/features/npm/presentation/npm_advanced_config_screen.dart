@@ -122,7 +122,7 @@ class _NpmAdvancedConfigScreenState
           _controller.text,
         );
       },
-      successMessage: 'Saved · nginx reloaded',
+      successMessage: 'Saved\u00A0· nginx reloaded',
       failureMessage: 'Could not save the advanced config',
       invalidate: [npmProxyHostsProvider],
     );
@@ -173,7 +173,7 @@ class _NpmAdvancedConfigScreenState
       ),
       children: [
         Text(
-          'the custom Nginx block for ${widget.host.primaryDomain} · '
+          'the custom Nginx block for ${widget.host.primaryDomain}\u00A0· '
           '$lines lines',
           style: theme.textTheme.bodySmall?.copyWith(
             color: colorScheme.onSurfaceVariant,

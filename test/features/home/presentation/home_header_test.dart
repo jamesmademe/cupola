@@ -49,7 +49,7 @@ void main() {
     );
     expect(
       homeHealthLine(health(answering: 9, checking: 3)),
-      '9 of 12 answering · 3 checking',
+      '9 of 12 answering\u00A0· 3 checking',
     );
   });
 
@@ -67,7 +67,7 @@ void main() {
           onlyAtHome: 6,
         ),
       ),
-      '7 of 7 answering · 6 only at home',
+      '7 of 7 answering\u00A0· 6 only at home',
     );
   });
 
@@ -118,7 +118,7 @@ void main() {
       find.byWidgetPredicate(
         (widget) =>
             widget is RichText &&
-            widget.text.toPlainText().startsWith('October · ') &&
+            widget.text.toPlainText().startsWith('October\u00A0· ') &&
             widget.text.toPlainText().endsWith('10 of 10 answering'),
       ),
       findsOneWidget,

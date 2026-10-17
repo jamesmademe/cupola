@@ -19,7 +19,7 @@ DashboardDecision _request(String title, int id, {int hoursAgo = 2}) =>
       id: 'seerr--$id',
       service: ServiceKey.seerr,
       title: title,
-      detail: 'Seerr · Anna',
+      detail: 'Seerr\u00A0· Anna',
       occurredAt: DateTime(2026, 10, 8, 20).subtract(Duration(hours: hoursAgo)),
       actionId: id,
     );
@@ -72,7 +72,7 @@ void main() {
             () => _Answered({
               charge.id: (
                 decision: charge,
-                outcome: 'Approved · sent to Radarr',
+                outcome: 'Approved\u00A0· sent to Radarr',
               ),
             }),
           ),
@@ -87,7 +87,7 @@ void main() {
 
     expect(find.text('1 waits for you'), findsOne);
     expect(find.text('Charge'), findsOne);
-    expect(find.text('Approved · sent to Radarr'), findsOne);
+    expect(find.text('Approved\u00A0· sent to Radarr'), findsOne);
     expect(find.text('Metropolis'), findsOne);
     // The answered row has no buttons of its own; Metropolis keeps its.
     expect(find.byTooltip('Approve Charge'), findsNothing);

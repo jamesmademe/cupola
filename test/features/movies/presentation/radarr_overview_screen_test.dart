@@ -275,7 +275,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // The row is still on screen…
-    expect(find.text('Import failed · Nickel Boys'), findsOneWidget);
+    expect(find.text('Import failed\u00A0· Nickel Boys'), findsOneWidget);
     // …so the figure above it still has to count it.
     expect(_sectionHeader(tester, 'Needs attention').subtitle, '1');
   });

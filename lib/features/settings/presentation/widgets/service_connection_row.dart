@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/settings/data/connection_reach_provider.dart';
@@ -115,15 +116,15 @@ class ServiceConnectionRow extends ConsumerWidget {
         : subject.away != null
         ? Lexicon.homeAndAway
         : Lexicon.homeOnly;
-    final where = atBoth ? null : [?setup, inUse].join(' · ');
+    final where = atBoth ? null : [?setup, inUse].join(dotSeparator);
     final hostLine = [
       ?where,
       if (settings.hasMultipleInstances(service)) '$connections connections',
-    ].join(' · ');
+    ].join(dotSeparator);
     final said = atBoth
         ? '${presentation.label} at home or away'
         : presentation.label;
-    final state = [?named, said].join(' · ');
+    final state = [?named, said].join(dotSeparator);
 
     return SettingsCard.grouped(
       leading: Icon(service.icon),
@@ -131,7 +132,7 @@ class ServiceConnectionRow extends ConsumerWidget {
       // Connected: the host is the useful line and the glyph says the rest.
       // Broken: the cause comes first, with the host still there to check.
       subtitle: presentation.needsAttention
-          ? [state, if (hostLine.isNotEmpty) hostLine].join(' · ')
+          ? [state, if (hostLine.isNotEmpty) hostLine].join(dotSeparator)
           : hostLine,
       subtitleLeading: _StatusGlyph(
         presentation: presentation,

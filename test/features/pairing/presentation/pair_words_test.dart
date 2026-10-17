@@ -337,7 +337,7 @@ void main() {
       );
       expect(
         pairPlanCounts(plan),
-        '3 services · 1 trusted certificate · 1 already here',
+        '3 services\u00A0· 1 trusted certificate\u00A0· 1 already here',
       );
       expect(pairAddLabel(plan), 'Add 3 services');
     });

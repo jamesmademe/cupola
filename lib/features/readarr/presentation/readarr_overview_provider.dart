@@ -180,7 +180,7 @@ List<ReadarrAttentionItem> readarrQueueFaults(
       items.add(
         ReadarrAttentionItem(
           kind: ReadarrAttentionKind.stalled,
-          headline: '${StateWord.stuck.label} · $title',
+          headline: '${StateWord.stuck.label}\u00A0· $title',
           detail: joinDisplayParts([
             stringOrNull(record['downloadClient']),
             message,
@@ -195,7 +195,7 @@ List<ReadarrAttentionItem> readarrQueueFaults(
       items.add(
         ReadarrAttentionItem(
           kind: ReadarrAttentionKind.importFailed,
-          headline: 'Import failed · $title',
+          headline: 'Import failed\u00A0· $title',
           detail: joinDisplayParts([message, age]),
         ),
       );

@@ -12,6 +12,7 @@ import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/title_light.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/utils/url_utils.dart';
@@ -259,11 +260,11 @@ class _AuthorPageState extends ConsumerState<AuthorPage>
                     if (book.year case final year?) '$year',
                     if (profile != null && profile.isNotEmpty)
                       'quality profile $profile',
-                  ].join(' · ');
+                  ].join(dotSeparator);
                   final words = switch (state) {
                     (word: final word, tone: _, hollow: true)
                         when word == StateWord.wanted.label =>
-                      '$word · no file yet',
+                      '$word\u00A0· no file yet',
                     final state? => state.word,
                     null => null,
                   };

@@ -8,6 +8,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/platform/local_network_access.dart';
 import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_card.dart';
@@ -199,7 +200,7 @@ class SettingsNotificationsRow extends ConsumerWidget {
           : [
               for (final kind in OutsideNoticeKind.values)
                 if (kinds.contains(kind)) kind.label,
-            ].join(' · '),
+            ].join(dotSeparator),
       semanticHint: 'opens the notification switches',
       onTap: () => context.push('/settings/notifications'),
     );

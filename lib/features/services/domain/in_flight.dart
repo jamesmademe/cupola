@@ -23,6 +23,7 @@ library;
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/byte_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
@@ -180,7 +181,7 @@ String formatInFlightLine({
     formatTimeLeft(etaSeconds),
     client,
   ];
-  return parts.join(' · ');
+  return parts.join(dotSeparator);
 }
 
 /// The region's eyebrow: `2 downloading · 15.5 MB/s across 2 clients`.
@@ -207,7 +208,7 @@ String inFlightEyebrow({
   if (coverage.everySourceFailed) return counted;
   if (rateBytesPerSecond == null || clients <= 0) return counted;
   final noun = clients == 1 ? 'client' : 'clients';
-  return '$counted · ${formatBytesPerSecond(rateBytesPerSecond)} '
+  return '$counted\u00A0· ${formatBytesPerSecond(rateBytesPerSecond)} '
       'across $clients $noun';
 }
 
@@ -241,7 +242,7 @@ String? inFlightFaultFootnote({
     if (failed > 0) '${figure(failed)} failed',
   ];
   if (clauses.isEmpty) return null;
-  return '${clauses.join(' · ')} · in Needs you';
+  return '${clauses.join(dotSeparator)}\u00A0· in Needs you';
 }
 
 /// [inFlightFaultFootnote] as a screen reader should say it: each clause on

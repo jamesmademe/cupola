@@ -64,7 +64,7 @@ void main() {
   });
 
   group('TransferInfo formatted helpers', () {
-    test('zero speeds render as 0 B/s', () {
+    test('zero speeds render as 0 B/\u2060s', () {
       final info = TransferInfo(
         dlSpeed: 0,
         upSpeed: 0,
@@ -74,8 +74,8 @@ void main() {
         upRateLimit: 0,
         altSpeedEnabled: false,
       );
-      expect(info.dlSpeedFormatted, '0\u00A0B/s');
-      expect(info.upSpeedFormatted, '0\u00A0B/s');
+      expect(info.dlSpeedFormatted, '0\u00A0B/\u2060s');
+      expect(info.upSpeedFormatted, '0\u00A0B/\u2060s');
     });
 
     test('non-zero speeds render with units', () {
@@ -88,8 +88,8 @@ void main() {
         upRateLimit: 0,
         altSpeedEnabled: false,
       );
-      expect(info.dlSpeedFormatted, '52.0\u00A0MB/s');
-      expect(info.upSpeedFormatted, '1.0\u00A0KB/s');
+      expect(info.dlSpeedFormatted, '52.0\u00A0MB/\u2060s');
+      expect(info.upSpeedFormatted, '1.0\u00A0KB/\u2060s');
     });
   });
 }

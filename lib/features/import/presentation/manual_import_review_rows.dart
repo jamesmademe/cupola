@@ -5,6 +5,7 @@ import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/import/domain/manual_import_display.dart';
 import 'package:cupola/features/import/domain/manual_import_models.dart';
@@ -279,7 +280,7 @@ class ReadyGroupHeader extends StatelessWidget {
                                       ? '$total ${total == 1 ? 'file' : 'files'}'
                                       : '$selectedCount of $total selected',
                                 ?libraryNote,
-                              ].join(' · '),
+                              ].join(dotSeparator),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               // The selected count changes as rows are ticked.
@@ -422,7 +423,10 @@ class MatchedFileRow extends StatelessWidget {
     // carries both, joined: both halves are matched values.
     final matchedLine = underGroupHeader
         ? (identity.title ?? groupTitle)
-        : [groupTitle, if (identity.title != null) identity.title!].join(' · ');
+        : [
+            groupTitle,
+            if (identity.title != null) identity.title!,
+          ].join(dotSeparator);
 
     final identityName = [
       groupTitle,
@@ -537,7 +541,7 @@ class MatchedFileRow extends StatelessWidget {
                         if (identity.quality != null) identity.quality!,
                         item.languageLabel,
                         formatImportBytes(item.size),
-                      ].join(' · '),
+                      ].join(dotSeparator),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: dimStyle,
@@ -704,7 +708,7 @@ class AttentionFileRow extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${item.extension} · ${formatImportBytes(item.size)}',
+                      '${item.extension}\u00A0· ${formatImportBytes(item.size)}',
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -769,7 +773,7 @@ class OtherFileRow extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '${item.extension} · ${formatImportBytes(item.size)}',
+                    '${item.extension}\u00A0· ${formatImportBytes(item.size)}',
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
@@ -855,7 +859,7 @@ class InFlightFileRow extends StatelessWidget {
                     [
                       manualImportGroupTitle(service, item),
                       if (identity.code != null) identity.code!,
-                    ].join(' · '),
+                    ].join(dotSeparator),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleSmall!.weight(FontWeight.w600),

@@ -192,7 +192,7 @@ class _ComingUpSection extends ConsumerWidget {
       // "—" while the library is loading or after it failed: a "0 releases"
       // printed over an unanswered question is a claim nobody made.
       subtitle:
-          'next $radarrComingUpDays days · '
+          'next $radarrComingUpDays days\u00A0· '
           '${count == null ? '—' : '$count ${count == 1 ? 'release' : 'releases'}'}',
       destination: ServiceTab.calendar,
       child: AsyncValueWidget<List<RadarrUpcomingRelease>>.section(
@@ -551,7 +551,7 @@ class _HistoryRow extends StatelessWidget {
         margin: const EdgeInsets.only(top: 5),
         decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
       ),
-      title: '${entry.title} · ${entry.event.toLowerCase()}',
+      title: '${entry.title}\u00A0· ${entry.event.toLowerCase()}',
       detail: entry.detail,
     );
   }

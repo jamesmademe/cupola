@@ -80,7 +80,7 @@ class OnboardingWalkSubject extends StatelessWidget {
     if (_eyebrowOnly) {
       final words = step == null
           ? 'Set up ${service.title}'
-          : 'Set up ${service.title} · ${step!.toLowerCase()}';
+          : 'Set up ${service.title}\u00A0· ${step!.toLowerCase()}';
       return ReelLine(
         words,
         style: AppTheme.chrome(context, color: scheme.onSurfaceVariant),
@@ -708,7 +708,7 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
     final host =
         widget.service.extractHost(UrlUtils.normalizeBaseUrl(raw)) ??
         raw.trim();
-    return '${away ? 'Away' : 'At home'} · $host';
+    return '${away ? 'Away' : 'At home'}\u00A0· $host';
   }
 
   /// Whether an answer is an address that did not answer at all, which is
@@ -868,7 +868,7 @@ class _OnboardingWalkState extends State<OnboardingWalk> {
         const SizedBox(height: AppSpacing.lg),
         OnboardingField(
           key: const ValueKey('address away'),
-          label: 'Address away · optional',
+          label: 'Address away\u00A0· optional',
           controller: widget.away.controller,
           isUrl: true,
           hint: 'https://${service.routeParam}.example.com',

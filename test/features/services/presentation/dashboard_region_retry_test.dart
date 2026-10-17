@@ -96,7 +96,9 @@ void main() {
     // the 4K Radarr's, so its rate is the one thing only it can say.
     // Sintel waits its turn in SABnzbd: queued, not among the moving.
     expect(
-      find.text('4 moving · 1 stuck · 1 queued · 40.4\u00A0MB/s'),
+      find.text(
+        '4 moving\u00A0· 1 stuck\u00A0· 1 queued\u00A0· 40.4\u00A0MB/\u2060s',
+      ),
       findsOne,
     );
     expect(find.textContaining('Not in the total'), findsNothing);
@@ -141,7 +143,7 @@ void main() {
 
     // The Retry drops the week Arrived reads, not only the history page.
     expect(
-      _within(HomeArrivedModule, find.text('Last 7 days · 4 new')),
+      _within(HomeArrivedModule, find.text('Last 7 days\u00A0· 4 new')),
       findsOne,
     );
     // The probe itself was asked, not the summary that awaits its old answer.

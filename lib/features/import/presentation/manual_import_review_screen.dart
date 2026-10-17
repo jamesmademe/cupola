@@ -7,6 +7,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/import/domain/manual_import_display.dart';
 import 'package:cupola/features/import/domain/manual_import_models.dart';
@@ -239,8 +240,8 @@ class _ManualImportReviewScreenState
       // sentence's real content, that the server parses and probes every file,
       // is on Locate above the button that starts the scan.
       subtitle: scanned == 0
-          ? '${widget.service.title} · $folderName'
-          : '${widget.service.title} · $scanned '
+          ? '${widget.service.title}\u00A0· $folderName'
+          : '${widget.service.title}\u00A0· $scanned '
                 '${scanned == 1 ? 'file' : 'files'}',
       actions: [
         IconButton(
@@ -696,7 +697,7 @@ class _ManualImportReviewScreenState
           // Whatever the view is hiding is still going in the import, so it is
           // named here rather than left to be discovered on the Track screen.
           if (offScreenSelected > 0) '$offScreenSelected selected out of view',
-        ].join(' · '),
+        ].join(dotSeparator),
         trailing: titles.length > 1
             ? TextButton(
                 onPressed: () => _setAllGroups(titles, expanded: anyCollapsed),
@@ -897,7 +898,7 @@ class _LastImportBanner extends StatelessWidget {
                 command.isActive
                     ? '$files handed to ${service.title}'
                     : command.isFailure
-                    ? 'Last import failed · $files'
+                    ? 'Last import failed\u00A0· $files'
                     : 'Imported $files',
                 // Carries the handed-off file count, which climbs while the
                 // command runs.

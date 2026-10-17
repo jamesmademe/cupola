@@ -7,6 +7,7 @@ import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/status/read_age.dart';
 import 'package:cupola/core/status/silence_age.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_overview_provider.dart';
@@ -421,7 +422,7 @@ class _QueueTile extends ConsumerWidget {
         // SABnzbd's `0:12:00`, as every span in the app reads: `12 min`.
         ?sabnzbdEtaLabel(sabnzbdParseTimeLeft(slot.timeLeft)),
         slot.sizeProgressLabel,
-      ].join(' · '),
+      ].join(dotSeparator),
       progress: slot.progress,
       percentage: slot.percentage,
       accent: ServiceKey.sabnzbd.accent,

@@ -145,7 +145,9 @@ OutsideItem _comingUpItem(
   return OutsideItem(
     // The lead says the day and the time; a row, a third of a widget wide,
     // says the day in its own column and leaves the time to the lead.
-    eyebrow: lead && airs != null ? '$day · ${formatClockTime(airs)}' : day,
+    eyebrow: lead && airs != null
+        ? '$day\u00A0· ${formatClockTime(airs)}'
+        : day,
     title: event.title,
     words: lead ? event.statusLine(at) : _rowWords(event, at),
     tone: state.stand == CalendarStand.inFlight

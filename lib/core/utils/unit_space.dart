@@ -19,6 +19,21 @@ library;
 /// U+00A0, the no-break space.
 const String unitSpace = '\u00A0';
 
+/// U+2060, the word joiner: no width, and no break on either side of it.
+const String wordJoiner = '\u2060';
+
 /// [figure] and [unit] with a no-break space between: `withUnit(4.4, 'GB')`
 /// is `4.4 GB`, `withUnit(12, 'min')` is `12 min`.
-String withUnit(Object figure, String unit) => '$figure$unitSpace$unit';
+///
+/// A slash in the unit is followed by [wordJoiner]: a line may break after a
+/// slash, and `4.2 MB/s` would otherwise end a line with `4.2 MB/` and start
+/// the next with `s`.
+String withUnit(Object figure, String unit) =>
+    '$figure$unitSpace${unit.replaceAll(_bareSlash, '/$wordJoiner')}';
+
+/// A slash not yet followed by [wordJoiner].
+final RegExp _bareSlash = RegExp('/(?!$wordJoiner)');
+
+/// Whether [text] ends with a rate (`MB/s`), as [withUnit] writes one.
+bool endsWithRate(String text) =>
+    text.replaceAll(wordJoiner, '').endsWith('/s');

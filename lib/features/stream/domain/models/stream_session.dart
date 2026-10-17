@@ -20,6 +20,7 @@ library;
 import 'package:flutter/foundation.dart';
 
 import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 
 /// How the server is delivering the bytes.
 ///
@@ -160,5 +161,5 @@ class StreamSession {
   /// Joined with `·` for the eye; the spoken form re-separates it, the same way
   /// `spokenFromDotted` handles every other dotted string in the app.
   String? get transcodeReasonLabel =>
-      transcodeReasons.isEmpty ? null : transcodeReasons.join(' · ');
+      transcodeReasons.isEmpty ? null : transcodeReasons.join(dotSeparator);
 }

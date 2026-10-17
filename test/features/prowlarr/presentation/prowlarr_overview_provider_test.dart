@@ -69,7 +69,7 @@ void main() {
       expect(row.headline, 'Nyaa');
       expect(
         row.detail,
-        'failing · disabled until 15:40 · last failed 12\u00A0min ago',
+        'failing\u00A0· disabled until 15:40\u00A0· last failed 12\u00A0min ago',
       );
       expect(
         row.spoken,
@@ -157,7 +157,7 @@ void main() {
       );
 
       final row = section.rows.single;
-      expect(row.detail, 'torrent · private · —');
+      expect(row.detail, 'torrent\u00A0· private\u00A0· —');
       expect(row.trailing, '—');
       expect(row.detail, isNot(contains('0\u00A0ms')));
     });
@@ -234,9 +234,9 @@ void main() {
       ], now: now);
 
       expect(rows.first.tone, StatusTone.success);
-      expect(rows.first.detail, 'TorrentLeech · 4\u00A0min ago');
+      expect(rows.first.detail, 'TorrentLeech\u00A0· 4\u00A0min ago');
       expect(rows.last.tone, StatusTone.warning);
-      expect(rows.last.headline, 'Severance · query failed');
+      expect(rows.last.headline, 'Severance\u00A0· query failed');
     });
 
     test('cuts at the preview limit', () {

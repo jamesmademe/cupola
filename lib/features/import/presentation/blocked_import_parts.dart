@@ -7,6 +7,7 @@ import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/arr_model_helpers.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
@@ -579,19 +580,19 @@ class _BlockedImportNeedYouRowState
         !ready || (widget.kind == NeedYouKind.refused && !widget.selected);
     final title = manualImportGroupTitle(service, item);
     final code = manualImportIdentityFor(service, item).code;
-    final where = [if (title != 'Unmatched') title, ?code].join(' · ');
+    final where = [if (title != 'Unmatched') title, ?code].join(dotSeparator);
     final reason = item.rejections.isEmpty
         ? null
         : item.rejections.first.reason;
 
     final (String status, Color statusColor, bool strong) = switch (true) {
       _ when ready && widget.selected => (
-        'Added · $where',
+        'Added\u00A0· $where',
         room.inkSecondary,
         false,
       ),
       _ when ready && widget.kind != NeedYouKind.refused => (
-        '$where · left out',
+        '$where\u00A0· left out',
         room.inkTertiary,
         false,
       ),

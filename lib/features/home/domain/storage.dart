@@ -10,6 +10,7 @@ library;
 import 'package:flutter/foundation.dart';
 
 import 'package:cupola/core/utils/byte_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/features/services/presentation/dashboard_sections.dart'
@@ -77,7 +78,7 @@ class StoragePool {
   }
 
   /// `Healthy · scrubbed Sunday`.
-  String get stateLine => [state, ?scan].join(' · ');
+  String get stateLine => [state, ?scan].join(dotSeparator);
 }
 
 /// [pool] of TrueNAS connection [instanceId], with its disks when its

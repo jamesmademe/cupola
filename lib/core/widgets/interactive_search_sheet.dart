@@ -598,7 +598,7 @@ class _ReleaseToolbar extends StatelessWidget {
     } else {
       buffer.write('$shownCount of $totalCount releases');
     }
-    buffer.write(' · $approvedCount approved');
+    buffer.write('\u00A0· $approvedCount approved');
     return buffer.toString();
   }
 }

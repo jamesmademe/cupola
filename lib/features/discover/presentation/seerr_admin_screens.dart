@@ -104,7 +104,7 @@ class _SeerrIssuesScreenState extends ConsumerState<SeerrIssuesScreen> {
       icon: Icons.check_circle_outline_rounded,
       title: 'Resolve this issue?',
       message: [
-        '${issue.media?.title ?? 'Unknown media'} · ${issue.issueTypeLabel}'
+        '${issue.media?.title ?? 'Unknown media'}\u00A0· ${issue.issueTypeLabel}'
             '${reporter == null ? '' : ', reported by $reporter'}.',
         'Seerr marks it resolved; it can be reopened from Seerr.',
       ].join('\n\n'),

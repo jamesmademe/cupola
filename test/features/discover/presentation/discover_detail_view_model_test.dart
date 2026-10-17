@@ -127,7 +127,7 @@ void main() {
       expect(viewModel.voteAverage, 8.1);
       expect(viewModel.voteCount, 1000);
       expect(viewModel.tvdbId, 321);
-      expect(viewModel.metadataLine, 'Sci-Fi · HBO, Max');
+      expect(viewModel.metadataLine, 'Sci-Fi\u00A0· HBO, Max');
     });
 
     test('handles missing optional data with safe defaults', () {

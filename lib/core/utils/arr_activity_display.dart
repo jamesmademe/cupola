@@ -1,7 +1,11 @@
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/episode_code.dart';
 
-String joinDisplayParts(Iterable<String?> parts, {String separator = ' · '}) {
+String joinDisplayParts(
+  Iterable<String?> parts, {
+  String separator = dotSeparator,
+}) {
   return parts
       .whereType<String>()
       .map((part) => part.trim())

@@ -177,7 +177,7 @@ void main() {
         );
 
         // The 4K server, named as such, brings its own profile and folder.
-        await tester.tap(find.text('UHD · 4K'));
+        await tester.tap(find.text('UHD\u00A0· 4K'));
         await tester.pumpAndSettle();
         expect(find.text('Ultra-HD'), findsOneWidget);
         expect(find.text('/movies-4k'), findsOneWidget);

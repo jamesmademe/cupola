@@ -71,7 +71,7 @@ void main() {
   ) async {
     await _pump(tester);
 
-    expect(find.text('1 downloading · 2 seeding'), findsOneWidget);
+    expect(find.text('1 downloading\u00A0· 2 seeding'), findsOneWidget);
   });
 
   testWidgets('a queue that never answered counts nothing, not zero', (
@@ -81,7 +81,7 @@ void main() {
 
     expect(find.text('—'), findsWidgets);
     // The figure the failure would otherwise invent.
-    expect(find.text('0 downloading · 0 seeding'), findsNothing);
+    expect(find.text('0 downloading\u00A0· 0 seeding'), findsNothing);
   });
 
   testWidgets('free space nobody could measure reads an em dash, not 0 B', (
@@ -89,7 +89,7 @@ void main() {
   ) async {
     await _pump(tester, freeSpace: null);
 
-    expect(find.text('Free space · —'), findsOneWidget);
+    expect(find.text('Free space\u00A0· —'), findsOneWidget);
     expect(find.text('0\u00A0B'), findsNothing);
     // Spoken as one sentence, with the path still attached: a free-space figure
     // with no path is a number about an unnamed disk.
@@ -162,11 +162,14 @@ void main() {
     // content. They ride the title line instead, which wraps.
     final sessionRows = tester
         .widgetList<ServiceOverviewRow>(find.byType(ServiceOverviewRow))
-        .where((row) => row.title.contains(' · '))
+        .where((row) => row.title.contains('\u00A0· '))
         .toList();
 
-    expect(find.text('Download limit · 4096\u00A0KB/s'), findsOneWidget);
-    expect(find.text('Upload limit · Not limited'), findsOneWidget);
+    expect(
+      find.text('Download limit\u00A0· 4096\u00A0KB/\u2060s'),
+      findsOneWidget,
+    );
+    expect(find.text('Upload limit\u00A0· Not limited'), findsOneWidget);
     expect(sessionRows, hasLength(4));
     for (final row in sessionRows) {
       expect(

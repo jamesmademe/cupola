@@ -134,7 +134,7 @@ void main() {
           etaSeconds: 180,
           client: 'qBittorrent',
         ),
-        '2160p · 14.0 of 15.0\u00A0GB · 3\u00A0min left · qBittorrent',
+        '2160p\u00A0· 14.0 of 15.0\u00A0GB\u00A0· 3\u00A0min left\u00A0· qBittorrent',
       );
     });
 
@@ -148,7 +148,7 @@ void main() {
 
       // Three fields, two of them explicitly absent. A client that knows only
       // its own name still produces a readable row.
-      expect(line, '— · — · SABnzbd');
+      expect(line, '—\u00A0· —\u00A0· SABnzbd');
     });
   });
 
@@ -160,7 +160,7 @@ void main() {
           rateBytesPerSecond: 16 * 1024 * 1024,
           clients: 2,
         ),
-        '2 downloading · 16.0\u00A0MB/s across 2 clients',
+        '2 downloading\u00A0· 16.0\u00A0MB/\u2060s across 2 clients',
       );
     });
 
@@ -207,14 +207,14 @@ void main() {
   group('a fault leaves Downloads and says what it is', () {
     test('the footnote names each fault, blocked imports first', () {
       expect(inFlightFaultFootnote(), isNull);
-      expect(inFlightFaultFootnote(stalled: 1), '1 stuck · in Needs you');
+      expect(inFlightFaultFootnote(stalled: 1), '1 stuck\u00A0· in Needs you');
       expect(
         inFlightFaultFootnote(stalled: 2, needsImport: 18),
-        '18 need a manual import · 2 stuck · in Needs you',
+        '18 need a manual import\u00A0· 2 stuck\u00A0· in Needs you',
       );
       expect(
         inFlightFaultFootnote(needsImport: 1, failed: 1),
-        '1 needs a manual import · 1 failed · in Needs you',
+        '1 needs a manual import\u00A0· 1 failed\u00A0· in Needs you',
       );
       // APP-04: eighteen blocked imports were footnoted "18 stalls", which
       // named the wrong fault and so the wrong remedy.
@@ -237,7 +237,7 @@ void main() {
       )!;
       expect(
         footnote,
-        '18+ need a manual import · 2+ stuck · 1+ failed · in Needs you',
+        '18+ need a manual import\u00A0· 2+ stuck\u00A0· 1+ failed\u00A0· in Needs you',
       );
       expect(
         spokenFaultFootnote(footnote),
@@ -251,7 +251,10 @@ void main() {
         needsImport: 18,
         coverage: SourceCoverage.answeredBy(ServiceKey.sonarr),
       )!;
-      expect(whole, '18 need a manual import · 2 stuck · in Needs you');
+      expect(
+        whole,
+        '18 need a manual import\u00A0· 2 stuck\u00A0· in Needs you',
+      );
       expect(
         spokenFaultFootnote(whole),
         '18 need a manual import, 2 stuck, in Needs you',
@@ -379,7 +382,7 @@ void main() {
   test('the spoken row re-separates the dots and leads with progress', () {
     expect(
       inFlightRowValue(
-        line: '2160p · 3\u00A0min left · qBittorrent',
+        line: '2160p\u00A0· 3\u00A0min left\u00A0· qBittorrent',
         percent: 92,
       ),
       '92 percent done, 2160p, 3\u00A0min left, qBittorrent',

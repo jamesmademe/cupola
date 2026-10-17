@@ -8,6 +8,7 @@ import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/lifecycle/refresh_on_return.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/brief_failure_line.dart';
@@ -453,7 +454,7 @@ class _GroupHeading extends StatelessWidget {
 String needsYouMeta({required int faults, required int requests}) => [
   if (faults > 0) faults == 1 ? '1 fault' : '$faults faults',
   if (requests > 0) requests == 1 ? '1 request' : '$requests requests',
-].join(' · ');
+].join(dotSeparator);
 
 /// Needs you: every fault on its card with its way out, then the requests
 /// that wait for an answer. The same list the Home's banner counts.
@@ -697,7 +698,9 @@ class _WatchingNowSection extends ConsumerWidget {
     }
     final sessions = ref.watch(streamActivityProvider).value;
     if (sessions == null || sessions.isEmpty) return const SizedBox.shrink();
-    final servers = {for (final row in sessions) row.service.title}.join(' · ');
+    final servers = {
+      for (final row in sessions) row.service.title,
+    }.join(dotSeparator);
     return ActivitySection(
       title: _title,
       meta: servers,
@@ -780,7 +783,7 @@ class _DownloadsSection extends ConsumerWidget {
       // The stopped rows say so themselves, and a third count does not fit
       // beside the name on a phone.
       if (stuck.isNotEmpty) '${coveredFigure(stuck.length, coverage)} stuck',
-    ].join(' · ');
+    ].join(dotSeparator);
     final now = ref.watch(stallClockProvider)();
     final note = coverageNote(coverage);
 

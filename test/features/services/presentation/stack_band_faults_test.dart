@@ -53,10 +53,10 @@ void main() {
     // header is not a list. What is not set up is said apart, never as one
     // of the others.
     for (final part in [
-      '2 of 5 clean ·',
-      'Radarr needs a look ·',
-      'Sonarr needs a look ·',
-      '1 other ·',
+      '2 of 5 clean\u00A0·',
+      'Radarr needs a look\u00A0·',
+      'Sonarr needs a look\u00A0·',
+      '1 other\u00A0·',
     ]) {
       expect(find.text(part), findsOneWidget, reason: part);
     }

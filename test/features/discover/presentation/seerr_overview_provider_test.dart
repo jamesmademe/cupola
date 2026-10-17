@@ -60,7 +60,7 @@ void main() {
           ),
           now: now,
         ),
-        'marco · 4\u00A0h ago · Movie · 4K',
+        'marco\u00A0· 4\u00A0h ago\u00A0· Movie\u00A0· 4K',
       );
     });
 
@@ -70,7 +70,7 @@ void main() {
         now: now,
       );
       // No invented "1080p", and no age for a request with no readable date.
-      expect(detail, 'lea · Movie');
+      expect(detail, 'lea\u00A0· Movie');
     });
 
     test('the age crosses its boundary at the hour, not near it', () {
@@ -83,8 +83,8 @@ void main() {
         now: now,
       );
 
-      expect(age(const Duration(minutes: 59)), '59\u00A0min ago · Movie');
-      expect(age(const Duration(minutes: 60)), '1\u00A0h ago · Movie');
+      expect(age(const Duration(minutes: 59)), '59\u00A0min ago\u00A0· Movie');
+      expect(age(const Duration(minutes: 60)), '1\u00A0h ago\u00A0· Movie');
     });
   });
 
@@ -97,19 +97,19 @@ void main() {
     );
 
     test('says the day as the app says dates, never the sortable one', () {
-      expect(when(DateTime(2026, 9, 6, 12)), 'Sun 6 Sep · Movie');
+      expect(when(DateTime(2026, 9, 6, 12)), 'Sun 6 Sep\u00A0· Movie');
       expect(when(DateTime(2026, 9, 6, 12)), isNot(contains('2026-09-06')));
     });
 
     test('adds the year only when it is another one', () {
-      expect(when(DateTime(2025, 12, 24, 12)), 'Wed 24 Dec 2025 · Movie');
+      expect(when(DateTime(2025, 12, 24, 12)), 'Wed 24 Dec 2025\u00A0· Movie');
     });
 
     test('names the weekday within the week, and dates from the seventh '
         'day', () {
-      expect(when(DateTime(2026, 9, 15, 9)), 'yesterday · Movie');
-      expect(when(DateTime(2026, 9, 10, 12)), 'Thursday · Movie');
-      expect(when(DateTime(2026, 9, 9, 12)), 'Wed 9 Sep · Movie');
+      expect(when(DateTime(2026, 9, 15, 9)), 'yesterday\u00A0· Movie');
+      expect(when(DateTime(2026, 9, 10, 12)), 'Thursday\u00A0· Movie');
+      expect(when(DateTime(2026, 9, 9, 12)), 'Wed 9 Sep\u00A0· Movie');
     });
 
     test('reads the same as the same request does on the Home', () {
@@ -122,7 +122,7 @@ void main() {
         DateTime(2026, 9, 6, 12),
         DateTime(2025, 12, 24, 12),
       ]) {
-        expect(when(asked), '${askedAgo(asked, now: today)} · Movie');
+        expect(when(asked), '${askedAgo(asked, now: today)}\u00A0· Movie');
       }
     });
   });

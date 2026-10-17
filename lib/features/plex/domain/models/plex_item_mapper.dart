@@ -12,6 +12,7 @@
 /// every depth.
 library;
 
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/features/plex/domain/models/plex_models.dart';
 import 'package:cupola/features/plex/domain/models/plex_transcode_session.dart';
@@ -294,7 +295,7 @@ StreamSession? plexSessionFromJson(Map<String, dynamic> json) {
       StreamItemKind.track => [
         grandparentTitle,
         parentTitle,
-      ].nonNulls.join(' · ').ifEmptyNull,
+      ].nonNulls.join(dotSeparator).ifEmptyNull,
       StreamItemKind.movie => plexInt(json['year'])?.toString(),
       _ => parentTitle,
     },
@@ -304,7 +305,7 @@ StreamSession? plexSessionFromJson(Map<String, dynamic> json) {
       plexString(player?['device']) ??
           plexString(player?['platform']) ??
           plexString(player?['title']),
-    ].nonNulls.join(' · '),
+    ].nonNulls.join(dotSeparator),
     posterPath: kind == StreamItemKind.episode
         // The series poster reads better than an episode still at grid size.
         ? plexArtworkKey(json['grandparentThumb']) ??
@@ -347,7 +348,7 @@ String? _episodeSubtitle(Map<String, dynamic> json, String title) {
     episode: plexInt(json['index']),
   );
   final parts = <String>[?code, if (title.isNotEmpty) title];
-  return parts.isEmpty ? null : parts.join(' · ');
+  return parts.isEmpty ? null : parts.join(dotSeparator);
 }
 
 /// Plex writes every child element as an array in JSON even when there is one of

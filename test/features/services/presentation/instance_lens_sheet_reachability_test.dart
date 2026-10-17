@@ -41,7 +41,7 @@ void main() {
     );
     // The one that did not: the cause in words, ahead of its address, said
     // once.
-    expect(find.text('Did not answer · nas.home.arpa:7879'), findsOne);
+    expect(find.text('Did not answer\u00A0· nas.home.arpa:7879'), findsOne);
     expect(
       find.bySemanticsLabel('4K, Did not answer, nas.home.arpa:7879'),
       findsOne,

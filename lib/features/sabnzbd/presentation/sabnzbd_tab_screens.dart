@@ -6,6 +6,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/utils/date_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
@@ -162,7 +163,7 @@ class _SabnzbdHistoryRow extends StatelessWidget {
       size,
       when,
       if (failure != null && failure.isNotEmpty) failure,
-    ].join(' · ');
+    ].join(dotSeparator);
     final spokenStatus = status.isEmpty ? 'status unavailable' : status;
     final spokenWhen = item.completed == null
         ? 'completion time unavailable'
@@ -554,7 +555,7 @@ class _ServerConfigRow extends StatelessWidget {
     final transport = server.ssl ? 'TLS' : 'Plain connection';
     final optional = server.optional ? 'optional' : 'required';
     final detail =
-        '$host · $transport · ${server.connections} connections · priority ${server.priority}';
+        '$host\u00A0· $transport\u00A0· ${server.connections} connections\u00A0· priority ${server.priority}';
     final spoken =
         '$name, $state, $host, $transport, ${server.connections} connections, '
         'priority ${server.priority}, $optional';

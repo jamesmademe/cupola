@@ -247,7 +247,7 @@ void main() {
     test('joins the label once there is one to tell apart', () {
       expect(
         _primary(ServiceKey.radarr).copyWith(label: '4K').displayTitle,
-        'Radarr · 4K',
+        'Radarr\u00A0· 4K',
       );
     });
   });

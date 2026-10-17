@@ -52,4 +52,4 @@ const String kAppLicence = 'Apache-2.0';
 /// separator everywhere else a readout joins two facts, and a second surface
 /// wanting this line must print the same one rather than an em dash version of
 /// it.
-const String kAppIdentityLine = '$kAppName $kAppVersion · $kAppLicence';
+const String kAppIdentityLine = '$kAppName $kAppVersion\u00A0· $kAppLicence';

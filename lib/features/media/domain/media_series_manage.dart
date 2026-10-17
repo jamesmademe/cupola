@@ -1,5 +1,6 @@
 import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/utils/date_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/features/media/domain/quality_words.dart';
@@ -24,7 +25,7 @@ String mediaSeriesFilesSummary(
   return [
     countLabel(count, 'file'),
     if (qualities.isNotEmpty) qualities else if (size > 0) formatBytes(size),
-  ].join(' · ');
+  ].join(dotSeparator);
 }
 
 /// History, closed: the episode imported last and when,
@@ -47,7 +48,7 @@ String mediaSeriesLastImport(
   }
   if (last == null || at == null) return '';
   return 'Last imported '
-      '${formatArrEpisodeCode(last.seasonNumber, last.episodeNumber)} · '
+      '${formatArrEpisodeCode(last.seasonNumber, last.episodeNumber)}\u00A0· '
       '${formatShortDate(at.toLocal().toIso8601String(), now: now)}';
 }
 
@@ -146,11 +147,11 @@ MediaSeasonFiles _seasonFiles(
       : [for (final episode in episodes) ?files[episode.episodeFileId]];
   final qualities = mediaQualitiesOf(held);
   final detail = aired == 0 && onDisk == 0
-      ? '${countLabel(total, 'episode')} · not aired'
+      ? '${countLabel(total, 'episode')}\u00A0· not aired'
       : [
           '$onDisk of ${aired < onDisk ? onDisk : aired} on disk',
           if (qualities.isNotEmpty) qualities,
-        ].join(' · ');
+        ].join(dotSeparator);
   return MediaSeasonFiles(
     number: number,
     label: label,

@@ -115,14 +115,14 @@ void main() {
       expect(find.text('Coming soon'), findsOne);
       expect(find.text('Tron'), findsOne);
       expect(find.text('Wed 14 Oct'), findsOne);
-      expect(find.text('As of 20:53 · checking now'), findsOne);
+      expect(find.text('As of 20:53\u00A0· checking now'), findsOne);
 
       trendingAnswer.complete([_title('Wicked', id: 9)]);
       await tester.pumpAndSettle();
       expect(find.text('Dune'), findsNothing);
       expect(find.text('Wicked'), findsOne);
       // Coming soon is still the drawing: the line stays for it.
-      expect(find.text('As of 20:53 · checking now'), findsOne);
+      expect(find.text('As of 20:53\u00A0· checking now'), findsOne);
 
       comingAnswer.complete([
         _title('Moana', id: 10, releaseDate: '2026-11-01'),
@@ -214,7 +214,7 @@ void main() {
       // Trending is still the drawing; Coming soon is not, and the line says
       // only what is drawn.
       expect(find.text('Dune'), findsOne);
-      expect(find.text('As of Mon 12 Oct · checking now'), findsOne);
+      expect(find.text('As of Mon 12 Oct\u00A0· checking now'), findsOne);
 
       await run(
         tester,

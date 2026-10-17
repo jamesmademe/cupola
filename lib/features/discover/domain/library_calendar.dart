@@ -4,6 +4,7 @@ import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/arr_model_helpers.dart';
 import 'package:cupola/core/utils/date_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/utils/image_utils.dart';
@@ -145,7 +146,9 @@ class CalendarState {
       switch (stand) {
         CalendarStand.notYet => notYet,
         CalendarStand.out =>
-          missingKnown ? '$outWord · ${StateWord.missing.inline}' : outWord,
+          missingKnown
+              ? '$outWord\u00A0· ${StateWord.missing.inline}'
+              : outWord,
         CalendarStand.inFlight => [
           Lexicon.inline(queue!.label),
           if (percent case final percent?) formatPercent(percent),
@@ -333,7 +336,7 @@ class CalendarEvent {
           notYet: StateWord.notAired.inline,
           outWord: 'aired',
         );
-        return [?code, ?mark?.words, standing].join(' · ');
+        return [?code, ?mark?.words, standing].join(dotSeparator);
       case CalendarKind.movie:
         if (region != null) {
           return _capitalised(
@@ -344,7 +347,7 @@ class CalendarEvent {
         // the server says only that.
         standing = switch (state.stand) {
           CalendarStand.inFlight =>
-            '$outWord · ${state.words(notYet: '', outWord: outWord)}',
+            '$outWord\u00A0· ${state.words(notYet: '', outWord: outWord)}',
           _ => state.words(
             notYet: StateWord.notOutYet.inline,
             outWord: outWord,
@@ -355,13 +358,13 @@ class CalendarEvent {
       case CalendarKind.book:
         standing = switch (state.stand) {
           CalendarStand.inFlight =>
-            '$outWord · ${state.words(notYet: '', outWord: outWord)}',
+            '$outWord\u00A0· ${state.words(notYet: '', outWord: outWord)}',
           _ => state.words(
             notYet: StateWord.notOutYet.inline,
             outWord: outWord,
           ),
         };
-        return [?byline, standing].join(' · ');
+        return [?byline, standing].join(dotSeparator);
     }
   }
 
@@ -1027,7 +1030,7 @@ String calendarGridLead(CalendarEvent event) => [
       event.lead().lead,
     ?event.code,
   ].join(' '),
-].join(' · ');
+].join(dotSeparator);
 
 /// What a day of the grid says of [event] under the pointer: `Sprite
 /// Fright · on disc · not out yet · Radarr, Radarr 4K`; the requester's
@@ -1043,7 +1046,7 @@ String calendarEventTip(CalendarEvent event, DateTime now) {
     // code or a name, which keep their capitals.
     event.kind == CalendarKind.movie ? _lowerFirst(status) : status,
     if (event.sources.isNotEmpty) event.sources.join(', '),
-  ].join(' · ');
+  ].join(dotSeparator);
 }
 
 String _lowerFirst(String words) =>
@@ -1163,7 +1166,7 @@ class CalendarDigest {
     if (thisWeek == 0) {
       return (
         lead: 'Nothing this week',
-        rest: '· ${calendarShortDate(event.day)} · ${event.title}',
+        rest: '· ${calendarShortDate(event.day)}\u00A0· ${event.title}',
       );
     }
     return (
@@ -1255,16 +1258,16 @@ class CalendarDigest {
 /// What follows a thing's name on the band: `on digital`, `S2 E5 at
 /// 22:00`, `album`.
 String calendarBandWords(CalendarEvent event) => switch (event.kind) {
-  CalendarKind.movie => [event.title, ?event.release].join(' · '),
+  CalendarKind.movie => [event.title, ?event.release].join(dotSeparator),
   CalendarKind.episode => [
     event.title,
     [
       ?event.code,
       if (event.airsAt case final at?) 'at ${formatClockTime(at)}',
     ].join(' '),
-  ].where((part) => part.isNotEmpty).join(' · '),
-  CalendarKind.album => '${event.title} · album',
-  CalendarKind.book => '${event.title} · book',
+  ].where((part) => part.isNotEmpty).join(dotSeparator),
+  CalendarKind.album => '${event.title}\u00A0· album',
+  CalendarKind.book => '${event.title}\u00A0· book',
 };
 
 /// What follows a thing's name in the page's answer: `, on digital`,

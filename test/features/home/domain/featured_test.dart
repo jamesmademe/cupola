@@ -24,7 +24,7 @@ ResumeRow _row(StreamItem item) => (
 const _episode = StreamItem(
   id: 'e1',
   title: 'The Second Cycle',
-  subtitle: 'Cosmos Laundromat · S2 E3',
+  subtitle: 'Cosmos Laundromat\u00A0· S2 E3',
   kind: StreamItemKind.episode,
   posterPath: null,
   year: null,
@@ -187,25 +187,25 @@ void main() {
     test('in progress: what it is and how long is left', () {
       expect(
         FeaturedResume(_row(_episode), art: _art).line(_now),
-        'Continue watching · S2 E3 · 5\u00A0min left',
+        'Continue watching\u00A0· S2 E3\u00A0· 5\u00A0min left',
       );
       expect(
         FeaturedResume(_row(_movie), art: _art).line(_now),
-        'Continue watching · 5\u00A0min left',
+        'Continue watching\u00A0· 5\u00A0min left',
       );
     });
 
     test('arrived: when, and the connection while the service has two', () {
       expect(
         FeaturedArrival(_arrival('Spring'), art: _art).line(_now),
-        'New on your server · 2\u00A0h ago',
+        'New on your server\u00A0· 2\u00A0h ago',
       );
       expect(
         FeaturedArrival(
           _arrival('Spring', connectionName: '4K'),
           art: _art,
         ).line(_now),
-        'New on your server · 2\u00A0h ago · Radarr 4K',
+        'New on your server\u00A0· 2\u00A0h ago\u00A0· Radarr 4K',
       );
     });
 
@@ -215,7 +215,7 @@ void main() {
           _today('Sprite Fright', state: _downloading()),
           art: _art,
         ).line(_now),
-        'Out on digital today · downloading 62%',
+        'Out on digital today\u00A0· downloading 62%',
       );
       expect(
         FeaturedToday(
@@ -232,7 +232,7 @@ void main() {
           ),
           art: _art,
         ).line(_now),
-        'Out on digital today · missing',
+        'Out on digital today\u00A0· missing',
       );
     });
 
@@ -247,7 +247,7 @@ void main() {
           ),
           art: _art,
         ).line(_now),
-        'S3 E1 · premiere · airs today at 21:00',
+        'S3 E1\u00A0· premiere\u00A0· airs today at 21:00',
       );
       expect(
         FeaturedToday(
@@ -259,7 +259,7 @@ void main() {
           ),
           art: _art,
         ).line(_now),
-        'S3 E1 · premiere · on your server',
+        'S3 E1\u00A0· premiere\u00A0· on your server',
       );
     });
 

@@ -57,7 +57,7 @@ void main() {
     test('carries the label when there is one to carry', () {
       final lane = _lane(_fourK, named: true);
       expect(lane.instanceLabel, '4K');
-      expect(lane.laneTitle, 'Radarr · 4K');
+      expect(lane.laneTitle, 'Radarr\u00A0· 4K');
     });
 
     test('a connection with no label is called by its place, never its id', () {
@@ -87,7 +87,7 @@ void main() {
       final lane = _lane(_hd, named: true, state: SearchLaneState.unreachable);
       expect(lane.hasFault, isTrue);
       expect(lane.instanceLabel, 'HD');
-      expect(lane.faultSentence, contains('Radarr · HD'));
+      expect(lane.faultSentence, contains('Radarr\u00A0· HD'));
     });
   });
 

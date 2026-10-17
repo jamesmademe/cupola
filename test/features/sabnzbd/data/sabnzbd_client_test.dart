@@ -38,7 +38,7 @@ void main() {
       expect(queue.paused, isFalse);
       expect(queue.slots, hasLength(1));
       expect(queue.slots.first.percentage, 50);
-      expect(queue.speedLabel, '2.0\u00A0MB/s');
+      expect(queue.speedLabel, '2.0\u00A0MB/\u2060s');
       expect(queue.sizeLeftLabel, '1.5\u00A0GB');
     });
 

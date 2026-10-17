@@ -86,7 +86,7 @@ class _StorageAlertCardState extends ConsumerState<StorageAlertCard> {
     if (pool == null) return plain;
 
     final words = faultWordsOf(decision);
-    final source = '${words.source} · pool ${pool.name}';
+    final source = '${words.source}\u00A0· pool ${pool.name}';
     final running = pool.isScanning
         ? (
             text: scanningLine(pool),

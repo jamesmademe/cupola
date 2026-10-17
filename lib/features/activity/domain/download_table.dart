@@ -5,6 +5,7 @@ library;
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart' show StatusTone;
 import 'package:cupola/core/utils/byte_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/features/activity/domain/activity_download.dart';
@@ -174,5 +175,5 @@ String downloadRouteLine(
       ?nothingForWords(item.stalledSince, now: now)
     else if (who != null && who.isNotEmpty)
       '$who asked',
-  ].join(' · ');
+  ].join(dotSeparator);
 }

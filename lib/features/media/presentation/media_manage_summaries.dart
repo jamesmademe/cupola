@@ -1,4 +1,5 @@
 import 'package:cupola/core/utils/date_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/features/media/domain/media_copies.dart';
 import 'package:cupola/features/media/domain/media_reading.dart';
@@ -49,8 +50,8 @@ mediaManageSummaries(
               .where((code) => code.isNotEmpty);
           subtitles = [
             ...present,
-            if (missing.isNotEmpty) '${missing.join(' · ')} wanted',
-          ].join(' · ');
+            if (missing.isNotEmpty) '${missing.join(dotSeparator)} wanted',
+          ].join(dotSeparator);
       }
     }
   }
@@ -75,13 +76,13 @@ mediaManageSummaries(
   return (
     files: files.isEmpty
         ? 'No file yet'
-        : '${countLabel(files.length, 'file')} · '
+        : '${countLabel(files.length, 'file')}\u00A0· '
               '${files.map((copy) => qualityWords(copy.quality!)).join(', ')}',
     history: imported.isEmpty
         ? ''
         : copies.length == 1 || sameDay
         ? 'Imported ${formatShortDate(copies.first.added!.toIso8601String())}'
-        : 'Imported ${imported.join(' · ')}',
+        : 'Imported ${imported.join(dotSeparator)}',
     subtitles: subtitles,
     search: names.length <= 1
         ? names.join()

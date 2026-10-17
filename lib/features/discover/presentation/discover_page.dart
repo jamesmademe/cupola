@@ -13,6 +13,7 @@ import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/utils/unit_space.dart';
@@ -444,7 +445,7 @@ class _TitleRow extends ConsumerWidget {
       title.isMovie ? 'Movie' : 'Series',
       if (title.year != null) '${title.year}',
       if (score != null) 'TMDB$unitSpace${score.toStringAsFixed(1)}',
-    ].join(' · ');
+    ].join(dotSeparator);
 
     return SearchRow.title(
       title: title.title,

@@ -90,25 +90,25 @@ const List<({String label, String location, String detail})> _namedScreens = [
   (
     label: 'Connections',
     location: '/settings/connections',
-    detail: 'Settings · every service and its state',
+    detail: 'Settings\u00A0· every service and its state',
   ),
   (
     label: 'Trusted certificates',
     location: '/settings/certificates',
-    detail: 'Settings · pinned per host',
+    detail: 'Settings\u00A0· pinned per host',
   ),
   (label: 'Appearance', location: '/settings/appearance', detail: 'Settings'),
   (
     label: 'Edit Home',
     location: '/home/edit',
-    detail: 'Home · reorder and hide modules',
+    detail: 'Home\u00A0· reorder and hide modules',
   ),
   (label: 'Region', location: '/settings/region', detail: 'Settings'),
   (label: 'Hints', location: '/settings/hints', detail: 'Settings'),
   (
     label: 'Background search',
     location: '/settings/background-search',
-    detail: 'Settings · release search',
+    detail: 'Settings\u00A0· release search',
   ),
 ];
 

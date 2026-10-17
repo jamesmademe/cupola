@@ -200,7 +200,7 @@ void main() {
       ),
     );
 
-    expect(find.text('James · imported'), findsOneWidget);
+    expect(find.text('James\u00A0· imported'), findsOneWidget);
     expect(
       tester
           .widgetList<ServiceOverviewRow>(find.byType(ServiceOverviewRow))

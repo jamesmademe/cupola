@@ -9,6 +9,7 @@ import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/byte_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
@@ -526,7 +527,7 @@ String manualImportSelectionSummary({
     // The sentinel, not a zero: a selection whose sizes the service did not
     // report is not a zero-byte import.
     if (selected > 0) formatImportBytes(selectedBytes),
-  ].join(' · ');
+  ].join(dotSeparator);
 }
 
 /// What the import confirmation says before [count] files are handed over.

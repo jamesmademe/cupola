@@ -40,7 +40,7 @@ void main() {
     await tester.tap(find.text('immich'));
     await tester.pumpAndSettle();
 
-    expect(find.text('immich · combined log'), findsOneWidget);
+    expect(find.text('immich\u00A0· combined log'), findsOneWidget);
     expect(find.textContaining('container started'), findsOneWidget);
   });
 

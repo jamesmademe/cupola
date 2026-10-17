@@ -30,7 +30,7 @@ class _RecordingHygiene extends BackgroundTaskHygiene {
 final _season = ReleaseSearchTarget.season(
   seriesId: 1,
   seasonNumber: 2,
-  label: 'Severance · Season 2',
+  label: 'Severance\u00A0· Season 2',
 );
 
 final _movie = ReleaseSearchTarget.movie(movieId: 9, label: 'Dune: Part Two');

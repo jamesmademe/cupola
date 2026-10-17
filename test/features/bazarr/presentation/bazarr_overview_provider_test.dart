@@ -17,7 +17,7 @@ void main() {
               sonarrSeriesId: 3,
             ),
           ),
-          'Severance · S2 E4',
+          'Severance\u00A0· S2 E4',
           reason: written,
         );
       }
@@ -32,7 +32,7 @@ void main() {
             sonarrSeriesId: 3,
           ),
         ),
-        'Severance · Special 1',
+        'Severance\u00A0· Special 1',
       );
     });
 
@@ -61,7 +61,7 @@ void main() {
             missingLanguages: [BazarrSubtitleLanguage(name: 'Italian')],
           ),
         ),
-        'Italian · Sonarr',
+        'Italian\u00A0· Sonarr',
       );
       expect(
         bazarrWantedDetail(
@@ -73,7 +73,7 @@ void main() {
             ],
           ),
         ),
-        'English forced · Radarr',
+        'English forced\u00A0· Radarr',
       );
     });
 
@@ -164,8 +164,8 @@ void main() {
       ]);
 
       final row = rows.single;
-      expect(row.headline, 'Severance, S02E03 · Italian downloaded');
-      expect(row.detail, 'OpenSubtitles · score 94 · 20 minutes ago');
+      expect(row.headline, 'Severance, S02E03\u00A0· Italian downloaded');
+      expect(row.detail, 'OpenSubtitles\u00A0· score 94\u00A0· 20 minutes ago');
       // Spoken as a sentence: the layout's dots come back as pauses.
       expect(
         row.spoken,

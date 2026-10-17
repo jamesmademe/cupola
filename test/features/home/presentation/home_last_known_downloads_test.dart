@@ -208,11 +208,13 @@ void main() {
       await firstRun(tester);
       expect(
         find.textContaining(
-          RegExp(r'^2 moving · 1 stuck · 1 queued · [\d.]+.MB/s'),
+          RegExp(
+            r'^2 moving\u00A0· 1 stuck\u00A0· 1 queued\u00A0· [\d.]+.MB/\u2060s',
+          ),
         ),
         findsOne,
       );
-      expect(find.text('88% · 1\u00A0min'), findsOne);
+      expect(find.text('88%\u00A0· 1\u00A0min'), findsOne);
       expect(find.text('Stuck at 47%'), findsOne);
       expect(find.text('Try another download'), findsOne);
     });
@@ -234,17 +236,17 @@ void main() {
       expect(find.text('Sprite.Fright.2021.1080p.WEB'), findsOne);
       expect(find.text('Elephants Dream'), findsOne);
       expect(find.text('Big Buck Bunny'), findsOne);
-      expect(find.text('As of 20:53 · checking now'), findsOne);
+      expect(find.text('As of 20:53\u00A0· checking now'), findsOne);
       // How far each got stays; how long is left is not said, and the
       // speed is not drawn.
       expect(find.text('88%'), findsOne);
       expect(find.text('31%'), findsOne);
       expect(find.text('47%'), findsOne);
-      expect(find.textContaining('MB/s'), findsNothing);
+      expect(find.textContaining('MB/\u2060s'), findsNothing);
       expect(find.textContaining('min'), findsNothing);
       expect(find.textContaining('left'), findsNothing);
       // What was moving, what waited; nothing about what was stuck.
-      expect(find.text('2 moving · 1 queued'), findsOne);
+      expect(find.text('2 moving\u00A0· 1 queued'), findsOne);
       expect(find.textContaining('stuck'), findsNothing);
       expect(find.textContaining('Stuck'), findsNothing);
       expect(find.text('Try another download'), findsNothing);
@@ -260,7 +262,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Sprite Fright'), findsNothing);
       expect(find.text('Spring'), findsOne);
-      expect(find.text('10% · 2\u00A0min'), findsOne);
+      expect(find.text('10%\u00A0· 2\u00A0min'), findsOne);
       expect(find.textContaining('As of'), findsNothing);
     });
 
@@ -369,7 +371,7 @@ void main() {
 
       await run(tester, () => Completer<ServicesInFlight>().future);
       expect(find.text('Sprite Fright'), findsOne);
-      expect(find.text('As of 20:53 · checking now'), findsOne);
+      expect(find.text('As of 20:53\u00A0· checking now'), findsOne);
       expect(find.textContaining('moving'), findsNothing);
       expect(find.text('Nothing is downloading'), findsNothing);
     });
@@ -432,7 +434,7 @@ void main() {
       await run(tester, () => Completer<ServicesInFlight>().future);
       expect(find.text('Nothing is downloading'), findsOne);
       expect(find.text('Nothing moving'), findsOne);
-      expect(find.text('As of 20:53 · checking now'), findsOne);
+      expect(find.text('As of 20:53\u00A0· checking now'), findsOne);
     });
 
     testWidgets('and an import after that read means it is no longer drawn', (
@@ -462,7 +464,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Nothing is downloading'), findsOne);
       expect(find.text('The last download finished at 18:53.'), findsOne);
-      expect(find.text('As of 20:53 · checking now'), findsOne);
+      expect(find.text('As of 20:53\u00A0· checking now'), findsOne);
     });
 
     testWidgets('a read that was not whole and had no row is not kept: the '
@@ -515,7 +517,7 @@ void main() {
       await run(tester, () => Completer<ServicesInFlight>().future);
       // The drawing before: nothing was downloading then.
       expect(find.text('Nothing is downloading'), findsOne);
-      expect(find.text('As of 20:53 · checking now'), findsOne);
+      expect(find.text('As of 20:53\u00A0· checking now'), findsOne);
     });
   });
 
@@ -717,7 +719,7 @@ void main() {
           whole: true,
           hasRows: true,
         ),
-        '3 moving · 1 queued',
+        '3 moving\u00A0· 1 queued',
       );
       expect(
         downloadsKnownSubtitle(

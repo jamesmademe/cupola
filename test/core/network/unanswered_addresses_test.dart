@@ -74,7 +74,7 @@ void main() {
     test('the sentence names both addresses, one a line', () {
       expect(
         connectionFailureSentence(_radarr),
-        'At home · nas.home.arpa:7878\nAway · radarr.example.net',
+        'At home\u00A0· nas.home.arpa:7878\nAway\u00A0· radarr.example.net',
       );
       expect(classifyConnectionFailure(_radarr), _radarr.reason);
     });

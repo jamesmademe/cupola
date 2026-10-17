@@ -28,7 +28,7 @@ GlobalActivityItem _row(
   serviceType: ServiceType.discover,
   instanceId: instanceId,
   title: 'Charge',
-  subtitle: 'Anna · Movie',
+  subtitle: 'Anna\u00A0· Movie',
   status: const MediaStatusInfo(
     availability: MediaAvailability.unknown,
     labelOverride: 'Pending',
@@ -128,7 +128,7 @@ void main() {
       expect(_writes(harness, WorldIds.seerr), [
         'POST /api/v1/request/1/approve',
       ]);
-      expect(find.textContaining('Approved · '), findsOneWidget);
+      expect(find.textContaining('Approved\u00A0· '), findsOneWidget);
       expect(find.byTooltip('Approve Charge'), findsNothing);
 
       await harness.unmount(tester);

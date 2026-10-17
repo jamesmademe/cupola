@@ -140,7 +140,7 @@ void main() {
 
     expect(find.text('Standard'), findsOneWidget);
     expect(
-      find.textContaining('RSS, automatic search · min 2 seeders'),
+      find.textContaining('RSS, automatic search\u00A0· min 2 seeders'),
       findsOneWidget,
     );
   });

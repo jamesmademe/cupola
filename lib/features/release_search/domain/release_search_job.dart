@@ -355,7 +355,7 @@ ReleaseSearchFailure classifyReleaseSearchFailure(
             'Cloudflare caps a request at 100 seconds and that limit cannot be '
             'raised on a free plan. Reach this instance over Tailscale or your '
             'LAN for long searches.',
-        detail: 'HTTP $status · $gateway',
+        detail: 'HTTP $status\u00A0· $gateway',
         gateway: gateway,
       );
     }
@@ -368,7 +368,7 @@ ReleaseSearchFailure classifyReleaseSearchFailure(
           '${_serviceWord(gateway)} is probably still searching. Starting again '
           'now would put a second search on the same indexers, raise the read '
           'timeout for this proxy host first.',
-      detail: gateway == null ? 'HTTP $status' : 'HTTP $status · $gateway',
+      detail: gateway == null ? 'HTTP $status' : 'HTTP $status\u00A0· $gateway',
       gateway: gateway,
     );
   }

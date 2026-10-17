@@ -73,7 +73,7 @@ void main() {
 
       expect(items, hasLength(1));
       expect(items.single.kind, LidarrAttentionKind.stalled);
-      expect(items.single.headline, 'Stuck · Alvvays, Blue Rev');
+      expect(items.single.headline, 'Stuck\u00A0· Alvvays, Blue Rev');
       expect(items.single.detail, contains('qBittorrent'));
     });
 
@@ -335,7 +335,7 @@ void main() {
         complete: false,
       );
 
-      expect(entries.single.detail, startsWith('FLAC · 1.1\u00A0GB'));
+      expect(entries.single.detail, startsWith('FLAC\u00A0· 1.1\u00A0GB'));
     });
 
     test('different events on one album stay different rows', () {

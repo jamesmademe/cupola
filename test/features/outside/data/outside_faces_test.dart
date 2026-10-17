@@ -58,9 +58,9 @@ void main() {
       final face = frames.first.face;
       expect(frames.first.from, takenAt);
       expect(face.title, 'Coming up');
-      expect(face.lead?.eyebrow, 'Today · 21:00');
+      expect(face.lead?.eyebrow, 'Today\u00A0· 21:00');
       expect(face.lead?.title, 'Sintel');
-      expect(face.lead?.words, 'S1 E4 · not aired');
+      expect(face.lead?.words, 'S1 E4\u00A0· not aired');
       expect(face.lead?.poster, isNotNull);
       expect(face.lead?.route, startsWith('/home/'));
       expect(face.items.single.eyebrow, 'Tomorrow');
@@ -73,13 +73,13 @@ void main() {
     test('once its time has come, the next one leads', () {
       final face = faceAt(frames, DateTime(2026, 10, 16, 21, 5));
       expect(face.lead?.title, 'Sprite Fright');
-      expect(face.lead?.eyebrow, 'Tomorrow · 20:00');
+      expect(face.lead?.eyebrow, 'Tomorrow\u00A0· 20:00');
       expect(face.aged, isTrue);
     });
 
     test('past midnight, the day is said against the new day', () {
       final face = faceAt(frames, DateTime(2026, 10, 17, 0, 1));
-      expect(face.lead?.eyebrow, 'Today · 20:00');
+      expect(face.lead?.eyebrow, 'Today\u00A0· 20:00');
       expect(face.age, 'As of yesterday 14:02');
     });
 
@@ -211,7 +211,7 @@ void main() {
 
     test('live, it says what moves, how fast, and the stuck one in amber', () {
       final face = frames.first.face;
-      expect(face.subtitle, startsWith('1 moving · 1 stuck · '));
+      expect(face.subtitle, startsWith('1 moving\u00A0· 1 stuck\u00A0· '));
       expect(face.figure, '1');
       expect(face.figureWords, 'moving');
       expect(face.lead?.title, 'Charge');

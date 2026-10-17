@@ -42,7 +42,7 @@ void main() {
       expect(pool.healthy, isTrue);
       expect(pool.percent, '72%');
       expect(pool.capacity, '31.2 of 43.6\u00A0TB');
-      expect(pool.stateLine, 'Healthy · scrubbed Sunday');
+      expect(pool.stateLine, 'Healthy\u00A0· scrubbed Sunday');
       expect(pool.disks, isEmpty);
     });
 
@@ -54,7 +54,7 @@ void main() {
         instanceId: 'nas',
         now: _now,
       );
-      expect(pool.stateLine, 'Healthy · scrubbing 41%');
+      expect(pool.stateLine, 'Healthy\u00A0· scrubbing 41%');
     });
 
     test('degraded: its state, and each disk in trouble by name', () {

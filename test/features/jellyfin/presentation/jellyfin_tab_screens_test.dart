@@ -90,7 +90,7 @@ void main() {
       ],
     );
 
-    expect(find.text('2 users · 1 disabled'), findsOneWidget);
+    expect(find.text('2 users\u00A0· 1 disabled'), findsOneWidget);
     expect(find.text('Administrator'), findsOneWidget);
     expect(find.text('Disabled'), findsOneWidget);
     expect(find.text('Last activity unavailable'), findsNWidgets(2));
@@ -186,8 +186,8 @@ void main() {
       ],
     );
 
-    expect(find.text('2 scheduled · 1 running'), findsOneWidget);
-    expect(find.text('Running · 38%'), findsOneWidget);
+    expect(find.text('2 scheduled\u00A0· 1 running'), findsOneWidget);
+    expect(find.text('Running\u00A0· 38%'), findsOneWidget);
     expect(find.text('Failed'), findsOneWidget);
     expect(find.textContaining('timeout after 30 min'), findsOneWidget);
     expect(find.text('0 s'), findsNothing);

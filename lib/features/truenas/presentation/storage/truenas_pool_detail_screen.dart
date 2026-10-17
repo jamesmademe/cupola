@@ -139,7 +139,7 @@ class _PoolDetailBody extends StatelessWidget {
                 TrueNasInfoRow(
                   label: 'Last scan',
                   value: pool.scanPercentage != null
-                      ? '${pool.scanState} · ${formatPercent(pool.scanPercentage!)}'
+                      ? '${pool.scanState}\u00A0· ${formatPercent(pool.scanPercentage!)}'
                       : pool.scanState,
                 ),
             ],

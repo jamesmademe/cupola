@@ -338,10 +338,12 @@ void main() {
     // Sintel's record says `queued`, and SABnzbd, the client that could say
     // otherwise, did not answer: it is queued, not moving.
     expect(
-      _inDownloads(find.text('4 moving · 1 stuck · 1 queued · —')),
+      _inDownloads(
+        find.text('4 moving\u00A0· 1 stuck\u00A0· 1 queued\u00A0· —'),
+      ),
       findsOne,
     );
-    expect(_inDownloads(find.textContaining('MB/s')), findsNothing);
+    expect(_inDownloads(find.textContaining('MB/\u2060s')), findsNothing);
 
     down = false;
     await tester.tap(_inNeedsYou(find.text('Retry')));
@@ -353,7 +355,11 @@ void main() {
     expect(find.textContaining('Not in the total'), findsNothing);
     // Sintel is queued in SABnzbd again, and not counted among the moving.
     expect(
-      _inDownloads(find.text('4 moving · 1 stuck · 1 queued · 40.4\u00A0MB/s')),
+      _inDownloads(
+        find.text(
+          '4 moving\u00A0· 1 stuck\u00A0· 1 queued\u00A0· 40.4\u00A0MB/\u2060s',
+        ),
+      ),
       findsOne,
     );
 

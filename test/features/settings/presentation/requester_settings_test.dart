@@ -24,7 +24,7 @@ void main() {
 
   /// The server's own name, as it says it (the world's is Jellyseerr's), and
   /// its address: the one service name she reads, in her account.
-  const where = 'Jellyseerr · nas.home.arpa:5055';
+  const where = 'Jellyseerr\u00A0· nas.home.arpa:5055';
 
   /// The operator's rows and pages she never meets.
   const operatorsRows = [

@@ -140,8 +140,8 @@ class _UserTile extends ConsumerWidget {
                   style: theme.textTheme.bodyMedium!.weight(FontWeight.w600),
                 ),
                 Text(
-                  '${user.fullName ?? '—'}${user.uid != null ? ' · uid ${user.uid}' : ''}'
-                  '${user.builtin ? ' · built-in' : ''}',
+                  '${user.fullName ?? '—'}${user.uid != null ? '\u00A0· uid ${user.uid}' : ''}'
+                  '${user.builtin ? '\u00A0· built-in' : ''}',
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -256,8 +256,8 @@ class _GroupTile extends ConsumerWidget {
                   style: theme.textTheme.bodyMedium!.weight(FontWeight.w600),
                 ),
                 Text(
-                  '${group.userCount} users${group.gid != null ? ' · gid ${group.gid}' : ''}'
-                  '${group.builtin ? ' · built-in' : ''}',
+                  '${group.userCount} users${group.gid != null ? '\u00A0· gid ${group.gid}' : ''}'
+                  '${group.builtin ? '\u00A0· built-in' : ''}',
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),

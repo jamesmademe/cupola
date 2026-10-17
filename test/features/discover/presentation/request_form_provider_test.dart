@@ -55,7 +55,7 @@ void main() {
       );
       expect(
         const SeerrServer(id: 2, name: 'Cinema', is4k: true).choiceLabel,
-        'Cinema · 4K',
+        'Cinema\u00A0· 4K',
       );
       expect(const SeerrServer(id: 0, name: 'Radarr').choiceLabel, 'Radarr');
     });

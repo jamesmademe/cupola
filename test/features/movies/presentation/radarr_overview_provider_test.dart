@@ -358,7 +358,7 @@ void main() {
       ], now: now);
 
       expect(faults.single.kind, RadarrAttentionKind.importFailed);
-      expect(faults.single.headline, 'Import failed · Nickel Boys');
+      expect(faults.single.headline, 'Import failed\u00A0· Nickel Boys');
       expect(faults.single.detail, contains('Radarr could not match the file'));
       expect(faults.single.detail, contains('2\u00A0h ago'));
     });
@@ -376,7 +376,7 @@ void main() {
       ], now: now);
 
       expect(faults.single.kind, RadarrAttentionKind.stalled);
-      expect(faults.single.headline, 'Stuck · The Zone of Interest');
+      expect(faults.single.headline, 'Stuck\u00A0· The Zone of Interest');
       expect(faults.single.detail, contains('qBittorrent'));
     });
 

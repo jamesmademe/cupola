@@ -948,7 +948,7 @@ class _PersonRow extends StatelessWidget {
         : ImageUtils.buildTmdbPosterUrl(person.profilePath, size: 'w185');
     return SearchRow.person(
       name: person.name,
-      line: '${person.role} · ${person.title}',
+      line: '${person.role}\u00A0· ${person.title}',
       face: photo ?? '',
       onTap: () => context.openPerson(person.id, posterUrl: photo),
       selected: context.paneShowsPerson(person.id),

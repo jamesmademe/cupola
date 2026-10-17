@@ -9,6 +9,7 @@
 /// difference from the arr side that `StreamItem` was designed around.
 library;
 
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/features/jellyfin/domain/models/jellyfin_transcode_reason.dart';
@@ -144,7 +145,7 @@ String? _itemSubtitle(Map<String, dynamic> item, StreamItemKind kind) {
       return [
         if (series != null && series.isNotEmpty) series,
         ?code,
-      ].join(' · ').ifEmptyNull();
+      ].join(dotSeparator).ifEmptyNull();
     case StreamItemKind.season:
       return item['SeriesName']?.toString().ifEmptyNull();
     case StreamItemKind.track:
@@ -382,7 +383,7 @@ StreamPlayMethod jellyfinPlayMethod(
 String _deviceLabel(Map<String, dynamic> session) {
   final client = session['Client']?.toString().trim() ?? '';
   final device = session['DeviceName']?.toString().trim() ?? '';
-  if (client.isNotEmpty && device.isNotEmpty) return '$client · $device';
+  if (client.isNotEmpty && device.isNotEmpty) return '$client\u00A0· $device';
   if (client.isNotEmpty) return client;
   if (device.isNotEmpty) return device;
   // `DeviceType` is the last resort; it is often null on third-party clients.
@@ -473,7 +474,7 @@ StreamSession? jellyfinStreamSessionFromJson(Map<String, dynamic> session) {
     userName: session['UserName']?.toString() ?? '',
     title: isEpisode ? seriesName : name,
     subtitle: isEpisode
-        ? [?episodeCode, name].join(' · ').ifEmptyNull()
+        ? [?episodeCode, name].join(dotSeparator).ifEmptyNull()
         : _itemSubtitle(nowPlaying, kind),
     deviceLabel: _deviceLabel(session),
     posterPath: jellyfinPosterPath(nowPlaying),

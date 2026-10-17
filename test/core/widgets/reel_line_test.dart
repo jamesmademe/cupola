@@ -191,10 +191,10 @@ void main() {
                 const TextSpan(
                   children: [
                     TextSpan(text: '12'),
-                    TextSpan(text: ' MB/s'),
+                    TextSpan(text: ' MB/\u2060s'),
                   ],
                 ),
-                plain: '12 MB/s',
+                plain: '12 MB/\u2060s',
                 style: style,
               ),
             ),

@@ -151,7 +151,7 @@ void main() {
       expect(find.text('Sprite Fright'), findsOne);
       expect(find.text('Cosmos Laundromat'), findsOne);
       expect(find.byType(ShimmerList), findsNothing);
-      expect(find.text('As of 20:53 · checking now'), findsOne);
+      expect(find.text('As of 20:53\u00A0· checking now'), findsOne);
       // The way to the Calendar stays where it is.
       expect(find.text('Calendar'), findsOne);
 
@@ -241,7 +241,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(
-        find.text('21:00 · S3 E1 · premiere · not aired'),
+        find.text('21:00\u00A0· S3 E1\u00A0· premiere\u00A0· not aired'),
         findsOne,
         reason: 'live at 20:53, seven minutes before it airs',
       );
@@ -255,7 +255,10 @@ void main() {
         () => Completer<LibraryCalendar>().future,
         now: DateTime(2026, 10, 12, 21, 30),
       );
-      expect(find.text('21:00 · S3 E1 · premiere · aired'), findsOne);
+      expect(
+        find.text('21:00\u00A0· S3 E1\u00A0· premiere\u00A0· aired'),
+        findsOne,
+      );
       expect(find.textContaining('not aired'), findsNothing);
       expect(find.textContaining('missing'), findsNothing);
       expect(find.text('Tomorrow'), findsOne);
@@ -288,14 +291,14 @@ void main() {
       );
       await firstRun(tester, [downloading, _movie('Sprite Fright', 13)]);
       // Live: the figure.
-      expect(find.text('Out today · downloading 62%'), findsOne);
+      expect(find.text('Out today\u00A0· downloading 62%'), findsOne);
 
       await run(tester, () => Completer<LibraryCalendar>().future);
-      expect(find.text('Out today · downloading'), findsOne);
+      expect(find.text('Out today\u00A0· downloading'), findsOne);
       expect(find.textContaining('62'), findsNothing);
       expect(find.textContaining('%'), findsNothing);
       expect(find.textContaining('21:10'), findsNothing);
-      expect(find.text('As of 20:53 · checking now'), findsOne);
+      expect(find.text('As of 20:53\u00A0· checking now'), findsOne);
     });
 
     testWidgets('a read with every connection silent is not kept', (

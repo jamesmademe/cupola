@@ -42,7 +42,7 @@ void main() {
         rateBytesPerSecond: (40.4 * _mb).round(),
       );
 
-      expect(_words(parts), ['4 moving', '40.4 MB/s', '1 stuck']);
+      expect(_words(parts), ['4 moving', '40.4 MB/\u2060s', '1 stuck']);
       expect([for (final part in parts) part.stuck], [false, false, true]);
     });
 
@@ -51,10 +51,10 @@ void main() {
       // formatBytesPerSecond joins them with U+00A0: a split on a plain
       // space once lost the speed on every machine that measured one.
       for (final (rate, figure, unit) in [
-        (512, '512', 'B/s'),
-        (300 * 1024, '300', 'KB/s'),
-        ((4.2 * _mb).round(), '4.2', 'MB/s'),
-        (3 * 1024 * _mb, '3.0', 'GB/s'),
+        (512, '512', 'B/\u2060s'),
+        (300 * 1024, '300', 'KB/\u2060s'),
+        ((4.2 * _mb).round(), '4.2', 'MB/\u2060s'),
+        (3 * 1024 * _mb, '3.0', 'GB/\u2060s'),
       ]) {
         final parts = activityReadoutParts(
           moving: 1,
@@ -102,7 +102,7 @@ void main() {
             coverage: coverage,
           ),
         ),
-        ['20+ moving', '2.0 MB/s', '3+ stuck'],
+        ['20+ moving', '2.0 MB/\u2060s', '3+ stuck'],
       );
     });
 

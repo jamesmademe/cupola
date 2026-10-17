@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart' show ThemeMode;
 
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/connection_address.dart';
@@ -350,7 +351,7 @@ class SettingsModel {
   String connectionTitle(
     String id,
     ServiceKey fallback, {
-    String joiner = ' · ',
+    String joiner = dotSeparator,
   }) {
     final instance = instanceById(id);
     if (instance == null) return fallback.title;
@@ -707,7 +708,7 @@ class SettingsModel {
 String serviceWithConnection(
   ServiceKey service,
   String? name, {
-  String joiner = ' · ',
+  String joiner = dotSeparator,
 }) {
   final trimmed = name?.trim() ?? '';
   if (trimmed.isEmpty) return service.title;

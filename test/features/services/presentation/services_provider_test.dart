@@ -300,7 +300,7 @@ void main() {
         // whose client reported no progress last and in source order.
         expect(items.map((item) => item.title), [
           'Furiosa',
-          'The Boys · S4 E7',
+          'The Boys\u00A0· S4 E7',
           'Shogun',
           'Slow Horses',
         ]);
@@ -722,7 +722,7 @@ void main() {
       final items = (await container.read(servicesQueueProvider.future)).items;
 
       expect(items, hasLength(1));
-      expect(items.single.title, 'The Boys · 3 episodes');
+      expect(items.single.title, 'The Boys\u00A0· 3 episodes');
       // A sentence names it by its episodes: `The Boys S4 E1–E3 needs a
       // manual import`, never `The Boys · 3 episodes needs …`.
       expect(items.single.subject, 'The Boys S4 E1–E3');
@@ -810,7 +810,7 @@ void main() {
         final row = decisions.single;
         expect(row.kind, DecisionKind.importBlocked);
         expect(row.count, 1);
-        expect(row.title, 'Show · S1 E7');
+        expect(row.title, 'Show\u00A0· S1 E7');
         expect(row.detail, contains('No files found are eligible for import'));
         expect(row.actionId, 5);
       },
@@ -1074,7 +1074,7 @@ void main() {
       );
       expect(
         arrivedSubtitle(cards.length, history.coverage),
-        'Last 7 days · 1 new',
+        'Last 7 days\u00A0· 1 new',
       );
       expect(client.lastGetPath, '/api/v3/history/since');
       expect(

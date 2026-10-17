@@ -218,7 +218,7 @@ class _BlockedImportReviewPageState
             if (read && total > 0)
               BlockedImportBar(
                 line: picked > 0
-                    ? '$pickedClear clear · $picked picked by you'
+                    ? '$pickedClear clear\u00A0· $picked picked by you'
                     : needYou.isEmpty
                     ? null
                     : '${needYou.length} left for later',

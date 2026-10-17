@@ -48,7 +48,7 @@ Future<ServiceInstance?> showMediaAddSheet(
     // One connection: the sheet names it. More: the pills under it do.
     title:
         'Add to ${connections.length == 1 ? name(connections.single) : arr.title}',
-    subtitle: (year ?? '').isEmpty ? title : '$title · $year',
+    subtitle: (year ?? '').isEmpty ? title : '$title\u00A0· $year',
     showClose: true,
     builder: (_) => MediaAddSheet(
       arr: arr,

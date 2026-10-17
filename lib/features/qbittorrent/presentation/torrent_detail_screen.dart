@@ -542,7 +542,7 @@ class _FileRow extends ConsumerWidget {
         ).textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant),
       ),
       trailing: Text(
-        '${file.sizeFormatted} · ${file.progressFormatted}',
+        '${file.sizeFormatted}\u00A0· ${file.progressFormatted}',
         style: Theme.of(context).textTheme.labelSmall!.tabular.copyWith(
           color: colorScheme.onSurfaceVariant,
         ),

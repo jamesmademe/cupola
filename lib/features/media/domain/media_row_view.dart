@@ -5,6 +5,7 @@ import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/utils/date_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/utils/string_utils.dart';
@@ -237,7 +238,7 @@ String mediaSeerrSeasonsLine(
           '${formatSeasonCode(season.number)} available'
         else if (season.status == SeerrMediaAvailability.partiallyAvailable)
           '${formatSeasonCode(season.number)} partly available',
-  ].join(' · ');
+  ].join(dotSeparator);
 }
 
 /// [row] as the rows it draws: one, or none (see [mediaRowView]), except a
@@ -382,7 +383,7 @@ List<MediaRowView> _sonarrFacts(
         shape: MediaRowShape.fault,
         name: name,
         state:
-            '${_episodeSpan(blocked, aired)} · ${blocked.length} '
+            '${_episodeSpan(blocked, aired)}\u00A0· ${blocked.length} '
             '${upgrades ? (blocked.length == 1 ? 'upgrade needs' : 'upgrades need') : (blocked.length == 1 ? 'episode needs' : 'episodes need')} import',
         detail: upgrades
             ? "Better versions arrived; $name won't import them on its own"
@@ -434,7 +435,7 @@ String _spanOf(Map<int, List<int>> seasons, Map<int, int> aired) {
         formatSeasonCode(season)
       else
         '${formatSeasonCode(season)} ${_ranges(seasons[season]!)}',
-  ].join(' · ');
+  ].join(dotSeparator);
 }
 
 /// What Bazarr says of a series from its episodes: the languages on disk and
@@ -463,7 +464,7 @@ String _spanOf(Map<int, List<int>> seasons, Map<int, int> aired) {
     detail: [
       if (present.isNotEmpty) '$present on disk',
       if (span.isNotEmpty) span,
-    ].join(' · '),
+    ].join(dotSeparator),
     state: wanting.isEmpty
         ? 'Nothing wanted'
         : '${mediaLanguageWords(wanting.expand((e) => e.missingLanguages))} '
@@ -536,7 +537,7 @@ String _seasonsLine(List<StreamItem> episodes, Map<int, int> aired) {
     for (final season in seasons)
       '${formatSeasonCode(season)} ${held[season]} of '
           '${aired[season] ?? held[season]}',
-  ].join(' · ');
+  ].join(dotSeparator);
 }
 
 /// What a service that is not set up would bring to the page, for its
@@ -582,7 +583,7 @@ MediaRowView? _connectionView(
         name: name,
         detail: known == null
             ? ''
-            : 'Last known: ${[if (known.detail.isNotEmpty) known.detail, known.state].join(' · ')}',
+            : 'Last known: ${[if (known.detail.isNotEmpty) known.detail, known.state].join(dotSeparator)}',
         state: '${failureLabel(failure, gateway: gateway)}$since',
         tone: failureTone(failure),
         // The remedy the cause names, else Retry: a refused key is refused
@@ -635,7 +636,7 @@ MediaRowView? _answeredView(
         detail: [
           if (picture.isNotEmpty) picture,
           if (item.isPlayed) 'Watched' else ?left,
-        ].join(' · '),
+        ].join(dotSeparator),
         state: _onDisk.label,
         tone: _onDisk.tone,
       );
@@ -653,7 +654,7 @@ MediaRowView? _answeredView(
           if (file?.qualityName case final quality? when quality.isNotEmpty)
             qualityWords(quality),
           if (file?.size case final size? when size > 0) formatBytes(size),
-        ].join(' · '),
+        ].join(dotSeparator),
         state: status.label,
         tone: status.tone,
         progress: status.progress,
@@ -715,7 +716,7 @@ MediaRowView? _answeredView(
                     final at? => formatDayWords(at, now: now),
                     null => request.when,
                   },
-              ].join(' · '),
+              ].join(dotSeparator),
         state: status.label,
         tone: status.tone,
       );

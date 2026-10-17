@@ -92,7 +92,7 @@ class _DatasetNode extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final subtitle = dataset.isVolume
-        ? 'zvol · ${dataset.volsizeBytes != null ? formatSize(dataset.volsizeBytes!) : '—'}'
+        ? 'zvol\u00A0· ${dataset.volsizeBytes != null ? formatSize(dataset.volsizeBytes!) : '—'}'
         : 'used ${dataset.usedBytes != null ? formatSize(dataset.usedBytes!) : '—'}';
 
     final tileTitle = Row(

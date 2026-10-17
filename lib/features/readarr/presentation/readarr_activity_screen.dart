@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
@@ -161,7 +162,7 @@ class _ReadarrRecordTile extends StatelessWidget {
     final subtitle = [
       stringOrNull(author?['authorName'] ?? item['authorName']),
       stringOrNull(item['releaseTitle'] ?? item['quality']?['name']),
-    ].whereType<String>().where((value) => value.isNotEmpty).join(' · ');
+    ].whereType<String>().where((value) => value.isNotEmpty).join(dotSeparator);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),

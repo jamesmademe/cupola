@@ -8,6 +8,7 @@ import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
@@ -208,7 +209,7 @@ class CatalogTitleRow extends ConsumerWidget {
       subtitle: [
         if (media.year.isNotEmpty) media.year,
         _isMovie ? 'Movie' : 'Series',
-      ].join(' · '),
+      ].join(dotSeparator),
       // Closed as its sibling the add sheet is.
       showClose: true,
       builder: (_) => RequestBottomSheet(

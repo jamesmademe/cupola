@@ -139,7 +139,7 @@ class DockgeTerminalPane extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '$stackName · combined log',
+          '$stackName\u00A0· combined log',
           style: Theme.of(context).textTheme.titleSmall,
         ),
         const SizedBox(height: AppSpacing.sm),

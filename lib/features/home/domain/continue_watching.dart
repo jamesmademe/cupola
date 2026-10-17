@@ -2,6 +2,7 @@
 /// not finish, how far in, and how long is left.
 library;
 
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
@@ -11,7 +12,8 @@ final _episodeCode = RegExp(r'S\d+ E\d+');
 /// What a row is called: an episode's series, a movie's own title.
 String resumeTitle(StreamItem item) {
   if (item.kind != StreamItemKind.episode) return item.title;
-  final series = item.subtitle?.split(' · ').first.trim() ?? '';
+  final subtitle = item.subtitle;
+  final series = subtitle == null ? '' : splitParts(subtitle).first.trim();
   return series.isEmpty || _episodeCode.hasMatch(series) ? item.title : series;
 }
 
@@ -22,7 +24,7 @@ String resumeDetail(StreamItem item) {
     final code =
         formatArrEpisodeCode(item.seasonNumber, item.episodeNumber) ??
         _episodeCode.stringMatch(item.subtitle ?? '');
-    return [?code, item.title].join(' · ');
+    return [?code, item.title].join(dotSeparator);
   }
   return item.year == null ? '' : '${item.year}';
 }

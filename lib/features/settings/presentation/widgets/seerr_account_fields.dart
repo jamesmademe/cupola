@@ -177,7 +177,7 @@ class _SeerrAccountFieldsState extends ConsumerState<SeerrAccountFields> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '$title · ${_flow.host}',
+                  '$title\u00A0· ${_flow.host}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),

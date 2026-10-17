@@ -30,7 +30,7 @@ final _now = DateTime(2026, 10, 12, 20, 53);
 const _episode = StreamItem(
   id: 'e1',
   title: 'The Second Cycle',
-  subtitle: 'Cosmos Laundromat · S2 E3',
+  subtitle: 'Cosmos Laundromat\u00A0· S2 E3',
   kind: StreamItemKind.episode,
   // No artwork: a picture would load forever in a test.
   posterPath: null,
@@ -145,9 +145,9 @@ void main() {
       await run(tester, () => answer.future);
       // No skeleton: the rows the person last saw, and the one line.
       expect(find.text('Cosmos Laundromat'), findsOne);
-      expect(find.text('S2 E3 · The Second Cycle'), findsOne);
+      expect(find.text('S2 E3\u00A0· The Second Cycle'), findsOne);
       expect(find.text('Sintel'), findsOne);
-      expect(find.text('As of 20:53 · checking now'), findsOne);
+      expect(find.text('As of 20:53\u00A0· checking now'), findsOne);
       // Where each stopped is a fact of then, drawn as it was: the time left
       // and the bar.
       expect(find.text('5\u00A0min left'), findsOne);
@@ -291,7 +291,7 @@ void main() {
 
       await run(tester, () => Completer<HomeResume>().future);
       expect(find.text('Cosmos Laundromat'), findsOne);
-      expect(find.text('As of 20:53 · checking now'), findsOne);
+      expect(find.text('As of 20:53\u00A0· checking now'), findsOne);
     });
 
     testWidgets('the question of who you are is kept with the titles, and '
@@ -307,7 +307,7 @@ void main() {
       await run(tester, () => Completer<HomeResume>().future);
       expect(find.text('Sintel'), findsOne);
       expect(find.text('Which Jellyfin user are you?'), findsOne);
-      expect(find.text('As of 20:53 · checking now'), findsOne);
+      expect(find.text('As of 20:53\u00A0· checking now'), findsOne);
 
       // Only the question: nothing drawn from the past to date.
       await run(
@@ -325,7 +325,7 @@ void main() {
     const episode = StreamItem(
       id: 'e1',
       title: 'The Second Cycle',
-      subtitle: 'Cosmos Laundromat · S2 E3',
+      subtitle: 'Cosmos Laundromat\u00A0· S2 E3',
       kind: StreamItemKind.episode,
       posterPath: '/Items/e1/Images/Primary?tag=abc',
       backdropPath: '/Items/s1/Images/Backdrop?tag=def',

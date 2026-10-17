@@ -229,7 +229,7 @@ class _EpisodeListTile extends ConsumerWidget {
     final episodeTitle = stringOrNull(episode['title']) ?? 'Unknown episode';
     final isMonitored = episode['monitored'] != false;
     final episodeId = extractWantedItemId(ServiceType.series, episode);
-    final title = '${formatEpisodeOrdinal(episodeNumber)} · $episodeTitle';
+    final title = '${formatEpisodeOrdinal(episodeNumber)}\u00A0· $episodeTitle';
     final subtitle = joinActivityParts([
       formatRelativeActivityDate(stringOrNull(episode['airDateUtc'])),
       if (!isMonitored) 'Unmonitored',

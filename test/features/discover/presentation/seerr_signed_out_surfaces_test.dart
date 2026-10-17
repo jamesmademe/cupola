@@ -205,7 +205,10 @@ void main() {
       );
 
       // The header counts it apart, the band names it, its cell says it.
-      expect(find.textContaining('1 signed out · 16 not set up'), findsOne);
+      expect(
+        find.textContaining('1 signed out\u00A0· 16 not set up'),
+        findsOne,
+      );
       expect(find.textContaining('Seerr signed out'), findsOne);
       expect(find.text('Signed out'), findsOne);
       expect(find.text('Set up Seerr'), findsNothing);
@@ -227,13 +230,15 @@ void main() {
       );
 
       expect(
-        find.textContaining('1 of 1 answering · 1 signed out · 15 not set up'),
+        find.textContaining(
+          '1 of 1 answering\u00A0· 1 signed out\u00A0· 15 not set up',
+        ),
         findsOne,
       );
       // A band's line is drawn a part at a time, each with its dot.
-      expect(find.text('Seerr signed out ·'), findsOne);
+      expect(find.text('Seerr signed out\u00A0·'), findsOne);
       expect(find.text('5 not set up'), findsOne);
-      expect(find.text('1 of 1 clean ·'), findsOne);
+      expect(find.text('1 of 1 clean\u00A0·'), findsOne);
       expect(find.text('1 not set up'), findsOne);
       expect(find.text('Signed out'), findsOne);
       expect(find.textContaining('fault'), findsNothing);
@@ -253,14 +258,14 @@ void main() {
       );
 
       expect(
-        find.textContaining('11 of 11 answering · 6 not set up'),
+        find.textContaining('11 of 11 answering\u00A0· 6 not set up'),
         findsOne,
       );
       // Radarr and Sonarr carry the world's faults (a stall, an import),
       // which Needs you holds; Seerr is among the clean.
-      expect(find.text('3 of 5 clean ·'), findsOne);
-      expect(find.text('Radarr needs a look ·'), findsOne);
-      expect(find.text('Sonarr needs a look ·'), findsOne);
+      expect(find.text('3 of 5 clean\u00A0·'), findsOne);
+      expect(find.text('Radarr needs a look\u00A0·'), findsOne);
+      expect(find.text('Sonarr needs a look\u00A0·'), findsOne);
       expect(find.text('1 not set up'), findsWidgets);
       expect(find.textContaining('with a fault'), findsNothing);
       expect(find.textContaining('Seerr needs a look'), findsNothing);
@@ -294,7 +299,7 @@ void main() {
     await tester.tap(find.byType(InstanceLensBadge));
     await harness.settle(tester);
 
-    expect(find.text('Signed out · seerr.example.net'), findsOneWidget);
+    expect(find.text('Signed out\u00A0· seerr.example.net'), findsOneWidget);
     expect(find.text('nas.home.arpa:5055'), findsOneWidget);
 
     await harness.unmount(tester);
@@ -308,7 +313,7 @@ void main() {
       surfaceSize: const Size(430, 2400),
     );
 
-    expect(find.text('Signed out · nas.home.arpa:5055'), findsOneWidget);
+    expect(find.text('Signed out\u00A0· nas.home.arpa:5055'), findsOneWidget);
     // Not offered again among the services to set up.
     expect(find.text('Seerr'), findsOneWidget);
 

@@ -41,7 +41,7 @@ class _RecordingSonarrService extends FakeSonarrService {
 final _target = ReleaseSearchTarget.season(
   seriesId: 1,
   seasonNumber: 2,
-  label: 'Severance · Season 2',
+  label: 'Severance\u00A0· Season 2',
 );
 
 /// A saved URL that is reached over TLS, which is the only kind of origin the
@@ -1066,7 +1066,7 @@ void main() {
         notificationsEnabled: true,
       )!;
       expect(notice.title, contains('14 releases'));
-      expect(notice.title, contains('Severance · Season 2'));
+      expect(notice.title, contains('Severance\u00A0· Season 2'));
       expect(notice.body, contains('${kGrabWindow.inMinutes} minutes'));
     });
 
@@ -1079,7 +1079,7 @@ void main() {
         notificationsEnabled: true,
       )!;
       expect(notice.title, contains('No releases found'));
-      expect(notice.title, contains('Severance · Season 2'));
+      expect(notice.title, contains('Severance\u00A0· Season 2'));
     });
 
     test('a failure names the target in the title, not just the fault', () {
@@ -1095,7 +1095,7 @@ void main() {
         appInForeground: false,
         notificationsEnabled: true,
       )!;
-      expect(notice.title, contains('Severance · Season 2'));
+      expect(notice.title, contains('Severance\u00A0· Season 2'));
       expect(notice.body, contains('reverse proxy'));
     });
 

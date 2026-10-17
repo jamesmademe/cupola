@@ -118,7 +118,7 @@ void main() {
     expect(find.text('3 on the way'), findsOne);
     expect(listed(tester), ['Cosmos Laundromat', 'Sprite Fright', 'Charge']);
     expect(find.text('All your requests'), findsOne);
-    expect(find.text('As of 20:53 · checking now'), findsOne);
+    expect(find.text('As of 20:53\u00A0· checking now'), findsOne);
 
     answer.complete([
       requesterRequest(
@@ -154,10 +154,10 @@ void main() {
     tester,
   ) async {
     await firstRun(tester);
-    expect(find.text('Asked 2\u00A0h ago · Standard'), findsOne);
+    expect(find.text('Asked 2\u00A0h ago\u00A0· Standard'), findsOne);
 
     await run(tester, now: requesterNow.add(const Duration(hours: 1)));
-    expect(find.text('Asked 3\u00A0h ago · Standard'), findsOne);
+    expect(find.text('Asked 3\u00A0h ago\u00A0· Standard'), findsOne);
   });
 
   testWidgets('a live read that fails keeps the rows over the failure and '

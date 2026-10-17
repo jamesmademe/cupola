@@ -5,6 +5,7 @@ import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
@@ -250,7 +251,7 @@ class _ProviderRow extends StatelessWidget {
                       ),
                       if (subtitleParts.isNotEmpty)
                         Text(
-                          subtitleParts.join(' · '),
+                          subtitleParts.join(dotSeparator),
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(color: colorScheme.onSurfaceVariant),
                           maxLines: 1,

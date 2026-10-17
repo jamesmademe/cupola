@@ -7,6 +7,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/date_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
@@ -42,7 +43,7 @@ class MediaNextAiringCard extends StatelessWidget {
     return [
       formatEpisodeCode(next.season, next.number),
       if (when.isNotEmpty) when,
-    ].join(' · ');
+    ].join(dotSeparator);
   }
 
   /// What will happen: Sonarr's part for the operator, else the season TMDB
@@ -55,7 +56,7 @@ class MediaNextAiringCard extends StatelessWidget {
     }
     final count = next.seasonEpisodes;
     if (next.premiere && count != null) {
-      return 'Season ${next.season} · ${countLabel(count, 'episode')} announced';
+      return 'Season ${next.season}\u00A0· ${countLabel(count, 'episode')} announced';
     }
     return null;
   }

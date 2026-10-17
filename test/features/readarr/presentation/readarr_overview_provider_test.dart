@@ -152,8 +152,11 @@ void main() {
       expect(items, hasLength(1));
       expect(items.single.kind, ReadarrAttentionKind.importFailed);
       expect(items.single.tone, StatusTone.warning);
-      expect(items.single.headline, 'Import failed · Orbital');
-      expect(items.single.detail, 'epub could not be matched · 3\u00A0h ago');
+      expect(items.single.headline, 'Import failed\u00A0· Orbital');
+      expect(
+        items.single.detail,
+        'epub could not be matched\u00A0· 3\u00A0h ago',
+      );
     });
 
     test('a stalled transfer wins over the import arm it also matches', () {
@@ -170,8 +173,8 @@ void main() {
       ], now: now);
 
       expect(items.single.kind, ReadarrAttentionKind.stalled);
-      expect(items.single.headline, 'Stuck · James');
-      expect(items.single.detail, startsWith('qBittorrent · '));
+      expect(items.single.headline, 'Stuck\u00A0· James');
+      expect(items.single.detail, startsWith('qBittorrent\u00A0· '));
     });
 
     test('a healthy record produces no row at all', () {
@@ -422,7 +425,7 @@ void main() {
 
       expect(entries.single.event, 'Imported');
       expect(entries.single.tone, StatusTone.success);
-      expect(entries.single.detail, startsWith('epub · '));
+      expect(entries.single.detail, startsWith('epub\u00A0· '));
       expect(entries.single.detail, endsWith('2\u00A0h ago'));
       expect(entries.single.spoken, startsWith('James, Imported, epub, '));
     });

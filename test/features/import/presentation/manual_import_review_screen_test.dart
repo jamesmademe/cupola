@@ -324,7 +324,7 @@ void main() {
     // five ready files of the whole scan, which is the fraction nobody could
     // reconcile with "Showing 2 of 8 files" directly above it.
     expect(
-      find.text('2 of 2 selected · 3 selected out of view'),
+      find.text('2 of 2 selected\u00A0· 3 selected out of view'),
       findsOneWidget,
     );
     expect(find.text('3 of them are not in view'), findsOneWidget);
@@ -336,7 +336,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('0 of 2 selected · 3 selected out of view'),
+      find.text('0 of 2 selected\u00A0· 3 selected out of view'),
       findsOneWidget,
     );
     expect(find.text('Import 3 files'), findsOneWidget);
@@ -397,7 +397,7 @@ void main() {
       // Daredevil has a single file, so it gets no group header. The row has
       // to carry both matched names itself, and the filename stays line two.
       expect(
-        find.text('Daredevil: Born Again · Excessive Force'),
+        find.text('Daredevil: Born Again\u00A0· Excessive Force'),
         findsOneWidget,
       );
     });
@@ -412,7 +412,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Title: the matched series plus the matched episode code, nothing else.
-      expect(find.text('The Pitt · S2 E1'), findsOneWidget);
+      expect(find.text('The Pitt\u00A0· S2 E1'), findsOneWidget);
       // Subtitle: the raw file, nothing else.
       expect(
         find.text('The.Pitt.S02E01.2160p.HMAX.WEB-DL.mkv'),
@@ -583,7 +583,7 @@ void main() {
       expect(find.text('1 imported'), findsOneWidget);
       expect(find.text('Imported'), findsOneWidget);
       expect(
-        find.text('2 of 2 selected · 1 already in the library'),
+        find.text('2 of 2 selected\u00A0· 1 already in the library'),
         findsOneWidget,
       );
 
@@ -614,7 +614,7 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.text('2 of 2 selected · 1 of 1 being re-imported'),
+        find.text('2 of 2 selected\u00A0· 1 of 1 being re-imported'),
         findsOneWidget,
       );
     });
@@ -662,7 +662,9 @@ void main() {
     await _pumpReview(tester);
 
     final titles = tester
-        .widgetList<Text>(find.text('Daredevil: Born Again · Excessive Force'))
+        .widgetList<Text>(
+          find.text('Daredevil: Born Again\u00A0· Excessive Force'),
+        )
         .followedBy(tester.widgetList<Text>(find.text('The Pain')))
         .followedBy(tester.widgetList<Text>(find.text('7:00 A.M.')));
 

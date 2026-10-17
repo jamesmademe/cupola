@@ -39,7 +39,7 @@ GlobalActivityItem _row(String instanceId, String title) => GlobalActivityItem(
   instanceId: instanceId,
   instanceLabel: instanceId,
   title: title,
-  subtitle: 'Matt · Movie',
+  subtitle: 'Matt\u00A0· Movie',
   status: const MediaStatusInfo(
     availability: MediaAvailability.unknown,
     labelOverride: 'Pending',

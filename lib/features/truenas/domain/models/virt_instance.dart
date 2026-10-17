@@ -1,3 +1,4 @@
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 
 /// Global Incus virtualization config from `virt.global.config`.
@@ -56,7 +57,7 @@ class TrueNasVirtDevice {
     return TrueNasVirtDevice(
       name: stringOrNull(json['name']) ?? type,
       type: type,
-      description: parts.join(' · '),
+      description: parts.join(dotSeparator),
     );
   }
 }

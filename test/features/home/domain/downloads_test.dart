@@ -40,7 +40,11 @@ void main() {
           clientSetUp: true,
           rateBytesPerSecond: 40400000,
         ),
-        matches(RegExp('^3 moving · 1 stuck · \\d+(\\.\\d)?\\u00A0MB/s\$')),
+        matches(
+          RegExp(
+            '^3 moving\u00A0· 1 stuck\u00A0· \\d+(\\.\\d)?\\u00A0MB/\u2060s\$',
+          ),
+        ),
       );
       expect(
         downloadsSubtitle(moving: 0, stuck: 2, queued: 0, clientSetUp: true),
@@ -59,7 +63,7 @@ void main() {
           clientSilent: true,
           rateBytesPerSecond: 1000,
         ),
-        '4 moving · —',
+        '4 moving\u00A0· —',
       );
       expect(
         downloadsSubtitle(
@@ -69,7 +73,7 @@ void main() {
           clientSetUp: false,
           rateBytesPerSecond: 1000,
         ),
-        '3 moving · 1 stuck',
+        '3 moving\u00A0· 1 stuck',
       );
     });
 
@@ -90,12 +94,14 @@ void main() {
           rateBytesPerSecond: 40400000,
         ),
         matches(
-          RegExp('^3 moving · 1 stuck · 1 queued · \\d+(\\.\\d)?\\u00A0MB/s\$'),
+          RegExp(
+            '^3 moving\u00A0· 1 stuck\u00A0· 1 queued\u00A0· \\d+(\\.\\d)?\\u00A0MB/\u2060s\$',
+          ),
         ),
       );
       expect(
         downloadsSubtitle(moving: 3, stuck: 0, queued: 2, clientSetUp: false),
-        '3 moving · 2 queued',
+        '3 moving\u00A0· 2 queued',
       );
     });
 
@@ -113,11 +119,11 @@ void main() {
           clientSetUp: true,
           rateBytesPerSecond: 2000000,
         ),
-        matches(RegExp('^1 queued · \\d+(\\.\\d)?\\u00A0MB/s\$')),
+        matches(RegExp('^1 queued\u00A0· \\d+(\\.\\d)?\\u00A0MB/\u2060s\$')),
       );
       expect(
         downloadsSubtitle(moving: 0, stuck: 2, queued: 1, clientSetUp: true),
-        '2 stuck · 1 queued',
+        '2 stuck\u00A0· 1 queued',
       );
     });
 
@@ -134,7 +140,7 @@ void main() {
         clientSetUp: false,
         coverage: coverage,
       );
-      expect(line, '2+ moving · 5+ queued');
+      expect(line, '2+ moving\u00A0· 5+ queued');
       expect(
         spokenDownloadsSubtitle(line),
         'at least 2 moving, at least 5 queued',
@@ -154,25 +160,25 @@ void main() {
           clientSetUp: false,
           coverage: coverage,
         ),
-        '200+ moving · 3+ stuck',
+        '200+ moving\u00A0· 3+ stuck',
       );
     });
 
     test('a screen reader hears the dash as an unknown speed, and a floor '
         'as at least', () {
       expect(
-        spokenDownloadsSubtitle('4 moving · —'),
+        spokenDownloadsSubtitle('4 moving\u00A0· —'),
         '4 moving, speed unknown',
       );
       expect(
-        spokenDownloadsSubtitle('200+ moving · 3+ stuck'),
+        spokenDownloadsSubtitle('200+ moving\u00A0· 3+ stuck'),
         'at least 200 moving, at least 3 stuck',
       );
       expect(
         spokenDownloadsSubtitle(
-          '3 moving · 1 stuck · 1 queued · 40.4\u00A0MB/s',
+          '3 moving\u00A0· 1 stuck\u00A0· 1 queued\u00A0· 40.4\u00A0MB/\u2060s',
         ),
-        '3 moving, 1 stuck, 1 queued, 40.4\u00A0MB/s',
+        '3 moving, 1 stuck, 1 queued, 40.4\u00A0MB/\u2060s',
       );
       expect(spokenDownloadsSubtitle('1 queued'), '1 queued');
     });
@@ -180,7 +186,7 @@ void main() {
 
   group('a row', () {
     test('a moving one says how far and how long, either alone', () {
-      expect(movingValue(percent: 88, etaSeconds: 60), '88% · 1\u00A0min');
+      expect(movingValue(percent: 88, etaSeconds: 60), '88%\u00A0· 1\u00A0min');
       expect(movingValue(percent: 88), '88%');
       expect(movingValue(etaSeconds: 660), '11\u00A0min');
       // SABnzbd, live: `0:00:00` of a job nothing reaches is no estimate.

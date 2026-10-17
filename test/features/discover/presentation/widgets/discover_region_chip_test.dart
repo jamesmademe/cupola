@@ -57,7 +57,7 @@ void main() {
     testWidgets('reads the region out of settings', (tester) async {
       await _pumpChip(tester, region: 'IT');
 
-      expect(find.text('Region · IT'), findsOneWidget);
+      expect(find.text('Region\u00A0· IT'), findsOneWidget);
     });
 
     testWidgets('follows the setting rather than holding a copy', (
@@ -65,8 +65,8 @@ void main() {
     ) async {
       await _pumpChip(tester, region: 'FR');
 
-      expect(find.text('Region · FR'), findsOneWidget);
-      expect(find.text('Region · IT'), findsNothing);
+      expect(find.text('Region\u00A0· FR'), findsOneWidget);
+      expect(find.text('Region\u00A0· IT'), findsNothing);
     });
 
     testWidgets('speaks the country, not the two-letter code', (tester) async {
@@ -146,7 +146,7 @@ void main() {
       await _pumpChip(tester, textScale: 2.0);
 
       expect(tester.takeException(), isNull);
-      expect(find.text('Region · IT'), findsOneWidget);
+      expect(find.text('Region\u00A0· IT'), findsOneWidget);
     });
 
     testWidgets('keeps the row target even though the plate is smaller', (

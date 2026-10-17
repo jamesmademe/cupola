@@ -391,7 +391,7 @@ void main() {
                 _session(
                   method: StreamPlayMethod.transcode,
                   reasons: const [
-                    'client cannot decode HEVC · audio downmix to stereo',
+                    'client cannot decode HEVC\u00A0· audio downmix to stereo',
                   ],
                 ),
               ],
@@ -406,7 +406,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('client cannot decode HEVC · audio downmix to stereo'),
+        find.text('client cannot decode HEVC\u00A0· audio downmix to stereo'),
         findsOneWidget,
       );
       expect(tester.takeException(), isNull);
@@ -609,11 +609,11 @@ void main() {
           scanningName: 'Films',
           scanningCount: 1,
         ),
-        '5 libraries · Films scanning',
+        '5 libraries\u00A0· Films scanning',
       );
       expect(
         streamLibrariesSummary(total: 5, scanningName: null, scanningCount: 3),
-        '5 libraries · 3 scanning',
+        '5 libraries\u00A0· 3 scanning',
       );
     });
   });

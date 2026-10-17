@@ -36,7 +36,7 @@ void main() {
             },
           ),
         ),
-        '6 albums · complete',
+        '6 albums\u00A0· complete',
       );
     });
 
@@ -55,7 +55,7 @@ void main() {
             },
           ),
         ),
-        '9 albums · 1 track missing',
+        '9 albums\u00A0· 1 track missing',
       );
     });
 

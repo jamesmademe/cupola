@@ -57,6 +57,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/features/npm/data/npm_upstream_probe.dart';
 import 'package:cupola/features/npm/domain/models/npm_models.dart';
 import 'package:cupola/features/npm/presentation/npm_provider.dart';
@@ -219,7 +220,7 @@ List<NpmAttentionItem> npmAttentionItems({
       items.add(
         NpmAttentionItem(
           kind: NpmAttentionKind.nginxRefused,
-          headline: 'nginx refused · ${host.primaryDomain}',
+          headline: 'nginx refused\u00A0· ${host.primaryDomain}',
           // NPM's own `nginx: [emerg] …` line when it kept one, verbatim: it
           // names the directive and the line number, which is the whole
           // difference between "your config is broken" and a fix. The forward
@@ -247,7 +248,7 @@ List<NpmAttentionItem> npmAttentionItems({
       items.add(
         NpmAttentionItem(
           kind: NpmAttentionKind.certificateExpired,
-          headline: 'Certificate expired · ${certificate.displayName}',
+          headline: 'Certificate expired\u00A0· ${certificate.displayName}',
           detail: joinDisplayParts([
             npmCertificateProviderLabel(certificate),
             npmCertificateExpiryLabel(certificate, now),
@@ -288,12 +289,12 @@ List<NpmAttentionItem> npmAttentionItems({
       NpmAttentionItem(
         kind: NpmAttentionKind.certificateExpiring,
         headline: expiring.length == 1
-            ? '1 certificate expiring · ${soonest.displayName}'
+            ? '1 certificate expiring\u00A0· ${soonest.displayName}'
             : '${expiring.length} certificates expiring',
         detail: joinDisplayParts([
           npmCertificateExpiryLabel(soonest, now),
           if (expiring.length > 1)
-            expiring.map((c) => c.displayName).take(3).join(' · '),
+            expiring.map((c) => c.displayName).take(3).join(dotSeparator),
           if (stalled) 'renewal has not completed',
         ]),
       ),

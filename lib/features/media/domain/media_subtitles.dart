@@ -1,3 +1,4 @@
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 
@@ -28,7 +29,7 @@ String mediaLanguageCodes(Iterable<BazarrSubtitleLanguage> languages) =>
         )
         .where((code) => code.isNotEmpty)
         .toSet()
-        .join(' · ');
+        .join(dotSeparator);
 
 /// One episode's subtitles, `English on disk · Italian wanted`; null when
 /// Bazarr has none on disk and wants none.
@@ -39,7 +40,7 @@ String? mediaEpisodeSubtitles(BazarrEpisode episode) {
     if (present.isNotEmpty) '$present on disk',
     if (missing.isNotEmpty) '$missing wanted',
   ];
-  return parts.isEmpty ? null : parts.join(' · ');
+  return parts.isEmpty ? null : parts.join(dotSeparator);
 }
 
 /// The languages a series has on disk wherever Bazarr looks for them: on
@@ -77,5 +78,5 @@ String mediaSeriesSubtitlesSummary(List<BazarrEpisode> episodes) {
     if (present.isNotEmpty) present,
     if (missing.isNotEmpty)
       '$missing wanted on ${countLabel(wanting.length, 'episode')}',
-  ].join(' · ');
+  ].join(dotSeparator);
 }

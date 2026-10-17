@@ -119,8 +119,8 @@ void main() {
 
     test('a floor is spoken as the least there is', () {
       expect(
-        spokenCountPhrase('200+ downloading, 2.0 MB/s across 1 client'),
-        'at least 200 downloading, 2.0 MB/s across 1 client',
+        spokenCountPhrase('200+ downloading, 2.0 MB/\u2060s across 1 client'),
+        'at least 200 downloading, 2.0 MB/\u2060s across 1 client',
       );
       expect(spokenCountPhrase('3+'), 'at least 3');
     });

@@ -150,7 +150,7 @@ class _InviteSheetState extends ConsumerState<InviteSheet> {
     final host = UrlUtils.hostInProse(
       ServiceKey.seerr.extractHost(invite.home) ?? invite.home,
     );
-    final named = title == null ? host : '$title · $host';
+    final named = title == null ? host : '$title\u00A0· $host';
     final inPerson = invitesInPerson(connection);
 
     final theme = Theme.of(context);

@@ -16,6 +16,7 @@ import 'package:cupola/core/platform/secure_clipboard.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
@@ -1231,7 +1232,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${service.domain.label} · ${service.apiVersion}',
+                  '${service.domain.label}\u00A0· ${service.apiVersion}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -1472,7 +1473,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     final host =
         service.extractHost(UrlUtils.normalizeBaseUrl(raw)) ?? raw.trim();
     final where = route == ConnectionRoute.away ? 'Away' : 'At home';
-    return [where, host, if (route == inUse) 'in use'].join(' · ');
+    return [where, host, if (route == inUse) 'in use'].join(dotSeparator);
   }
 
   /// Blue: [route]'s address did not answer from where this device is, and
@@ -1847,7 +1848,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     if (inUse == null) return 'No address yet';
     if (!settings.instances.any((i) => i.away != null)) return inUse;
     final setup = sibling.away != null ? Lexicon.homeAndAway : Lexicon.homeOnly;
-    return '$setup · $inUse';
+    return '$setup\u00A0· $inUse';
   }
 
   Widget _buildRemoveRow(BuildContext context, {required bool twoAddresses}) {
@@ -1958,7 +1959,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   /// from home, tried when the one at home does not answer.
   Widget _buildAddressField({required bool away}) {
     final controller = away ? _awayController : _urlController;
-    final label = away ? 'Address away · optional' : 'Address at home';
+    final label = away ? 'Address away\u00A0· optional' : 'Address at home';
     // Rebuilds on every keystroke so the refusal and the warning track the
     // field.
     return ValueListenableBuilder<TextEditingValue>(
@@ -2653,7 +2654,7 @@ class _SavedConnectionStatus extends ConsumerWidget {
       icon: presentation.icon,
       label: qualifier == null
           ? presentation.label
-          : '${presentation.label} · $qualifier',
+          : '${presentation.label}\u00A0· $qualifier',
       color: statusToneColor(colorScheme, presentation.tone),
       busy: diagnosis.status == ServiceConnectionStatus.checking,
     );

@@ -413,7 +413,11 @@ void main() {
               .map((route) => route.path)
               .toList(growable: false);
 
-          expect(actual, expected, reason: '${service.name} · ${tab.name}');
+          expect(
+            actual,
+            expected,
+            reason: '${service.name}\u00A0· ${tab.name}',
+          );
         }
       }
     });

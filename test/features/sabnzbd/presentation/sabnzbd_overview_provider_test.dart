@@ -184,7 +184,7 @@ void main() {
         _queue(paused: true, kbPerSec: 0),
       );
       final speed = readouts.firstWhere((kpi) => kpi.label == 'Speed');
-      expect(speed.value, '0\u00A0B/s');
+      expect(speed.value, '0\u00A0B/\u2060s');
       // …and it wears no tone, because nothing is moving to report.
       expect(speed.tone, isNull);
       expect(readouts.firstWhere((kpi) => kpi.label == 'Queue').value, '0');
@@ -290,7 +290,7 @@ void main() {
       expect(row.name, 'Dune.Part.Two.2024.2160p');
       expect(
         row.detail,
-        'downloading · 1.0\u00A0GB left · 2\u00A0min · movies',
+        'downloading\u00A0· 1.0\u00A0GB left\u00A0· 2\u00A0min\u00A0· movies',
       );
       expect(row.percentLabel, '72%');
       expect(row.tone, StatusTone.info);
@@ -319,7 +319,7 @@ void main() {
 
       expect(
         row.detail,
-        'downloading · 1.0\u00A0GB left of 4.0\u00A0GB · 2\u00A0min · movies',
+        'downloading\u00A0· 1.0\u00A0GB left of 4.0\u00A0GB\u00A0· 2\u00A0min\u00A0· movies',
       );
       expect(
         row.spoken,
@@ -336,7 +336,10 @@ void main() {
         _queue(slots: [_slot(status: 'Downloading', mbLeft: 1024)]),
       ).rows.single;
 
-      expect(row.detail, 'downloading · 1.0\u00A0GB left · 5\u00A0min');
+      expect(
+        row.detail,
+        'downloading\u00A0· 1.0\u00A0GB left\u00A0· 5\u00A0min',
+      );
       expect(row.detail, isNot(contains('of')));
       expect(row.detail, isNot(contains('—')));
       expect(row.detail, isNot(contains('0\u00A0B')));
@@ -356,7 +359,7 @@ void main() {
       ).rows.single;
 
       expect(row.percentLabel, '0%');
-      expect(row.detail, 'queued · 1.0\u00A0GB left');
+      expect(row.detail, 'queued\u00A0· 1.0\u00A0GB left');
       expect(row.detail, isNot(contains('—')));
     });
 
@@ -547,7 +550,10 @@ void main() {
 
       expect(entry.failed, isTrue);
       expect(entry.event, 'failed');
-      expect(entry.detail, 'missing 14 articles · 1\u00A0h ago · movies');
+      expect(
+        entry.detail,
+        'missing 14 articles\u00A0· 1\u00A0h ago\u00A0· movies',
+      );
     });
 
     test('a completed row is spoken as one sentence', () {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/service_theme.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/sample_age.dart';
 import 'package:cupola/core/app_spacing.dart';
@@ -352,7 +353,7 @@ class DownloadQueueTile extends StatelessWidget {
     return [
       ?subtitleLead,
       age == null ? subtitle : 'as of ${formatDurationAge(age)}',
-    ].where((part) => part.isNotEmpty).join(' · ');
+    ].where((part) => part.isNotEmpty).join(dotSeparator);
   }
 
   /// The row as one sentence, in the order a person would say it.

@@ -434,7 +434,9 @@ void main() {
       expect(find.text('From your iPhone'), findsOneWidget);
       // Three new (the Sonarr is here already), one certificate.
       expect(
-        find.text('3 services · 1 trusted certificate · 1 already here'),
+        find.text(
+          '3 services\u00A0· 1 trusted certificate\u00A0· 1 already here',
+        ),
         findsOneWidget,
       );
       expect(find.text('Radarr'), findsOneWidget);
@@ -576,7 +578,7 @@ void main() {
         ],
       );
       expect(find.text('Radarr'), findsOneWidget);
-      expect(find.text('Radarr · 4K'), findsOneWidget);
+      expect(find.text('Radarr\u00A0· 4K'), findsOneWidget);
     });
 
     testWidgets('only certificates new: Add says so', (tester) async {
@@ -610,7 +612,7 @@ void main() {
         overrides: [fixedReceive(PairReceivePreview(plan)).override],
       );
       expect(
-        find.text('1 trusted certificate · 1 already here'),
+        find.text('1 trusted certificate\u00A0· 1 already here'),
         findsOneWidget,
       );
       expect(find.text('Add 1 trusted certificate'), findsOneWidget);

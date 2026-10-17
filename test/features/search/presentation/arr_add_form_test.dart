@@ -224,7 +224,7 @@ void main() {
 
     final error = await notifier.submit(_severance);
 
-    expect(error, "Could not add Severance to Sonarr · Away.");
+    expect(error, "Could not add Severance to Sonarr\u00A0· Away.");
     final state = container.read(arrAddFormProvider(args));
     // A refusal, in words, not an exception caught by the handler that exists
     // for a server saying no, and nothing was posted to either connection.

@@ -94,7 +94,7 @@ void main() {
     expect(
       find.descendant(
         of: find.byType(HomeArrivedModule),
-        matching: find.text('Last 7 days · 27 new'),
+        matching: find.text('Last 7 days\u00A0· 27 new'),
       ),
       findsOne,
     );

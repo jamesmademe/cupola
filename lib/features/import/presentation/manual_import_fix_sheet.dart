@@ -7,6 +7,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/arr_model_helpers.dart';
 import 'package:cupola/core/utils/date_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/utils/sheet_utils.dart';
@@ -536,7 +537,7 @@ class _MatchSheetState extends ConsumerState<_MatchSheet> {
   String _metaOf(ManualImportLookupResult result) {
     final raw = result.raw;
     return switch (_service) {
-      ServiceKey.radarr => ['Movie', ?result.subtitle].join(' · '),
+      ServiceKey.radarr => ['Movie', ?result.subtitle].join(dotSeparator),
       ServiceKey.sonarr => () {
         final seasons = [
           for (final season in jsonObjects(raw['seasons'], (each) => each))
@@ -546,9 +547,9 @@ class _MatchSheetState extends ConsumerState<_MatchSheet> {
           'Series',
           ?result.subtitle,
           if (seasons > 0) seasons == 1 ? '1 season' : '$seasons seasons',
-        ].join(' · ');
+        ].join(dotSeparator);
       }(),
-      _ => ['Artist', ?result.subtitle].join(' · '),
+      _ => ['Artist', ?result.subtitle].join(dotSeparator),
     };
   }
 
@@ -586,7 +587,7 @@ class _MatchSheetState extends ConsumerState<_MatchSheet> {
       for (final album in _albums)
         SearchRow.title(
           title: album.title,
-          meta: ['Album', ?album.year?.toString()].join(' · '),
+          meta: ['Album', ?album.year?.toString()].join(dotSeparator),
           poster: _posterOf(album.raw) ?? '',
           onTap: () => _pickAlbum(album),
         ),
@@ -749,7 +750,7 @@ class _MatchSheetState extends ConsumerState<_MatchSheet> {
   static String _episodeTitle(ManualImportEpisode episode) => [
     formatEpisodeOrdinal(episode.episodeNumber),
     if (episode.title.isNotEmpty && episode.title != 'Episode') episode.title,
-  ].join(' · ');
+  ].join(dotSeparator);
 
   /// When it aired and whether the library has it: `Aired 3 Oct 2024 · On
   /// disk`, `Aired 3 Oct 2024 · Missing`, `Airs 21 Oct`.
@@ -766,7 +767,7 @@ class _MatchSheetState extends ConsumerState<_MatchSheet> {
     return [
       'Aired ${formatDayMonth(aired.toLocal())}',
       onDisk ? 'On disk' : 'Missing',
-    ].join(' · ');
+    ].join(dotSeparator);
   }
 
   static String? _trackDetail(ManualImportTrack track) {
@@ -777,7 +778,7 @@ class _MatchSheetState extends ConsumerState<_MatchSheet> {
         '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}',
       if (raw['hasFile'] == true) 'On disk',
     ];
-    return words.isEmpty ? null : words.join(' · ');
+    return words.isEmpty ? null : words.join(dotSeparator);
   }
 }
 

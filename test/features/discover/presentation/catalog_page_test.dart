@@ -33,14 +33,14 @@ void main() {
       'Series',
       'Popular',
       'Decade',
-      'Rating 7+ · 100+ votes',
+      'Rating 7+\u00A0· 100+ votes',
       'Under 100\u00A0min',
       'Hide what I have',
     ]) {
       expect(find.text(control), findsOneWidget, reason: control);
     }
     expect(find.text('Spring'), findsOneWidget);
-    expect(find.text('Scores from TMDB · 2,380 titles'), findsOneWidget);
+    expect(find.text('Scores from TMDB\u00A0· 2,380 titles'), findsOneWidget);
     expect(seerr.asked.single.kind, CatalogKind.movie);
   });
 
@@ -51,7 +51,7 @@ void main() {
       const CatalogQuery.all(CatalogKind.movie),
     );
 
-    expect(find.text('Scores from TMDB · 20,000+ titles'), findsOneWidget);
+    expect(find.text('Scores from TMDB\u00A0· 20,000+ titles'), findsOneWidget);
   });
 
   testWidgets('a network is series alone: no halves, no running time', (

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
@@ -75,7 +76,7 @@ class ReadarrAuthorTile extends StatelessWidget {
     final subtitle = <String>[
       '${author.bookFileCount}/${author.bookCount} books',
       if (author.missingBookCount > 0) '${author.missingBookCount} missing',
-    ].join(' · ');
+    ].join(dotSeparator);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -205,7 +206,7 @@ class ReadarrHistoryTile extends StatelessWidget {
                     ),
                     if (subtitleParts.isNotEmpty)
                       Text(
-                        subtitleParts.join(' · '),
+                        subtitleParts.join(dotSeparator),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),

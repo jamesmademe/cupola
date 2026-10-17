@@ -82,7 +82,7 @@ void main() {
           'series': {'id': 2, 'title': 'Night Shift'},
         },
       );
-      expect(names?.title, startsWith('Night Shift · S'));
+      expect(names?.title, startsWith('Night Shift\u00A0· S'));
       expect(names?.source, MediaTitleSource.library);
 
       final parsedOnly = namesFromParse(
@@ -108,7 +108,7 @@ void main() {
             {'title': 'Nosferatu'},
           ],
         })?.title,
-        'Nosferatu · Hans Erdmann',
+        'Nosferatu\u00A0· Hans Erdmann',
       );
       expect(
         namesFromParse(ServiceKey.lidarr, 'Hans.Erdmann-Nosferatu-FLAC', {

@@ -26,7 +26,7 @@ void main() {
 
       expect(find.text('Which series?'), findsOne);
       expect(find.text('Laundromat.Tapes.E04.720p.WEB'), findsOne);
-      expect(find.text('Series · 2015 · 2 seasons'), findsOne);
+      expect(find.text('Series\u00A0· 2015\u00A0· 2 seasons'), findsOne);
       // No button until there is something to match to: the row is the step.
       expect(find.byType(FilledButton), findsNothing);
     });
@@ -37,8 +37,8 @@ void main() {
       await _tapText(tester, 'Cosmos Laundromat');
 
       expect(find.text('Which episode?'), findsOne);
-      expect(find.text('Aired 11 Feb 2016 · On disk'), findsOne);
-      expect(find.text('Aired 13 Apr 2016 · Missing'), findsOne);
+      expect(find.text('Aired 11 Feb 2016\u00A0· On disk'), findsOne);
+      expect(find.text('Aired 13 Apr 2016\u00A0· Missing'), findsOne);
       expect(find.text('Episode'), findsOne, reason: 'the label, not a line');
       expect(
         find.textContaining(
@@ -55,7 +55,7 @@ void main() {
       final flow = _Flow([single, _placed]);
       await _open(tester, [single], flow: flow);
       await _tapText(tester, 'Cosmos Laundromat');
-      await _tapText(tester, 'E5 · Tilly');
+      await _tapText(tester, 'E5\u00A0· Tilly');
       await _tapText(tester, 'Match to S1 E5');
 
       expect(flow.applied.keys.single.path, single.path);
@@ -84,10 +84,10 @@ void main() {
 
       await tester.tap(find.text('Laundromat.Tapes.Reel.A'));
       await _settle(tester);
-      await _tapText(tester, 'E4 · The Island');
+      await _tapText(tester, 'E4\u00A0· The Island');
 
-      expect(find.text('E5 · Tilly'), findsOne);
-      expect(find.text('E6 · Second Spin'), findsOne);
+      expect(find.text('E5\u00A0· Tilly'), findsOne);
+      expect(find.text('E6\u00A0· Second Spin'), findsOne);
       await _tapText(tester, 'Match 3 files');
       expect(
         [for (final a in flow.bulk.values) a.episode?.episodeNumber],

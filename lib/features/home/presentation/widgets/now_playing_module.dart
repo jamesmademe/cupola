@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/home/domain/home_module.dart';
 import 'package:cupola/features/home/domain/now_playing.dart';
@@ -74,7 +75,9 @@ class HomeNowPlayingModule extends ConsumerWidget {
     }
 
     final shown = sessions.take(nowPlayingRowLimit).toList(growable: false);
-    final servers = {for (final row in sessions) row.service.title}.join(' · ');
+    final servers = {
+      for (final row in sessions) row.service.title,
+    }.join(dotSeparator);
     final note = offline.isEmpty ? null : coverageFailureSentence(silent);
 
     return HomeModuleFrame(

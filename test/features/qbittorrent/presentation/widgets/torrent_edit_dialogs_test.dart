@@ -126,7 +126,9 @@ void main() {
       return answer;
     }
 
-    testWidgets('a figure is KB/s, a comma is a decimal point', (tester) async {
+    testWidgets('a figure is KB/\u2060s, a comma is a decimal point', (
+      tester,
+    ) async {
       final answer = await answerFor(tester, '1,5') as SpeedLimitResult;
       expect(answer.bytesPerSecond, 1536);
     });

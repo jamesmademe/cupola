@@ -163,12 +163,12 @@ void main() {
       await harness.settle(tester);
 
       expect(_writes(harness, _seerr), ['POST /api/v1/request/1/approve']);
-      expect(find.text('Approved · sent to Radarr 1'), findsOneWidget);
+      expect(find.text('Approved\u00A0· sent to Radarr 1'), findsOneWidget);
       expect(_approve, findsNothing);
       expect(_decline, findsNothing);
       expect(
         _container(tester).read(answeredRequestsProvider)['seerr-seerr-1'],
-        (decision: null, outcome: 'Approved · sent to Radarr 1'),
+        (decision: null, outcome: 'Approved\u00A0· sent to Radarr 1'),
       );
 
       await harness.unmount(tester);

@@ -138,7 +138,9 @@ void main() {
     final (harness, opened) = await _pumpRows(tester, provider: 'letsencrypt');
 
     expect(
-      _inRows(find.text('Certificate expires in 5 days · Nginx Proxy Manager')),
+      _inRows(
+        find.text('Certificate expires in 5 days\u00A0· Nginx Proxy Manager'),
+      ),
       findsOneWidget,
     );
     expect(_inRows(find.text(_open)), findsNothing);

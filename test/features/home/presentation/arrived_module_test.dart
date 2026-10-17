@@ -77,8 +77,8 @@ void main() {
       coverage: SourceCoverage.answeredBy(ServiceKey.radarr),
     ));
 
-    expect(find.text('Last 7 days · 2 new'), findsOne);
-    expect(find.text('2\u00A0h ago · Radarr 4K'), findsOne);
+    expect(find.text('Last 7 days\u00A0· 2 new'), findsOne);
+    expect(find.text('2\u00A0h ago\u00A0· Radarr 4K'), findsOne);
     expect(
       tester.getTopLeft(find.text('Spring')).dx,
       lessThan(tester.getTopLeft(find.text('Sintel')).dx),
@@ -104,7 +104,7 @@ void main() {
         ),
       ]),
     ));
-    expect(find.text('Last 7 days · 1 from Radarr'), findsOne);
+    expect(find.text('Last 7 days\u00A0· 1 from Radarr'), findsOne);
     expect(find.textContaining('Radarr 4K did not answer'), findsOne);
   });
 

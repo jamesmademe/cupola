@@ -77,7 +77,7 @@ void main() {
       ],
     );
 
-    expect(find.text('movies · 1'), findsOneWidget);
+    expect(find.text('movies\u00A0· 1'), findsOneWidget);
     expect(find.textContaining('does not support labels'), findsNothing);
     expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
   });
@@ -100,7 +100,7 @@ void main() {
       ],
     );
 
-    expect(find.text('movies · 1'), findsOneWidget);
+    expect(find.text('movies\u00A0· 1'), findsOneWidget);
     expect(find.textContaining('does not support labels'), findsOneWidget);
     expect(find.byIcon(Icons.edit_outlined), findsNothing);
   });

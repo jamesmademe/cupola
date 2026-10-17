@@ -99,7 +99,7 @@ void main() {
         ],
       );
       expect(find.text('Stack'), findsOne);
-      expect(find.text('3 of 3 answering · 2 faults'), findsOne);
+      expect(find.text('3 of 3 answering\u00A0· 2 faults'), findsOne);
       expect(find.text('Faults: Sonarr and qBittorrent'), findsOne);
       expect(find.byType(StackLightMark), findsNWidgets(3));
       await tester.tap(
@@ -148,7 +148,10 @@ void main() {
           ),
         ],
       );
-      expect(find.text('1 of 3 answering · 1 fault · 2 timed out'), findsOne);
+      expect(
+        find.text('1 of 3 answering\u00A0· 1 fault\u00A0· 2 timed out'),
+        findsOne,
+      );
       expect(
         find.textContaining(
           'Radarr and Sonarr were reached but did not reply in time.',

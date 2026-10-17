@@ -36,7 +36,7 @@ void main() {
       expect(readout.registrySize, ServiceKey.values.length);
       expect(
         readout.summary,
-        '1 of ${ServiceKey.values.length} set up · 1 answering',
+        '1 of ${ServiceKey.values.length} set up\u00A0· 1 answering',
       );
     });
 
@@ -54,7 +54,7 @@ void main() {
 
       expect(readout.answering, 1);
       expect(readout.checking, 1);
-      expect(readout.summary, endsWith('· 1 answering · checking 1'));
+      expect(readout.summary, endsWith('· 1 answering\u00A0· checking 1'));
     });
   });
 
@@ -70,7 +70,10 @@ void main() {
       notSetUp: const [],
       registrySize: 17,
     );
-    expect(readout.summary, '2 of 17 set up · 1 answering · 1 only at home');
+    expect(
+      readout.summary,
+      '2 of 17 set up\u00A0· 1 answering\u00A0· 1 only at home',
+    );
     // Never a group to fix, and the card stays green.
     expect(readout.faults, isEmpty);
     expect(readout.tone, StatusTone.success);

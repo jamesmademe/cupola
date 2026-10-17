@@ -100,11 +100,11 @@ void main() {
       find.text('From Radarr 1, Radarr 4K, Sonarr and Lidarr at 20:53'),
       findsOneWidget,
     );
-    expect(find.text('Out today · downloading 62%'), findsOneWidget);
+    expect(find.text('Out today\u00A0· downloading 62%'), findsOneWidget);
     // The first Radarr, unnamed, is called by its place.
     expect(find.text('Radarr 1'), findsWidgets);
     expect(find.text('Tomorrow'), findsOneWidget);
-    expect(find.text('S2 E5 · not aired'), findsOneWidget);
+    expect(find.text('S2 E5\u00A0· not aired'), findsOneWidget);
     expect(find.text('Nothing more in the next 30 days'), findsOneWidget);
     expect(
       find.text('Books appear here when Readarr is set up.'),
@@ -122,8 +122,8 @@ void main() {
     // Series only: the movie goes.
     await tester.tap(find.text('Series'));
     await tester.pumpAndSettle();
-    expect(find.text('Out today · downloading 62%'), findsNothing);
-    expect(find.text('S2 E5 · not aired'), findsOneWidget);
+    expect(find.text('Out today\u00A0· downloading 62%'), findsNothing);
+    expect(find.text('S2 E5\u00A0· not aired'), findsOneWidget);
 
     await harness.unmount(tester);
   });
@@ -133,7 +133,9 @@ void main() {
     final harness = await pump(tester, Profiles.p7, const CalendarPage());
 
     expect(
-      find.textContaining('Lidarr did not answer · albums may be missing here'),
+      find.textContaining(
+        'Lidarr did not answer\u00A0· albums may be missing here',
+      ),
       findsOneWidget,
     );
     expect(find.textContaining('— things come out'), findsOneWidget);
@@ -188,12 +190,12 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.text('Your requests on their way · checked at 20:53'),
+      find.text('Your requests on their way\u00A0· checked at 20:53'),
       findsOneWidget,
     );
     expect(find.text('Downloading 62%'), findsOneWidget);
     expect(find.text('On digital in Italy today'), findsOneWidget);
-    expect(find.text('S3 E1 · premiere · not aired'), findsOneWidget);
+    expect(find.text('S3 E1\u00A0· premiere\u00A0· not aired'), findsOneWidget);
     expect(find.textContaining('You asked for season 3 on '), findsOneWidget);
     expect(
       find.text('Dates are for Italy. Episodes have a date here, not a time.'),
@@ -245,7 +247,7 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       await tester.pump();
       expect(find.text('Nothing on this day.'), findsOneWidget);
-      expect(find.text('Next day · Mon 12 Oct'), findsOneWidget);
+      expect(find.text('Next day\u00A0· Mon 12 Oct'), findsOneWidget);
 
       await tester.tap(find.bySemanticsLabel('Monday 12 October, 1 thing'));
       await tester.pump();

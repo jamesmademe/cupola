@@ -8,6 +8,7 @@ import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/title_light.dart';
 import 'package:cupola/core/utils/date_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -228,7 +229,7 @@ class _PersonPageState extends ConsumerState<PersonPage> {
               if (work.year != null) '${work.year}',
               media.mediaType == 'tv' ? 'Series' : 'Movie',
               if (score != null) 'TMDB$unitSpace${score.toStringAsFixed(1)}',
-            ].join(' · '),
+            ].join(dotSeparator),
             heroTag:
                 'person_${widget.personId}_${trade.title}_'
                 '${media.mediaType}_${media.id}',
@@ -246,7 +247,7 @@ class _PersonPageState extends ConsumerState<PersonPage> {
       if ((person.birthday ?? '').isNotEmpty)
         'Born ${formatMediumDate(person.birthday!)}',
       if ((person.placeOfBirth ?? '').isNotEmpty) person.placeOfBirth!,
-    ].join(' · ');
+    ].join(dotSeparator);
     final died = (person.deathday ?? '').isEmpty
         ? ''
         : 'Died ${formatMediumDate(person.deathday!)}';

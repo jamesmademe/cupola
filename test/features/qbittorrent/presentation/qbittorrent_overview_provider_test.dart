@@ -136,8 +136,8 @@ void main() {
 
       final row = rows.single;
       expect(row.tone, StatusTone.warning);
-      expect(row.headline, 'Stuck · The.Zone.of.Interest.2023');
-      expect(row.detail, '18% · idle 42\u00A0min · 3 seeds');
+      expect(row.headline, 'Stuck\u00A0· The.Zone.of.Interest.2023');
+      expect(row.detail, '18%\u00A0· idle 42\u00A0min\u00A0· 3 seeds');
     });
 
     test('zero seeds is stated: it is the reason, not a missing figure', () {
@@ -158,7 +158,7 @@ void main() {
         ),
       ], now: now);
 
-      expect(rows.single.detail, '50% · 2 seeds');
+      expect(rows.single.detail, '50%\u00A0· 2 seeds');
       expect(rows.single.detail, isNot(contains('idle')));
     });
 
@@ -204,8 +204,8 @@ void main() {
       ], now: now);
 
       expect(rows.map((r) => r.headline), [
-        'Stuck · ancient',
-        'Stuck · recent',
+        'Stuck\u00A0· ancient',
+        'Stuck\u00A0· recent',
       ]);
     });
 
@@ -287,7 +287,7 @@ void main() {
       expect(row.tone, StatusTone.info);
       expect(
         row.detail,
-        'movies · 15.0\u00A0GB · 8.0\u00A0MB/s down · 3\u00A0min left',
+        'movies\u00A0· 15.0\u00A0GB\u00A0· 8.0\u00A0MB/\u2060s down\u00A0· 3\u00A0min left',
       );
     });
 
@@ -307,7 +307,7 @@ void main() {
       expect(rows.single.tone, StatusTone.success);
       expect(
         rows.single.detail,
-        'movies · 9.0\u00A0GB · 240\u00A0KB/s up · ratio 3.20',
+        'movies\u00A0· 9.0\u00A0GB\u00A0· 240\u00A0KB/\u2060s up\u00A0· ratio 3.20',
       );
     });
 
@@ -441,7 +441,10 @@ void main() {
     });
 
     test('a real limit renders as a rate', () {
-      expect(qbittorrentGlobalLimitLabel(20 * 1024 * 1024), '20.0\u00A0MB/s');
+      expect(
+        qbittorrentGlobalLimitLabel(20 * 1024 * 1024),
+        '20.0\u00A0MB/\u2060s',
+      );
     });
   });
 
@@ -487,7 +490,7 @@ void main() {
         '2.00',
         // The global sentinel, not a throttle to nothing.
         'no limit',
-        '5.0\u00A0MB/s',
+        '5.0\u00A0MB/\u2060s',
         'off',
       ]);
       // An old qBittorrent leaves free space out of its answer, and DHT nodes

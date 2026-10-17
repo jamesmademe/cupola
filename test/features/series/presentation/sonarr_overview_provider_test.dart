@@ -149,7 +149,7 @@ void main() {
       ], now: now);
 
       expect(items.single.kind, SonarrAttentionKind.stalled);
-      expect(items.single.headline, 'Stuck · Andor S2 E3');
+      expect(items.single.headline, 'Stuck\u00A0· Andor S2 E3');
       expect(items.single.detail, contains('qBittorrent'));
       expect(items.single.detail, contains('3\u00A0h ago'));
     });
@@ -165,7 +165,7 @@ void main() {
       ], now: now);
 
       expect(items.single.kind, SonarrAttentionKind.importFailed);
-      expect(items.single.headline, 'Import failed · Slow Horses S4');
+      expect(items.single.headline, 'Import failed\u00A0· Slow Horses S4');
     });
 
     test('a healthy queue record is not a fault', () {
@@ -310,7 +310,7 @@ void main() {
       expect(tiles.map((t) => t.seriesTitle), ['Severance', 'Silo']);
       // The newest record of the series is the one whose slot the caption shows.
       expect(tiles.first.slot, 'S2 E4');
-      expect(tiles.first.caption, 'S2 E4 · just now');
+      expect(tiles.first.caption, 'S2 E4\u00A0· just now');
     });
 
     test(

@@ -363,7 +363,7 @@ void main() {
           files,
           replacing: {for (final file in files) file.path: 'HDTV-720p'},
         ),
-        '1080p WEB · English · each replaces a 720p file',
+        '1080p WEB\u00A0· English\u00A0· each replaces a 720p file',
       );
     });
 
@@ -374,7 +374,7 @@ void main() {
           files.take(3).toList(),
           replacing: {files.first.path: 'HDTV-720p'},
         ),
-        '1080p WEB · English · 1 replaces a file you have',
+        '1080p WEB\u00A0· English\u00A0· 1 replaces a file you have',
       );
     });
   });

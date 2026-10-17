@@ -1,5 +1,6 @@
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/media_child_list.dart';
 import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
@@ -48,7 +49,7 @@ class AuthorShelf {
       if (onDisk > 0) '$onDisk${unitSpace}on disk',
       if (wanted.isNotEmpty)
         '${wanted.length}$unitSpace${StateWord.wanted.inline}',
-    ].join(' · ');
+    ].join(dotSeparator);
   }
 }
 

@@ -177,7 +177,7 @@ void main() {
     await run(tester, () => answer.future);
     expect(find.text('Spring'), findsWidgets);
     expect(find.text('Play'), findsWidgets);
-    expect(find.text('As of 20:53 · checking now'), findsOne);
+    expect(find.text('As of 20:53\u00A0· checking now'), findsOne);
 
     answer.complete(const []);
     await tester.pumpAndSettle();
@@ -224,7 +224,7 @@ void main() {
     // Today's slide was yesterday's; the arrival is a day older.
     expect(find.text('Sprite Fright'), findsNothing);
     expect(find.text('Spring'), findsWidgets);
-    expect(find.text('As of yesterday 20:53 · checking now'), findsOne);
+    expect(find.text('As of yesterday 20:53\u00A0· checking now'), findsOne);
   });
 
   testWidgets('Continue watching steps aside for the title a drawing leads '

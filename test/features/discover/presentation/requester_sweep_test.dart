@@ -158,7 +158,7 @@ final _pages = <String, Widget>{
 
 /// The one service name she reads besides the players: her server's own, in
 /// her account, beside its address (the spec of the requester, § 6.2).
-final _herAccountLine = RegExp(r'^\S+ · nas\.home\.arpa:5055$');
+final _herAccountLine = RegExp(r'^\S+\u00A0· nas\.home\.arpa:5055$');
 
 Future<ProfileHarness> _pump(
   WidgetTester tester,

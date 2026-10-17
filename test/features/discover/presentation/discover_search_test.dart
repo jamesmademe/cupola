@@ -46,7 +46,10 @@ void main() {
       // in Seerr's word.
       expect(find.text('Dune'), findsOneWidget);
       expect(find.text('Available'), findsOneWidget);
-      expect(find.text('Movie · 2021 · TMDB\u00A07.8'), findsOneWidget);
+      expect(
+        find.text('Movie\u00A0· 2021\u00A0· TMDB\u00A07.8'),
+        findsOneWidget,
+      );
       expect(find.text('Arrival'), findsOneWidget);
       expect(find.text('Dune: Prophecy'), findsOneWidget);
       expect(find.text('Denis Villeneuve'), findsOneWidget);
@@ -78,7 +81,7 @@ void main() {
       await _frames(tester);
 
       expect(find.text('Add to Radarr'), findsOneWidget);
-      expect(find.text('Arrival · 2016'), findsOneWidget);
+      expect(find.text('Arrival\u00A0· 2016'), findsOneWidget);
     });
 
     testWidgets('a word that names someone leads with them', (tester) async {
@@ -116,7 +119,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Movie · 2020'), findsOneWidget);
+      expect(find.text('Movie\u00A0· 2020'), findsOneWidget);
       expect(find.textContaining('TMDB'), findsNothing);
     });
 

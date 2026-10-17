@@ -154,7 +154,7 @@ String spokenBytesPerSecond(String rate) {
     ' GB/s': ' gigabytes a second',
     ' TB/s': ' terabytes a second',
   };
-  final plain = rate.replaceAll('\u00A0', ' ');
+  final plain = rate.replaceAll('\u00A0', ' ').replaceAll(wordJoiner, '');
   for (final MapEntry(:key, :value) in units.entries) {
     if (plain.endsWith(key)) {
       return '${plain.substring(0, plain.length - key.length)}$value';

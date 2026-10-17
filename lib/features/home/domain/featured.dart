@@ -5,6 +5,7 @@ library;
 
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/date_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/features/discover/domain/library_calendar.dart';
@@ -70,7 +71,7 @@ final class FeaturedResume extends FeaturedSlide {
       if (item.kind == StreamItemKind.episode)
         ?formatArrEpisodeCode(item.seasonNumber, item.episodeNumber),
       ?resumeLeft(item),
-    ].join(' · ');
+    ].join(dotSeparator);
   }
 }
 
@@ -95,7 +96,7 @@ final class FeaturedArrival extends FeaturedSlide {
     if (entry.at case final at?) askedAgo(at, now: now),
     if (entry.connectionName case final name? when name.isNotEmpty)
       serviceWithConnection(entry.service, name, joiner: ' '),
-  ].join(' · ');
+  ].join(dotSeparator);
 }
 
 /// A movie out today or an episode that airs today: its page, and the queue
@@ -127,14 +128,19 @@ final class FeaturedToday extends FeaturedSlide {
           'airs today at ${formatClockTime(at)}',
         _ => standing == null ? 'aired today' : null,
       };
-      return [?event.code, ?event.mark?.words, ?airs, ?standing].join(' · ');
+      return [
+        ?event.code,
+        ?event.mark?.words,
+        ?airs,
+        ?standing,
+      ].join(dotSeparator);
     }
     final out = switch (event.release) {
       Lexicon.inCinemas => 'In cinemas today',
       final release? => 'Out $release today',
       null => 'Out today',
     };
-    return [out, ?standing].join(' · ');
+    return [out, ?standing].join(dotSeparator);
   }
 }
 

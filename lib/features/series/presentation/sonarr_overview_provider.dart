@@ -331,7 +331,7 @@ List<SonarrAttentionItem> sonarrQueueFaults(
       items.add(
         SonarrAttentionItem(
           kind: SonarrAttentionKind.stalled,
-          headline: '${StateWord.stuck.label} · $subject',
+          headline: '${StateWord.stuck.label}\u00A0· $subject',
           detail: joinDisplayParts([
             stringOrNull(record['downloadClient']),
             message,
@@ -346,7 +346,7 @@ List<SonarrAttentionItem> sonarrQueueFaults(
       items.add(
         SonarrAttentionItem(
           kind: SonarrAttentionKind.importFailed,
-          headline: 'Import failed · $subject',
+          headline: 'Import failed\u00A0· $subject',
           detail: joinDisplayParts([message, age]),
         ),
       );

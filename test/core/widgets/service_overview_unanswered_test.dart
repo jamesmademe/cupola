@@ -60,8 +60,8 @@ void main() {
     expect(
       find.text(
         'Radarr did not answer at home or away.\n'
-        'At home · $home\n'
-        'Away · radarr.example.net',
+        'At home\u00A0· $home\n'
+        'Away\u00A0· radarr.example.net',
       ),
       findsOneWidget,
     );
@@ -125,7 +125,7 @@ void main() {
       expect(diagnosis.reason, ServiceFailureReason.unreachableAtBoth);
       expect(
         diagnosis.messageFor(ServiceKey.radarr),
-        endsWith('Away · radarr.example.net'),
+        endsWith('Away\u00A0· radarr.example.net'),
       );
     },
   );

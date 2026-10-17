@@ -16,6 +16,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/title_light.dart';
 import 'package:cupola/core/utils/arr_model_helpers.dart';
 import 'package:cupola/core/utils/date_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
@@ -602,13 +603,13 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
       return [
         name,
         for (final event in rows) calendarEventShort(event),
-      ].join(' · ');
+      ].join(dotSeparator);
     }
     final next = events.where((event) => event.day.isAfter(day)).firstOrNull;
     final nothing = name == 'Today' ? 'Nothing today' : 'Nothing on $name';
     return next == null
         ? nothing
-        : '$nothing · next on ${calendarShortDate(next.day)}';
+        : '$nothing\u00A0· next on ${calendarShortDate(next.day)}';
   }
 
   /// When a title of the last shelf comes out: a movie `Out 14 Oct`, a new
@@ -847,7 +848,7 @@ class _LaterInSeason extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${episode.title} · season ${episode.season}',
+                '${episode.title}\u00A0· season ${episode.season}',
                 style: AppType.label.copyWith(color: room.ink),
               ),
               const SizedBox(height: AppSpacing.xxs),
@@ -916,7 +917,7 @@ class _NextDay extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Next day · $date',
+                        'Next day\u00A0· $date',
                         style: AppType.caption.copyWith(
                           color: room.inkTertiary,
                         ),
@@ -1030,7 +1031,7 @@ class _Head extends StatelessWidget {
             const SizedBox(height: AppSpacing.xs),
             Text(
               requester
-                  ? 'Your requests on their way · checked at '
+                  ? 'Your requests on their way\u00A0· checked at '
                         '${formatClockTime(calendar.readAt)}'
                   : 'From ${joinWithAnd(calendar.answered)} at '
                         '${formatClockTime(calendar.readAt)}',
@@ -1297,7 +1298,7 @@ class _SilentSource extends ConsumerWidget {
             [
               headline,
               if (kind != null) '${kind.plural} may be missing here',
-            ].join(' · '),
+            ].join(dotSeparator),
             style: AppType.meta.copyWith(color: room.inkSecondary),
           ),
         ),

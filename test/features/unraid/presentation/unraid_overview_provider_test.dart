@@ -147,7 +147,7 @@ void main() {
       // honestly be stated as a total while six rows are drawn.
       expect(digest.diskCount, 9);
       expect(digest.preview, hasLength(6));
-      expect(digest.headline, 'started · 9 disks');
+      expect(digest.headline, 'started\u00A0· 9 disks');
     });
 
     test('a warm slot and a flagged slot float to the top of the preview', () {
@@ -174,7 +174,7 @@ void main() {
       expect(digest.faultCount, 1);
       expect(
         digest.headline,
-        'started · 5 disks · 1 above 45\u00A0°C · 1 slot flagged',
+        'started\u00A0· 5 disks\u00A0· 1 above 45\u00A0°C\u00A0· 1 slot flagged',
       );
     });
 
@@ -192,7 +192,10 @@ void main() {
       // No "0 above 45 °C": a sentence about a problem where there is none is
       // the most expensive kind of noise on a page that exists to say what
       // needs a decision.
-      expect(digest.headline, 'started · 5.0 of 10.0\u00A0TB · 1 disk');
+      expect(
+        digest.headline,
+        'started\u00A0· 5.0 of 10.0\u00A0TB\u00A0· 1 disk',
+      );
     });
 
     test('a drive that is both flagged and warm is named as flagged', () {
@@ -216,7 +219,7 @@ void main() {
       // nothing is double-reported and nothing is dropped.
       expect(digest.faultCount, 1);
       expect(digest.warmCount, 0);
-      expect(digest.headline, 'started · 2 disks · 1 slot flagged');
+      expect(digest.headline, 'started\u00A0· 2 disks\u00A0· 1 slot flagged');
     });
 
     test('an array that reported no slot list does not claim 0 disks', () {
@@ -236,7 +239,7 @@ void main() {
         UnraidArray.fromJson(const {'state': 'STARTED', 'disks': <Object?>[]}),
       );
       expect(empty.diskCount, 0);
-      expect(empty.headline, 'started · 0 disks');
+      expect(empty.headline, 'started\u00A0· 0 disks');
     });
 
     test('an array that reported no state simply does not claim one', () {
@@ -287,7 +290,7 @@ void main() {
 
       expect(
         digest.headline,
-        '4 containers · 2 running · 1 stopped · 1 unhealthy',
+        '4 containers\u00A0· 2 running\u00A0· 1 stopped\u00A0· 1 unhealthy',
       );
       expect(digest.failed, 0);
     });
@@ -315,7 +318,7 @@ void main() {
 
       expect(digest.total, 14);
       expect(digest.preview, hasLength(5));
-      expect(digest.headline, '14 containers · 14 running');
+      expect(digest.headline, '14 containers\u00A0· 14 running');
     });
   });
 }

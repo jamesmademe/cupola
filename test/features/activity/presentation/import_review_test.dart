@@ -117,7 +117,7 @@ void main() {
     expect(find.text('12 clear matches'), findsOneWidget);
     expect(find.text('12 of 12 selected'), findsOneWidget);
     expect(
-      find.text('1080p WEB · English · each replaces a 720p file'),
+      find.text('1080p WEB\u00A0· English\u00A0· each replaces a 720p file'),
       findsOneWidget,
     );
     expect(find.text('Clear all'), findsOneWidget);
@@ -157,9 +157,12 @@ void main() {
     expect(find.text('E4'), findsOneWidget);
     await _tap(tester, find.text('Add to the import'));
 
-    expect(find.text('Added · Cosmos Laundromat · S2 E4'), findsOneWidget);
+    expect(
+      find.text('Added\u00A0· Cosmos Laundromat\u00A0· S2 E4'),
+      findsOneWidget,
+    );
     expect(find.text('Which episode?'), findsNWidgets(5));
-    expect(find.text('12 clear · 1 picked by you'), findsOneWidget);
+    expect(find.text('12 clear\u00A0· 1 picked by you'), findsOneWidget);
     expect(find.text('Import 13 selected'), findsOneWidget);
 
     await _close(tester, harness, container);

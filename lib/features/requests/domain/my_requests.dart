@@ -15,6 +15,7 @@ import 'package:cupola/core/models/rating_source.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/date_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/sample_age.dart';
@@ -172,7 +173,7 @@ class MyRequest {
     MyRequestStage.waiting => [
       if (askedAt case final at?) 'Asked ${askedWords(at, now: now)}',
       quality,
-    ].join(' · '),
+    ].join(dotSeparator),
     MyRequestStage.downloading => switch (readyAround) {
       final at? => 'Ready around ${aroundWords(at, now: now)}',
       null => Lexicon.beingFetched,
@@ -195,7 +196,7 @@ class MyRequest {
   String askedLine(DateTime now) => [
     if (askedAt case final at?) 'You asked for it ${dayWords(at, now: now)}',
     if (score case final score?) 'TMDB ${score.toStringAsFixed(1)}',
-  ].join(' · ');
+  ].join(dotSeparator);
 
   /// The row as a screen reader says it, in one sentence.
   String spoken(DateTime now) => '$title, $state, ${detail(now)}';

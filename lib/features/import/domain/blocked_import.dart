@@ -2,6 +2,7 @@
 /// sorts their files, and the words before and after the import.
 library;
 
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/features/import/domain/manual_import_display.dart';
@@ -447,7 +448,7 @@ String? clearQualityLine(
     ?language,
     ?replaces,
   ];
-  return parts.isEmpty ? null : parts.join(' · ');
+  return parts.isEmpty ? null : parts.join(dotSeparator);
 }
 
 /// What a clear row says first: `S1 E1`, `Track 3`, or for a movie its

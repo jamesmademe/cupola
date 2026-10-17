@@ -235,7 +235,7 @@ void main() {
 
       final row = sections.onServer.single;
       expect(row.addable, isFalse);
-      expect(row.libraries, ['Radarr · 4K']);
+      expect(row.libraries, ['Radarr\u00A0· 4K']);
     });
   });
 

@@ -54,7 +54,7 @@ void main() {
       expect(status.downloadRateBytes, 2097152);
       expect(status.remainingSizeMb, 1500);
       expect(status.paused, isFalse);
-      expect(status.rateLabel, '2.0\u00A0MB/s');
+      expect(status.rateLabel, '2.0\u00A0MB/\u2060s');
     });
 
     test('listGroups parses queue progress', () async {

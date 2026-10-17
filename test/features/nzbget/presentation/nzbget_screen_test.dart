@@ -243,9 +243,15 @@ void main() {
 
       expect(find.textContaining('DOWNLOADING'), findsNothing);
       expect(find.textContaining('PAUSED'), findsNothing);
-      expect(find.textContaining('Downloading · tv · '), findsOneWidget);
-      expect(find.textContaining('Stopped · tv · '), findsOneWidget);
-      expect(find.textContaining('Post-processing · tv · '), findsOneWidget);
+      expect(
+        find.textContaining('Downloading\u00A0· tv\u00A0· '),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Stopped\u00A0· tv\u00A0· '), findsOneWidget);
+      expect(
+        find.textContaining('Post-processing\u00A0· tv\u00A0· '),
+        findsOneWidget,
+      );
     });
 
     testWidgets('every group is a reachable row, and the header counts them', (
@@ -391,7 +397,7 @@ void main() {
       expect(find.text('Job.1'), findsOneWidget);
       expect(find.textContaining(counting), findsNothing);
       expect(
-        find.text('Downloading · tv · as of 6\u00A0min ago'),
+        find.text('Downloading\u00A0· tv\u00A0· as of 6\u00A0min ago'),
         findsOneWidget,
       );
 
@@ -399,7 +405,7 @@ void main() {
       now = now.add(const Duration(minutes: 1));
       await tester.pump(const Duration(minutes: 1));
       expect(
-        find.text('Downloading · tv · as of 7\u00A0min ago'),
+        find.text('Downloading\u00A0· tv\u00A0· as of 7\u00A0min ago'),
         findsOneWidget,
       );
 

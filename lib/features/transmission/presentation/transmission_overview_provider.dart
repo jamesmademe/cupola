@@ -120,7 +120,7 @@ String transmissionTransferringSubtitle(List<TransmissionTorrent>? torrents) {
       .length;
   // Never collapsed to "nothing is transferring": the two counts are different
   // questions and a user with 18 seeds and no downloads is not idle.
-  return '$downloading downloading · $seeding seeding';
+  return '$downloading downloading\u00A0· $seeding seeding';
 }
 
 /// The sample of the queue the Overview draws.
@@ -241,7 +241,7 @@ class TransmissionSessionFact {
   /// and leave `Download limit …` saying nothing. The board agrees: its Session
   /// rows read `Peer port 51413` and `Blocklist · 342 k rules` on the title
   /// line, with the qualifier under them and no right-hand figure at all.
-  String get titleLine => '$label · $value';
+  String get titleLine => '$label\u00A0· $value';
 
   String get spoken =>
       joinSpokenParts([label, value, spokenFromDotted(detail)]);
@@ -330,7 +330,7 @@ List<TransmissionSessionFact> transmissionSessionFacts(
       detail: measuredDir.isEmpty
           ? 'download directory unknown'
           : session.usesIncompleteDir
-          ? '$measuredDir · incomplete directory'
+          ? '$measuredDir\u00A0· incomplete directory'
           : measuredDir,
       icon: Icons.sd_storage_outlined,
       // The one fault this region can carry. Every other row is a setting the

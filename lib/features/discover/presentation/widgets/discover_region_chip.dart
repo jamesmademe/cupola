@@ -98,7 +98,7 @@ class DiscoverRegionChip extends ConsumerWidget {
                     ),
                     const SizedBox(width: AppSpacing.xs),
                     Text(
-                      'Region · $code',
+                      'Region\u00A0· $code',
                       style: theme.textTheme.labelMedium!
                           .weight(FontWeight.w600)
                           .copyWith(color: colorScheme.onSurfaceVariant),

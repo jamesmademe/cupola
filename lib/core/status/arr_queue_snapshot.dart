@@ -1,5 +1,6 @@
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/sample_age.dart';
 import 'package:cupola/core/utils/string_utils.dart';
@@ -138,7 +139,7 @@ class ArrQueueEntry {
     final haystack = [
       stringOrNull(item['errorMessage']),
       ...extractArrStatusMessages(item['statusMessages']),
-    ].whereType<String>().join(' · ').toLowerCase();
+    ].whereType<String>().join(dotSeparator).toLowerCase();
 
     return haystack.contains('stalled') || haystack.contains('no connections');
   }

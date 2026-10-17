@@ -95,7 +95,7 @@ void main() {
       ], now: now);
 
       expect(rows.first.title, 'Films');
-      expect(rows.first.detail, 'Movies · Scanning');
+      expect(rows.first.detail, 'Movies\u00A0· Scanning');
       // Blue, not amber: the server is doing exactly what it was asked to do.
       // Amber is reserved for a fault, and a working library wearing it is how
       // the five-arm tone rule breaks.
@@ -135,7 +135,7 @@ void main() {
       ], now: now);
 
       // "Scanned 5 h ago" beside "Scanning" is the stale half of the same fact.
-      expect(rows.single.detail, 'Movies · Scanning');
+      expect(rows.single.detail, 'Movies\u00A0· Scanning');
     });
 
     test('a room at rest carries the age of its own scan', () {
@@ -194,7 +194,7 @@ void main() {
             _library(name: 'Shows'),
           ],
         ),
-        '2 libraries · Movies scanning',
+        '2 libraries\u00A0· Movies scanning',
       );
     });
 
@@ -254,7 +254,7 @@ void main() {
         streamOnDeckCaption(
           _item(subtitle: 'S02E05', runtimeMs: 3000, resumeMs: 900),
         ),
-        'S02E05 · 30% in',
+        'S02E05\u00A0· 30% in',
       );
     });
 

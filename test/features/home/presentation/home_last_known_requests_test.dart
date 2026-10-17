@@ -181,14 +181,14 @@ void main() {
       expect(find.text('Charge'), findsOne);
       expect(find.text('Metropolis'), findsOne);
       expect(find.text('7 wait for you'), findsOne);
-      expect(find.text('As of 20:53 · checking now'), findsOne);
+      expect(find.text('As of 20:53\u00A0· checking now'), findsOne);
       // Their answers stay: the server says for what is no longer valid.
       expect(find.byTooltip('Approve Charge'), findsOne);
       expect(find.byTooltip('Decline Charge'), findsOne);
       expect(find.byTooltip('Approve Metropolis'), findsOne);
       expect(find.text('See all requests'), findsOne);
       // Who asked, and how long ago, made again against now.
-      expect(find.textContaining('Anna · 2\u00A0h ago'), findsOne);
+      expect(find.textContaining('Anna\u00A0· 2\u00A0h ago'), findsOne);
 
       answer.complete(_decisions([_request('Spring', 3)]));
       count.complete((count: 1, floor: false));
@@ -277,15 +277,18 @@ void main() {
       await firstRun(
         tester,
         answered: {
-          charge.id: (decision: charge, outcome: 'Approved · sent to Radarr'),
+          charge.id: (
+            decision: charge,
+            outcome: 'Approved\u00A0· sent to Radarr',
+          ),
         },
       );
-      expect(find.text('Approved · sent to Radarr'), findsOne);
+      expect(find.text('Approved\u00A0· sent to Radarr'), findsOne);
 
       await run(tester, () => Completer<DashboardDecisions>().future);
       expect(find.text('Metropolis'), findsOne);
       expect(find.text('Charge'), findsNothing);
-      expect(find.text('Approved · sent to Radarr'), findsNothing);
+      expect(find.text('Approved\u00A0· sent to Radarr'), findsNothing);
       expect(find.byTooltip('Approve Charge'), findsNothing);
     });
 
@@ -418,7 +421,7 @@ void main() {
       id: 'seerr-4k-17',
       service: ServiceKey.seerr,
       title: 'Charge',
-      detail: 'Seerr 4K · Anna',
+      detail: 'Seerr 4K\u00A0· Anna',
       occurredAt: DateTime.utc(2026, 10, 12, 18, 30, 15, 250),
       route: '/dashboard/seerr/requests?i=4k',
       posterUrl: 'https://image.tmdb.org/t/p/w154/charge.jpg',
@@ -469,12 +472,14 @@ void main() {
       String? detailOf(String detail) =>
           (dashboardDecisionToJson(with_(detail))!)['detail'] as String?;
       expect(detailOf('Anna'), 'Anna');
-      expect(detailOf('Seerr 4K · Anna'), 'Seerr 4K · Anna');
+      expect(detailOf('Seerr 4K\u00A0· Anna'), 'Seerr 4K\u00A0· Anna');
       // Seerr's display name falls back to the account's email.
       expect(detailOf('anna@home.arpa'), isNull);
-      expect(detailOf('Seerr 4K · anna@home.arpa'), 'Seerr 4K');
+      expect(detailOf('Seerr 4K\u00A0· anna@home.arpa'), 'Seerr 4K');
       expect(
-        jsonEncode(dashboardDecisionToJson(with_('Seerr · anna@home.arpa'))),
+        jsonEncode(
+          dashboardDecisionToJson(with_('Seerr\u00A0· anna@home.arpa')),
+        ),
         isNot(contains('anna@home.arpa')),
       );
       // A handle is not an address.

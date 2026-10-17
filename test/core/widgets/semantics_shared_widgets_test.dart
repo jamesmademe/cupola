@@ -115,17 +115,22 @@ void main() {
         const MediaDetailSectionLabel(
           label: 'Missing subtitles',
           accent: Color(0xFF8B5CF6),
-          count: '3 missing · 2 languages',
+          count: '3 missing\u00A0· 2 languages',
         ),
       );
 
       expect(
-        find.semantics.byLabel('Missing subtitles, 3 missing · 2 languages'),
+        find.semantics.byLabel(
+          'Missing subtitles, 3 missing\u00A0· 2 languages',
+        ),
         containsSemantics(isHeader: true),
       );
       // Uppercase belongs in the eye, not in the ear.
       expect(find.semantics.byLabel('MISSING SUBTITLES'), findsNothing);
-      expect(find.semantics.byLabel('3 missing · 2 languages'), findsNothing);
+      expect(
+        find.semantics.byLabel('3 missing\u00A0· 2 languages'),
+        findsNothing,
+      );
     });
 
     testWidgets('an action stays reachable inside the heading', (tester) async {

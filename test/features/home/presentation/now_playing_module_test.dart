@@ -62,10 +62,10 @@ void main() {
     await pump(tester, rows: [_row('Anna', 'Sintel')]);
     expect(find.text('Now playing'), findsOne);
     expect(find.text('Jellyfin'), findsOne);
-    expect(find.text('Anna · Sintel'), findsOne);
-    expect(find.text('Living room TV · 9\u00A0min left'), findsOne);
+    expect(find.text('Anna\u00A0· Sintel'), findsOne);
+    expect(find.text('Living room TV\u00A0· 9\u00A0min left'), findsOne);
     expect(find.text('A'), findsOne);
-    expect(find.bySemanticsLabel('Anna · Sintel'), findsOne);
+    expect(find.bySemanticsLabel('Anna\u00A0· Sintel'), findsOne);
     handle.dispose();
   });
 

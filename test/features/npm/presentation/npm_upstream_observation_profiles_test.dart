@@ -80,7 +80,7 @@ void main() {
     );
     expect(
       find.textContaining(
-        'http://immich.lan:2283 · serving · not reachable from this device',
+        'http://immich.lan:2283\u00A0· serving\u00A0· not reachable from this device',
       ),
       findsOneWidget,
     );

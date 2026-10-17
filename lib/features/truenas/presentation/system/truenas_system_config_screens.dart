@@ -374,7 +374,7 @@ class TrueNasEmailScreen extends ConsumerWidget {
                   key: 'security',
                   label: 'Security',
                   initialValue: stringOrNull(data['security']),
-                  hint: 'PLAIN · SSL · TLS',
+                  hint: 'PLAIN\u00A0· SSL\u00A0· TLS',
                 ),
                 TrueNasFormField(
                   key: 'user',

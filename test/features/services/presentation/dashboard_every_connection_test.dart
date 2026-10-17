@@ -119,16 +119,19 @@ void main() {
     // Downloads: the 4K's movie, named for its Radarr, with how far it is
     // and how long is left.
     expect(
-      _within(HomeDownloadsModule, find.text('Elephants Dream · Radarr 4K')),
+      _within(
+        HomeDownloadsModule,
+        find.text('Elephants Dream\u00A0· Radarr 4K'),
+      ),
       findsOne,
     );
     expect(
-      _within(HomeDownloadsModule, find.text('31% · 6\u00A0min')),
+      _within(HomeDownloadsModule, find.text('31%\u00A0· 6\u00A0min')),
       findsOne,
     );
     // The value is figures, so it is tabular in the text face: figures are
     // never mono, which is for machine strings only.
-    final value = tester.widget<Text>(find.text('31% · 6\u00A0min'));
+    final value = tester.widget<Text>(find.text('31%\u00A0· 6\u00A0min'));
     expect(value.style?.fontFamily, isNot(DesignTokens.typeFamilyMono));
     expect(
       value.style?.fontFeatures,
@@ -154,13 +157,13 @@ void main() {
     expect(inFlight.queued.map((item) => item.instanceId), [WorldIds.radarr4k]);
     // The HD's own rows say which Radarr too, now that there are two.
     expect(
-      _within(HomeDownloadsModule, find.text('Sprite Fright · Radarr 1')),
+      _within(HomeDownloadsModule, find.text('Sprite Fright\u00A0· Radarr 1')),
       findsOne,
     );
     // Arrived: the 4K's import is on the rail, and the card says which
     // Radarr it came to. Its failed import is Needs you's, not a card.
     expect(
-      _within(HomeArrivedModule, find.text('2\u00A0h ago · Radarr 4K')),
+      _within(HomeArrivedModule, find.text('2\u00A0h ago\u00A0· Radarr 4K')),
       findsOne,
     );
     expect(find.bySemanticsLabel('Spring, 2\u00A0h ago, Radarr 4K'), findsOne);
@@ -200,7 +203,7 @@ void main() {
       find.descendant(
         of: find.byType(DecisionRow),
         matching: find.text(
-          'Import failed · Radarr 4K · Not a valid video file',
+          'Import failed\u00A0· Radarr 4K\u00A0· Not a valid video file',
         ),
       ),
       findsOne,
@@ -368,7 +371,7 @@ void main() {
     expect(cards.map((card) => card.instanceId).toSet(), {WorldIds.radarr4k});
     expect(
       arrivedSubtitle(cards.length, history.coverage),
-      'Last 7 days · 2 from Lidarr, Radarr 4K and Sonarr',
+      'Last 7 days\u00A0· 2 from Lidarr, Radarr 4K and Sonarr',
     );
   });
 
@@ -389,7 +392,10 @@ void main() {
     // The 4K keeps its movies: the one the module has room for is drawn, and
     // both are still in what it counts.
     expect(
-      _within(HomeDownloadsModule, find.text('Elephants Dream · Radarr 4K')),
+      _within(
+        HomeDownloadsModule,
+        find.text('Elephants Dream\u00A0· Radarr 4K'),
+      ),
       findsOne,
     );
     final container = ProviderScope.containerOf(
@@ -409,7 +415,7 @@ void main() {
     expect(
       _within(
         HomeArrivedModule,
-        find.text('Last 7 days · 2 from Lidarr, Radarr 4K and Sonarr'),
+        find.text('Last 7 days\u00A0· 2 from Lidarr, Radarr 4K and Sonarr'),
       ),
       findsOne,
     );
@@ -418,7 +424,7 @@ void main() {
       findsOne,
     );
     expect(
-      _within(HomeArrivedModule, find.text('2\u00A0h ago · Radarr 4K')),
+      _within(HomeArrivedModule, find.text('2\u00A0h ago\u00A0· Radarr 4K')),
       findsOne,
     );
     // A figure over the connections that answered, never a dash over a
@@ -426,7 +432,9 @@ void main() {
     expect(
       _within(
         HomeDownloadsModule,
-        find.text('4 moving · 1 stuck · 1 queued · 40.4\u00A0MB/s'),
+        find.text(
+          '4 moving\u00A0· 1 stuck\u00A0· 1 queued\u00A0· 40.4\u00A0MB/\u2060s',
+        ),
       ),
       findsOne,
     );
@@ -461,7 +469,7 @@ void main() {
     final cabin = byConnection[WorldIds.seerrCabin]!.first;
     // Named, and opening the cabin's own requests list: Discover reads the
     // lens, so a media page would have asked the other Seerr.
-    expect(cabin.detail, startsWith('Seerr Cabin · '));
+    expect(cabin.detail, startsWith('Seerr Cabin\u00A0· '));
     expect(cabin.route, '/activity/requests?i=${WorldIds.seerrCabin}');
     // Ids carry the connection: both Seerrs number their requests from one.
     expect(

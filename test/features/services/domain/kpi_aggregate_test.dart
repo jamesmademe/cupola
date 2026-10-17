@@ -69,22 +69,22 @@ void main() {
       // 2.0 MB/s + 512 KB/s is 2.5 MB/s, on the same binary ladder the cards
       // already print.
       final folded = aggregateServiceKpis([
-        [kpi('Download', '2.0\u00A0MB/s')],
-        [kpi('Download', '512\u00A0KB/s')],
+        [kpi('Download', '2.0\u00A0MB/\u2060s')],
+        [kpi('Download', '512\u00A0KB/\u2060s')],
       ]);
 
-      expect(folded!.single.value, '2.5\u00A0MB/s');
+      expect(folded!.single.value, '2.5\u00A0MB/\u2060s');
     });
 
     test('a rate printed whole from 100 up still adds', () {
       // `120 MB/s` is how the ladder prints a rate from 100 up in a unit: no
       // decimal, so the parser must not insist on one.
       final folded = aggregateServiceKpis([
-        [kpi('Download', '12.4\u00A0MB/s')],
-        [kpi('Download', '120\u00A0MB/s')],
+        [kpi('Download', '12.4\u00A0MB/\u2060s')],
+        [kpi('Download', '120\u00A0MB/\u2060s')],
       ]);
 
-      expect(folded!.single.value, '132\u00A0MB/s');
+      expect(folded!.single.value, '132\u00A0MB/\u2060s');
     });
 
     test('one connection folds to itself', () {

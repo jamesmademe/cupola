@@ -208,7 +208,7 @@ class _FoundRow {
     if (address == null) return '';
     final scheme = Uri.tryParse(address)?.scheme;
     return scheme == 'https'
-        ? '${_hostAndPort(address)} · https'
+        ? '${_hostAndPort(address)}\u00A0· https'
         : _hostAndPort(address);
   }
 
@@ -221,7 +221,7 @@ class _FoundRow {
         proposal.basis != FoundAddressBasis.sourceHost) {
       return null;
     }
-    return '$sourceTitle has ${_hostAndPort(candidate.reportedUrl)} · '
+    return '$sourceTitle has ${_hostAndPort(candidate.reportedUrl)}\u00A0· '
         "$sourceTitle's own host, with $name's port";
   }
 

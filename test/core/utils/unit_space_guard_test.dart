@@ -113,7 +113,7 @@ final k = '404s';
     );
   });
 
-  test('no source line carries an invisible no-break space', () {
+  test('no source line carries an invisible no-break space or joiner', () {
     // A no-break space typed into a file is indistinguishable from a space in
     // every editor and diff; it is `unitSpace` or an escape, so it can be seen.
     final offenders = [
@@ -125,7 +125,8 @@ final k = '404s';
             .where((file) => file.path.endsWith('.dart')),
       ])
         for (final (index, line) in file.readAsLinesSync().indexed)
-          if (line.contains('\u00A0')) '${file.path}:${index + 1}',
+          if (line.contains('\u00A0') || line.contains(wordJoiner))
+            '${file.path}:${index + 1}',
     ];
     expect(
       offenders,
@@ -167,7 +168,7 @@ final k = '404s';
     expect(unitSpace.codeUnits, [0xA0]);
     expect(withUnit(4.4, 'GB'), '4.4\u00A0GB');
     expect(withUnit(12, 'min'), '12\u00A0min');
-    expect(withUnit('0', 'B/s'), '0\u00A0B/s');
+    expect(withUnit('0', 'B/s'), '0\u00A0B/\u2060s');
   });
 
   test('the scan catches a plain space before a unit and passes the rest', () {

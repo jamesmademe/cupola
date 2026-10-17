@@ -21,6 +21,7 @@ import 'package:flutter_riverpod/misc.dart' show ProviderListenable;
 import 'package:cupola/core/last_known/last_known_store.dart';
 import 'package:cupola/core/last_known/stored_image.dart';
 import 'package:cupola/core/utils/date_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/discover/presentation/library_calendar_provider.dart'
@@ -402,7 +403,7 @@ String? homeAsOfWords(
   return [
     'As of ${formatAsOf(oldest, now: now)}',
     if (checking) 'checking now',
-  ].join(' · ');
+  ].join(dotSeparator);
 }
 
 /// When a snapshot was taken, as `As of …` finishes it: `20:53` today,

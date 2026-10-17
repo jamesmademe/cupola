@@ -97,7 +97,7 @@ Future<void> _addAway(
   String url,
 ) async {
   await _tap(tester, harness, 'Add an address away');
-  await tester.enterText(_field('Address away · optional'), url);
+  await tester.enterText(_field('Address away\u00A0· optional'), url);
   await harness.settle(tester);
 }
 
@@ -106,10 +106,10 @@ void main() {
       'the keyboard on it', (tester) async {
     final (harness, _) = await _firstRunAtRadarr(tester);
 
-    expect(_field('Address away · optional'), findsNothing);
+    expect(_field('Address away\u00A0· optional'), findsNothing);
     await _tap(tester, harness, 'Add an address away');
 
-    final away = _field('Address away · optional');
+    final away = _field('Address away\u00A0· optional');
     expect(away, findsOneWidget);
     expect(find.text('Add an address away'), findsNothing);
     expect(tester.widget<TextField>(away).focusNode?.hasFocus, isTrue);
@@ -133,13 +133,13 @@ void main() {
     await _tap(tester, harness, 'Test connection');
 
     expect(find.text('Radarr answered.'), findsOneWidget);
-    expect(find.text('At home · nas.home.arpa:7878'), findsOneWidget);
+    expect(find.text('At home\u00A0· nas.home.arpa:7878'), findsOneWidget);
     expect(find.text('Not checked from here.'), findsOneWidget);
     expect(
       find.text("Cupola tries it when the home address doesn't answer."),
       findsOneWidget,
     );
-    expect(find.text('Away · radarr.example.net'), findsOneWidget);
+    expect(find.text('Away\u00A0· radarr.example.net'), findsOneWidget);
 
     await tester.tap(find.text('Continue').first);
     await harness.settle(tester);
@@ -165,8 +165,8 @@ void main() {
     await _tap(tester, harness, 'Test connection');
 
     expect(find.text('Radarr did not answer at home or away'), findsOneWidget);
-    expect(find.text('At home · radarr.home.arpa:7878'), findsOneWidget);
-    expect(find.text('Away · radarr.example.net'), findsOneWidget);
+    expect(find.text('At home\u00A0· radarr.home.arpa:7878'), findsOneWidget);
+    expect(find.text('Away\u00A0· radarr.example.net'), findsOneWidget);
     expect(find.text('Continue'), findsNothing);
     expect(
       container.read(currentSettingsProvider).primaryOf(ServiceKey.radarr),
@@ -195,7 +195,7 @@ void main() {
     await _tap(tester, harness, 'Use https');
     expect(
       tester
-          .widget<TextField>(_field('Address away · optional'))
+          .widget<TextField>(_field('Address away\u00A0· optional'))
           .controller!
           .text,
       _away,

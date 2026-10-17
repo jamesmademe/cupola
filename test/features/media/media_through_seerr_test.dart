@@ -61,7 +61,7 @@ void main() {
       )).rows;
 
       final view = _view(rows.whereType<MediaServerThroughSeerrRow>().single);
-      expect(view.detail, 'S1 available · S2 partly available');
+      expect(view.detail, 'S1 available\u00A0· S2 partly available');
       expect(view.state, 'Partial');
       expect(
         resolveMediaLead(rows, audience: Audience.operator),
@@ -112,7 +112,7 @@ void main() {
         {'seasonNumber': 0, 'status': 5, 'status4k': 1},
       ],
     });
-    expect(line, 'S1 available · S2 partly available');
+    expect(line, 'S1 available\u00A0· S2 partly available');
     expect(
       mediaSeerrSeasonsLine({
         'seasons': [
@@ -120,7 +120,7 @@ void main() {
           {'seasonNumber': 2, 'status': 4, 'status4k': 5},
         ],
       }, is4k: true),
-      'S1 available · S2 available',
+      'S1 available\u00A0· S2 available',
     );
     expect(mediaSeerrSeasonsLine({'status': 5}), '');
   });

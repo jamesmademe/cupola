@@ -94,7 +94,7 @@ class ReleaseSearchJobCard extends StatelessWidget {
                     Text(
                       connection == null
                           ? _subtitle
-                          : '$connection · $_subtitle',
+                          : '$connection\u00A0· $_subtitle',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colors.onSurfaceVariant,
                       ),
@@ -129,7 +129,7 @@ class ReleaseSearchJobCard extends StatelessWidget {
       ReleaseSearchJobStatus.queued =>
         queuePosition == null
             ? 'Waiting for a slot'
-            : '$queuePosition ahead · starts when a slot frees',
+            : '$queuePosition ahead\u00A0· starts when a slot frees',
       ReleaseSearchJobStatus.running => 'Searching your indexers',
       ReleaseSearchJobStatus.completed =>
         job.releaseCount == 0
@@ -137,7 +137,7 @@ class ReleaseSearchJobCard extends StatelessWidget {
             : '${job.releaseCount} release${job.releaseCount == 1 ? '' : 's'}',
       ReleaseSearchJobStatus.failed => job.stoppedHeadline,
       ReleaseSearchJobStatus.expired =>
-        '${job.releaseCount} release${job.releaseCount == 1 ? '' : 's'} · expired',
+        '${job.releaseCount} release${job.releaseCount == 1 ? '' : 's'}\u00A0· expired',
     };
   }
 

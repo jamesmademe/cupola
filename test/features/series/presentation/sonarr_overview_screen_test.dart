@@ -104,7 +104,10 @@ void main() {
       ),
     );
 
-    expect(_subtitleOf(tester, 'Airing this week'), 'next 7 days · 1 series');
+    expect(
+      _subtitleOf(tester, 'Airing this week'),
+      'next 7 days\u00A0· 1 series',
+    );
     expect(find.text('Today'), findsOneWidget);
     // The row speaks as ONE sentence and silences its parts: day, series, then
     // the qualifier with the layout's dot turned into a comma.
@@ -130,7 +133,7 @@ void main() {
       ),
     );
 
-    expect(_subtitleOf(tester, 'Airing this week'), 'next 7 days · —');
+    expect(_subtitleOf(tester, 'Airing this week'), 'next 7 days\u00A0· —');
     expect(find.text('Sonarr did not say when anything next airs'), findsOne);
     expect(find.text('Nothing airing this week'), findsNothing);
   });
@@ -145,7 +148,10 @@ void main() {
       ),
     );
 
-    expect(_subtitleOf(tester, 'Airing this week'), 'next 7 days · 0 series');
+    expect(
+      _subtitleOf(tester, 'Airing this week'),
+      'next 7 days\u00A0· 0 series',
+    );
     expect(find.text('Nothing airing this week'), findsOne);
   });
 
@@ -159,7 +165,7 @@ void main() {
     // here: one that did not answer says it once, for the whole page.
     await _pump(tester, service: _scripted(libraryThrows: true));
 
-    expect(_subtitleOf(tester, 'Airing this week'), 'next 7 days · —');
+    expect(_subtitleOf(tester, 'Airing this week'), 'next 7 days\u00A0· —');
     expect(find.text('Nothing airing this week'), findsNothing);
     expect(find.text('0 series'), findsNothing);
     expect(

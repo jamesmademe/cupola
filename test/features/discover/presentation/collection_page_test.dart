@@ -134,7 +134,10 @@ void main() {
       expect(find.byType(AppErrorState), findsNothing);
       expect(find.byType(AppEmptyState), findsNothing);
       expect(find.text('The Trilogy'), findsOneWidget);
-      expect(find.text('Collection · 2 movies · 2001–2004'), findsOneWidget);
+      expect(
+        find.text('Collection\u00A0· 2 movies\u00A0· 2001–2004'),
+        findsOneWidget,
+      );
       expect(find.text('0 of 2 on your server'), findsOneWidget);
       expect(
         tester.getTopLeft(find.text('Part One')).dy,

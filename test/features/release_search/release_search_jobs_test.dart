@@ -58,18 +58,18 @@ void main() {
   final season2 = ReleaseSearchTarget.season(
     seriesId: 1,
     seasonNumber: 2,
-    label: 'Severance · Season 2',
+    label: 'Severance\u00A0· Season 2',
   );
   final season1 = ReleaseSearchTarget.season(
     seriesId: 1,
     seasonNumber: 1,
-    label: 'Severance · Season 1',
+    label: 'Severance\u00A0· Season 1',
   );
   final episodeInSeason2 = ReleaseSearchTarget.episode(
     episodeId: 44,
     seriesId: 1,
     seasonNumber: 2,
-    label: 'Severance · S02E04',
+    label: 'Severance\u00A0· S02E04',
   );
   final movie = ReleaseSearchTarget.movie(movieId: 9, label: 'Dune: Part Two');
 

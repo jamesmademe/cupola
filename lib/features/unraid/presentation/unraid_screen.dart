@@ -9,6 +9,7 @@ import 'package:cupola/core/capability/connection_capability.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/status/silence_age.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/service_action.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
@@ -306,7 +307,7 @@ String _dockerTally(List<UnraidDockerContainer> containers) {
     if (stopped > 0) '$stopped stopped',
     if (unhealthy > 0) '$unhealthy unhealthy',
     if (crashed > 0) '$crashed failed',
-  ].join(' · ');
+  ].join(dotSeparator);
 }
 
 /// Re-reads what the tab on screen draws, and nothing else.
@@ -606,7 +607,7 @@ class _ShareList extends ConsumerWidget {
                     if (share.cached != null)
                       share.cached! ? 'cached' : 'array',
                     if (share.comment.isNotEmpty) share.comment,
-                  ].join(' · ');
+                  ].join(dotSeparator);
                   return _UnraidTile(
                     icon: Icons.folder_outlined,
                     // The accent walked for contrast against the surface it

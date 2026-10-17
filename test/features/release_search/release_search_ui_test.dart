@@ -27,7 +27,7 @@ import '../../test_helpers/settings_scope.dart';
 final _season = ReleaseSearchTarget.season(
   seriesId: 1,
   seasonNumber: 2,
-  label: 'Severance · Season 2',
+  label: 'Severance\u00A0· Season 2',
 );
 
 ReleaseSearchJob _job({
@@ -200,7 +200,7 @@ void main() {
                   headline:
                       'Your reverse proxy closed the connection after 1:02.',
                   diagnosis: 'Sonarr is probably still searching.',
-                  detail: 'HTTP 502 · nginx',
+                  detail: 'HTTP 502\u00A0· nginx',
                 ),
               ),
               now: DateTime.utc(2026, 8, 5, 9),
@@ -216,7 +216,7 @@ void main() {
         );
         // Present, because a self-hoster can act on it, but demoted, never the
         // message.
-        expect(find.text('HTTP 502 · nginx'), findsOneWidget);
+        expect(find.text('HTTP 502\u00A0· nginx'), findsOneWidget);
       },
     );
 
@@ -345,7 +345,7 @@ void main() {
             home: Scaffold(
               body: SingleChildScrollView(
                 child: ReleaseSearchesGroup(
-                  heading: (count) => Text('Searching · $count'),
+                  heading: (count) => Text('Searching\u00A0· $count'),
                 ),
               ),
             ),
@@ -354,7 +354,7 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text('Searching · 2'), findsOneWidget);
+      expect(find.text('Searching\u00A0· 2'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox());
       container.dispose();
@@ -387,7 +387,7 @@ void main() {
       await tester.pump();
 
       expect(find.text('Dune: Part Two'), findsOneWidget);
-      expect(find.text('Severance · Season 2'), findsOneWidget);
+      expect(find.text('Severance\u00A0· Season 2'), findsOneWidget);
       expect(find.byType(ReleaseSearchJobCard), findsAtLeastNWidgets(2));
 
       await tester.pumpWidget(const SizedBox());

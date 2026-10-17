@@ -77,8 +77,14 @@ void main() {
           diagnosis: const ServiceDiagnosis.connected(),
           routes: const {},
         );
-        expect(find.text('Home and away · nas.home.arpa:7878'), findsOneWidget);
-        expect(find.text('Home only · nas.home.arpa:8080'), findsOneWidget);
+        expect(
+          find.text('Home and away\u00A0· nas.home.arpa:7878'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('Home only\u00A0· nas.home.arpa:8080'),
+          findsOneWidget,
+        );
       });
 
       testWidgets('away, the address follows the route and a home-only row '
@@ -90,8 +96,14 @@ void main() {
           diagnoses: const {ServiceKey.sabnzbd: ServiceDiagnosis.onlyAtHome()},
           routes: const {'radarr': ConnectionRoute.away},
         );
-        expect(find.text('Home and away · radarr.example.net'), findsOneWidget);
-        expect(find.text('Only at home · nas.home.arpa:8080'), findsOneWidget);
+        expect(
+          find.text('Home and away\u00A0· radarr.example.net'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('Only at home\u00A0· nas.home.arpa:8080'),
+          findsOneWidget,
+        );
         expect(find.textContaining('Did not answer'), findsNothing);
       });
 
@@ -110,7 +122,10 @@ void main() {
           routes: const {},
         );
         expect(find.text('Did not answer at home or away'), findsOneWidget);
-        expect(find.text('Home only · nas.home.arpa:8080'), findsOneWidget);
+        expect(
+          find.text('Home only\u00A0· nas.home.arpa:8080'),
+          findsOneWidget,
+        );
       });
 
       testWidgets('without any address away, the rows say what they said', (
@@ -155,7 +170,7 @@ void main() {
 
       expect(find.text('Ready to add'), findsOneWidget);
       expect(find.text('Add Radarr 4K'), findsOneWidget);
-      expect(find.text('Seerr knows it · key found'), findsOneWidget);
+      expect(find.text('Seerr knows it\u00A0· key found'), findsOneWidget);
       // Above what is set up.
       expect(
         tester.getTopLeft(find.text('Ready to add')).dy,
@@ -334,7 +349,10 @@ void main() {
         diagnosis: const ServiceDiagnosis.connected(),
       );
 
-      expect(find.text('radarr.local:7878 · 2 connections'), findsOneWidget);
+      expect(
+        find.text('radarr.local:7878\u00A0· 2 connections'),
+        findsOneWidget,
+      );
       expect(
         find.semantics.byLabel(
           'Radarr, Answering, radarr.local:7878, 2 connections',
@@ -377,7 +395,7 @@ void main() {
       );
 
       expect(
-        find.textContaining('Radarr 2 · ', findRichText: true),
+        find.textContaining('Radarr 2\u00A0· ', findRichText: true),
         findsOneWidget,
       );
       expect(
@@ -405,7 +423,10 @@ void main() {
         diagnosis: ServiceDiagnosis.failed(_UnauthorizedFailure()),
       );
 
-      expect(find.text('Refused the key · radarr.local:7878'), findsOneWidget);
+      expect(
+        find.text('Refused the key\u00A0· radarr.local:7878'),
+        findsOneWidget,
+      );
       expect(
         find.semantics.byLabel('Radarr, Refused the key, radarr.local:7878'),
         findsOneWidget,

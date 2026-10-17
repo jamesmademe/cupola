@@ -193,7 +193,7 @@ class _AccountHeader extends ConsumerWidget {
       ServiceKey.seerr.extractHost(connection.url) ?? '',
     );
     final title = _titleOf(ref, connection);
-    final where = host.isEmpty ? title : '$title · $host';
+    final where = host.isEmpty ? title : '$title\u00A0· $host';
     return Semantics(
       container: true,
       excludeSemantics: true,

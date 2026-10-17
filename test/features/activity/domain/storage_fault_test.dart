@@ -57,12 +57,20 @@ void main() {
 
   test('the evidence: the pool, how full, and the disk', () {
     expect(poolEvidence('sdd', _tank()), [
-      'Pool tank · Healthy · 72%',
-      'Disk sdd · 8 errors',
+      'Pool tank\u00A0· Healthy\u00A0· 72%',
+      'Disk sdd\u00A0· 8 errors',
     ]);
-    expect(poolEvidence('sdd', _tank(errors: 1)).last, 'Disk sdd · 1 error');
-    expect(poolEvidence('sdd', _tank(errors: 0)).last, 'Disk sdd · Online');
-    expect(poolEvidence('sdx', _tank()), ['Pool tank · Healthy · 72%']);
+    expect(
+      poolEvidence('sdd', _tank(errors: 1)).last,
+      'Disk sdd\u00A0· 1 error',
+    );
+    expect(
+      poolEvidence('sdd', _tank(errors: 0)).last,
+      'Disk sdd\u00A0· Online',
+    );
+    expect(poolEvidence('sdx', _tank()), [
+      'Pool tank\u00A0· Healthy\u00A0· 72%',
+    ]);
   });
 
   test('a running scan: what, how far, and how long it has left', () {
@@ -75,7 +83,7 @@ void main() {
     expect(scrubbing.isScanning, isTrue);
     expect(
       scanningLine(scrubbing),
-      'Scrubbing tank · 2% · about 9\u00A0h 2\u00A0min left',
+      'Scrubbing tank\u00A0· 2%\u00A0· about 9\u00A0h 2\u00A0min left',
     );
     expect(
       scanningLine(
@@ -85,7 +93,7 @@ void main() {
           scanPercentage: 40,
         ),
       ),
-      'Resilvering tank · 40%',
+      'Resilvering tank\u00A0· 40%',
     );
     expect(_tank(scanState: 'FINISHED').isScanning, isFalse);
   });

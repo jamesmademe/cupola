@@ -204,14 +204,14 @@ void main() {
           _torrent(id: 4, status: 0),
           _torrent(id: 5, status: 3),
         ]),
-        '2 downloading · 1 seeding',
+        '2 downloading\u00A0· 1 seeding',
       );
     });
 
     test('an empty queue is still two answered figures', () {
       expect(
         transmissionTransferringSubtitle(const []),
-        '0 downloading · 0 seeding',
+        '0 downloading\u00A0· 0 seeding',
       );
     });
   });
@@ -274,11 +274,17 @@ void main() {
     });
 
     test('an enforced limit prints the API unit it was set in', () {
-      expect(transmissionLimitLabel(4096, enabled: true), '4096\u00A0KB/s');
+      expect(
+        transmissionLimitLabel(4096, enabled: true),
+        '4096\u00A0KB/\u2060s',
+      );
     });
 
     test('an enforced zero says what it does', () {
-      expect(transmissionLimitLabel(0, enabled: true), 'Stopped (0\u00A0KB/s)');
+      expect(
+        transmissionLimitLabel(0, enabled: true),
+        'Stopped (0\u00A0KB/\u2060s)',
+      );
     });
   });
 
@@ -482,7 +488,10 @@ void main() {
         ),
       ], now: now);
 
-      expect(items.single.detail, '1.0\u00A0GB · 2\u00A0h ago · seeding');
+      expect(
+        items.single.detail,
+        '1.0\u00A0GB\u00A0· 2\u00A0h ago\u00A0· seeding',
+      );
     });
 
     test('a ratio Transmission did not report reads an em dash', () {
@@ -665,7 +674,7 @@ void main() {
       // The row names the path it measured, and which directory that is: the
       // figure and its subject have to be the same volume, or the row answers
       // the wrong question while looking right.
-      expect(free.detail, '/mnt/fast/incomplete · incomplete directory');
+      expect(free.detail, '/mnt/fast/incomplete\u00A0· incomplete directory');
     });
 
     test('ignores an incomplete directory that is switched off', () async {

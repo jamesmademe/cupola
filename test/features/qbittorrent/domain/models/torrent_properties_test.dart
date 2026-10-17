@@ -346,26 +346,29 @@ void main() {
       () {
         expect(build(dlLimit: -1).dlLimitFormatted, '∞');
         expect(build(dlLimit: 0).dlLimitFormatted, '0');
-        expect(build(dlLimit: 2048).dlLimitFormatted, '2.0\u00A0KB/s');
+        expect(build(dlLimit: 2048).dlLimitFormatted, '2.0\u00A0KB/\u2060s');
         expect(
           build(dlLimit: 5 * 1024 * 1024).dlLimitFormatted,
-          '5.0\u00A0MB/s',
+          '5.0\u00A0MB/\u2060s',
         );
 
         expect(build(upLimit: -1).upLimitFormatted, '∞');
         expect(build(upLimit: 0).upLimitFormatted, '0');
-        expect(build(upLimit: 1024).upLimitFormatted, '1.0\u00A0KB/s');
+        expect(build(upLimit: 1024).upLimitFormatted, '1.0\u00A0KB/\u2060s');
       },
     );
 
     test(
       'dlSpeedAvgFormatted and upSpeedAvgFormatted defer to formatSpeed',
       () {
-        expect(build(dlSpeedAvg: 0).dlSpeedAvgFormatted, '0\u00A0B/s');
-        expect(build(dlSpeedAvg: 2048).dlSpeedAvgFormatted, '2.0\u00A0KB/s');
+        expect(build(dlSpeedAvg: 0).dlSpeedAvgFormatted, '0\u00A0B/\u2060s');
+        expect(
+          build(dlSpeedAvg: 2048).dlSpeedAvgFormatted,
+          '2.0\u00A0KB/\u2060s',
+        );
         expect(
           build(upSpeedAvg: 1024 * 1024).upSpeedAvgFormatted,
-          '1.0\u00A0MB/s',
+          '1.0\u00A0MB/\u2060s',
         );
       },
     );

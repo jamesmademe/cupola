@@ -70,7 +70,7 @@ void main() {
       expect(find.text('Radarr'), findsNWidgets(2));
       expect(find.text('Save'), findsOneWidget);
       expect(find.text('Address at home'), findsOneWidget);
-      expect(find.text('Address away · optional'), findsOneWidget);
+      expect(find.text('Address away\u00A0· optional'), findsOneWidget);
       expect(find.text('API key'), findsOneWidget);
       expect(find.byType(TextFormField), findsNWidgets(3));
     });

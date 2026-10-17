@@ -100,7 +100,10 @@ void main() {
         .widgetList<SectionHeader>(find.byType(SectionHeader))
         .toList();
     expect(headers[0].subtitle, '0');
-    expect(headers[1].subtitle, '3 · 2 of 3 enabled checked from this device');
+    expect(
+      headers[1].subtitle,
+      '3\u00A0· 2 of 3 enabled checked from this device',
+    );
   });
 
   testWidgets('a host this device could not reach says so, and is no fault', (
@@ -162,7 +165,10 @@ void main() {
     );
 
     final row = tester.widget<ServiceOverviewRow>(
-      find.widgetWithText(ServiceOverviewRow, 'nginx refused · photos.lan'),
+      find.widgetWithText(
+        ServiceOverviewRow,
+        'nginx refused\u00A0· photos.lan',
+      ),
     );
     // Toned, and toned through `statusToneColor` rather than a raw palette
     // constant: the walk is what keeps amber legible on this surface.
@@ -194,11 +200,11 @@ void main() {
     );
 
     expect(
-      find.textContaining('Certificate expired · photos.lan'),
+      find.textContaining('Certificate expired\u00A0· photos.lan'),
       findsOneWidget,
     );
     expect(
-      find.textContaining('1 certificate expiring · seerr.lan'),
+      find.textContaining('1 certificate expiring\u00A0· seerr.lan'),
       findsOneWidget,
     );
 
@@ -235,9 +241,9 @@ void main() {
       final certificates = tester.widget<SectionHeader>(
         find.widgetWithText(SectionHeader, 'Certificates'),
       );
-      expect(certificates.subtitle, '1 · 1 expired');
+      expect(certificates.subtitle, '1\u00A0· 1 expired');
       expect(
-        find.textContaining('Certificate expired · photos.lan'),
+        find.textContaining('Certificate expired\u00A0· photos.lan'),
         findsOneWidget,
       );
       expect(find.textContaining('expiring'), findsNothing);

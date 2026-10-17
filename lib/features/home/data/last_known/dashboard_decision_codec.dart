@@ -15,6 +15,7 @@
 library;
 
 import 'package:cupola/core/last_known/stored_image.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/features/home/data/last_known/stored_fields.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 
@@ -84,11 +85,9 @@ DashboardDecision? dashboardDecisionFromJson(Object? json) {
 }
 
 /// The row's line without the parts that are an email address.
-String _detailWithoutAddresses(String detail) => detail
-    .split(' · ')
-    .where((part) => !_address.hasMatch(part))
-    .join(' · ')
-    .trim();
+String _detailWithoutAddresses(String detail) => splitParts(
+  detail,
+).where((part) => !_address.hasMatch(part)).join(dotSeparator).trim();
 
 String? _keptPath(String? path) {
   if (path == null || path.isEmpty) return null;

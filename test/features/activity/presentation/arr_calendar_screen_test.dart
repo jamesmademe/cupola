@@ -30,7 +30,7 @@ void main() {
     expect(find.text('Sprite Fright'), findsNWidgets(2));
     expect(find.text('Digital'), findsOneWidget);
     expect(find.text('Disc'), findsOneWidget);
-    expect(find.text('Out today · downloading 62%'), findsOneWidget);
+    expect(find.text('Out today\u00A0· downloading 62%'), findsOneWidget);
     expect(find.text('Not out yet'), findsOneWidget);
     // The room is Radarr's: no row names it.
     expect(find.text('Radarr 1'), findsNothing);

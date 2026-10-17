@@ -81,7 +81,7 @@ void main() {
     expect(digital.release, 'on digital');
     expect(digital.sources, ['Radarr', 'Radarr 4K']);
     expect(digital.state.stand, CalendarStand.inFlight);
-    expect(digital.statusLine(now), 'Out today · downloading 62%');
+    expect(digital.statusLine(now), 'Out today\u00A0· downloading 62%');
     expect(digital.state.finishesAt, DateTime(2026, 9, 29, 21, 10));
     expect(digital.lead(), (lead: 'Digital', under: 'all day'));
     expect(
@@ -158,7 +158,7 @@ void main() {
     );
     expect(
       read(ArrQueueSnapshot.empty).first.statusLine(now),
-      'Out today · missing',
+      'Out today\u00A0· missing',
     );
     expect(
       read(const ArrQueueSnapshot.failed('down')).first.statusLine(now),
@@ -212,7 +212,7 @@ void main() {
       ],
     );
     final album = events[0];
-    expect(album.statusLine(now), 'Jan Morgenstern · not out yet');
+    expect(album.statusLine(now), 'Jan Morgenstern\u00A0· not out yet');
     expect(album.lead(), (lead: 'Album', under: 'all day'));
     expect(
       album.target,
@@ -221,14 +221,17 @@ void main() {
 
     final premiere = events[1];
     expect(premiere.lead(), (lead: '21:00', under: null));
-    expect(premiere.statusLine(now), 'S3 E1 · premiere · not aired');
+    expect(premiere.statusLine(now), 'S3 E1\u00A0· premiere\u00A0· not aired');
     expect(premiere.target, isA<CalendarMediaTarget>());
     expect(
       premiere.spoken(now),
       'Friday 2 October at 21:00, Cosmos Laundromat season 3 premiere, '
       'not aired yet, in Sonarr',
     );
-    expect(events[2].statusLine(now), 'S4 E10 · season finale · not aired');
+    expect(
+      events[2].statusLine(now),
+      'S4 E10\u00A0· season finale\u00A0· not aired',
+    );
   });
 
   test('an episode that aired with nothing on disk is the backlog', () {
@@ -248,7 +251,7 @@ void main() {
       window,
       now,
     );
-    expect(events.single.statusLine(now), 'S2 E5 · aired · missing');
+    expect(events.single.statusLine(now), 'S2 E5\u00A0· aired\u00A0· missing');
     expect(events.single.state.tone, StatusTone.neutral);
     expect(events.single.state.hollow, isFalse);
   });
@@ -415,7 +418,10 @@ void main() {
 
     expect([for (final e in events) e.code], ['S3 E1', 'S3 E2']);
     expect(events.first.airsAt, isNull);
-    expect(events.first.statusLine(now), 'S3 E1 · premiere · not aired');
+    expect(
+      events.first.statusLine(now),
+      'S3 E1\u00A0· premiere\u00A0· not aired',
+    );
     // Only the season the calendar dates.
     expect(events.first.note, 'You asked for season 3 on Sat 26 Sep');
     expect(events.last.note, isNull);
@@ -446,7 +452,10 @@ void main() {
 
     expect(events, hasLength(2));
     expect(events.first.code, 'S1 E1–E8');
-    expect(events.first.statusLine(now), 'S1 E1–E8 · whole season · not aired');
+    expect(
+      events.first.statusLine(now),
+      'S1 E1–E8\u00A0· whole season\u00A0· not aired',
+    );
     expect(
       events.first.spoken(now),
       'Tomorrow at 09:00, Carrie season 1 episodes 1 to 8, whole season, '
@@ -538,11 +547,11 @@ void main() {
         'the connections', () {
       expect(
         calendarEventTip(disc, now),
-        'Sprite Fright · on disc · not out yet · Radarr, Radarr 4K',
+        'Sprite Fright\u00A0· on disc\u00A0· not out yet\u00A0· Radarr, Radarr 4K',
       );
       expect(
         calendarEventTip(album, now),
-        'Sintel (Anniversary Edition) · Jan Morgenstern · not out yet · '
+        'Sintel (Anniversary Edition)\u00A0· Jan Morgenstern\u00A0· not out yet\u00A0· '
         'Lidarr',
       );
     });

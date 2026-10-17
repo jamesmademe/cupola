@@ -182,7 +182,7 @@ void main() {
       expect(row.kind, DecisionKind.importBlocked);
       expect(row.count, 18);
       expect(row.title, '18 need a manual import');
-      expect(row.detail, 'Sonarr · Episode 0, Episode 1 and 16 more');
+      expect(row.detail, 'Sonarr\u00A0· Episode 0, Episode 1 and 16 more');
       // Ranks where its oldest member would have.
       expect(row.occurredAt, DateTime.utc(2024, 1, 1));
       // What every member agrees on travels with the group.
@@ -191,12 +191,12 @@ void main() {
       expect(row.route, '/stack/sonarr');
       // Every count surface reads the members, not the rows.
       expect(decisionItemCount(grouped), 18);
-      expect(decisionsEyebrow(grouped), '18 items · blocked imports');
+      expect(decisionsEyebrow(grouped), '18 items\u00A0· blocked imports');
       // Found in the rows of a queue walk that stopped short: there may be
       // more behind them.
       expect(
         decisionsEyebrow(grouped, floor: true),
-        '18+ items · blocked imports',
+        '18+ items\u00A0· blocked imports',
       );
     });
 
@@ -217,14 +217,17 @@ void main() {
         stalls(['Disk full', 'Disk full', 'Disk full']),
       ).single;
       expect(shared.title, '3 stuck downloads');
-      expect(shared.detail, 'Disk full · Radarr · Film 0, Film 1 and 1 more');
+      expect(
+        shared.detail,
+        'Disk full\u00A0· Radarr\u00A0· Film 0, Film 1 and 1 more',
+      );
       expect(shared.reason, 'Disk full');
 
       final differing = groupDecisions(
         stalls(['Disk full', 'Password needed']),
       ).single;
       expect(differing.title, '2 stuck downloads');
-      expect(differing.detail, 'Radarr · Film 0, Film 1');
+      expect(differing.detail, 'Radarr\u00A0· Film 0, Film 1');
       expect(differing.reason, isNull);
 
       // A member that gave no cause is not one that shares it.
@@ -343,7 +346,7 @@ void main() {
         _decision(DecisionKind.pendingRequest, 'c', at: DateTime.utc(2024)),
       ]);
 
-      expect(eyebrow, '3 items · stalls, requests');
+      expect(eyebrow, '3 items\u00A0· stalls, requests');
       expect(eyebrow, isNot(contains('certs')));
     });
 

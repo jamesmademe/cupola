@@ -213,7 +213,7 @@ void main() {
       key: MediaKey.movie(WorldTitles.coffeeRun.tmdbId),
     );
 
-    final add = find.text('Add to Radarr · 4K');
+    final add = find.text('Add to Radarr\u00A0· 4K');
     expect(add, findsOneWidget);
     // The copy it holds offers nothing of the kind.
     expect(find.text('Add to Radarr 1'), findsNothing);
@@ -224,7 +224,7 @@ void main() {
     await _answer(tester);
     // The sheet is that Radarr's, with no choice of another: nothing new
     // names the other one.
-    expect(find.text('Add to Radarr · 4K'), findsWidgets);
+    expect(find.text('Add to Radarr\u00A0· 4K'), findsWidgets);
     expect(find.text('Quality profile'), findsOneWidget);
     expect(find.text('Radarr 1'), findsNWidgets(other));
 

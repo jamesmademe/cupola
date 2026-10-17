@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -289,7 +290,7 @@ class _SnapshotTile extends ConsumerWidget {
                           snapshot.createdMs!,
                         ).toIso8601String(),
                       ),
-                  ].join(' · '),
+                  ].join(dotSeparator),
                   style: theme.textTheme.labelSmall!.tabular.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),

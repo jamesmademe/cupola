@@ -88,7 +88,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.textContaining('0\u00A0B'), findsOneWidget);
-    expect(find.textContaining('· — · Missing articles'), findsOneWidget);
+    expect(find.textContaining('· —\u00A0· Missing articles'), findsOneWidget);
 
     final icon = tester.widget<Icon>(find.byIcon(Icons.error_outline_rounded));
     final colorScheme = Theme.of(

@@ -3,6 +3,7 @@
 library;
 
 import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/features/requests/domain/my_requests.dart';
 
 /// How many rows Everyone's requests draws before All requests.
@@ -54,7 +55,7 @@ String everyonesSummary(MyRequests requests) {
   return [
     if (processing > 0) '$processing processing',
     if (declined > 0) '$declined declined',
-  ].join(' · ');
+  ].join(dotSeparator);
 }
 
 /// One request's state and when, as one line: `Ready to watch since 18:40`,
@@ -81,7 +82,7 @@ String everyonesLine(MyRequest mine, DateTime now) {
   final lower = '${detail[0].toLowerCase()}${detail.substring(1)}';
   return detail.startsWith('Since ')
       ? '${mine.state} $lower'
-      : '${mine.state} · $lower';
+      : '${mine.state}\u00A0· $lower';
 }
 
 /// The tone of [stage] on the operator's rows: a request that did not go

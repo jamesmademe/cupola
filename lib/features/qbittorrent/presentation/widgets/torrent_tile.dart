@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/widgets/download_queue_tile.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
@@ -67,7 +68,7 @@ class TorrentTile extends StatelessWidget {
       subtitle: <String>[
         torrent.sizeFormatted,
         if (eta.isNotEmpty && eta != '∞') eta,
-      ].join(' · '),
+      ].join(dotSeparator),
       // Null, not zero, for a torrent that has not started. A checking, queued
       // or errored torrent has no meaningful bar, and the old row expressed that
       // by conditionally omitting the widget; the plate expresses it in the

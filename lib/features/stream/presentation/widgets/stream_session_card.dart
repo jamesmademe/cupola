@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/app_card.dart';
@@ -133,7 +134,7 @@ class StreamSessionCard extends StatelessWidget {
                     session.userName,
                     session.deviceLabel,
                     ?serverName,
-                  ].join(' · '),
+                  ].join(dotSeparator),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodySmall?.copyWith(

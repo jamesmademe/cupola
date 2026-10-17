@@ -39,13 +39,13 @@ void main() {
       screen: const SeerrIssuesScreen(topPadding: 0),
     );
     expect(find.text('Dune: Part Two'), findsOneWidget);
-    expect(find.text('Audio · Matt'), findsOneWidget);
+    expect(find.text('Audio\u00A0· Matt'), findsOneWidget);
     // Asks first, naming the issue and who reported it; Cancel sends nothing.
     await tester.tap(find.byTooltip('Resolve issue'));
     await tester.pumpAndSettle();
     expect(find.text('Resolve this issue?'), findsOneWidget);
     expect(
-      find.textContaining('Dune: Part Two · Audio, reported by Matt'),
+      find.textContaining('Dune: Part Two\u00A0· Audio, reported by Matt'),
       findsOneWidget,
     );
     await tester.tap(find.text('Cancel'));

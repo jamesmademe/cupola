@@ -190,7 +190,7 @@ void main() {
       final unanswered = c.read(unansweredConnectionProvider('radarr'));
       expect(
         unanswered?.failureDetail,
-        'At home · 192.168.1.20:7878\nAway · radarr.example.com',
+        'At home\u00A0· 192.168.1.20:7878\nAway\u00A0· radarr.example.com',
       );
       expect(c.read(unansweredAddressesProvider).single.urls, [
         'http://192.168.1.20:7878',

@@ -88,7 +88,7 @@ void main() {
     await harness.settle(tester);
 
     expect(seerrWrites(harness), ['POST /api/v1/request/1/approve']);
-    expect(find.textContaining('Approved · '), findsOneWidget);
+    expect(find.textContaining('Approved\u00A0· '), findsOneWidget);
     expect(find.byTooltip('Approve Charge'), findsNothing);
 
     await harness.unmount(tester);

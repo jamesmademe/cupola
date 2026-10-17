@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/connection_reach_provider.dart';
@@ -144,12 +145,12 @@ class StackHealth {
   ];
 
   /// The whole line, spoken and printed the same way.
-  String get sentence => [?headline, ...qualifiers].join(' · ');
+  String get sentence => [?headline, ...qualifiers].join(dotSeparator);
 
   /// The line with its age, which is what the Dashboard header draws.
   String sentenceAt(DateTime now) {
     final age = ageLabel(now);
-    return [?headline, ...qualifiers, ?age].join(' · ');
+    return [?headline, ...qualifiers, ?age].join(dotSeparator);
   }
 
   /// `refreshed just now`, `refreshed 6 minutes ago`: **never** seconds.

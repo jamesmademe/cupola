@@ -31,7 +31,10 @@ void main() {
       expect(container.condition, UnraidContainerCondition.stopped);
       expect(container.tone, StatusTone.neutral);
       expect(container.exitCode, 0);
-      expect(container.summary, 'stopped on purpose · exit 0 · 2 days ago');
+      expect(
+        container.summary,
+        'stopped on purpose\u00A0· exit 0\u00A0· 2 days ago',
+      );
     });
 
     test('a non-zero exit is a fault, and amber', () {
@@ -65,7 +68,7 @@ void main() {
       expect(healthy.condition, UnraidContainerCondition.running);
       expect(plain.condition, UnraidContainerCondition.running);
       expect(healthy.tone, StatusTone.success);
-      expect(plain.summary, 'running · 3 days');
+      expect(plain.summary, 'running\u00A0· 3 days');
     });
 
     test('a paused container is deliberate, so neutral', () {

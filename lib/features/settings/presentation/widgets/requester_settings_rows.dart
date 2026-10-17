@@ -85,7 +85,7 @@ class _AccountRow extends ConsumerWidget {
     final line = signedIn
         ? Lexicon.signedInAs(name.isEmpty ? account.login : name)
         : Lexicon.youWereSignedOut;
-    final where = host.isEmpty ? title : '$title · $host';
+    final where = host.isEmpty ? title : '$title\u00A0· $host';
     final tone = statusToneColor(
       colorScheme,
       StatusTone.info,

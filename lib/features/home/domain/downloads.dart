@@ -14,6 +14,7 @@ library;
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/utils/date_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/features/services/domain/in_flight.dart';
@@ -87,7 +88,7 @@ String downloadsSubtitle({
     if (stuck > 0) '${coveredFigure(stuck, coverage)} stuck',
     if (queued > 0) '${coveredFigure(queued, coverage)} queued',
     ?speed,
-  ].join(' · ');
+  ].join(dotSeparator);
 }
 
 /// The line under the module's name when the module is a last drawing:
@@ -133,7 +134,7 @@ String movingValue({int? percent, int? etaSeconds}) => [
   // Zero is no estimate: SABnzbd says `0:00:00` of a job nothing reaches.
   if (etaSeconds != null && etaSeconds > 0)
     formatTimeSpan(Duration(seconds: etaSeconds)),
-].join(' · ');
+].join(dotSeparator);
 
 /// What a stuck row says beside its title: where it stopped, `Stuck at
 /// 47%`, or that it failed.

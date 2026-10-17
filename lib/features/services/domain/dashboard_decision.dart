@@ -571,7 +571,7 @@ String decisionsEyebrow(
     if (!kinds.contains(word)) kinds.add(word);
   }
   final count = floor ? Lexicon.floor(total) : '$total';
-  return '$count $noun · ${kinds.join(', ')}';
+  return '$count $noun\u00A0· ${kinds.join(', ')}';
 }
 
 String _kindNoun(DecisionKind kind) => switch (kind) {

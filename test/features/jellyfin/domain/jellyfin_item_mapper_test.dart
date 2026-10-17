@@ -273,8 +273,8 @@ void main() {
       expect(mapped.bitrateIsNominal, isFalse);
       // Series leads, episode is the detail: the inverse of `StreamItem`.
       expect(mapped.title, 'Severance');
-      expect(mapped.subtitle, "S2 E4 · Woe's Hollow");
-      expect(mapped.deviceLabel, 'Jellyfin Web · Chrome');
+      expect(mapped.subtitle, "S2 E4\u00A0· Woe's Hollow");
+      expect(mapped.deviceLabel, 'Jellyfin Web\u00A0· Chrome');
       expect(mapped.progress, 0.5);
       expect(mapped.isPaused, isFalse);
     });
@@ -320,7 +320,7 @@ void main() {
       ]);
       expect(
         mapped.transcodeReasonLabel,
-        'Client cannot play this container · Audio track is a separate file',
+        'Client cannot play this container\u00A0· Audio track is a separate file',
       );
       // Explained, but still not the row that is burning a CPU: `needsAttention`
       // is the gate for "is this costing me something", not an empty reason list.
@@ -363,7 +363,7 @@ void main() {
         },
       ]).video!;
       expect(video.resolution, '2160p');
-      expect(video.words, '2160p · Dolby Vision');
+      expect(video.words, '2160p\u00A0· Dolby Vision');
     });
 
     test('a scope film is the class of its width; SDR says nothing', () {

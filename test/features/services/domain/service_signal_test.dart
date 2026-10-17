@@ -61,7 +61,7 @@ void main() {
       // it. These three tests are what stops the derivation coming back.
       test('an active transfer reads as activity, not as a fault', () {
         final signal = resolveServiceSignal([
-          _kpi('Download', '2.4 MB/s', tone: StatusTone.info),
+          _kpi('Download', '2.4 MB/\u2060s', tone: StatusTone.info),
           _kpi('Queue', '3'),
         ]);
 
@@ -101,10 +101,10 @@ void main() {
       // The cell paints "2.4 MB/s incoming" because the eye scans a column of
       // figures. Read back in that order it is nonsense.
       final signal = resolveServiceSignal([
-        _kpi('Download', '2.4 MB/s', tone: StatusTone.info),
+        _kpi('Download', '2.4 MB/\u2060s', tone: StatusTone.info),
       ]);
 
-      expect(signal!.spoken, 'Incoming 2.4 MB/s');
+      expect(signal!.spoken, 'Incoming 2.4 MB/\u2060s');
     });
 
     group('the matrix vocabulary', () {
@@ -113,7 +113,7 @@ void main() {
         // line is literally "Offline", so "2.4 MB/s down" reads as a service that
         // is down rather than as bytes arriving.
         final signal = resolveServiceSignal([
-          _kpi('Download', '2.4 MB/s', tone: StatusTone.info),
+          _kpi('Download', '2.4 MB/\u2060s', tone: StatusTone.info),
         ]);
 
         // And short enough to survive a 168pt cell: "downloading" ellipsised to
@@ -159,7 +159,7 @@ void main() {
       test('a figure that is not a count is left alone', () {
         // `85%`, `4/6` and `2.4 MB/s` all parse to null, which is correct: those
         // labels are not counts and must not be singularized by a stray "1".
-        for (final value in ['85%', '4/6', '1.0 MB/s']) {
+        for (final value in ['85%', '4/6', '1.0 MB/\u2060s']) {
           expect(
             resolveServiceSignal([
               _kpi('Pools', value, tone: StatusTone.neutral),
@@ -231,7 +231,7 @@ void _twoFigures() {
       final pair = resolveServiceSignalPair([
         const ServiceKpi(
           label: 'Download',
-          value: '12.4 MB/s',
+          value: '12.4 MB/\u2060s',
           icon: Icons.download_rounded,
           tone: StatusTone.info,
         ),

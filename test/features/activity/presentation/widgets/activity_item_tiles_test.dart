@@ -344,7 +344,7 @@ void main() {
         ),
       );
 
-      expect(find.text('S1 E1 · Pilot'), findsOneWidget);
+      expect(find.text('S1 E1\u00A0· Pilot'), findsOneWidget);
       expect(find.text('Breaking Bad'), findsOneWidget);
     });
 
@@ -671,7 +671,7 @@ void main() {
                   serviceType: ServiceType.series,
                   title: 'Frieren: Beyond Journey\'s End',
                   subtitle:
-                      'S1 E3 · Killing Magic · Frieren.S01E03.1080p.WEB-DL-GROUP',
+                      'S1 E3\u00A0· Killing Magic\u00A0· Frieren.S01E03.1080p.WEB-DL-GROUP',
                   status: MediaStatusInfo(
                     availability: MediaAvailability.available,
                     labelOverride: 'Completed',
@@ -833,7 +833,7 @@ void main() {
                   serviceType: ServiceType.movies,
                   title: 'Dune: Part Two',
                   subtitle: 'Dune.Part.Two.2024.2160p.WEB-DL-GROUP',
-                  figures: '7.5\u00A0GB · 12\u00A0min left',
+                  figures: '7.5\u00A0GB\u00A0· 12\u00A0min left',
                   instanceLabel: '4K',
                   status: MediaStatusInfo(
                     pipeline: MediaPipeline.downloading,
@@ -858,7 +858,10 @@ void main() {
           await tester.pumpWidget(host(1200));
           await tester.pumpAndSettle();
 
-          expect(find.text('7.5\u00A0GB · 12\u00A0min left'), findsOneWidget);
+          expect(
+            find.text('7.5\u00A0GB\u00A0· 12\u00A0min left'),
+            findsOneWidget,
+          );
           // The release is not lost: it moved to where prose belongs, under
           // the title.
           expect(
@@ -884,7 +887,10 @@ void main() {
           expect(find.text('Dune: Part Two'), findsOneWidget);
 
           // And the cells that only pay for themselves with room are gone.
-          expect(find.text('7.5\u00A0GB · 12\u00A0min left'), findsNothing);
+          expect(
+            find.text('7.5\u00A0GB\u00A0· 12\u00A0min left'),
+            findsNothing,
+          );
           // Never the connection: with two Radarr interleaved in one group,
           // a row that drops its name is a row that cannot say which server
           // it is about, to the eye or the ear.
@@ -909,7 +915,7 @@ void main() {
                   service: ServiceKey.seerr,
                   serviceType: ServiceType.discover,
                   title: 'Shogun',
-                  subtitle: 'sarah · Series',
+                  subtitle: 'sarah\u00A0· Series',
                   status: MediaStatusInfo(
                     labelOverride: 'Requested',
                     toneOverride: StatusTone.info,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/bazarr/data/bazarr_service.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
@@ -320,10 +321,10 @@ class _BazarrHistoryRow extends StatelessWidget {
       if (item.score case final score?) 'score $score',
       bazarrHistoryWhen(item),
       if (item.blacklisted) 'blacklisted',
-    ].whereType<String>().where((value) => value.isNotEmpty).join(' · ');
+    ].whereType<String>().where((value) => value.isNotEmpty).join(dotSeparator);
     final spoken = [headline, detail]
         .where((value) => value.isNotEmpty)
-        .map((value) => value.replaceAll(' · ', ', '))
+        .map((value) => value.replaceAll(dotSeparator, ', '))
         .join(', ');
 
     return Semantics(

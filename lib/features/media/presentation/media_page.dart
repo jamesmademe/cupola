@@ -17,6 +17,7 @@ import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/pinned_image_cache.dart';
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/features/media/domain/quality_words.dart';
 import 'package:cupola/features/media/domain/media_reading.dart';
@@ -1200,7 +1201,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     AppBottomSheet.showScrollable<void>(
       context: context,
       title: 'Episodes graph',
-      subtitle: [if (title.isNotEmpty) title, 'TMDB votes'].join(' · '),
+      subtitle: [if (title.isNotEmpty) title, 'TMDB votes'].join(dotSeparator),
       showClose: true,
       initialSize: 0.92,
       minSize: 0.5,
@@ -2285,7 +2286,7 @@ class _LeadBar extends StatelessWidget {
           ?mediaTimeLeft(episode)
         else
           'on ${serverName(lead as MediaLeadPlay)}',
-      ].join(' · '),
+      ].join(dotSeparator),
       _ => null,
     };
     final trailerLeads = primary == null && lead is MediaLeadTrailer;
@@ -2867,7 +2868,7 @@ class _Files extends StatelessWidget {
                   qualityWords(quality),
                 if (copy.file?.size case final size? when size > 0)
                   formatBytes(size),
-              ].join(' · '),
+              ].join(dotSeparator),
               style: AppType.label.copyWith(color: room.inkSecondary),
             ),
           ),

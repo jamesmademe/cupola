@@ -331,7 +331,7 @@ class _HistoryRow extends StatelessWidget {
         margin: const EdgeInsets.only(top: 5),
         decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
       ),
-      title: '${entry.name} · ${entry.event}',
+      title: '${entry.name}\u00A0· ${entry.event}',
       // Only a fault colours its title. A completed row is the resting state of
       // this section and wearing green ink would make a quiet day look like an
       // announcement.

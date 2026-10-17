@@ -134,7 +134,7 @@ void main() {
         needingIdentity: 1,
         selectedBytes: 1024,
       );
-      expect(line.split(' \u00b7 '), [
+      expect(line.split('\u00A0\u00b7 '), [
         '4 of 7 selected',
         '1 re-import',
         '1 needs an identity',

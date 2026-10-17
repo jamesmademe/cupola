@@ -380,13 +380,16 @@ void main() {
       // a name for the first, and removing the second leaves that name behind.
       // Every badge and chip goes quiet again because they all ask
       // `hasMultipleInstances` first; `displayTitle` does not, so a sentence
-      // built straight off it announced "Radarr \u00b7 7878" for the only Radarr
+      // built straight off it announced "Radarr\u00A0\u00b7 7878" for the only Radarr
       // there is.
       final lone = SettingsModel(
         instances: [_radarr('radarr', label: '7878', url: 'https://nas:7878')],
       );
 
-      expect(lone.instanceById('radarr')!.displayTitle, 'Radarr \u00b7 7878');
+      expect(
+        lone.instanceById('radarr')!.displayTitle,
+        'Radarr\u00A0\u00b7 7878',
+      );
       expect(lone.connectionTitle('radarr', ServiceKey.radarr), 'Radarr');
     });
 
@@ -400,7 +403,7 @@ void main() {
 
       expect(
         pair.connectionTitle('radarr-away11', ServiceKey.radarr),
-        'Radarr \u00b7 Away',
+        'Radarr\u00A0\u00b7 Away',
       );
       // An id naming nothing \u2014 a queued job from a connection since removed \u2014
       // falls back to the service rather than to an empty sentence.
@@ -431,7 +434,7 @@ void main() {
         expect(pair.connectionName('radarr-4k11111'), '4K');
         expect(
           pair.connectionTitle('radarr-4k11111', ServiceKey.radarr),
-          'Radarr \u00b7 4K',
+          'Radarr\u00A0\u00b7 4K',
         );
       });
 

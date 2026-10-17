@@ -263,7 +263,7 @@ List<ServiceQueueItem> spentPackQueue() => const [
   ServiceQueueItem(
     service: ServiceKey.sonarr,
     id: 'q-pack',
-    title: 'Cosmos Laundromat · 8 episodes',
+    title: 'Cosmos Laundromat\u00A0· 8 episodes',
     subject: 'Cosmos Laundromat S1 E1–E8',
     progress: 1,
     clientLabel: 'qBittorrent',

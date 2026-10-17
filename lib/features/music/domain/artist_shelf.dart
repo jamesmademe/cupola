@@ -1,6 +1,7 @@
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/date_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/media_child_list.dart';
@@ -81,7 +82,7 @@ class ArtistShelf {
             : count(wanted.length, StateWord.wanted.inline),
       if (coming.isNotEmpty) count(coming.length, 'announced'),
     ];
-    return parts.isEmpty ? 'No albums yet' : parts.join(' · ');
+    return parts.isEmpty ? 'No albums yet' : parts.join(dotSeparator);
   }
 
   /// The covers the page shows under the name, at most three: what is on
@@ -167,7 +168,7 @@ AlbumState? albumState(
   if (albumIsComing(album, now: now)) {
     return (
       word:
-          'Out ${formatShortDate(album.releaseDate!, now: now)} · '
+          'Out ${formatShortDate(album.releaseDate!, now: now)}\u00A0· '
           '${StateWord.notOutYet.inline}',
       tone: StatusTone.neutral,
       hollow: true,

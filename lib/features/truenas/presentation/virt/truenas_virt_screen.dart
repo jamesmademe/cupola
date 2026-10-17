@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cupola/core/generated/design_tokens.g.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -338,7 +339,7 @@ class _InstanceCard extends ConsumerWidget {
                   ),
                   if (specs.isNotEmpty)
                     Text(
-                      specs.join(' · '),
+                      specs.join(dotSeparator),
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),

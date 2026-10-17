@@ -104,8 +104,8 @@ void main() {
         'Set up Bazarr',
       ],
     );
-    expect(suggestions[0].line, 'Seerr knows it · key found');
-    expect(suggestions[1].line, 'Prowlarr knows it · paste its key');
+    expect(suggestions[0].line, 'Seerr knows it\u00A0· key found');
+    expect(suggestions[1].line, 'Prowlarr knows it\u00A0· paste its key');
     expect(suggestions[0].found, found[0]);
     expect(suggestions[2].found, isNull);
   });

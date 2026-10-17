@@ -118,7 +118,7 @@ extension ServiceKeyExtension on ServiceKey {
     ServiceKey.sonarr => 'Series',
     ServiceKey.lidarr => 'Music',
     ServiceKey.bazarr => 'Subtitles',
-    ServiceKey.readarr => 'Books · no longer maintained upstream',
+    ServiceKey.readarr => 'Books\u00A0· no longer maintained upstream',
     ServiceKey.prowlarr => 'Indexers',
     ServiceKey.qbittorrent || ServiceKey.transmission => 'Torrent client',
     ServiceKey.sabnzbd || ServiceKey.nzbget => 'Usenet client',
@@ -134,7 +134,8 @@ extension ServiceKeyExtension on ServiceKey {
   /// which is set up on its own.
   String? get knowsOthers => switch (this) {
     ServiceKey.seerr => 'Knows your Radarr and Sonarr, keys included',
-    ServiceKey.prowlarr => "Knows your arrs' addresses · you add their keys",
+    ServiceKey.prowlarr =>
+      "Knows your arrs' addresses\u00A0· you add their keys",
     _ => null,
   };
 

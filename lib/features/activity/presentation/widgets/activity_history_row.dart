@@ -41,7 +41,7 @@ class ActivityHistoryRow extends ConsumerWidget {
     final detail = entry.detail;
     final title = detail == null || detail.isEmpty
         ? entry.title
-        : '${entry.title} · $detail';
+        : '${entry.title}\u00A0· $detail';
     final event = historyEventLine(entry);
     final source = serviceWithConnection(
       entry.service,

@@ -13,6 +13,7 @@ library;
 import 'package:flutter/foundation.dart';
 
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -142,7 +143,7 @@ class StackLights {
       if (onlyAtHome.isNotEmpty)
         '${onlyAtHome.length} ${StateWord.onlyAtHome.inline}',
     ];
-    return parts.join(' · ');
+    return parts.join(dotSeparator);
   }
 
   /// The marks as a screen reader hears them, grouped by light: `Answering:

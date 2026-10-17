@@ -115,8 +115,8 @@ class HomeLayout {
     ];
     return switch (off.length) {
       0 => count,
-      1 => '$count · ${off.single.label} hidden',
-      _ => '$count · ${off.length} hidden',
+      1 => '$count\u00A0· ${off.single.label} hidden',
+      _ => '$count\u00A0· ${off.length} hidden',
     };
   }
 

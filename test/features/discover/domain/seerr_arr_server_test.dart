@@ -255,8 +255,9 @@ void main() {
       _radarr('http://nas.home.arpa:7878'),
       _radarr('https://nas.home.arpa:7879', id: 'radarr-4k', label: '4K'),
     ];
-    String title(ServiceInstance connection) =>
-        connection.label.isEmpty ? 'Radarr' : 'Radarr · ${connection.label}';
+    String title(ServiceInstance connection) => connection.label.isEmpty
+        ? 'Radarr'
+        : 'Radarr\u00A0· ${connection.label}';
 
     test('a 4K request goes to the 4K server and its connection', () {
       final target = SeerrApproveTarget.of(
@@ -271,7 +272,7 @@ void main() {
       expect(target.rootFolder, '/films-4k');
       expect(
         target.confirmation('Sintel', connectionTitle: title),
-        'Sintel goes to Radarr · 4K and starts downloading.',
+        'Sintel goes to Radarr\u00A0· 4K and starts downloading.',
       );
     });
 
@@ -335,7 +336,7 @@ void main() {
           servers: [hd, uhd],
           connections: connections,
         ).approvedLine(connectionTitle: title),
-        'Approved · sent to Radarr · 4K',
+        'Approved\u00A0· sent to Radarr\u00A0· 4K',
       );
       expect(
         SeerrApproveTarget.of(
@@ -343,7 +344,7 @@ void main() {
           servers: [hd, uhd, spare],
           connections: connections,
         ).approvedLine(connectionTitle: title),
-        'Approved · sent to Radarr spare',
+        'Approved\u00A0· sent to Radarr spare',
       );
       expect(
         SeerrApproveTarget.of(
@@ -351,14 +352,14 @@ void main() {
           servers: [hd],
           connections: connections,
         ).approvedLine(connectionTitle: title),
-        'Approved · Seerr has no 4K Radarr for it',
+        'Approved\u00A0· Seerr has no 4K Radarr for it',
       );
       expect(
         SeerrApproveTarget.of(
           _request(type: 'tv'),
           servers: null,
         ).approvedLine(connectionTitle: title),
-        "Approved · sent to Seerr's Sonarr",
+        "Approved\u00A0· sent to Seerr's Sonarr",
       );
     });
 

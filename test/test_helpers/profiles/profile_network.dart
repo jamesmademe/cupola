@@ -192,7 +192,7 @@ NetworkReply? gatewayReply(NetworkRequest request, ProfileServer server) {
 
 /// Cloudflare's page for a request Access turned away.
 const cloudflareAccessPage =
-    '<!DOCTYPE html><html><head><title>Forbidden · Cloudflare Access</title>'
+    '<!DOCTYPE html><html><head><title>Forbidden\u00A0· Cloudflare Access</title>'
     '</head><body><h1>Forbidden</h1><p>You don\'t have permission to view '
     'this application.</p></body></html>';
 

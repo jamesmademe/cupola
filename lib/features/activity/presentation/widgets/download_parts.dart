@@ -10,7 +10,9 @@ import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/byte_format.dart' show spokenBytesPerSecond;
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/percent_format.dart';
+import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/machine_name.dart'
     show machineNameWithBreaks;
@@ -284,9 +286,8 @@ class DownloadReadout extends StatelessWidget {
   }
 
   /// The pace line for the ear: `4.2 megabytes per second, 11 min left`.
-  static String _spokenPace(String pace) => pace
-      .split(' · ')
-      .map((part) => part.endsWith('/s') ? spokenBytesPerSecond(part) : part)
+  static String _spokenPace(String pace) => splitParts(pace)
+      .map((part) => endsWithRate(part) ? spokenBytesPerSecond(part) : part)
       .join(', ');
 }
 
@@ -560,7 +561,7 @@ class DownloadFacts extends StatelessWidget {
             style: fact.machine ? mono : body,
           ),
           if (fact.address case final address?) ...[
-            TextSpan(text: ' · ', style: body),
+            TextSpan(text: dotSeparator, style: body),
             TextSpan(text: machineNameWithBreaks(address), style: mono),
           ],
         ],

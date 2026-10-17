@@ -234,10 +234,10 @@ List<QbittorrentAttentionItem> qbittorrentFaultRows(
         kind: kind,
         headline: switch (kind) {
           QbittorrentFaultKind.stalled =>
-            '${StateWord.stuck.label} · ${torrent.name}',
+            '${StateWord.stuck.label}\u00A0· ${torrent.name}',
           QbittorrentFaultKind.missingFiles =>
-            'Missing files · ${torrent.name}',
-          QbittorrentFaultKind.errored => 'Errored · ${torrent.name}',
+            'Missing files\u00A0· ${torrent.name}',
+          QbittorrentFaultKind.errored => 'Errored\u00A0· ${torrent.name}',
         },
         detail: switch (kind) {
           // A stalled transfer's evidence is how far it got, how long it has

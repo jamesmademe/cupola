@@ -107,7 +107,7 @@ class _HistoryRow extends StatelessWidget {
           : Icons.download_done_rounded,
       color: color,
       title: item.name,
-      detail: '$category · $when',
+      detail: '$category\u00A0· $when',
       trailing: item.status.isEmpty ? '—' : item.status,
       semanticLabel:
           '${item.name}, ${item.status.isEmpty ? 'status unavailable' : item.status}, '
@@ -136,7 +136,7 @@ class _FeedRow extends StatelessWidget {
       icon: Icons.rss_feed_rounded,
       color: color,
       title: name,
-      detail: '$interval · $category',
+      detail: '$interval\u00A0· $category',
       trailing: feed.pauseNzb ? 'Added stopped' : 'Active',
       semanticLabel:
           '$name, $interval, $category, '

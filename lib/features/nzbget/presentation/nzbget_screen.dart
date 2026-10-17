@@ -7,6 +7,7 @@ import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/status/read_age.dart';
 import 'package:cupola/core/status/silence_age.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
@@ -358,7 +359,7 @@ class _QueueTile extends ConsumerWidget {
       subtitleLead: <String>[
         capitalizeFirst(nzbgetGroupStageLabel(group.status)),
         if (group.category.isNotEmpty) group.category,
-      ].join(' · '),
+      ].join(dotSeparator),
       // "progress unknown" rather than "— left": the em dash alone reads as a
       // missing size, and what is actually missing is the whole measurement.
       // It is also the line that contradicts the `0%` below.

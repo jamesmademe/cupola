@@ -6,6 +6,7 @@ import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/title_light.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -173,7 +174,7 @@ class _CollectionPageState extends ConsumerState<CollectionPage> {
                   if (part.year != null) '${part.year}',
                   if (score != null)
                     'TMDB$unitSpace${score.toStringAsFixed(1)}',
-                ].join(' · '),
+                ].join(dotSeparator),
                 heroTag: 'collection_${id}_${media.id}',
                 onChanged: _readAgain,
               );

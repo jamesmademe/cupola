@@ -66,14 +66,17 @@ void main() {
         host(
           row(
             title: 'Living room projector',
-            trailing: 'client · player · pubsub-player · controller · cast',
+            trailing:
+                'client\u00A0· player\u00A0· pubsub-player\u00A0· controller\u00A0· cast',
           ),
         ),
       );
 
       final card = tester.getRect(find.byType(ServiceRecordRow));
       final figure = tester.getRect(
-        find.text('client · player · pubsub-player · controller · cast'),
+        find.text(
+          'client\u00A0· player\u00A0· pubsub-player\u00A0· controller\u00A0· cast',
+        ),
       );
       final content = card.width - 2 * 12 - 2;
       expect(

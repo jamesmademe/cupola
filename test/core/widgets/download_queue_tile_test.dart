@@ -27,7 +27,7 @@ void main() {
         host(
           const DownloadQueueTile(
             title: 'Dune.Part.Two.2024.2160p.WEB-DL-GROUP',
-            subtitle: 'Downloading · movies · 2.1\u00A0GB left',
+            subtitle: 'Downloading\u00A0· movies\u00A0· 2.1\u00A0GB left',
             progress: 0.63,
             percentage: 63,
             accent: Colors.teal,
@@ -38,7 +38,7 @@ void main() {
       expect(
         find.bySemanticsLabel(
           'Dune.Part.Two.2024.2160p.WEB-DL-GROUP, 63 percent, '
-          'Downloading · movies · 2.1\u00A0GB left',
+          'Downloading\u00A0· movies\u00A0· 2.1\u00A0GB left',
         ),
         findsOneWidget,
       );
@@ -237,7 +237,7 @@ void main() {
               width: 390,
               child: DownloadQueueTile(
                 title: 'Dune.Part.Two.2024.2160p.WEB-DL-GROUP',
-                subtitle: 'Paused · movies',
+                subtitle: 'Paused\u00A0· movies',
                 statusLabel: 'Paused',
                 progress: 0.63,
                 percentage: 63,
@@ -277,7 +277,7 @@ void main() {
               width: 390,
               child: DownloadQueueTile(
                 title: name,
-                subtitle: 'Errored · movies',
+                subtitle: 'Errored\u00A0· movies',
                 statusLabel: label,
                 statusTone: StatusTone.warning,
                 progress: 0.63,
@@ -309,7 +309,7 @@ void main() {
           home: Scaffold(
             body: DownloadQueueTile(
               title: 'Dune.2021.2160p',
-              subtitle: '12\u00A0min left · 1.2\u00A0GB remaining',
+              subtitle: '12\u00A0min left\u00A0· 1.2\u00A0GB remaining',
               progress: 0.63,
               percentage: 63,
               accent: AppColors.sabnzbd,
@@ -348,7 +348,7 @@ void main() {
       await pump(tester);
 
       expect(
-        find.text('12\u00A0min left · 1.2\u00A0GB remaining'),
+        find.text('12\u00A0min left\u00A0· 1.2\u00A0GB remaining'),
         findsOneWidget,
       );
       final bar = tester.widget<LinearProgressIndicator>(
@@ -378,8 +378,8 @@ void main() {
           home: Scaffold(
             body: DownloadQueueTile(
               title: 'Metropolis.1927.1080p',
-              subtitleLead: 'Downloading · movies',
-              subtitle: '12\u00A0min · 1.2\u00A0GB left',
+              subtitleLead: 'Downloading\u00A0· movies',
+              subtitle: '12\u00A0min\u00A0· 1.2\u00A0GB left',
               progress: 0.65,
               percentage: 65,
               accent: AppColors.sabnzbd,
@@ -391,13 +391,15 @@ void main() {
 
       await pumpUsenet();
       expect(
-        find.text('Downloading · movies · 12\u00A0min · 1.2\u00A0GB left'),
+        find.text(
+          'Downloading\u00A0· movies\u00A0· 12\u00A0min\u00A0· 1.2\u00A0GB left',
+        ),
         findsOneWidget,
       );
 
       await pumpUsenet(sampleAge: const Duration(minutes: 6));
       expect(
-        find.text('Downloading · movies · as of 6\u00A0min ago'),
+        find.text('Downloading\u00A0· movies\u00A0· as of 6\u00A0min ago'),
         findsOneWidget,
       );
     });

@@ -7,6 +7,7 @@
 /// arrives when its tracks are imported.
 library;
 
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/features/discover/domain/library_calendar.dart'
     show joinWithAnd;
 import 'package:cupola/features/services/domain/source_coverage.dart';
@@ -65,10 +66,10 @@ String arrivedSubtitle(int count, SourceCoverage coverage) {
     final answered = [for (final source in coverage.answered) source.title]
       ..sort();
     if (answered.isNotEmpty) {
-      return '$window · $count from ${joinWithAnd(answered)}';
+      return '$window\u00A0· $count from ${joinWithAnd(answered)}';
     }
   }
-  return '$window · $count new';
+  return '$window\u00A0· $count new';
 }
 
 /// What a card says under its title: when it arrived, and which connection
@@ -77,4 +78,4 @@ String arrivedCardLine(ArrHistoryEntry entry, {required String when}) => [
   when,
   if (entry.connectionName case final name? when name.isNotEmpty)
     serviceWithConnection(entry.service, name, joiner: ' '),
-].join(' · ');
+].join(dotSeparator);

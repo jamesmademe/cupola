@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -381,7 +382,7 @@ class _BazarrWantedRow extends StatelessWidget {
     final parts = <String>[];
     if (item.episodeCode != null) parts.add(item.episodeCode!);
     if (item.episodeTitle != null) parts.add(item.episodeTitle!);
-    return parts.isNotEmpty ? parts.join(' · ') : null;
+    return parts.isNotEmpty ? parts.join(dotSeparator) : null;
   }
 
   void _openDetail(BuildContext context, BazarrWantedItem item) {

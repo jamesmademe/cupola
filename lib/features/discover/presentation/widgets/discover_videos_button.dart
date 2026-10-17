@@ -75,7 +75,7 @@ void _showVideosSheet(BuildContext context, List<RelatedVideo> videos) {
             leading: const Icon(Icons.play_arrow_rounded),
             title: Text(sortedVideos[index].name),
             subtitle: Text(
-              '${sortedVideos[index].type} · ${sortedVideos[index].site}',
+              '${sortedVideos[index].type}\u00A0· ${sortedVideos[index].site}',
             ),
             onTap: sortedVideos[index].url.isEmpty
                 ? null

@@ -111,7 +111,7 @@ void main() {
       );
       // No skeleton: the card the person last saw, and the one line.
       expect(find.text('Sintel'), findsOne);
-      expect(find.text('As of 20:53 · checking now'), findsOne);
+      expect(find.text('As of 20:53\u00A0· checking now'), findsOne);
 
       answer.complete(_history([_import('Spring', tmdbId: 1)]));
       await tester.pumpAndSettle();
@@ -218,7 +218,7 @@ void main() {
           (asOf: DateTime(2026, 10, 12, 20, 53), checking: false),
           (asOf: DateTime(2026, 10, 12, 21, 30), checking: true),
         ], now: today),
-        'As of 20:53 · checking now',
+        'As of 20:53\u00A0· checking now',
       );
       expect(
         homeAsOfWords([

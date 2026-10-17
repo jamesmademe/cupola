@@ -239,7 +239,7 @@ void main() {
 
     final movies = lane(ServiceKey.radarr).results;
     expect(movies.first.tags, ['Movie', 'In library']);
-    expect(movies.first.subtitle, '2019 · In library');
+    expect(movies.first.subtitle, '2019\u00A0· In library');
     expect(movies.map((r) => r.inLibrary), [true, false]);
     // Nothing claimed about the one the server does not have: the section it
     // sits under already names the library that was asked.

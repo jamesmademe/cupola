@@ -7,6 +7,7 @@ import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/title_light.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
 import 'package:cupola/features/media/domain/media_facts.dart';
@@ -60,7 +61,7 @@ class MediaDecisionCard extends ConsumerWidget {
     final waiting = [
       StateWord.waitingForApproval.label,
       formatDayWordsOf(request.createdAt),
-    ].join(' · ');
+    ].join(dotSeparator);
     final info = statusToneColor(
       scheme,
       StatusTone.info,

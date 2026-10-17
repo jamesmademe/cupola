@@ -8,6 +8,7 @@ library;
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/date_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 
 /// Joins the non-empty parts with the comma both screen readers read as a short
@@ -79,7 +80,7 @@ String serviceInstanceCountLabel(int count) {
 /// permanently claim to be everything the user runs while hiding one of its own
 /// rows; and it was one line for all of them, so it could not say *which*. A
 /// dimmed cell in the domain it belongs to says both, and leads somewhere.
-const String servicesNotSetUpCellLabel = 'Not set up · Add it';
+const String servicesNotSetUpCellLabel = 'Not set up\u00A0· Add it';
 
 /// What a stack card says when the service answered and its figures did not.
 /// The card shows an em dash; this is the spoken form of it.
@@ -131,7 +132,7 @@ String serviceDomainHealthLine({
     // Counted, never named: away from home, not asked.
     if (onlyAtHome > 0) '$onlyAtHome ${StateWord.onlyAtHome.inline}',
     if (notSetUp > 0) '$notSetUp not set up',
-  ].join(' · ');
+  ].join(dotSeparator);
 }
 
 /// What one decision row announces after its title.

@@ -88,7 +88,7 @@ class _ManualImportLocateScreenState
       // changed under a flow that had not changed, and the browser back button
       // read as three unrelated destinations.
       title: manualImportTitle,
-      subtitle: '${widget.service.title} · choose a folder to scan',
+      subtitle: '${widget.service.title}\u00A0· choose a folder to scan',
       bottomBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -361,7 +361,7 @@ class _LastFolderShortcut extends ConsumerWidget {
     // that says nothing rather than guessing.
     final eyebrow = folder.scannedAt == null
         ? 'Last scanned'
-        : 'Last scanned · ${formatRelativeDateTime(folder.scannedAt!)}';
+        : 'Last scanned\u00A0· ${formatRelativeDateTime(folder.scannedAt!)}';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(

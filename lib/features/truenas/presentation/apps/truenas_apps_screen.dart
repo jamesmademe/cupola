@@ -197,7 +197,7 @@ class AppStateLabel extends StatelessWidget {
         ),
         const SizedBox(width: 6),
         Text(
-          version != null ? '$upper · $version' : upper,
+          version != null ? '$upper\u00A0· $version' : upper,
           style: theme.textTheme.labelSmall?.copyWith(color: color),
         ),
       ],

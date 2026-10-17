@@ -104,7 +104,7 @@ class CollectionTally extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          '$invitation · $headline',
+          '$invitation\u00A0· $headline',
           style: AppType.label
               .weight(FontWeight.w400)
               .copyWith(color: room.inkSecondary),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
@@ -117,7 +118,7 @@ class ProwlarrIndexerTile extends StatelessWidget {
                 ),
                 if (subtitleParts.isNotEmpty)
                   Text(
-                    subtitleParts.join(' · '),
+                    subtitleParts.join(dotSeparator),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
@@ -128,7 +129,7 @@ class ProwlarrIndexerTile extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(top: AppSpacing.xs),
                     child: Text(
-                      tagLabels.join(' · '),
+                      tagLabels.join(dotSeparator),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),

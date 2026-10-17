@@ -9,6 +9,7 @@ import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/date_format.dart' show formatClockTime;
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/import/domain/manual_import_display.dart';
 import 'package:cupola/features/import/domain/manual_import_models.dart';
@@ -58,7 +59,7 @@ class _ManualImportProgressScreenState
         // without a name of its own.
         title: manualImportTitle,
         subtitle:
-            '${widget.service.title} · ${state.submittedItems.length} '
+            '${widget.service.title}\u00A0· ${state.submittedItems.length} '
             '${state.submittedItems.length == 1 ? 'file' : 'files'} submitted',
         bottomBar: _TrackButtons(
           service: widget.service,
@@ -360,7 +361,7 @@ class _SubmittedFileRow extends StatelessWidget {
                       item.mediaTitle,
                       if (identity.code != null) identity.code!,
                       if (identity.title != null) identity.title!,
-                    ].join(' · '),
+                    ].join(dotSeparator),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleSmall!.weight(FontWeight.w600),
@@ -372,7 +373,7 @@ class _SubmittedFileRow extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '${item.qualityLabel} · ${formatImportBytes(item.size)}',
+                    '${item.qualityLabel}\u00A0· ${formatImportBytes(item.size)}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.labelSmall?.copyWith(

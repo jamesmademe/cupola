@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/import/domain/manual_import_display.dart';
 import 'package:cupola/features/import/domain/manual_import_models.dart';
@@ -28,7 +29,7 @@ Future<void> showManualImportAdjustSheet(
     title: [
       manualImportGroupTitle(service, item),
       if (identity.code != null) identity.code!,
-    ].join(' · '),
+    ].join(dotSeparator),
     subtitle: item.fileName,
     icon: service.icon,
     accent: service.accent,

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/byte_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/utils/episode_code.dart';
@@ -150,7 +151,7 @@ class MediaSeriesManage extends ConsumerWidget {
                       target: ReleaseSearchTarget.season(
                         seriesId: copy.series.id,
                         seasonNumber: season.number,
-                        label: '${truncateTitle(title)} · ${season.label}',
+                        label: '${truncateTitle(title)}\u00A0· ${season.label}',
                       ).stampedWith(copy.connection.id),
                     ),
             ],
@@ -415,7 +416,7 @@ class _CopyFilesState extends ConsumerState<_CopyFiles> {
           [
             _name,
             if (series.sizeOnDisk > 0) formatBytes(series.sizeOnDisk),
-          ].join(' · '),
+          ].join(dotSeparator),
         ),
         if ((series.path ?? '').isNotEmpty) FileInfoSection(path: series.path),
         // Unnamed until Sonarr has said what its profiles are called.

@@ -41,7 +41,7 @@ void main() {
                 spoken: 'Nyaa, 298 queries, 4 grabs',
                 leading: Icon(Icons.circle, size: 8),
                 title: 'Nyaa',
-                detail: 'torrent · public',
+                detail: 'torrent\u00A0· public',
                 trailing: '298 queries',
               ),
             ),
@@ -70,7 +70,7 @@ void main() {
             spoken: 'Nyaa, 298 queries',
             leading: Icon(Icons.circle, size: 8),
             title: 'Nyaa',
-            detail: 'torrent · public',
+            detail: 'torrent\u00A0· public',
           ),
         ),
       );
@@ -81,7 +81,7 @@ void main() {
         findsOneWidget,
         reason: 'the row must be one container node, not three fragments',
       );
-      expect(find.bySemanticsLabel('torrent · public'), findsNothing);
+      expect(find.bySemanticsLabel('torrent\u00A0· public'), findsNothing);
       handle.dispose();
     });
   });

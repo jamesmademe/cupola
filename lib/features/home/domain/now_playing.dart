@@ -7,6 +7,7 @@
 library;
 
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
 
@@ -20,7 +21,7 @@ final _episodeCode = RegExp(r'^S\d+ E\d+(?:–E?\d+)?');
 String nowPlayingTitle(StreamSession session) {
   final code = _episodeCode.stringMatch(session.subtitle ?? '');
   final who = session.userName.trim();
-  return [if (who.isNotEmpty) who, session.title, ?code].join(' · ');
+  return [if (who.isNotEmpty) who, session.title, ?code].join(dotSeparator);
 }
 
 /// `Living room TV · 9 min left`, with `Stopped` before the time while the
@@ -32,7 +33,7 @@ String nowPlayingLine(StreamSession session) {
     if (session.deviceLabel.trim().isNotEmpty) session.deviceLabel.trim(),
     if (session.isPaused) StateWord.stopped.label,
     if (remaining != null) '${formatTimeSpan(remaining)} left',
-  ].join(' · ');
+  ].join(dotSeparator);
 }
 
 /// The initial on the row's disc: the first letter of who is watching.

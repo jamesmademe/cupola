@@ -440,7 +440,7 @@ void main() {
       expect(session.userName, 'matt');
       expect(session.title, 'Interstellar');
       expect(session.subtitle, '2014');
-      expect(session.deviceLabel, 'Infuse · Apple TV');
+      expect(session.deviceLabel, 'Infuse\u00A0· Apple TV');
       expect(session.posterPath, '/library/metadata/20418/thumb/1748102400');
       // No TranscodeSession at all is the only signal Plex gives for a direct
       // play; there is no field that says so.
@@ -467,16 +467,16 @@ void main() {
       ]);
       expect(
         session.transcodeReasonLabel,
-        'video HEVC → H.264 · audio TrueHD → AAC · subtitle burn-in · '
-        'software encode, hardware not used · falling behind at 0.8× realtime',
+        'video HEVC → H.264\u00A0· audio TrueHD → AAC\u00A0· subtitle burn-in\u00A0· '
+        'software encode, hardware not used\u00A0· falling behind at 0.8× realtime',
       );
 
       // An episode leads with the series and carries the episode below it.
       expect(session.title, 'Severance');
-      expect(session.subtitle, 'S1 E4 · The You You Are');
+      expect(session.subtitle, 'S1 E4\u00A0· The You You Are');
       // The series poster reads better than an episode still at grid size.
       expect(session.posterPath, '/library/metadata/41000/thumb/1718220000');
-      expect(session.deviceLabel, 'Plex Web · Windows');
+      expect(session.deviceLabel, 'Plex Web\u00A0· Windows');
     });
 
     test('the board is ordered most expensive first', () async {

@@ -233,5 +233,5 @@ double? _bytesPerSecond(String value) {
 const List<String> _rateUnits = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
 
 final RegExp _rate = RegExp(
-  '^(-?\\d+(?:\\.\\d+)?)$unitSpace(B|KB|MB|GB|TB|PB)/s\$',
+  '^(-?\\d+(?:\\.\\d+)?)$unitSpace(B|KB|MB|GB|TB|PB)/$wordJoiner?s\$',
 );

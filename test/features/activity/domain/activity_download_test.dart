@@ -145,10 +145,10 @@ void main() {
 
   group('queuedWords', () {
     test('where the client estimates it, when it starts', () {
-      expect(queuedWords(360), 'Queued · starts in about 6\u00A0min');
+      expect(queuedWords(360), 'Queued\u00A0· starts in about 6\u00A0min');
       expect(
         queuedWords(5400),
-        'Queued · starts in about 1\u00A0h 30\u00A0min',
+        'Queued\u00A0· starts in about 1\u00A0h 30\u00A0min',
       );
     });
 
@@ -268,11 +268,11 @@ void main() {
       // Forty minutes from 20:00.
       expect(
         line(_item(etaSeconds: 40 * 60)),
-        "Anna's request · ready around 20:40",
+        "Anna's request\u00A0· ready around 20:40",
       );
       expect(
         line(_item(etaSeconds: 70 * 60)),
-        "Anna's request · ready around 21:10",
+        "Anna's request\u00A0· ready around 21:10",
       );
     });
 
@@ -281,11 +281,11 @@ void main() {
       () {
         expect(
           line(_item(etaSeconds: 13 * 3600)),
-          "Anna's request · ready around tomorrow 09:00",
+          "Anna's request\u00A0· ready around tomorrow 09:00",
         );
         expect(
           line(_item(etaSeconds: 3 * 24 * 3600)),
-          "Anna's request · ready around Monday",
+          "Anna's request\u00A0· ready around Monday",
         );
       },
     );

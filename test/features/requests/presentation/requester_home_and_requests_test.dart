@@ -40,7 +40,7 @@ void main() {
       final harness = await pump(tester, const HomeScreen());
 
       expect(find.byType(FeaturedPager), findsOne);
-      expect(find.text('Ready to watch · since Wednesday'), findsOne);
+      expect(find.text('Ready to watch\u00A0· since Wednesday'), findsOne);
       expect(find.text(WorldTitles.sintel.title), findsWidgets);
       expect(find.textContaining('You asked for it on Wed 30 Sep'), findsOne);
       expect(find.text('Watch on Jellyfin'), findsOne);
@@ -69,7 +69,7 @@ void main() {
       expect(find.text('62%'), findsOne);
       expect(find.text('Ready around 20:41'), findsOne);
       expect(find.text('Waiting for approval'), findsOne);
-      expect(find.text('Asked 2\u00A0h ago · Standard'), findsOne);
+      expect(find.text('Asked 2\u00A0h ago\u00A0· Standard'), findsOne);
       expect(find.text('All your requests'), findsOne);
       // Nothing of hers is a fault.
       expect(find.textContaining('Stuck'), findsNothing);

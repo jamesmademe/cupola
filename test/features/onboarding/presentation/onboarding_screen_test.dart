@@ -997,7 +997,7 @@ void main() {
 
       // The step counter folds into the eyebrow with the service, so the
       // compact register still says how far in the person is.
-      expect(findLine('Set up Seerr · step 1 of 2'), findsOneWidget);
+      expect(findLine('Set up Seerr\u00A0· step 1 of 2'), findsOneWidget);
       expect(findLine('Step 1 of 2'), findsNothing);
     });
 

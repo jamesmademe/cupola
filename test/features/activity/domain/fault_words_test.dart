@@ -80,7 +80,7 @@ void main() {
         DecisionKind.failingIndexer,
         service: ServiceKey.prowlarr,
         title: 'NZBgeek',
-        detail: 'Failing · Prowlarr · disabled for now',
+        detail: 'Failing\u00A0· Prowlarr\u00A0· disabled for now',
       ),
     );
     expect(indexer.headline, 'NZBgeek is failing');

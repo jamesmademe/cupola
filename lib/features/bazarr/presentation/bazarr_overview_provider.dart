@@ -65,7 +65,7 @@ String bazarrWantedHeadline(BazarrWantedItem item) {
   final series = item.seriesTitle?.trim();
   final code = item.episodeCode?.trim();
   if (series != null && series.isNotEmpty) {
-    return code == null || code.isEmpty ? series : '$series · $code';
+    return code == null || code.isEmpty ? series : '$series\u00A0· $code';
   }
   final title = item.title?.trim();
   return title == null || title.isEmpty ? 'Unknown title' : title;

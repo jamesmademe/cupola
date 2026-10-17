@@ -31,24 +31,24 @@ StreamSession _session({
 /// The words of the Home's Now playing module.
 void main() {
   test('who and what; an episode by its code, never its name', () {
-    expect(nowPlayingTitle(_session()), 'Anna · Sintel');
+    expect(nowPlayingTitle(_session()), 'Anna\u00A0· Sintel');
     expect(
       nowPlayingTitle(
         _session(
           title: 'Cosmos Laundromat',
-          subtitle: 'S2 E3 · The Second Cycle',
+          subtitle: 'S2 E3\u00A0· The Second Cycle',
         ),
       ),
-      'Anna · Cosmos Laundromat · S2 E3',
+      'Anna\u00A0· Cosmos Laundromat\u00A0· S2 E3',
     );
     expect(nowPlayingTitle(_session(user: ' ')), 'Sintel');
   });
 
   test('where, and how long is left; Stopped while the player holds it', () {
-    expect(nowPlayingLine(_session()), 'Living room TV · 9\u00A0min left');
+    expect(nowPlayingLine(_session()), 'Living room TV\u00A0· 9\u00A0min left');
     expect(
       nowPlayingLine(_session(paused: true)),
-      'Living room TV · Stopped · 9\u00A0min left',
+      'Living room TV\u00A0· Stopped\u00A0· 9\u00A0min left',
     );
     expect(nowPlayingLine(_session(remaining: null)), 'Living room TV');
   });

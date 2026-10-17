@@ -126,7 +126,10 @@ void main() {
       findsOneWidget,
     );
     // The header states the day's totals, whatever the preview shows.
-    expect(_subtitleOf(tester, 'History'), 'today · 1 completed · 1 failed');
+    expect(
+      _subtitleOf(tester, 'History'),
+      'today\u00A0· 1 completed\u00A0· 1 failed',
+    );
   });
 
   testWidgets('a status that did not answer costs the ETA, not the queue', (
@@ -150,7 +153,7 @@ void main() {
   ) async {
     await _pump(tester, failHistory: true);
 
-    expect(_subtitleOf(tester, 'History'), 'today · —');
+    expect(_subtitleOf(tester, 'History'), 'today\u00A0· —');
     // The failed region says so in its own slot…
     expect(find.byType(InlineErrorRetry), findsOneWidget);
     expect(
@@ -196,7 +199,7 @@ void main() {
       historyFailsOnRefetch: true,
     );
 
-    expect(_subtitleOf(tester, 'History'), 'today · 1 completed');
+    expect(_subtitleOf(tester, 'History'), 'today\u00A0· 1 completed');
 
     ProviderScope.containerOf(
       tester.element(find.byType(NzbgetOverviewScreen)),
@@ -204,9 +207,9 @@ void main() {
     await tester.pumpAndSettle();
 
     // The row survived the failed refetch…
-    expect(find.text('Andor.S02E02 · success'), findsOneWidget);
+    expect(find.text('Andor.S02E02\u00A0· success'), findsOneWidget);
     // …so the header must not disown it.
-    expect(_subtitleOf(tester, 'History'), 'today · 1 completed');
+    expect(_subtitleOf(tester, 'History'), 'today\u00A0· 1 completed');
   });
 
   testWidgets('nothing overflows at an accessibility reading size', (

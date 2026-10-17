@@ -51,7 +51,7 @@ void main() {
       expect(emDashAsPunctuation(prose), isTrue, reason: prose);
     }
     for (final placeholder in [
-      "subtitle: data == null ? 'today · \u2014' : data.subtitle,",
+      "subtitle: data == null ? 'today\u00A0· \u2014' : data.subtitle,",
       "expect(vm.missingChip, '\u2014 missing');",
       "  value: '\u2014',",
       '/// empty, and the readout is `\u2014 moving`.',

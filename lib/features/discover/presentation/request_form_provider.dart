@@ -74,7 +74,7 @@ class SeerrServer {
   /// only place that says which servers those are.
   String get choiceLabel {
     if (!is4k || name.toLowerCase().contains('4k')) return name;
-    return '$name · 4K';
+    return '$name\u00A0· 4K';
   }
 }
 

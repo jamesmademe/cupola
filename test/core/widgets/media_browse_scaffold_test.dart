@@ -809,7 +809,7 @@ void main() {
           libraryProvider: testLibraryProvider,
           searchQueryProvider: testSearchQueryProvider,
           searchResultsProvider: testSearchResultsProvider,
-          subtitleExtractor: (_) => '6 albums \u00b7 complete',
+          subtitleExtractor: (_) => '6 albums\u00A0\u00b7 complete',
           statusExtractor: (_) =>
               const MediaStatusInfo(availability: MediaAvailability.available),
           tileShape: MediaBrowseTileShape.circle,
@@ -822,7 +822,7 @@ void main() {
       // completeness is in the caption instead, and the caption is what the
       // screen reader was already given.
       expect(find.byType(StatusBadge), findsNothing);
-      expect(find.text('6 albums \u00b7 complete'), findsWidgets);
+      expect(find.text('6 albums\u00A0\u00b7 complete'), findsWidgets);
     });
 
     testWidgets('the poster wall keeps its dot', (tester) async {

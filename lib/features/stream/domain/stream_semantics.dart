@@ -113,9 +113,9 @@ String streamLibrariesSummary({
   final rooms = '$total ${total == 1 ? 'library' : 'libraries'}';
   if (scanningCount == 0) return rooms;
   if (scanningCount == 1 && scanningName != null && scanningName.isNotEmpty) {
-    return '$rooms · $scanningName scanning';
+    return '$rooms\u00A0· $scanningName scanning';
   }
-  return '$rooms · $scanningCount scanning';
+  return '$rooms\u00A0· $scanningCount scanning';
 }
 
 /// The confirm prompt for stopping someone else's playback.

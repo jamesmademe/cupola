@@ -25,7 +25,7 @@ import 'package:cupola/features/settings/presentation/service_settings_screen.da
 import '../../../test_helpers/profiles/profiles.dart';
 
 const _home = 'Address at home';
-const _away = 'Address away · optional';
+const _away = 'Address away\u00A0· optional';
 
 /// Radarr's form on P3, pushed over a launcher so a save can pop.
 Future<(ProfileHarness, ProviderContainer)> _pumpForm(
@@ -306,8 +306,8 @@ void main() {
       await _tap(tester, find.text('Test connection'), harness);
 
       expect(find.text('Answering'), findsNWidgets(2));
-      expect(find.text('At home · nas.home.arpa:7878'), findsOneWidget);
-      expect(find.text('Away · radarr.example.net'), findsOneWidget);
+      expect(find.text('At home\u00A0· nas.home.arpa:7878'), findsOneWidget);
+      expect(find.text('Away\u00A0· radarr.example.net'), findsOneWidget);
       expect(find.text('Not checked from here'), findsNothing);
 
       await harness.unmount(tester);
@@ -327,7 +327,7 @@ void main() {
         find.text("Cupola tries it when the home address doesn't answer."),
         findsOneWidget,
       );
-      expect(find.text('Away · silent.example.net'), findsOneWidget);
+      expect(find.text('Away\u00A0· silent.example.net'), findsOneWidget);
       expect(find.text('Unreachable'), findsNothing);
 
       await harness.unmount(tester);
@@ -344,10 +344,10 @@ void main() {
       await _tap(tester, find.text('Test connection'), harness);
 
       expect(
-        find.text('At home · nas.home.arpa:7878 · in use'),
+        find.text('At home\u00A0· nas.home.arpa:7878\u00A0· in use'),
         findsOneWidget,
       );
-      expect(find.text('Away · silent.example.net'), findsOneWidget);
+      expect(find.text('Away\u00A0· silent.example.net'), findsOneWidget);
 
       await harness.unmount(tester);
     });
@@ -368,8 +368,8 @@ void main() {
         find.text('Radarr did not answer at home or away.'),
         findsOneWidget,
       );
-      expect(find.text('At home · nas.home.arpa:7878'), findsOneWidget);
-      expect(find.text('Away · silent.example.net'), findsOneWidget);
+      expect(find.text('At home\u00A0· nas.home.arpa:7878'), findsOneWidget);
+      expect(find.text('Away\u00A0· silent.example.net'), findsOneWidget);
       expect(find.text('Not checked from here'), findsNothing);
 
       await harness.unmount(tester);
@@ -383,7 +383,7 @@ void main() {
       await _tap(tester, find.text('Test connection'), harness);
 
       expect(find.text('Radarr answered as expected.'), findsOneWidget);
-      expect(find.textContaining('At home ·'), findsNothing);
+      expect(find.textContaining('At home\u00A0·'), findsNothing);
 
       await harness.unmount(tester);
     });
@@ -516,7 +516,7 @@ void main() {
         ).withConnection(WorldConnections.radarr4k),
       );
 
-      expect(find.text('Home only · nas.home.arpa:7879'), findsOneWidget);
+      expect(find.text('Home only\u00A0· nas.home.arpa:7879'), findsOneWidget);
 
       await harness.unmount(tester);
     });

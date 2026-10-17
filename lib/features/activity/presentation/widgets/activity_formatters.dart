@@ -1,6 +1,7 @@
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/date_format.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart'
     show intOrNull, mapOrNull, stringOrNull;
@@ -29,7 +30,10 @@ export 'package:cupola/features/activity/domain/global_activity_status.dart'
 
 Map<String, dynamic>? asActivityMap(dynamic value) => mapOrNull(value);
 
-String joinActivityParts(Iterable<String?> parts, {String separator = ' · '}) {
+String joinActivityParts(
+  Iterable<String?> parts, {
+  String separator = dotSeparator,
+}) {
   return joinDisplayParts(parts, separator: separator);
 }
 
@@ -252,7 +256,7 @@ String formatActivityValue(dynamic value) {
           (entry) =>
               '${humanizeCamelCase(entry.key.toString())}: ${formatActivityValue(entry.value)}',
         )
-        .join(' · ');
+        .join(dotSeparator);
   }
 
   return value.toString();

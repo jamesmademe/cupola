@@ -43,11 +43,15 @@ void main() {
 
     // Anna is watching on both, one card each, and each says which server.
     expect(
-      find.text('Anna · Jellyfin Android TV · Living room TV · Jellyfin 1'),
+      find.text(
+        'Anna\u00A0· Jellyfin Android TV\u00A0· Living room TV\u00A0· Jellyfin 1',
+      ),
       findsOne,
     );
     expect(
-      find.text('Anna · Jellyfin Android TV · Living room TV · Jellyfin Cabin'),
+      find.text(
+        'Anna\u00A0· Jellyfin Android TV\u00A0· Living room TV\u00A0· Jellyfin Cabin',
+      ),
       findsOne,
     );
     // And says it aloud, in the card's one sentence.
@@ -101,7 +105,9 @@ void main() {
     );
 
     expect(
-      find.text('Anna · Jellyfin Android TV · Living room TV · Jellyfin 1'),
+      find.text(
+        'Anna\u00A0· Jellyfin Android TV\u00A0· Living room TV\u00A0· Jellyfin 1',
+      ),
       findsOne,
     );
     expect(find.textContaining('Jellyfin Cabin did not answer'), findsOne);
@@ -112,7 +118,10 @@ void main() {
   testWidgets('P1: one Jellyfin is named nowhere', (tester) async {
     final harness = await _pump(tester, Profiles.p1);
 
-    expect(find.text('Anna · Jellyfin Android TV · Living room TV'), findsOne);
+    expect(
+      find.text('Anna\u00A0· Jellyfin Android TV\u00A0· Living room TV'),
+      findsOne,
+    );
 
     await harness.unmount(tester);
   });

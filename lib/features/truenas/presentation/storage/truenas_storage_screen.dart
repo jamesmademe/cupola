@@ -131,7 +131,7 @@ class _PoolCard extends StatelessWidget {
               const SizedBox(height: AppSpacing.xs),
               Text(
                 '${formatPercent(used * 100)} used'
-                '${pool.sizeBytes != null ? ' · ${formatSize(pool.allocatedBytes ?? 0)} / ${formatSize(pool.sizeBytes!)}' : ''}',
+                '${pool.sizeBytes != null ? '\u00A0· ${formatSize(pool.allocatedBytes ?? 0)} / ${formatSize(pool.sizeBytes!)}' : ''}',
                 style: theme.textTheme.labelSmall!.tabular.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),

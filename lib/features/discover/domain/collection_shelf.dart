@@ -1,4 +1,5 @@
 import 'package:cupola/core/models/media_preview.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/features/discover/domain/models/collection_detail.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
@@ -86,7 +87,7 @@ class CollectionShelf {
     'Collection',
     '${parts.length} ${parts.length == 1 ? 'movie' : 'movies'}',
     if (span.isNotEmpty) span,
-  ].join(' · ');
+  ].join(dotSeparator);
 
   static CollectionPartStand _standOf(
     Map<String, dynamic>? mediaInfo,

@@ -217,7 +217,7 @@ void main() {
       expect(directPlay.userName, 'flatmate');
       expect(directPlay.title, 'Dune: Part Two');
       expect(directPlay.subtitle, '2024');
-      expect(directPlay.deviceLabel, 'Infuse-Library · Apple TV');
+      expect(directPlay.deviceLabel, 'Infuse-Library\u00A0· Apple TV');
       // No rate field exists for a direct play, so this is the source file's own
       // bitrate and must never be presented as measured throughput.
       //
@@ -257,8 +257,8 @@ void main() {
       ]);
       expect(
         transcode.transcodeReasonLabel,
-        'Client cannot decode this video codec · '
-        'Client cannot decode this audio codec · '
+        'Client cannot decode this video codec\u00A0· '
+        'Client cannot decode this audio codec\u00A0· '
         'Subtitles have to be burned in',
       );
       // TranscodingInfo.Bitrate is the encoder's actual target, so this one is
@@ -267,8 +267,8 @@ void main() {
       expect(transcode.bitrateIsNominal, isFalse);
       // An episode leads with the series; the episode is the detail line.
       expect(transcode.title, 'Severance');
-      expect(transcode.subtitle, "S2 E4 · Woe's Hollow");
-      expect(transcode.deviceLabel, 'Jellyfin Web · Chrome');
+      expect(transcode.subtitle, "S2 E4\u00A0· Woe's Hollow");
+      expect(transcode.deviceLabel, 'Jellyfin Web\u00A0· Chrome');
       expect(transcode.progress, 0.5);
       expect(transcode.isPaused, isTrue);
       // This episode carries no image of its own at all (`ImageTags: {}`), so the
@@ -483,7 +483,7 @@ void main() {
           .firstWhere((group) => group.label == 'Episodes')
           .items
           .single;
-      expect(episode.subtitle, 'The Internet Is Made Of Cats · S2 E4');
+      expect(episode.subtitle, 'The Internet Is Made Of Cats\u00A0· S2 E4');
       expect(episode.kind, StreamItemKind.episode);
       // A hint carries no `UserData` at any setting, so watch state is absent by
       // construction rather than by a missing parameter.
@@ -589,7 +589,7 @@ void main() {
       expect(query['limit'], '3');
       expect(query['excludeActiveSessions'], 'true');
       expect(query['enableUserData'], 'true');
-      expect(items.first.subtitle, 'Severance · S2 E4');
+      expect(items.first.subtitle, 'Severance\u00A0· S2 E4');
       expect(items.first.resumeProgress, closeTo(0.4, 0.0001));
     });
 
@@ -738,7 +738,7 @@ void main() {
       final episode = items.first;
       expect(episode.kind, StreamItemKind.episode);
       expect(episode.title, "Woe's Hollow");
-      expect(episode.subtitle, 'Severance · S2 E4');
+      expect(episode.subtitle, 'Severance\u00A0· S2 E4');
       // This item reports `PlayedPercentage: 40.0` and no position ticks: a
       // 0-100 double, so 40% of 2 700 000 ms.
       expect(episode.runtimeMs, 2700000);
@@ -1059,7 +1059,7 @@ void main() {
       expect(episodes, hasLength(3));
       expect(episodes.first.kind, StreamItemKind.episode);
       expect(episodes.first.title, 'Hello, Ms. Cobel');
-      expect(episodes.first.subtitle, 'Severance · S2 E1');
+      expect(episodes.first.subtitle, 'Severance\u00A0· S2 E1');
       expect(episodes.first.isPlayed, isTrue);
       // 30 600 000 000 ticks → 51 minutes.
       expect(episodes.first.runtimeMs, 3060000);

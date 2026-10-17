@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/presentation/widgets/decision_fault_card.dart';
 import 'package:cupola/features/activity/presentation/widgets/storage_alert_card.dart';
@@ -143,10 +144,10 @@ String requestsWaitSummary(List<DashboardDecision> requests) {
       [
         request.title,
         if (request.detail.isNotEmpty) request.detail,
-      ].join(' · '),
+      ].join(dotSeparator),
   ];
   final more = requests.length - named.length;
-  return [...named, if (more > 0) '$more more'].join(' · ');
+  return [...named, if (more > 0) '$more more'].join(dotSeparator);
 }
 
 /// The requests that wait, as one line of a wide list: `2 requests wait for
@@ -181,7 +182,7 @@ class RequestsWaitRow extends StatelessWidget {
     );
     final words = Semantics(
       container: true,
-      label: '$line. ${summary.replaceAll(' · ', ', ')}',
+      label: '$line. ${summary.replaceAll(dotSeparator, ', ')}',
       excludeSemantics: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

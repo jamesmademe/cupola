@@ -258,9 +258,9 @@ void main() {
 
     test('dlSpeedFormatted and upSpeedFormatted', () {
       expect(build(dl: 0).dlSpeedFormatted, '0');
-      expect(build(dl: 2048).dlSpeedFormatted, '2.0\u00A0KB/s');
+      expect(build(dl: 2048).dlSpeedFormatted, '2.0\u00A0KB/\u2060s');
       expect(build(up: 0).upSpeedFormatted, '0');
-      expect(build(up: 1024).upSpeedFormatted, '1.0\u00A0KB/s');
+      expect(build(up: 1024).upSpeedFormatted, '1.0\u00A0KB/\u2060s');
     });
 
     test('etaFormatted', () {

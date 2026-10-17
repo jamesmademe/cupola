@@ -571,7 +571,7 @@ class _ServerRows extends StatelessWidget {
           value: pass,
           // Named with its consequence rather than as trivia: this flag is why
           // the stop control on a session card is there or is not.
-          label: 'Plex Pass · stopping a stream needs it',
+          label: 'Plex Pass\u00A0· stopping a stream needs it',
         ),
         _ServerRow(
           icon: Icons.person_outline_rounded,
@@ -593,7 +593,7 @@ class _ServerRows extends StatelessWidget {
             // qualifier arriving before the thing it qualifies, which is the
             // exact failure the spoken order below exists to prevent.
             value: 'Owner only',
-            label: 'Plex Home · Cupola reads the owner’s watch state',
+            label: 'Plex Home\u00A0· Cupola reads the owner’s watch state',
           ),
       ],
     );

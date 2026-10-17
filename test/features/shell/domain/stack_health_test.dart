@@ -148,7 +148,7 @@ void main() {
       expect(health.allClear, isFalse);
       expect(
         health.sentence,
-        '1 of 4 answering · 2 timed out · 1 did not answer',
+        '1 of 4 answering\u00A0· 2 timed out\u00A0· 1 did not answer',
       );
     });
   });
@@ -186,7 +186,7 @@ void main() {
       expect(health.allClear, isTrue);
       expect(
         health.sentence,
-        '7 of 7 answering · 6 only at home · 4 not set up',
+        '7 of 7 answering\u00A0· 6 only at home\u00A0· 4 not set up',
       );
     });
   });
@@ -220,7 +220,7 @@ void main() {
       expect(health.notSetUp, 15);
       expect(
         health.sentence,
-        '1 of 1 answering · 1 signed out · 15 not set up',
+        '1 of 1 answering\u00A0· 1 signed out\u00A0· 15 not set up',
       );
       // The person's step, not a fault.
       expect(health.allClear, isTrue);
@@ -236,7 +236,7 @@ void main() {
       expect(health.configured, 0);
       expect(health.headline, isNull);
       // Not "0 of 0 answering · 1 signed out · 16 not set up".
-      expect(health.sentence, '1 signed out · 16 not set up');
+      expect(health.sentence, '1 signed out\u00A0· 16 not set up');
     });
 
     test('the qualifiers are in reading order and omitted at zero', () {
@@ -275,7 +275,10 @@ void main() {
       expect(health.faulted, 1);
       expect(health.unreachable, 1);
       expect(health.allClear, isFalse);
-      expect(health.sentence, '1 of 2 answering · 1 fault · 1 did not answer');
+      expect(
+        health.sentence,
+        '1 of 2 answering\u00A0· 1 fault\u00A0· 1 did not answer',
+      );
     });
 
     test('a clear stack says only the headline: no permanent green', () {

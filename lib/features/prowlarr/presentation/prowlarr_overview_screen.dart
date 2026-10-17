@@ -181,7 +181,7 @@ class _IndexersSection extends ConsumerWidget {
       // day's queries and nothing else on the row says so.
       subtitle: total == null
           ? '—'
-          : '$total · by queries, last ${withUnit(prowlarrStatsWindow.inHours, 'h')}',
+          : '$total\u00A0· by queries, last ${withUnit(prowlarrStatsWindow.inHours, 'h')}',
       destination: ServiceTab.indexers,
       child: AsyncValueWidget<ProwlarrOverviewSection>.section(
         value: section,
