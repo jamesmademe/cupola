@@ -219,6 +219,54 @@ void main() {
       expect(navSurfaceRect.center.dy, greaterThan(700));
     });
 
+    testWidgets('a tap beside the pill reaches the content under it', (
+      tester,
+    ) async {
+      // The content scrolls under the bar; what shows beside the pill is
+      // content, and it answers.
+      _setTestViewport(tester, const Size(390, 844));
+      var tapped = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.darkTheme(),
+          home: Scaffold(
+            extendBody: true,
+            body: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => tapped++,
+              child: const SizedBox.expand(),
+            ),
+            bottomNavigationBar: FloatingBottomNavBar(
+              selectedIndex: 0,
+              onDestinationSelected: (_) {},
+              destinations: const [
+                FloatingNavDestination(
+                  icon: Icons.home_outlined,
+                  selectedIcon: Icons.home_rounded,
+                  label: 'Home',
+                ),
+                FloatingNavDestination(
+                  icon: Icons.bolt_outlined,
+                  selectedIcon: Icons.bolt_rounded,
+                  label: 'Activity',
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final pill = tester.getRect(
+        find.byKey(const ValueKey('floating-nav-surface')),
+      );
+      expect(pill.left, greaterThan(8), reason: 'room beside the pill');
+      await tester.tapAt(Offset(pill.left / 2, pill.center.dy));
+      await tester.pump();
+
+      expect(tapped, 1);
+    });
+
     testWidgets('applies elastic drag and springs back to rest', (
       tester,
     ) async {

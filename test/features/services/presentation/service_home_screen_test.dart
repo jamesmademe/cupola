@@ -85,6 +85,44 @@ void main() {
     expect(find.text('Stack home'), findsOneWidget);
   });
 
+  testWidgets('with nothing beneath it, back goes to Stack', (tester) async {
+    // A service home that is the first page of its navigator has nothing to
+    // pop, and the button used to go to the service itself: it did nothing.
+    final router = GoRouter(
+      initialLocation: '/stack/lidarr',
+      routes: [
+        GoRoute(
+          path: '/stack',
+          builder: (_, _) => const Scaffold(body: Text('Stack home')),
+        ),
+        GoRoute(
+          path: '/stack/lidarr',
+          builder: (_, _) => const ServiceHomeScreen(
+            service: ServiceKey.lidarr,
+            child: Scaffold(body: Text('Lidarr body')),
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Back to Stack'));
+    await tester.pumpAndSettle();
+
+    expect(router.state.uri.toString(), '/stack');
+    expect(find.text('Stack home'), findsOneWidget);
+  });
+
   testWidgets('the activity action sits on the gutter, not short of it', (
     tester,
   ) async {

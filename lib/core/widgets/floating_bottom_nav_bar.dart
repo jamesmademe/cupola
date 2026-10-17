@@ -387,7 +387,10 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
       onPanStart: _onPanStart,
       onPanUpdate: _onPanUpdate,
       onPanEnd: _onPanEnd,
-      behavior: HitTestBehavior.opaque,
+      // Only where the pill is drawn. The slot is as wide as the screen and
+      // the content scrolls under it (`extendBody`), so an opaque slot ate
+      // every tap on what showed beside and below the pill.
+      behavior: HitTestBehavior.deferToChild,
       child: Container(
         // Outer padding to make it float
         padding: EdgeInsets.only(

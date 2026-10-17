@@ -133,10 +133,10 @@ class _ServiceDashboardAppBar extends ConsumerWidget {
                 Icons.chevron_left_rounded,
                 color: colorScheme.onSurfaceVariant,
               ),
-              onPressed: () => RouteUtils.popOrGo(
-                context,
-                ServiceRoutes.forService(service),
-              ),
+              // Back to Stack, as it says, when there is no page to pop: the
+              // service's own location was this very page, so the button did
+              // nothing on a service opened with nothing beneath it.
+              onPressed: () => RouteUtils.popOrGo(context, ServiceRoutes.stack),
               tooltip: 'Back to Stack',
               padding: const EdgeInsets.only(right: AppSpacing.xs),
               constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
