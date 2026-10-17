@@ -82,23 +82,28 @@ class _TorrentDetailScreenState extends ConsumerState<TorrentDetailScreen>
     ref.watchWhileLive(context, torrentDetailPollingProvider(widget.hash));
     final torrentAsync = ref.watch(qbittorrentTorrentsProvider(widget.hash));
 
-    return AsyncValueWidget<List<Torrent>>(
-      value: torrentAsync,
-      serviceName: 'qBittorrent',
-      silentService: ServiceKey.qbittorrent,
-      onRetry: () {
-        clearQbittorrentLoginRefusal(ref);
-        ref.invalidate(qbittorrentTorrentsProvider(widget.hash));
-      },
-      data: (matches) {
-        if (matches.isEmpty) {
-          return Scaffold(
-            appBar: GlassAppBar(title: const Text('Torrent')),
-            body: const Center(child: Text('Torrent not found')),
-          );
-        }
-        return _buildContent(matches.first);
-      },
+    final matches = torrentAsync.value;
+    if (matches != null && matches.isNotEmpty) {
+      return _buildContent(matches.first);
+    }
+    // Loading, failed or gone: the page keeps its frame and its way back,
+    // rather than a bare body with no bar to leave by.
+    return Scaffold(
+      appBar: GlassAppBar(title: const Text('Torrent')),
+      body: AsyncValueWidget<List<Torrent>>(
+        value: torrentAsync,
+        serviceName: 'qBittorrent',
+        silentService: ServiceKey.qbittorrent,
+        onRetry: () {
+          clearQbittorrentLoginRefusal(ref);
+          ref.invalidate(qbittorrentTorrentsProvider(widget.hash));
+        },
+        data: (_) => const AppEmptyState.compact(
+          icon: Icons.search_off_rounded,
+          title: 'This torrent is not in qBittorrent',
+          message: 'It may have been removed there.',
+        ),
+      ),
     );
   }
 
