@@ -554,7 +554,16 @@ class TransmissionClient {
         reason: ServiceFailureReason.unknown,
       );
     }
-    return {'ids': ids};
+    // A torrent with no hash yet is addressed by its session id, which the
+    // RPC wants as a number: the string `"12"` reads as a hash and selects
+    // nothing. A hash is forty hex characters, so anything shorter that parses
+    // is an id.
+    return {
+      'ids': [
+        for (final id in ids)
+          if (id.length < 40) int.tryParse(id) ?? id else id,
+      ],
+    };
   }
 
   Future<void> start(List<String> ids) async {

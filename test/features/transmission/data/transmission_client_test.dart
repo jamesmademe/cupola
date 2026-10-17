@@ -475,6 +475,21 @@ void main() {
   });
 
   group('writes', () {
+    test(
+      'a torrent with no hash is addressed by its id, as a number',
+      () async {
+        final adapter = ScriptedHttpAdapter([_ok(const {})]);
+        final client = TransmissionClient(
+          url: 'https://nas.local:9091',
+          dio: _dio(adapter),
+        );
+
+        await client.stop(['12', 'a' * 40]);
+        final body = adapter.lastRequest.body as Map<String, dynamic>;
+        expect(body['arguments']['ids'], [12, 'a' * 40]);
+      },
+    );
+
     test('every write sends an ids key, and an empty selection throws', () async {
       // An **absent** `ids` means "all torrents" to this API, so a write
       // assembled with `if (ids.isNotEmpty)` would escalate an empty selection
