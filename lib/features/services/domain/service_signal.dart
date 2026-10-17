@@ -164,12 +164,8 @@ class ServiceSignalPair {
 
 /// Picks the two figures a stack card shows, in rank order.
 ///
-/// The ranking is the same judgment [resolveServiceSignal] already makes, only
-/// written down rather than reduced to its first element: **flagged KPIs first,
-/// in the builder's own order, then the rest in the builder's own order.** The
-/// primary is therefore exactly what the single-figure card showed, which is
-/// what makes this an addition rather than a change, and the secondary is the
-/// next thing the builder thought worth computing.
+/// The ranking is [rankServiceKpis]: a fault or something moving first, then
+/// the service's scale, then its backlog. The secondary is the next of those.
 ///
 /// Each figure keeps *its own* tone. A Radarr with a backlog shows a neutral
 /// `2 038 movies` beside a neutral `34 missing`; a Bazarr shows a neutral
@@ -185,14 +181,26 @@ ServiceSignalPair? resolveServiceSignalPair(List<ServiceKpi> kpis) {
   );
 }
 
-/// Flagged first, each group in the builder's own order.
+/// A fault or something moving first, then the service's scale, then its
+/// backlog, then the rest; each group in the builder's own order.
+///
+/// The backlog is toned (neutral) but it is not news: a Sonarr headed
+/// `72 missing` reads as a Sonarr in trouble, when 72 missing episodes is the
+/// resting state of most libraries. So it never leads: the card says how big
+/// the service is (`3 series`) and the backlog sits beside it, unless something
+/// amber, red or blue has a better claim on the first place.
 ///
 /// Exposed rather than inlined because it is the rule both figures are chosen
 /// by, and a rule that lives inside a reducer is a rule no test can name.
-List<ServiceKpi> rankServiceKpis(List<ServiceKpi> kpis) => [
-  ...kpis.where((kpi) => kpi.isNoteworthy),
-  ...kpis.where((kpi) => !kpi.isNoteworthy),
-];
+List<ServiceKpi> rankServiceKpis(List<ServiceKpi> kpis) {
+  bool isNews(ServiceKpi kpi) =>
+      kpi.tone != null && kpi.tone != StatusTone.neutral;
+  bool isBacklog(ServiceKpi kpi) => kpi.tone == StatusTone.neutral;
+  final news = kpis.where(isNews);
+  final backlog = kpis.where(isBacklog);
+  final rest = kpis.where((kpi) => kpi.tone == null).toList();
+  return [...news, ...rest.take(1), ...backlog, ...rest.skip(1)];
+}
 
 ServiceSignal _signalFrom(ServiceKpi kpi) => ServiceSignal(
   label: _matrixLabel(kpi.label, kpi.value),

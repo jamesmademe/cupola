@@ -27,22 +27,20 @@ void main() {
       expect(signal.needsAttention, isFalse);
     });
 
-    test('prefers the first flagged KPI over the headline', () {
-      // The KPI builders mark their own noteworthy metric with a non-null
-      // tone: `_backlogIf(missing > 0)`. That flag is the domain's judgment
-      // about its own data, so this reads it instead of restating a per-service
-      // table here.
-      final signal = resolveServiceSignal([
+    test('a backlog never leads: the scale does, the backlog follows', () {
+      // `_backlogIf(missing > 0)` tones the backlog neutral: it is the resting
+      // state of most libraries, not news, so a card headed by it read as a
+      // service in trouble.
+      final pair = resolveServiceSignalPair([
         _kpi('Movies', '312'),
         _kpi('Monitored', '300'),
         _kpi('Missing', '7', tone: StatusTone.neutral),
-      ]);
+      ])!;
 
-      expect(signal!.label, 'missing');
-      expect(signal.value, '7');
-      // Selected, but not coloured: a backlog is why you would open Radarr and
-      // is still not something asking for you.
-      expect(signal.needsAttention, isFalse);
+      expect(pair.primary.label, 'movies');
+      expect(pair.primary.value, '312');
+      expect(pair.secondary!.label, 'missing');
+      expect(pair.secondary!.needsAttention, isFalse);
     });
 
     test('takes the earliest flag when several are raised', () {
@@ -197,11 +195,10 @@ void _twoFigures() {
         ),
       ];
 
-      // The flagged KPI wins, which is the ranking the deck and the status bar
-      // already use, so the card's primary and the deck's one figure cannot
-      // disagree about which metric matters.
-      expect(resolveServiceSignalPair(kpis)!.primary.value, '34');
-      expect(resolveServiceSignal(kpis)!.value, '34');
+      // One ranking for the card and for the deck's and the status bar's one
+      // figure, so they cannot disagree about which metric leads.
+      expect(resolveServiceSignalPair(kpis)!.primary.value, '2038');
+      expect(resolveServiceSignal(kpis)!.value, '2038');
     });
 
     test('each figure keeps its own tone', () {
@@ -221,10 +218,10 @@ void _twoFigures() {
       ];
 
       final pair = resolveServiceSignalPair(kpis)!;
-      // Painting both with the worse of the two is the "one card, one colour"
-      // reduction the tone rule exists to prevent.
-      expect(pair.primary.tone, StatusTone.neutral);
-      expect(pair.secondary!.tone, StatusTone.warning);
+      // The fault leads; and painting both with the worse of the two is the
+      // "one card, one colour" reduction the tone rule exists to prevent.
+      expect(pair.primary.tone, StatusTone.warning);
+      expect(pair.secondary!.tone, StatusTone.neutral);
     });
 
     test('a one-KPI service has no secondary to draw', () {
