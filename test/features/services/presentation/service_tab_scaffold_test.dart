@@ -4,17 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/theme.dart';
-import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
-import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/service_tab_bar.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_home_screen.dart';
-import 'package:cupola/features/services/presentation/service_tab_placeholder.dart';
 import 'package:cupola/features/services/presentation/service_tab_scaffold.dart';
 import 'package:cupola/features/qbittorrent/presentation/widgets/qbittorrent_actions_bar.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
-import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
@@ -218,72 +214,6 @@ void main() {
 
       expect(find.text('tab content'), findsOneWidget);
       expect(find.byType(ServiceTabBar), findsNothing);
-    });
-  });
-
-  group('ServiceTabPlaceholder', () {
-    Future<void> pump(WidgetTester tester, {required bool configured}) =>
-        tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              currentSettingsProvider.overrideWith(
-                (ref) => configured
-                    ? const SettingsModel(
-                        instances: [
-                          ServiceInstance(
-                            id: 'radarr',
-                            service: ServiceKey.radarr,
-                            url: 'http://radarr.lan',
-                            credential: 'k',
-                          ),
-                        ],
-                      )
-                    : const SettingsModel(),
-              ),
-            ],
-            child: MaterialApp(
-              theme: AppTheme.darkTheme(),
-              home: Scaffold(
-                body: ServiceTabPlaceholder(
-                  service: ServiceKey.radarr,
-                  tab: ServiceTab.calendar,
-                ),
-              ),
-            ),
-          ),
-        );
-
-    testWidgets('a service that is not set up says so first', (tester) async {
-      // "The Calendar is empty" would be a claim about a server this app has
-      // never spoken to. The emptiness of a thing you cannot see is not a fact.
-      await pump(tester, configured: false);
-
-      expect(find.byType(NotConfiguredPlaceholder), findsOneWidget);
-      // And specifically NOT the empty-tab copy: the two share a well, so the
-      // type alone would not tell them apart.
-      expect(find.textContaining('is not here yet'), findsNothing);
-    });
-
-    testWidgets('a configured service gets the empty well, not an error', (
-      tester,
-    ) async {
-      // Nothing failed, so nothing wears alarm chrome: the same well the
-      // queue shows when the queue is genuinely empty.
-      await pump(tester, configured: true);
-
-      expect(find.byType(NotConfiguredPlaceholder), findsNothing);
-      expect(find.byType(AppEmptyState), findsOneWidget);
-      expect(find.text('Calendar is not here yet'), findsOneWidget);
-    });
-
-    testWidgets('the well can scroll, so its copy is not clipped', (
-      tester,
-    ) async {
-      // A leaf that cannot scroll clips its own second line at an
-      // accessibility reading size, and this copy is two lines at every size.
-      await pump(tester, configured: true);
-
-      expect(find.byType(AppEmptyStatePage), findsOneWidget);
     });
   });
 

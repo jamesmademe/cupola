@@ -75,7 +75,6 @@ import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_all_screens.dart';
 import 'package:cupola/features/home/presentation/home_screen.dart';
 import 'package:cupola/features/services/presentation/stack_screen.dart';
-import 'package:cupola/features/services/presentation/service_tab_placeholder.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/discover/domain/seerr_invite.dart';
 import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
@@ -894,7 +893,7 @@ void main() {
       tester,
     ) async {
       // A branch that resolves is not a branch that shows the right page: for
-      // months every one of these tabs resolved to `ServiceTabPlaceholder`,
+      // months every one of these tabs resolved to a placeholder,
       // which is a legitimate destination, so the location assertions above
       // stayed green while eight Overviews sat in the tree reachable by
       // nothing. This table is the one that would have caught it: it names
@@ -946,13 +945,6 @@ void main() {
           find.byType(entry.value),
           findsOneWidget,
           reason: '${entry.key} must draw ${entry.value}',
-        );
-        expect(
-          find.byType(ServiceTabPlaceholder),
-          findsNothing,
-          reason:
-              '${entry.key} has a real screen, so a placeholder there is the '
-              'screen having been unmounted rather than a tab not yet built.',
         );
       }
     });
@@ -1298,16 +1290,11 @@ void main() {
         // One screen for both servers, so the assertion names the same type
         // twice. Asserting the type rather than the location is what makes the
         // redirect's destination a real page: for months it landed on
-        // `ServiceTabPlaceholder`, which resolves just as happily.
+        // a placeholder, which resolves just as happily.
         expect(
           find.byType(StreamOverviewScreen),
           findsOneWidget,
           reason: entry.value,
-        );
-        expect(
-          find.byType(ServiceTabPlaceholder),
-          findsNothing,
-          reason: '${entry.value} draws its own screen now.',
         );
       }
     });
@@ -1559,11 +1546,6 @@ void main() {
           findsOneWidget,
           reason: '${entry.value.$1} must draw ${entry.value.$2}',
         );
-        expect(
-          find.byType(ServiceTabPlaceholder),
-          findsNothing,
-          reason: '${entry.value.$1} draws its own screen now.',
-        );
       }
     });
 
@@ -1747,7 +1729,7 @@ void main() {
   // ── What each tab actually draws ────────────────────────────────────────
   //
   // The tables above this one assert *locations*, and a location is not a
-  // page: for months every tab on every bar resolved to `ServiceTabPlaceholder`
+  // page: for months every tab on every bar resolved to a placeholder
   // (a legitimate destination), so the path assertions stayed green while the
   // screens behind them were unreachable. The Overview table was written to
   // close that for the sixteen Overviews. This one closes it for the other
@@ -1991,13 +1973,6 @@ void main() {
             finder,
             findsOneWidget,
             reason: '$location must draw the screen its row names',
-          );
-          expect(
-            find.byType(ServiceTabPlaceholder),
-            findsNothing,
-            reason:
-                '$location has a real screen, so a placeholder there is the '
-                'screen having been unmounted rather than a tab not built.',
           );
         }
       });
