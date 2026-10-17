@@ -145,7 +145,10 @@ void main() {
       expect(
         classifyConnectionFailure(
           _wrapping(
-            const HandshakeException('bad cert'),
+            const HandshakeException(
+              'Handshake error in client',
+              OSError('CERTIFICATE_VERIFY_FAILED: unable to get local issuer'),
+            ),
             DioExceptionType.connectionError,
           ),
         ),
@@ -168,7 +171,11 @@ void main() {
         ServiceFailureReason.unreachable,
       );
       expect(
-        classifyConnectionFailure(const HandshakeException('expired')),
+        classifyConnectionFailure(
+          const HandshakeException(
+            'CERTIFICATE_VERIFY_FAILED: certificate has expired',
+          ),
+        ),
         ServiceFailureReason.tls,
       );
       // A deadline around a whole request cannot prove the host was reached,
@@ -271,22 +278,62 @@ void main() {
       );
     });
 
-    test('a handshake that failed any other way stays a certificate', () {
-      expect(
-        classifyConnectionFailure(
-          const HandshakeException(
-            'Handshake error in client',
-            OSError('CERTIFICATE_VERIFY_FAILED: self signed certificate'),
+    test('a certificate that did not verify is a certificate, on every '
+        'platform', () {
+      for (final said in const [
+        // Android and Linux.
+        'CERTIFICATE_VERIFY_FAILED: self signed certificate',
+        'CERTIFICATE_VERIFY_FAILED: Hostname mismatch',
+        // macOS and iOS, where the platform's trust decides.
+        'CERTIFICATE_VERIFY_FAILED: application verification failure',
+      ]) {
+        expect(
+          classifyConnectionFailure(
+            HandshakeException('Handshake error in client', OSError(said)),
           ),
-        ),
-        ServiceFailureReason.tls,
-      );
+          ServiceFailureReason.tls,
+          reason: said,
+        );
+      }
       expect(
-        classifyConnectionFailure(
-          const HandshakeException('Connection terminated during handshake'),
-        ),
+        classifyConnectionFailure(const CertificateException('pin')),
         ServiceFailureReason.tls,
       );
+    });
+
+    test('a handshake that broke off before any certificate is no secure '
+        'connection, not a certificate', () {
+      for (final error in const [
+        // NZBGet on its http port: it hangs up on the TLS hello.
+        HandshakeException('Connection terminated during handshake'),
+        HandshakeException(
+          'Handshake error in client',
+          OSError('TLSV1_ALERT_PROTOCOL_VERSION'),
+        ),
+      ]) {
+        expect(
+          classifyConnectionFailure(error),
+          ServiceFailureReason.noSecureConnection,
+        );
+        expect(
+          classifyConnectionFailure(
+            _wrapping(error, DioExceptionType.connectionError),
+          ),
+          ServiceFailureReason.noSecureConnection,
+        );
+      }
+    });
+
+    test('no secure connection is amber, with the address to check', () {
+      const reason = ServiceFailureReason.noSecureConnection;
+      expect(failureTone(reason), StatusTone.warning);
+      expect(failureLabel(reason), 'No secure connection');
+      expect(
+        failureHeadline(reason, subject: 'NZBGet'),
+        'NZBGet did not open a secure connection',
+      );
+      expect(failureRemedy(reason), 'Check the address');
+      expect(failureDidNotAnswer(reason), isFalse);
     });
 
     test('is an amber fault, with the port to check and no retry', () {

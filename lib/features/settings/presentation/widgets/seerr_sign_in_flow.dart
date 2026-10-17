@@ -69,6 +69,9 @@ enum _Trust {
 
   /// There was no certificate to ask about.
   none,
+
+  /// There was none because the port serves plain http.
+  plainHttp,
 }
 
 /// Whether the certificate [shown] at an address is trusted on an invite's
@@ -286,9 +289,12 @@ class SeerrSignInFlow extends ChangeNotifier {
       if (_disposed) return;
       if (trust == _Trust.trusted) return readServer(again: again);
       return _stop(
-        trust == _Trust.declined
-            ? SeerrSignInNotice.certificateDeclined
-            : SeerrSignInNotice.ofServerRead(error, url: _connection.url),
+        switch (trust) {
+          _Trust.declined => SeerrSignInNotice.certificateDeclined,
+          // The port serves http: what a handshake it never spoke says.
+          _Trust.plainHttp => SeerrSignInNotice.noSecureConnection,
+          _ => SeerrSignInNotice.ofServerRead(error, url: _connection.url),
+        },
         retry: () => readServer(again: again),
       );
     }
@@ -335,11 +341,20 @@ class SeerrSignInFlow extends ChangeNotifier {
     // certificate in question is the one in front of the address away.
     final url = readAt;
     final previous = settings.pinForUrl(url);
-    final probe = await _certificateProber(
+    final finding = await _certificateProber(
       url,
       pinnedFingerprint: previous ?? '',
     );
-    if (probe == null || _disposed) return _Trust.none;
+    if (_disposed) return _Trust.none;
+    final UntrustedCertificateProbe probe;
+    switch (finding) {
+      case null:
+        return _Trust.none;
+      case PlainHttpPort():
+        return _Trust.plainHttp;
+      case UntrustedCertificate(probe: final found):
+        probe = found;
+    }
     final invited = _invitedPin?.call(url);
     final trust =
         trustedOnInvite(

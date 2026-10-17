@@ -227,7 +227,28 @@ class ServiceDiagnosis {
         serverVersion: serverVersion,
         gateway: gateway,
         webPage: webPage,
+        connectionId: connectionId,
       );
+
+  /// This failure, with what probing its address found, which then is its
+  /// reason: a certificate nobody trusts ([ServiceFailureReason.tls], with
+  /// the certificate to offer), or a port that serves plain http. Either says
+  /// more than the failure did, whose words were about a handshake that broke
+  /// off or ran out of time.
+  ServiceDiagnosis withFinding(TlsFinding? finding) => switch (finding) {
+    null => this,
+    UntrustedCertificate(:final probe) => ServiceDiagnosis._all(
+      status: ServiceConnectionStatus.disconnected,
+      reason: ServiceFailureReason.tls,
+      certificateProbe: probe,
+      connectionId: connectionId,
+    ),
+    PlainHttpPort() => ServiceDiagnosis._all(
+      status: ServiceConnectionStatus.disconnected,
+      reason: ServiceFailureReason.plainHttp,
+      connectionId: connectionId,
+    ),
+  };
 }
 
 /// Verifies [service] against the credentials passed in, rather than the saved
@@ -864,6 +885,7 @@ bool localNetworkCouldExplain(ServiceFailureReason? reason) => switch (reason) {
   ServiceFailureReason.invalidResponse ||
   ServiceFailureReason.tls ||
   ServiceFailureReason.plainHttp ||
+  ServiceFailureReason.noSecureConnection ||
   // Refused before dialling: the OS was never asked for anything.
   ServiceFailureReason.insecureTransport ||
   // Already attributed; asking again would only re-confirm it.
@@ -915,10 +937,13 @@ Future<ServiceDiagnosis> diagnoseThroughLocalNetworkGate(
   };
 }
 
-/// Whether a certificate probe could still explain this failure.
+/// Whether probing the address could still explain this failure
+/// ([probeUntrustedCertificate]).
 ///
 /// An untrusted certificate surfaces as `tls`, and as `unreachable`/`unknown`
-/// when the handshake fails before a reason can be attributed. Anything the
+/// when the handshake fails before a reason can be attributed. A port that
+/// serves plain http surfaces as `noSecureConnection` when it closes the
+/// handshake, and as `unreachable` when it waits it out. Anything the
 /// server answered (a rejected key, a 404, a 500, a redirect nobody could
 /// follow) rules the certificate out: the response proves the handshake
 /// already completed, so probing for an untrusted certificate costs a round
@@ -972,11 +997,11 @@ Future<ServiceDiagnosis> diagnoseInstanceWithCertProbe(
     return diagnosis;
   }
   final url = instance.url;
-  final certProbe = await probe(
+  final finding = await probe(
     url,
     pinnedFingerprint: settings.pinForUrl(url) ?? '',
   );
-  return diagnosis.withCertificateProbe(certProbe);
+  return diagnosis.withFinding(finding);
 }
 
 /// The sentence under a failure of [service], from the failure itself: what
@@ -1038,6 +1063,9 @@ String connectionFailureMessage(
           : 'This port serves plain http, not https. Use the port '
                 '${service.title} serves https on, or http:// for an address '
                 'used only at home.';
+    case ServiceFailureReason.noSecureConnection:
+      return 'The secure connection broke off before a certificate arrived. '
+          'Check that this port serves https.';
     case ServiceFailureReason.unauthorized:
       // The why, not the what again: the title above it already says the key
       // was refused, so this says where the right one comes from.

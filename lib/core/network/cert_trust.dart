@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
@@ -227,4 +228,65 @@ Future<bool> certificateValidatesByDefault(
   } finally {
     socket?.destroy();
   }
+}
+
+/// Asks [host]:[port] for `/` in plain http, once and without anything of the
+/// connection's (no key, no cookie, no header but `Host`), and says whether
+/// it answered as an http server.
+///
+/// Used only where a connection test of an `https://` address failed before
+/// any certificate arrived: qBittorrent and Bazarr wait for an http request
+/// line that a TLS hello never sends, so the handshake runs out of time;
+/// NZBGet closes it at once. Both answer this in milliseconds. `GET`, not
+/// `HEAD`: NZBGet closes a `HEAD` without a word. False on anything else,
+/// within [timeout]: a closed port, a TLS server that hangs up, silence.
+Future<bool> answersPlainHttp(
+  String host,
+  int port, {
+  Duration timeout = const Duration(seconds: 2),
+}) async {
+  Socket? socket;
+  try {
+    // The connect's own deadline cancels the attempt, so nothing lands late:
+    // no TLS handshake to wait out here, unlike [probeServerCertificate].
+    socket = await Socket.connect(host, port, timeout: timeout);
+    final hostHeader = host.contains(':') ? '[$host]' : host;
+    socket.add(
+      ascii.encode(
+        'GET / HTTP/1.1\r\nHost: $hostHeader:$port\r\n'
+        'Connection: close\r\n\r\n',
+      ),
+    );
+    final head = <int>[];
+    await for (final chunk in socket.timeout(timeout)) {
+      head.addAll(chunk);
+      if (head.length >= _plainHttpHeadLength) break;
+    }
+    return isPlainHttpAnswer(latin1.decode(head));
+  } catch (_) {
+    return false;
+  } finally {
+    socket?.destroy();
+  }
+}
+
+/// How much of the answer [answersPlainHttp] reads: the status line, the
+/// headers and the start of a short error page.
+const _plainHttpHeadLength = 1024;
+
+/// Whether [head], the start of what a port sent back to a plain http
+/// request, is an http server answering, and not an https one explaining
+/// that it is one.
+///
+/// A port that serves https may still answer a plain request in http, to say
+/// so: nginx's `400 The plain HTTP request was sent to HTTPS port`, Go's
+/// `400 Client sent an HTTP request to an HTTPS server`, Apache's `400 You're
+/// speaking plain HTTP to an SSL-enabled server port`. A 400 that names https
+/// or SSL is that, and reading it as an http port would send the person away
+/// from the right address.
+bool isPlainHttpAnswer(String head) {
+  final status = RegExp(r'^HTTP/\d(?:\.\d)? (\d{3})').firstMatch(head);
+  if (status == null) return false;
+  if (status.group(1) != '400') return true;
+  return !RegExp(r'https|ssl', caseSensitive: false).hasMatch(head);
 }

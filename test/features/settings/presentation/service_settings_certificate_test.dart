@@ -97,7 +97,7 @@ void main() {
       behaviour: ConnectionBehaviour.plainHttpPort,
       prober: (_, {pinnedFingerprint = ''}) async {
         probed++;
-        return _selfSigned;
+        return const UntrustedCertificate(_selfSigned);
       },
     );
 
@@ -119,7 +119,8 @@ void main() {
     final (harness, container) = await _pumpForm(
       tester,
       behaviour: ConnectionBehaviour.untrustedTls,
-      prober: (_, {pinnedFingerprint = ''}) async => _selfSigned,
+      prober: (_, {pinnedFingerprint = ''}) async =>
+          const UntrustedCertificate(_selfSigned),
     );
 
     await _toTrustPrompt(tester, find.text('Test connection'));
@@ -153,17 +154,18 @@ void main() {
     await harness.unmount(tester);
   });
 
-  testWidgets('a handshake that broke off before a certificate arrived says '
-      'so, and promises none', (tester) async {
+  testWidgets('a handshake that broke off with nothing behind it is no '
+      'secure connection, and asks about no certificate', (tester) async {
     final (harness, _) = await _pumpForm(
       tester,
-      behaviour: ConnectionBehaviour.untrustedTls,
+      behaviour: ConnectionBehaviour.closesHandshake,
       prober: (_, {pinnedFingerprint = ''}) async => null,
     );
 
     await _tap(tester, find.text('Test connection'), harness);
 
-    expect(find.text('Certificate not trusted'), findsNWidgets(2));
+    // The panel, and the saved connection's header above the form.
+    expect(find.text('No secure connection'), findsNWidgets(2));
     expect(
       find.text(
         'The secure connection broke off before a certificate arrived. Check '
@@ -171,8 +173,49 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.textContaining('test again'), findsNothing);
+    expect(find.text('Certificate not trusted'), findsNothing);
     expect(find.text('Check the certificate'), findsNothing);
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('a port that waits out the handshake and answers plain http is '
+      'a port without https, not silence', (tester) async {
+    // qBittorrent and Bazarr: the TLS hello gets no reply until the
+    // deadline, and a plain request gets one at once.
+    final (harness, _) = await _pumpForm(
+      tester,
+      behaviour: ConnectionBehaviour.timesOut,
+      prober: (_, {pinnedFingerprint = ''}) async => const PlainHttpPort(),
+    );
+
+    await _tap(tester, find.text('Test connection'), harness);
+
+    expect(find.text('No https on this port'), findsOneWidget);
+    expect(find.textContaining('plain http, not https'), findsOneWidget);
+    expect(find.text('Did not answer'), findsOneWidget, reason: 'the header');
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('a broken-off handshake whose probe finds a certificate offers '
+      'it after all', (tester) async {
+    final (harness, _) = await _pumpForm(
+      tester,
+      behaviour: ConnectionBehaviour.closesHandshake,
+      prober: (_, {pinnedFingerprint = ''}) async =>
+          const UntrustedCertificate(_selfSigned),
+    );
+
+    await _toTrustPrompt(tester, find.text('Test connection'));
+    expect(find.text('Self-signed certificate'), findsOneWidget);
+    await _answer(tester, find.text('Cancel'), harness);
+
+    expect(find.text('Check the certificate'), findsOneWidget);
+    expect(
+      find.textContaining('sent a certificate this device does not trust'),
+      findsOneWidget,
+    );
 
     await harness.unmount(tester);
   });

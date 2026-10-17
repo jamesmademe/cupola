@@ -39,6 +39,85 @@ class _FakeCert implements X509Certificate {
 }
 
 void main() {
+  group('a plain http request to a failed https port', () {
+    /// A loopback server that reads the request and sends [reply], or hangs
+    /// up when [reply] is null, or says nothing when [silent].
+    Future<ServerSocket> serve(String? reply, {bool silent = false}) async {
+      final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      server.listen((socket) {
+        socket.listen((_) {
+          if (silent) return;
+          if (reply == null) {
+            socket.destroy();
+            return;
+          }
+          socket
+            ..write(reply)
+            ..close();
+        });
+      });
+      addTearDown(server.close);
+      return server;
+    }
+
+    test('an http server answering is a port that serves http', () async {
+      for (final reply in const [
+        'HTTP/1.1 200 OK\r\nServer: waitress\r\n\r\n',
+        'HTTP/1.1 401 Unauthorized\r\nServer: nzbget-26.3\r\n\r\n',
+      ]) {
+        final server = await serve(reply);
+        expect(await answersPlainHttp('127.0.0.1', server.port), isTrue);
+      }
+    });
+
+    test('an https server explaining itself, a hang-up and silence are '
+        'not', () async {
+      final explains = await serve(
+        'HTTP/1.1 400 Bad Request\r\nServer: nginx\r\n\r\n<html><head>'
+        '<title>400 The plain HTTP request was sent to HTTPS port</title>',
+      );
+      final hangsUp = await serve(null);
+      final silent = await serve('', silent: true);
+      expect(await answersPlainHttp('127.0.0.1', explains.port), isFalse);
+      expect(await answersPlainHttp('127.0.0.1', hangsUp.port), isFalse);
+      expect(
+        await answersPlainHttp(
+          '127.0.0.1',
+          silent.port,
+          timeout: const Duration(milliseconds: 200),
+        ),
+        isFalse,
+      );
+    });
+
+    test('a closed port is not', () async {
+      final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      final port = server.port;
+      await server.close();
+      expect(await answersPlainHttp('127.0.0.1', port), isFalse);
+    });
+
+    test('a 400 that names https or SSL is an https port saying so', () {
+      expect(
+        isPlainHttpAnswer(
+          'HTTP/1.0 400 Bad Request\r\n\r\nClient sent an HTTP request to '
+          'an HTTPS server.',
+        ),
+        isFalse,
+      );
+      expect(
+        isPlainHttpAnswer(
+          "HTTP/1.1 400 Bad Request\r\n\r\nYou're speaking plain HTTP to "
+          'an SSL-enabled server port.',
+        ),
+        isFalse,
+      );
+      expect(isPlainHttpAnswer('HTTP/1.1 400 Bad Request\r\n\r\n'), isTrue);
+      expect(isPlainHttpAnswer('SSH-2.0-OpenSSH_9.6\r\n'), isFalse);
+      expect(isPlainHttpAnswer(''), isFalse);
+    });
+  });
+
   group('buildPinnedHttpClient', () {
     test('binds a pin to its host and port, not to the fingerprint alone', () {
       final cert = _FakeCert(const [1, 2, 3]);

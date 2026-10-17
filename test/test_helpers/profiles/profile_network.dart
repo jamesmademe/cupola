@@ -561,6 +561,9 @@ class ProfileNetwork {
         'Handshake error in client',
         OSError('\n\tWRONG_VERSION_NUMBER(tls_record.cc:127)'),
       ),
+      ConnectionBehaviour.closesHandshake => const HandshakeException(
+        'Connection terminated during handshake',
+      ),
       _ => null,
     };
   }

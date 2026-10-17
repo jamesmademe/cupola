@@ -568,9 +568,10 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
 
   /// When [result] failed in a way a certificate could explain, offers to
   /// trust the certificate of [route]'s address as typed, and tests that
-  /// address again. Null when no certificate arrived to offer; [result] with
-  /// the certificate attached when it was offered and not trusted, so the
-  /// panel can offer it again ([_reviewCertificate]).
+  /// address again. Null when the probe found nothing; the plain http failure
+  /// when the port serves http; [result] with the certificate attached when
+  /// it was offered and not trusted, so the panel can offer it again
+  /// ([_reviewCertificate]).
   ///
   /// Skipped once the server has answered (a rejected key rules the
   /// certificate out), and for an address away that did not answer at all:
@@ -586,12 +587,14 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     final settings = _updateServiceSettings(ref.read(currentSettingsProvider));
     final (:url, :pin) = _typedAddress(settings, route);
     if (url.isEmpty) return null;
-    final probe = await widget.certificateProber(
+    final finding = await widget.certificateProber(
       url,
       pinnedFingerprint: pin ?? '',
     );
-    if (probe == null || !mounted) return null;
-    return _offerTrust(result.withCertificateProbe(probe), route);
+    if (finding == null || !mounted) return null;
+    final found = result.withFinding(finding);
+    if (found.certificateProbe == null) return found;
+    return _offerTrust(found, route);
   }
 
   /// [route]'s address as the fields hold it, the one the test went to, and
@@ -1575,8 +1578,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       addresses: [?address],
     );
 
-    if (result.reason == ServiceFailureReason.tls &&
-        result.certificateProbe != null) {
+    if (result.certificateProbe != null) {
       // Outside the banner for the reason the local network's button is:
       // the banner is one live region, and a button inside it is unreachable.
       return Column(
@@ -1620,27 +1622,20 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     );
   }
 
-  /// What the panel says under a failure: the failure's own sentence, except
-  /// for a certificate, where it depends on what the probe found. The
-  /// failure's sentence asks to test again for a certificate Cupola will
-  /// offer; after the test that is either the certificate already offered, or
-  /// none, and promising one would loop.
-  String _failureLine(ServiceDiagnosis result) {
-    if (result.reason != ServiceFailureReason.tls) {
-      return result.messageFor(service);
-    }
-    return switch (result.certificateProbe) {
-      null =>
-        'The secure connection broke off before a certificate arrived. '
-            'Check that this port serves https.',
-      (rotated: true, certificate: _) =>
-        '${service.title} sent a different certificate from the one you '
-            'trusted. Check it before trusting it.',
-      _ =>
-        '${service.title} sent a certificate this device does not trust. If '
-            'it is your own, check it and trust it.',
-    };
-  }
+  /// What the panel says under a failure: the failure's own sentence, or,
+  /// once a certificate was offered and not trusted, what that certificate
+  /// is. The failure's sentence asks to test again for a certificate Cupola
+  /// will offer, and this one was offered already.
+  String _failureLine(ServiceDiagnosis result) =>
+      switch (result.certificateProbe) {
+        null => result.messageFor(service),
+        (rotated: true, certificate: _) =>
+          '${service.title} sent a different certificate from the one you '
+              'trusted. Check it before trusting it.',
+        _ =>
+          '${service.title} sent a certificate this device does not trust. '
+              'If it is your own, check it and trust it.',
+      };
 
   /// Takes the user to the toggle. When the host cannot get there, the route is
   /// spelled out instead of failing silently.

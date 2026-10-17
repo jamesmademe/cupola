@@ -101,6 +101,7 @@ abstract class ServiceFake {
       case PlainBehaviour.timesOut:
       case PlainBehaviour.untrustedTls:
       case PlainBehaviour.plainHttpPort:
+      case PlainBehaviour.closesHandshake:
         return null;
     }
   }

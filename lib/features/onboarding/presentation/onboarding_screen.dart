@@ -565,34 +565,39 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       if (awayUrl.isNotEmpty)
         ask(awayUrl, access: awayAccess, pin: _awayPinFor(service)),
     ]);
-    final result = asked.first;
-    final away = asked.length > 1 ? asked[1] : null;
+    var result = asked.first;
+    var away = asked.length > 1 ? asked[1] : null;
 
     // A TLS failure resolves *in the step*: probe for the certificate and let
-    // the card offer to trust it. Probing after the server rejected a key is
-    // a wasted round trip that can only return null. Every service can reach
-    // this since ADR-6: there is no pinning-capability gate left to check.
-    UntrustedCertificateProbe? certProbe;
+    // the card offer to trust it, or find the port serves plain http.
+    // Probing after the server rejected a key is a wasted round trip that can
+    // only return null. Every service can reach this since ADR-6: there is no
+    // pinning-capability gate left to check.
     if (result.status == ServiceConnectionStatus.disconnected &&
         certProbeWorthwhile(result.reason)) {
-      certProbe = await widget.certificateProber(
-        _urlCtrl[service]!.text,
-        pinnedFingerprint: _pinFor(service) ?? '',
+      result = result.withFinding(
+        await widget.certificateProber(
+          _urlCtrl[service]!.text,
+          pinnedFingerprint: _pinFor(service) ?? '',
+        ),
       );
     }
+    final certProbe = result.certificateProbe;
     // The address away's own, unless it did not answer at all: the probe
     // would wait on the silent address a second time.
-    UntrustedCertificateProbe? awayCertProbe;
     if (away != null &&
         away.isDisconnected &&
         away.reason != ServiceFailureReason.unreachable &&
         away.reason != ServiceFailureReason.timeout &&
         certProbeWorthwhile(away.reason)) {
-      awayCertProbe = await widget.certificateProber(
-        awayUrl,
-        pinnedFingerprint: _awayPinFor(service) ?? '',
+      away = away.withFinding(
+        await widget.certificateProber(
+          awayUrl,
+          pinnedFingerprint: _awayPinFor(service) ?? '',
+        ),
       );
     }
+    final awayCertProbe = away?.certificateProbe;
 
     if (!mounted) return;
     if (result.status == ServiceConnectionStatus.connected ||

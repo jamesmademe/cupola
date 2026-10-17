@@ -52,7 +52,8 @@ enum ServiceFailureReason {
   /// receive timeouts, or a client that knows it was talking to the server.
   timeout,
 
-  /// The TLS handshake failed: untrusted, expired or mismatched certificate.
+  /// The certificate did not verify: untrusted, expired or for another name
+  /// (BoringSSL's `CERTIFICATE_VERIFY_FAILED`, on every platform).
   tls,
 
   /// The address says https and the port answered in plain http: the
@@ -65,6 +66,15 @@ enum ServiceFailureReason {
   /// certificate was ever sent, so the probe finds nothing to trust and
   /// "test again" would loop.
   plainHttp,
+
+  /// The secure connection broke off before any certificate arrived: the
+  /// server closed it mid-handshake, or the two sides share no TLS version.
+  /// Something is at the address, and it is not the https it names.
+  ///
+  /// Amber, never [tls]: there is no certificate to trust, and saying there
+  /// is sends the person to look for one. When a plain http request to the
+  /// same port answers, the connection test makes it [plainHttp].
+  noSecureConnection,
 
   /// Reached the service, which rejected the credentials or the API key.
   unauthorized,
@@ -563,16 +573,24 @@ ServiceFailureReason classifyConnectionFailure(
   return fallback;
 }
 
-/// A failed handshake is a certificate question unless the reply was not TLS
-/// at all: BoringSSL, which Dart uses on every platform, says
-/// `WRONG_VERSION_NUMBER` when the first bytes back are not a TLS record, and
-/// an http server's `HTTP/1.1 400` is exactly that. nginx, Kestrel (every arr),
-/// Jellyfin, Node and Transmission all answer this way on an http port.
+/// What a failed handshake was about. BoringSSL, which Dart uses on every
+/// platform, names it: `CERTIFICATE_VERIFY_FAILED` for every certificate
+/// problem (an unknown issuer, an expiry, another name, a pin that does not
+/// match), and `WRONG_VERSION_NUMBER` when the first bytes back are not TLS at
+/// all, which is an http server's `HTTP/1.1 400` (nginx, Kestrel and so every
+/// arr, Jellyfin, Node, Transmission). Anything else broke off before a
+/// certificate was in question: `Connection terminated during handshake`, a
+/// version or cipher the two sides do not share.
 ServiceFailureReason _fromTls(TlsException error) {
+  if (error is CertificateException) return ServiceFailureReason.tls;
   final said = '${error.message} ${error.osError?.message ?? ''}';
-  return said.contains('WRONG_VERSION_NUMBER')
-      ? ServiceFailureReason.plainHttp
-      : ServiceFailureReason.tls;
+  if (said.contains('CERTIFICATE_VERIFY_FAILED')) {
+    return ServiceFailureReason.tls;
+  }
+  if (said.contains('WRONG_VERSION_NUMBER')) {
+    return ServiceFailureReason.plainHttp;
+  }
+  return ServiceFailureReason.noSecureConnection;
 }
 
 /// Heuristic for the services that report an auth failure inside a 200 body
@@ -732,6 +750,7 @@ String failureLabel(
   ServiceFailureReason.timeout => 'Timed out',
   ServiceFailureReason.tls => 'Certificate not trusted',
   ServiceFailureReason.plainHttp => 'No https on this port',
+  ServiceFailureReason.noSecureConnection => 'No secure connection',
   ServiceFailureReason.notFound => 'API not at this address',
   ServiceFailureReason.redirected => 'Redirected elsewhere',
   ServiceFailureReason.accessGateway => switch (gateway) {
@@ -784,6 +803,8 @@ String failureHeadline(
   ServiceFailureReason.tls =>
     '$subject has a certificate Cupola does not trust',
   ServiceFailureReason.plainHttp => '$subject answered in plain http',
+  ServiceFailureReason.noSecureConnection =>
+    '$subject did not open a secure connection',
   ServiceFailureReason.notFound => '$subject is not at this address',
   ServiceFailureReason.redirected =>
     '$subject answered with a redirect Cupola will not follow',
@@ -838,6 +859,8 @@ String? failureGroupHeadline(
   ServiceFailureReason.tls =>
     '$subjects have certificates Cupola does not trust',
   ServiceFailureReason.plainHttp => '$subjects answered in plain http',
+  ServiceFailureReason.noSecureConnection =>
+    '$subjects did not open secure connections',
   ServiceFailureReason.notFound => '$subjects are not at their addresses',
   ServiceFailureReason.redirected =>
     '$subjects answered with redirects Cupola will not follow',
@@ -889,6 +912,7 @@ String? failureRemedy(
   },
   ServiceFailureReason.tls => 'Check the certificate',
   ServiceFailureReason.plainHttp => 'Check the port',
+  ServiceFailureReason.noSecureConnection => 'Check the address',
   ServiceFailureReason.insecureTransport => 'Change the address',
   ServiceFailureReason.unreachable ||
   ServiceFailureReason.unreachableAtBoth ||
@@ -933,6 +957,8 @@ bool failureRetryHelps(
   ServiceFailureReason.unreachableAtBoth ||
   ServiceFailureReason.timeout ||
   ServiceFailureReason.tls ||
+  // A proxy restarting in front of the service closes handshakes too.
+  ServiceFailureReason.noSecureConnection ||
   ServiceFailureReason.notFound ||
   ServiceFailureReason.redirected ||
   ServiceFailureReason.serverError ||
@@ -1069,6 +1095,9 @@ String connectionFailureSentence(
     ServiceFailureReason.plainHttp =>
       'Its address names a port that serves http. Use the one that serves '
           'https.',
+    ServiceFailureReason.noSecureConnection =>
+      'The secure connection broke off before a certificate arrived. Check '
+          'that its address serves https.',
     ServiceFailureReason.unauthorized =>
       remedyBeside
           ? 'The server answered and refused the saved credentials.'

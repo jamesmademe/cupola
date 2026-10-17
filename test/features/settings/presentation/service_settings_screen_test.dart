@@ -555,7 +555,7 @@ Future<LocalNetworkAccess> _theOsIsBlockingUs(
   Duration timeout = Duration.zero,
 }) async => LocalNetworkAccess.denied;
 
-Future<UntrustedCertificateProbe?> _neverFindsACertificate(
+Future<TlsFinding?> _neverFindsACertificate(
   String rawUrl, {
   String pinnedFingerprint = '',
 }) async => null;

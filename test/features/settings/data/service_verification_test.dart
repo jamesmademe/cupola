@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
@@ -430,6 +431,36 @@ void main() {
       ]) {
         expect(certProbeWorthwhile(reason), isTrue, reason: '$reason');
       }
+    });
+
+    test('what the probe found becomes the reason', () {
+      const silent = ServiceDiagnosis(
+        ServiceConnectionStatus.disconnected,
+        ServiceFailureReason.unreachable,
+      );
+      final plain = silent
+          .ofConnection('qb')
+          .withFinding(const PlainHttpPort());
+      expect(plain.reason, ServiceFailureReason.plainHttp);
+      expect(plain.connectionId, 'qb');
+      expect(plain.certificateProbe, isNull);
+
+      const probe = (
+        certificate: ServerCertificate(
+          fingerprint: 'ab',
+          subject: 'CN=nas',
+          issuer: 'CN=nas',
+        ),
+        rotated: false,
+      );
+      final offered = const ServiceDiagnosis(
+        ServiceConnectionStatus.disconnected,
+        ServiceFailureReason.noSecureConnection,
+      ).withFinding(const UntrustedCertificate(probe));
+      expect(offered.reason, ServiceFailureReason.tls);
+      expect(offered.certificateProbe, probe);
+
+      expect(silent.withFinding(null), same(silent));
     });
 
     test('a port that answered in plain http sent no certificate to find', () {

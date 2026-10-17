@@ -103,7 +103,8 @@ class SeerrSignInNotice {
     // classification's words would send to settings a first run has none of.
     // A port that answered in plain http is the commonest way to get here.
     if (reason == ServiceFailureReason.tls ||
-        reason == ServiceFailureReason.plainHttp) {
+        reason == ServiceFailureReason.plainHttp ||
+        reason == ServiceFailureReason.noSecureConnection) {
       return noSecureConnection;
     }
     if (_answeredAsSomethingElse(error)) {

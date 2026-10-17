@@ -71,6 +71,9 @@ sealed class ConnectionBehaviour {
   /// The port speaks plain http. See [PlainBehaviour.plainHttpPort].
   static const plainHttpPort = PlainBehaviour.plainHttpPort;
 
+  /// The host hangs up mid-handshake. See [PlainBehaviour.closesHandshake].
+  static const closesHandshake = PlainBehaviour.closesHandshake;
+
   /// The server refuses the credential. See [PlainBehaviour.refusesKey].
   static const refusesKey = PlainBehaviour.refusesKey;
 
@@ -251,6 +254,12 @@ enum PlainBehaviour implements ConnectionBehaviour {
   /// http reply, and BoringSSL says `WRONG_VERSION_NUMBER`, which the app
   /// classifies as a port without https. A plain connection still opens.
   plainHttpPort,
+
+  /// The host hangs up on the TLS hello, as NZBGet's http port does:
+  /// `Connection terminated during handshake`, which the app classifies as
+  /// no secure connection. Whether the port answers plain http is the test's
+  /// certificate prober's to say.
+  closesHandshake,
 
   /// The server answers and refuses the credential, each service in its own
   /// way (401, 403, qBittorrent's `200 Fails.`, SABnzbd's `status: false`,

@@ -494,7 +494,8 @@ void main() {
       final (harness, _, _) = await _atSignIn(
         tester,
         Profiles.p2,
-        certificateProber: (url, {pinnedFingerprint = ''}) async => probe,
+        certificateProber: (url, {pinnedFingerprint = ''}) async =>
+            UntrustedCertificate(probe),
       );
       harness.network.behave(WorldIds.seerr, ConnectionBehaviour.untrustedTls);
 
@@ -513,6 +514,28 @@ void main() {
       await _tap(tester, harness, find.text('Trust this certificate'));
 
       expect(find.text('Sign in with email'), findsOneWidget);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('a port that answers plain http is the same notice, even when '
+        'its handshake only ran out of time', (tester) async {
+      final (harness, _, _) = await _atSignIn(
+        tester,
+        Profiles.p2,
+        certificateProber: (url, {pinnedFingerprint = ''}) async =>
+            const PlainHttpPort(),
+      );
+      harness.network.behave(WorldIds.seerr, ConnectionBehaviour.timesOut);
+
+      await tester.enterText(_address(), WorldHosts.seerr);
+      await _tap(tester, harness, find.text('Continue'));
+
+      expect(
+        find.text("Seerr didn't open a secure connection"),
+        findsOneWidget,
+      );
+      expect(find.text('Seerr did not answer'), findsNothing);
 
       await harness.unmount(tester);
     });

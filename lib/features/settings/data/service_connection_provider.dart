@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 
@@ -25,6 +27,26 @@ typedef UntrustedCertificateProbe = ({
   bool rotated,
 });
 
+/// What probing a failed `https://` address found: a certificate to offer,
+/// or a port that is not TLS at all.
+sealed class TlsFinding {
+  const TlsFinding();
+}
+
+/// A certificate the platform does not trust and no pin covers, for the
+/// person to look at and trust (trust-on-first-use).
+final class UntrustedCertificate extends TlsFinding {
+  const UntrustedCertificate(this.probe);
+
+  final UntrustedCertificateProbe probe;
+}
+
+/// The port answered a plain http request: the address says https, and the
+/// port serves http (`answersPlainHttp`). There is no certificate to offer.
+final class PlainHttpPort extends TlsFinding {
+  const PlainHttpPort();
+}
+
 /// The shape of [probeUntrustedCertificate], so a caller that reaches it from
 /// a widget can accept one as an optional constructor parameter and default
 /// to the real function.
@@ -37,40 +59,61 @@ typedef UntrustedCertificateProbe = ({
 /// means). A widget test now needs a fake here to stay offline and
 /// deterministic; production code never passes one.
 typedef CertificateProber =
-    Future<UntrustedCertificateProbe?> Function(
-      String rawUrl, {
-      String pinnedFingerprint,
-    });
+    Future<TlsFinding?> Function(String rawUrl, {String pinnedFingerprint});
 
-/// Probes [rawUrl]'s origin for a TLS certificate that is not trusted by the
-/// platform and not already pinned as [pinnedFingerprint], returning it so
-/// the UI can offer to trust it (trust-on-first-use). Returns null when the
-/// URL is not TLS, the certificate already validates, it matches the current
-/// pin, or the server is simply unreachable. Never trusts anything itself.
-Future<UntrustedCertificateProbe?> probeUntrustedCertificate(
+/// Probes [rawUrl]'s origin after a failed test: for a TLS certificate that
+/// is not trusted by the platform and not already pinned as
+/// [pinnedFingerprint], so the UI can offer to trust it (trust-on-first-use),
+/// and for a port that answers plain http, which no certificate explains.
+/// Null when the URL is not TLS, the certificate already validates, it
+/// matches the current pin, or nothing at the port says anything. Never
+/// trusts anything itself.
+///
+/// The two questions go out together. A port that serves http answers the
+/// plain one in milliseconds, while its TLS handshake can only wait for its
+/// deadline (qBittorrent and Bazarr wait for a request line a TLS hello never
+/// sends), so its answer is taken at once. A port that serves https never
+/// answers it as an http server (`isPlainHttpAnswer`), and the certificate
+/// is then waited for.
+Future<TlsFinding?> probeUntrustedCertificate(
   String rawUrl, {
   String pinnedFingerprint = '',
 }) async {
   final endpoint = tlsEndpointFor(rawUrl);
   if (endpoint == null) return null;
+  final certificate = _untrustedCertificateAt(
+    endpoint.host,
+    endpoint.port,
+    pinnedFingerprint: pinnedFingerprint,
+  );
+  // Settled either way, so the one not waited for never surfaces an error.
+  unawaited(certificate.then((_) {}, onError: (_) {}));
+  if (await answersPlainHttp(endpoint.host, endpoint.port)) {
+    return const PlainHttpPort();
+  }
+  return certificate;
+}
+
+Future<TlsFinding?> _untrustedCertificateAt(
+  String host,
+  int port, {
+  required String pinnedFingerprint,
+}) async {
   try {
-    final validates = await certificateValidatesByDefault(
-      endpoint.host,
-      endpoint.port,
-    );
+    final validates = await certificateValidatesByDefault(host, port);
     // Certificate is fine; any failure is unrelated (auth, wrong URL, …).
     if (validates) return null;
-    final cert = await probeServerCertificate(endpoint.host, endpoint.port);
+    final cert = await probeServerCertificate(host, port);
     if (cert == null) return null;
     final pin = pinnedFingerprint.trim().toLowerCase();
     if (cert.fingerprint.toLowerCase() == pin) {
       // Already pinned: the failure is something else.
       return null;
     }
-    return (certificate: cert, rotated: pin.isNotEmpty);
+    return UntrustedCertificate((certificate: cert, rotated: pin.isNotEmpty));
   } catch (_) {
-    // Server unreachable / DNS / refused: a genuine disconnect, not a cert
-    // trust problem.
+    // Server unreachable / DNS / refused / a handshake that broke off: no
+    // certificate to show.
     return null;
   }
 }

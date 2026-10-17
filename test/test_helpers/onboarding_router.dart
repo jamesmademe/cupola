@@ -81,7 +81,7 @@ GoRouter onboardingRouter({
 /// `flutter_test` cannot intercept and hang on a pending timer. None of these
 /// tests exercise the trust flow itself, so "no certificate found" is the
 /// correct fake, not only a convenient one.
-Future<UntrustedCertificateProbe?> neverFindsACertificate(
+Future<TlsFinding?> neverFindsACertificate(
   String rawUrl, {
   String pinnedFingerprint = '',
 }) async => null;
