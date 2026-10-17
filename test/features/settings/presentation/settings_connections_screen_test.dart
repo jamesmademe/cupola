@@ -348,6 +348,48 @@ void main() {
       expect(find.text('2 of ${ServiceKey.values.length}'), findsOneWidget);
     });
 
+    testWidgets('the state of the second connection is said of the second', (
+      tester,
+    ) async {
+      // A row speaks for every connection of its service and shows the worst
+      // state. When that state is the second Radarr's, the row names it and
+      // shows its address: it used to read `Only at home` beside the first
+      // Radarr's address, which has an address away.
+      await _pumpConnectionsScreen(
+        tester,
+        settings:
+            settingsWith(
+              radarrUrl: 'https://radarr.local:7878',
+              radarrApiKey: 'key',
+            ).copyWithInstance(
+              const ServiceInstance(
+                id: 'radarr-2',
+                service: ServiceKey.radarr,
+                label: 'Radarr 2',
+                url: 'http://192.168.1.10:7879',
+                credential: 'key-2',
+              ),
+            ),
+        diagnosis: const ServiceDiagnosis(
+          ServiceConnectionStatus.disconnected,
+          ServiceFailureReason.unreachable,
+        ).ofConnection('radarr-2'),
+      );
+
+      expect(
+        find.textContaining('Radarr 2 · ', findRichText: true),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('192.168.1.10:7879', findRichText: true),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('radarr.local:7878', findRichText: true),
+        findsNothing,
+      );
+    });
+
     testWidgets('a failing row leads with the cause, not the host', (
       tester,
     ) async {

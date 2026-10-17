@@ -168,8 +168,7 @@ class _SearchHeadroomCardState extends ConsumerState<SearchHeadroomCard> {
     final reach = ref.watch(releaseSearchLensReachProvider(widget.service));
     final title = widget.service.title;
     final noCeiling = defaultTargetPlatform == TargetPlatform.android
-        ? ", there's no minute ceiling either way, since that only applies to "
-              'the background path this instance cannot use'
+        ? " Android's 9-minute limit on background work does not apply to it."
         : '';
 
     return switch (reach) {
@@ -183,16 +182,16 @@ class _SearchHeadroomCardState extends ConsumerState<SearchHeadroomCard> {
       ReleaseSearchReach.whileOpen ||
       ReleaseSearchReach.whileOpenSwitchedOff => null,
       ReleaseSearchReach.whileOpenTrustedCert =>
-        '$title uses a certificate trusted only inside Cupola, so this '
-            'search runs while Cupola stays open instead of in the '
-            'background$noCeiling. Installing the certificate on this device '
-            'restores it.',
+        "$title's certificate is trusted only inside Cupola, so this search "
+            'runs only while Cupola is open.$noCeiling Installing the '
+            'certificate on this device lets it run in the background too.',
       ReleaseSearchReach.whileOpenCleartext =>
-        '$title is reached over plain http, so this search runs while Cupola '
-            'stays open instead of in the background$noCeiling. A background '
-            'search cannot refuse a redirect, and over http anyone on the '
-            "network can inject one to collect $title's API key. Switching "
-            'this instance to https restores it.',
+        // Why, in one clause: the background path cannot refuse a redirect,
+        // and over http anyone on the network can inject one to collect the
+        // key it carries.
+        'Over plain http this search runs only while Cupola is open: in the '
+            "background it could not keep $title's API key safe.$noCeiling "
+            'With https it runs in the background too.',
     };
   }
 

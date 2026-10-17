@@ -110,6 +110,86 @@ void main() {
     );
   });
 
+  group('a home address on the local network decides', () {
+    // Read from the routes alone: nothing is knocked on here, so these
+    // addresses never go out.
+    const seerr = ServiceInstance(
+      id: 'seerr',
+      service: ServiceKey.seerr,
+      url: 'http://192.168.1.10:5055',
+      credential: 'seerr-key',
+      away: ConnectionAddress(url: 'https://seerr.example.net'),
+    );
+    const qbittorrent = ServiceInstance(
+      id: 'qbittorrent',
+      service: ServiceKey.qbittorrent,
+      url: 'http://192.168.1.11:8080',
+      away: ConnectionAddress(url: 'https://qbit.example.net'),
+    );
+    const truenas = ServiceInstance(
+      id: 'truenas',
+      service: ServiceKey.truenas,
+      url: 'https://nas.example.net',
+      credential: 'truenas-key',
+      away: ConnectionAddress(url: 'https://nas-away.example.net'),
+    );
+
+    Future<void> move(ProviderContainer container, String id) => container
+        .read(connectionRoutesProvider.notifier)
+        .set(id, ConnectionRoute.away);
+
+    test(
+      'one connection moving away, a local home still answering: at home',
+      () async {
+        // A mistyped home address moves its connection away on the home Wi-Fi.
+        // That is no reason to stop reading the connections only at home.
+        final container = await _container(
+          instances: const [seerr, qbittorrent, _sabnzbd],
+        );
+        await move(container, 'qbittorrent');
+
+        expect(container.read(awayFromHomeProvider), isFalse);
+      },
+    );
+
+    test('every local home moved away: away', () async {
+      final container = await _container(
+        instances: const [seerr, qbittorrent, truenas, _sabnzbd],
+      );
+      await move(container, 'seerr');
+      await move(container, 'qbittorrent');
+
+      // TrueNAS still answers at its home address, a public name, which
+      // answers from anywhere and so says nothing about where the phone is.
+      expect(container.read(awayFromHomeProvider), isTrue);
+    });
+
+    test(
+      'a local home that answered at neither address is no evidence',
+      () async {
+        final container = await _container(
+          instances: const [seerr, qbittorrent, _sabnzbd],
+        );
+        await move(container, 'qbittorrent');
+        container.read(unansweredConnectionsProvider.notifier).mark('seerr');
+
+        expect(container.read(awayFromHomeProvider), isTrue);
+      },
+    );
+
+    test(
+      'without a local home address, one connection away still says so',
+      () async {
+        final container = await _container(
+          instances: const [truenas, _radarr, _sabnzbd],
+        );
+        await move(container, 'truenas');
+
+        expect(container.read(awayFromHomeProvider), isTrue);
+      },
+    );
+  });
+
   group('away from home, a connection with no address away', () {
     test('reads only at home, and is not asked', () async {
       final container = await _container();

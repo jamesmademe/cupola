@@ -166,11 +166,20 @@ class SearchHeadroom {
 ///
 /// Header-based rather than probe-based: nothing here asks the server to be slow,
 /// so the check costs one ordinary request and cannot be mistaken for load.
+///
+/// The arrs answer with a `Server` header of their own: Kestrel, the web
+/// server inside every .NET release of Radarr, Sonarr and Lidarr, and
+/// Mono-HTTPAPI before that. That is the service itself, so nothing stands in
+/// between: it used to read as "something answers in front of Sonarr".
 SearchGateway classifyGateway(String? serverHeader, {bool hasCfRay = false}) {
   if (hasCfRay) return SearchGateway.cloudflare;
   final server = serverHeader?.toLowerCase();
   if (server == null || server.isEmpty) return SearchGateway.direct;
+  if (_ownServers.any(server.contains)) return SearchGateway.direct;
   if (server.contains('cloudflare')) return SearchGateway.cloudflare;
   if (server.contains('nginx')) return SearchGateway.nginx;
   return SearchGateway.other;
 }
+
+/// The web servers the arrs run inside themselves ([classifyGateway]).
+const _ownServers = ['kestrel', 'mono-httpapi'];

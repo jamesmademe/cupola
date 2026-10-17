@@ -312,8 +312,9 @@ void main() {
 
     final saved = container.read(currentSettingsProvider);
     expect(saved.instancesOf(ServiceKey.radarr), hasLength(2));
-    // Same host, different port, so the port is what tells them apart.
-    expect(saved.primaryOf(ServiceKey.radarr)?.label, '7878');
+    // Same host, different port: the port tells them apart, but a port is
+    // not a name, so the first is numbered.
+    expect(saved.primaryOf(ServiceKey.radarr)?.label, 'Radarr 1');
     expect(saved.instancesOf(ServiceKey.radarr).last.label, 'HD');
   });
 
@@ -377,7 +378,10 @@ void main() {
     );
     await tester.enterText(find.widgetWithText(TextFormField, 'API key'), 'k2');
     // The exact string the derivation is about to produce for the sibling.
-    await tester.enterText(find.widgetWithText(TextFormField, 'Name'), '7878');
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Name'),
+      'Radarr 1',
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
@@ -389,7 +393,8 @@ void main() {
         .toList();
     expect(labels, hasLength(2));
     expect(labels.toSet(), hasLength(2), reason: 'two names, not one twice');
-    expect(labels, contains('7878'));
+    // The numbered name takes the next number free.
+    expect(labels, containsAll(['Radarr 1', 'Radarr 2']));
   });
 
   testWidgets('the name the sibling\'s save wrote reaches the field', (

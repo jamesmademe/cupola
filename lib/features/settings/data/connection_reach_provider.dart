@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/network/local_network_target.dart';
+import 'package:cupola/core/utils/url_utils.dart';
+
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_address.dart';
 import 'package:cupola/features/settings/domain/connection_reach.dart';
@@ -121,35 +124,76 @@ ConnectionUnanswered? connectionUnansweredOf(ServiceInstance instance) {
   );
 }
 
-/// Whether the app is away from home: at least one connection moved to its
-/// address away because the one at home did not answer.
+/// Whether the app is away from home: a connection moved to its address away
+/// because the one at home did not answer, **and no connection whose home
+/// address is on the local network still answers there**.
 ///
 /// What makes a connection with no address away read `Only at home` instead
-/// of `Did not answer`, and never asked meanwhile (`OnlyAtHomeRefusal`). False
-/// while no connection has an address away: without one the app cannot tell
-/// away from a server that is down, and says what it said before (spec 3.3).
-/// The routes are read only then, so a container that stands up no
+/// of `Did not answer`, and never asked meanwhile (`OnlyAtHomeRefusal`), so a
+/// wrong answer here is worse than a wrong word: at home, on Wi-Fi, the
+/// home-only connections stop being read. One connection moving is not enough
+/// to say so. Its home address may simply be wrong, or be a name that resolves
+/// only through a VPN that is off: a qBittorrent saved with a mistyped home
+/// address used to move away on the home Wi-Fi and take the whole app with it.
+/// A home address on the local network (`192.168…`, `nas.local`: see
+/// [localNetworkHostVerdict]) that still answers is the evidence that the phone
+/// is at home, or reaches home as if it were (a VPN to it), where a home-only
+/// connection answers too. Without such an address (every home address a
+/// public name) the first rule stands alone. A connection that answered at
+/// neither address (`unansweredConnectionsProvider`) is no evidence either
+/// way: its server may be down.
+///
+/// False while no connection has an address away: without one the app cannot
+/// tell away from a server that is down, and says what it said before (spec
+/// 3.3). The routes are read only then, so a container that stands up no
 /// preferences (most tests) never reads them; they are crossed with the
-/// connections that still have an address away, because the map can keep
-/// the id of one removed, or whose address away was taken off. Remembered
-/// routes count: a cold start away is away before any probe confirms it.
+/// connections that still have an address away, because the map can keep the
+/// id of one removed, or whose address away was taken off. Remembered routes
+/// count: a cold start away is away before any probe confirms it.
 final awayFromHomeProvider = Provider<bool>((ref) {
+  // `id=l` for a home address on the local network, `id=r` for any other.
   final withAway = ref.watch(
     currentSettingsProvider.select(
       (s) => [
         for (final instance in s.instances)
-          if (instance.away?.url.trim().isNotEmpty ?? false) instance.id,
+          if (instance.away?.url.trim().isNotEmpty ?? false)
+            '${instance.id}=${_homeIsLocal(instance) ? 'l' : 'r'}',
       ].join(' '),
     ),
   );
   if (withAway.isEmpty) return false;
-  final ids = withAway.split(' ');
-  return ref.watch(
-    connectionRoutesProvider.select(
-      (routes) => ids.any((id) => routes[id] == ConnectionRoute.away),
-    ),
+  final entries = [
+    for (final entry in withAway.split(' '))
+      (id: entry.substring(0, entry.length - 2), local: entry.endsWith('=l')),
+  ];
+  final away = ref
+      .watch(
+        connectionRoutesProvider.select(
+          (routes) => [
+            for (final entry in entries)
+              if (routes[entry.id] == ConnectionRoute.away) entry.id,
+          ].join(' '),
+        ),
+      )
+      .split(' ')
+      .where((id) => id.isNotEmpty)
+      .toSet();
+  if (away.isEmpty) return false;
+  if (!entries.any((entry) => entry.local)) return true;
+  final unanswered = ref.watch(unansweredConnectionsProvider);
+  return !entries.any(
+    (entry) =>
+        entry.local &&
+        !away.contains(entry.id) &&
+        !unanswered.contains(entry.id),
   );
 });
+
+/// Whether [instance]'s home address can only be on the local network.
+bool _homeIsLocal(ServiceInstance instance) {
+  final host = Uri.tryParse(UrlUtils.normalizeBaseUrl(instance.url))?.host;
+  return host != null && localNetworkHostVerdict(host) == true;
+}
 
 /// The route connection [id] is on: [ConnectionRoute.home] for one without
 /// an address away, whatever is remembered for its id, so a connection with

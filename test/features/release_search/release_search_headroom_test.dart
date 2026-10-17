@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cupola/features/release_search/domain/release_search_headroom.dart';
+import 'package:cupola/features/release_search/domain/release_search_job.dart';
+import 'package:cupola/features/release_search/presentation/release_search_entry.dart';
 import 'package:cupola/features/release_search/presentation/release_search_headroom_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -27,6 +29,15 @@ void main() {
       expect(classifyGateway('nginx/1.24.0'), SearchGateway.nginx);
       expect(classifyGateway('NGINX'), SearchGateway.nginx);
     });
+
+    test(
+      'the arrs\' own web server is the service, not something in front',
+      () {
+        // Radarr, Sonarr and Lidarr are .NET apps and name their own server.
+        expect(classifyGateway('Kestrel'), SearchGateway.direct);
+        expect(classifyGateway('Mono-HTTPAPI/1.0'), SearchGateway.direct);
+      },
+    );
 
     test('an unknown intermediary is named but not advised about', () {
       expect(classifyGateway('Caddy'), SearchGateway.other);
@@ -173,5 +184,45 @@ void main() {
       addTearDown(bare.dispose);
       expect(bare.read(searchHeadroomProvider), isEmpty);
     });
+  });
+
+  test('only the path cutting a search off says how long the path allows', () {
+    expect(isPathCutoff(ReleaseSearchFailureKind.gatewayTimeout), isTrue);
+    expect(isPathCutoff(ReleaseSearchFailureKind.cloudflareCap), isTrue);
+    // Cupola's own wait running out is the setting, not the path.
+    expect(isPathCutoff(ReleaseSearchFailureKind.clientTimeout), isFalse);
+    expect(isPathCutoff(ReleaseSearchFailureKind.connectionLost), isFalse);
+    expect(isPathCutoff(null), isFalse);
+  });
+
+  group('what the first version kept', () {
+    test(
+      'is read once: its cut-offs dropped, its gateway classified again',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'release_search_headroom':
+              '{"sonarr":{"gateway":"other","gatewayName":"Kestrel",'
+              '"longestMs":197000,"cutoffMs":300000,"recentMs":[197000]}}',
+        });
+        final prefs = await SharedPreferences.getInstance();
+        final container = ProviderContainer(
+          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+        );
+        addTearDown(container.dispose);
+
+        final sonarr = container.read(
+          serviceHeadroomProvider(ServiceKey.sonarr),
+        );
+
+        // Cupola's own wait running out was kept as the path's ceiling.
+        expect(sonarr.earliestCutoff, isNull);
+        expect(sonarr.likelyCeiling, isNull);
+        expect(sonarr.gateway, SearchGateway.direct);
+        expect(sonarr.longestSuccess, const Duration(seconds: 197));
+        await Future<void>.delayed(Duration.zero);
+        expect(prefs.getString('release_search_headroom'), isNull);
+        expect(prefs.getString('release_search_headroom_v2'), isNotNull);
+      },
+    );
   });
 }

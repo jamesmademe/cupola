@@ -1563,12 +1563,15 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     }
   }
 
-  /// A name for [instance], derived from what distinguishes it from [otherUrl].
+  /// A name for [instance], derived from what distinguishes it from [otherUrl],
+  /// or null when only the port does.
   ///
-  /// Three shapes, in the order they tell the two apart:
+  /// Null when they share a host and differ only by port: two arrs on one box,
+  /// the overwhelmingly common homelab. The port is what tells them apart, but
+  /// a port is not a name: the first Sonarr was called `30113`. The caller
+  /// numbers it instead (`Sonarr 1`), beside the `Sonarr 2` a second one is
+  /// usually given. Otherwise two shapes, in the order they tell the two apart:
   ///
-  /// * the **port**, when they share a host: two arrs on one box, the
-  ///   overwhelmingly common homelab;
   /// * the **first path segment**, when they share a host *and* a port:
   ///   `media.lan/radarr` beside `media.lan/radarr4k`, which is one reverse
   ///   proxy fronting both. This branch is not an edge case worth skipping: it
@@ -1585,14 +1588,14 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   /// Uniqueness is the caller's job; see [_deriveSiblingLabels]. This answers
   /// "what is different about it", which can legitimately come out the same for
   /// two connections that really are near-identical.
-  String _derivedLabel(ServiceInstance instance, String otherUrl) {
+  String? _derivedLabel(ServiceInstance instance, String otherUrl) {
     final mine = Uri.tryParse(instance.url);
     final other = Uri.tryParse(otherUrl);
     if (mine == null || mine.host.isEmpty) return instance.id;
 
     final sameHost = other != null && other.host == mine.host;
     if (sameHost) {
-      if (mine.port != other.port) return '${mine.port}';
+      if (mine.port != other.port) return null;
       final segment = mine.pathSegments
           .where((part) => part.isNotEmpty)
           .firstOrNull;
@@ -1614,7 +1617,8 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   ///
   /// A colliding name is suffixed with what is left to distinguish it: the
   /// port, or failing that a counter. Ugly beats ambiguous, and it is editable
-  /// in the sibling's own form the moment the user disagrees.
+  /// in the sibling's own form the moment the user disagrees. A numbered name
+  /// takes the next number free instead.
   SettingsModel _deriveSiblingLabels(SettingsModel next, String url) {
     final taken = <String>{
       for (final instance in _siblings(next))
@@ -1625,7 +1629,18 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     var updated = next;
     for (final sibling in _siblings(next)) {
       if (sibling.label.isNotEmpty) continue;
-      final base = _derivedLabel(sibling, url);
+      final derived = _derivedLabel(sibling, url);
+      if (derived == null) {
+        var number = next.instancesOf(service).indexOf(sibling) + 1;
+        while (taken.contains('${service.title} $number'.toLowerCase())) {
+          number++;
+        }
+        final numbered = '${service.title} $number';
+        taken.add(numbered.toLowerCase());
+        updated = updated.copyWithInstance(sibling.copyWith(label: numbered));
+        continue;
+      }
+      final base = derived;
       var candidate = base;
       if (taken.contains(candidate.toLowerCase())) {
         final port = Uri.tryParse(sibling.url)?.port;

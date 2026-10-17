@@ -87,10 +87,23 @@ class ServiceConnectionRow extends ConsumerWidget {
     // before that every row would read `Home only`, a setup nobody chose.
     // Away, a connection only at home says its state instead, which says
     // the setup with it.
+    //
+    // The state is the worst of the service's connections, so the setup and
+    // the address are that connection's too, and the row names it when it
+    // is not the first: the second Radarr only at home used to read `Only at
+    // home` beside the first Radarr's address, which has an address away.
     final first = settings.instancesOf(service).first;
+    final subject = switch (diagnosis.connectionId) {
+      final id? => settings.instanceById(id) ?? first,
+      null => first,
+    };
+    final named =
+        subject.id != first.id && settings.hasMultipleInstances(service)
+        ? settings.connectionTitle(subject.id, service, joiner: ' ')
+        : null;
     final inUse =
         service.extractHost(
-          ref.watch(connectionReachProvider(first.id))?.url ?? url,
+          ref.watch(connectionReachProvider(subject.id))?.url ?? subject.url,
         ) ??
         host;
     final onlyAtHome = diagnosis.reason == ServiceFailureReason.onlyAtHome;
@@ -99,7 +112,7 @@ class ServiceConnectionRow extends ConsumerWidget {
     final atBoth = diagnosis.reason == ServiceFailureReason.unreachableAtBoth;
     final setup = onlyAtHome || !settings.instances.any((i) => i.away != null)
         ? null
-        : first.away != null
+        : subject.away != null
         ? Lexicon.homeAndAway
         : Lexicon.homeOnly;
     final where = atBoth ? null : [?setup, inUse].join(' · ');
@@ -107,9 +120,10 @@ class ServiceConnectionRow extends ConsumerWidget {
       ?where,
       if (settings.hasMultipleInstances(service)) '$connections connections',
     ].join(' · ');
-    final state = atBoth
+    final said = atBoth
         ? '${presentation.label} at home or away'
         : presentation.label;
+    final state = [?named, said].join(' · ');
 
     return SettingsCard.grouped(
       leading: Icon(service.icon),

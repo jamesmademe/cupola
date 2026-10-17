@@ -57,7 +57,8 @@ class ServiceDiagnosis {
     this.detail,
   ]) : serverVersion = null,
        gateway = null,
-       webPage = null;
+       webPage = null,
+       connectionId = null;
 
   /// The full form, for the places that set a field the positional list cannot
   /// reach: Dart allows optional positionals or optional named, not both, and
@@ -70,6 +71,7 @@ class ServiceDiagnosis {
     this.serverVersion,
     this.gateway,
     this.webPage,
+    this.connectionId,
   });
 
   const ServiceDiagnosis.connected() : this(ServiceConnectionStatus.connected);
@@ -161,6 +163,25 @@ class ServiceDiagnosis {
   /// The web page that answered in the service's place, when the test met
   /// one: its sentence names where, as Home's and the library's do.
   final UnexpectedAnswer? webPage;
+
+  /// Which connection this answer is about, when it comes from a fold across
+  /// a service's connections ([diagnoseService]); null for an answer about
+  /// the one connection it was asked of. What lets a row that speaks for
+  /// two Radarrs say which of them is out of reach, instead of printing the
+  /// second one's state beside the first one's address.
+  final String? connectionId;
+
+  /// This answer, said of connection [id].
+  ServiceDiagnosis ofConnection(String id) => ServiceDiagnosis._all(
+    status: status,
+    reason: reason,
+    certificateProbe: certificateProbe,
+    detail: detail,
+    serverVersion: serverVersion,
+    gateway: gateway,
+    webPage: webPage,
+    connectionId: id,
+  );
 
   /// What the UI should actually say about this outcome.
   ///
@@ -684,7 +705,11 @@ Future<ServiceDiagnosis> diagnoseService(
       diagnose?.call(instance) ??
           diagnoseInstance(instance, settings, route: ConnectionRoute.home),
   ];
-  return worstDiagnosis(await Future.wait(pending));
+  final answers = await Future.wait(pending);
+  return worstDiagnosis([
+    for (final (i, answer) in answers.indexed)
+      answer.ofConnection(instances[i].id),
+  ]);
 }
 
 /// The diagnosis a folded readout should show: the one the user most needs to

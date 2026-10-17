@@ -509,9 +509,11 @@ void _onSearchFinished(Ref ref, ReleaseSearchJob job) {
 
 /// Feeds a finished search into what the headroom card knows.
 ///
-/// Only a **cut-off** teaches anything about the ceiling: a lost connection or a
-/// server error says nothing about how long the path allows, and folding those in
-/// would report a limit that does not exist.
+/// Only a **cut-off** by the path teaches anything about the ceiling: a lost
+/// connection or a server error says nothing about how long the path allows,
+/// and neither does Cupola's own wait running out (`clientTimeout`): that is
+/// the setting in Settings, and the path allowed at least that long. Folding
+/// it in printed the setting back as "likely ceiling around 5 min".
 void _recordHeadroom(Ref ref, ReleaseSearchJob job) {
   final notifier = ref.read(searchHeadroomProvider.notifier);
   final service = job.target.service;
@@ -519,13 +521,18 @@ void _recordHeadroom(Ref ref, ReleaseSearchJob job) {
     notifier.recordSuccess(service, job.elapsed);
     return;
   }
-  final kind = job.failure?.kind;
-  final isCutoff =
-      kind == ReleaseSearchFailureKind.gatewayTimeout ||
-      kind == ReleaseSearchFailureKind.cloudflareCap ||
-      kind == ReleaseSearchFailureKind.clientTimeout;
-  if (isCutoff) notifier.recordCutoff(service, job.elapsed);
+  if (isPathCutoff(job.failure?.kind)) {
+    notifier.recordCutoff(service, job.elapsed);
+  }
 }
+
+/// Whether a search that failed with [kind] was cut off by the path between
+/// Cupola and the service, the one failure that says how long the path
+/// allows ([_recordHeadroom]).
+@visibleForTesting
+bool isPathCutoff(ReleaseSearchFailureKind? kind) =>
+    kind == ReleaseSearchFailureKind.gatewayTimeout ||
+    kind == ReleaseSearchFailureKind.cloudflareCap;
 
 /// Builds the target for a Sonarr season or whole-series action.
 ///

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
@@ -29,27 +30,56 @@ final serviceHeadroomProvider = Provider.family<SearchHeadroom, ServiceKey>((
 });
 
 class SearchHeadroomNotifier extends Notifier<Map<ServiceKey, SearchHeadroom>> {
-  static const _key = 'release_search_headroom';
+  static const _key = 'release_search_headroom_v2';
+
+  /// What the first version kept, read once and then removed. Its cut-offs
+  /// may be Cupola's own wait running out, which it took for the path's, so
+  /// they are dropped; its gateway is classified again from the server's own
+  /// name, since it took Kestrel, the arrs' own server, for something in front
+  /// of them. Durations that completed stay true and are kept.
+  static const _firstKey = 'release_search_headroom';
 
   @override
   Map<ServiceKey, SearchHeadroom> build() {
     try {
-      final raw = ref.watch(sharedPreferencesProvider).getString(_key);
-      if (raw == null) return const {};
-      final decoded = jsonDecode(raw) as Map<String, dynamic>;
-      final result = <ServiceKey, SearchHeadroom>{};
-      for (final entry in decoded.entries) {
-        for (final service in ServiceKey.values) {
-          if (service.name != entry.key) continue;
-          result[service] = SearchHeadroom.fromJson(
-            entry.value as Map<String, dynamic>,
-          );
-        }
-      }
-      return result;
+      final prefs = ref.watch(sharedPreferencesProvider);
+      final raw = prefs.getString(_key);
+      if (raw != null) return _decode(raw);
+      final first = prefs.getString(_firstKey);
+      if (first == null) return const {};
+      final migrated = {
+        for (final MapEntry(:key, :value) in _decode(first).entries)
+          key: SearchHeadroom(
+            gateway: value.gateway == SearchGateway.cloudflare
+                ? value.gateway
+                : value.gatewayName == null
+                ? value.gateway
+                : classifyGateway(value.gatewayName),
+            gatewayName: value.gatewayName,
+            longestSuccess: value.longestSuccess,
+            recentDurations: value.recentDurations,
+          ),
+      };
+      _persist(migrated);
+      unawaited(prefs.remove(_firstKey));
+      return migrated;
     } catch (_) {
       return const {};
     }
+  }
+
+  static Map<ServiceKey, SearchHeadroom> _decode(String raw) {
+    final decoded = jsonDecode(raw) as Map<String, dynamic>;
+    final result = <ServiceKey, SearchHeadroom>{};
+    for (final entry in decoded.entries) {
+      for (final service in ServiceKey.values) {
+        if (service.name != entry.key) continue;
+        result[service] = SearchHeadroom.fromJson(
+          entry.value as Map<String, dynamic>,
+        );
+      }
+    }
+    return result;
   }
 
   /// Records a search that came back with an answer.
@@ -59,9 +89,9 @@ class SearchHeadroomNotifier extends Notifier<Map<ServiceKey, SearchHeadroom>> {
 
   /// Records a search that was cut off by something in the middle.
   ///
-  /// Only gateway cut-offs and our own ceiling belong here. A lost connection or
-  /// a server error says nothing about how long the path allows, and folding it
-  /// in would report a ceiling that does not exist.
+  /// Only the path's cut-offs belong here. A lost connection, a server error
+  /// or Cupola's own wait running out says nothing about how long the path
+  /// allows, and folding it in would report a ceiling that does not exist.
   void recordCutoff(ServiceKey service, Duration elapsed) {
     _update(service, (current) => current.recordCutoff(elapsed));
   }
