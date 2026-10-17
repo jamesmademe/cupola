@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cupola/features/search/presentation/recent_searches_provider.dart';
 import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/utils/service_routes.dart';
@@ -222,6 +223,23 @@ void main() {
 
       expect(radarr.calls, calls + 1);
       expect(_containerOf(tester).read(globalSearchQueryProvider), 'dune');
+    });
+
+    testWidgets('a query is a recent search once it stays put, not every '
+        'prefix on the way', (tester) async {
+      await _pump(
+        tester,
+        radarr: _Radarr(results: [_duneRadarr]),
+        query: 'dun',
+      );
+      final container = _containerOf(tester);
+
+      await tester.pump(const Duration(milliseconds: 500));
+      container.read(globalSearchQueryProvider.notifier).state = 'dune';
+      await _frames(tester);
+      await tester.pump(const Duration(seconds: 3));
+
+      expect(container.read(recentSearchesProvider), ['dune']);
     });
 
     testWidgets('the tab again clears the field', (tester) async {

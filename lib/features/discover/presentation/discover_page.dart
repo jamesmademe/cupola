@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -61,6 +63,13 @@ class DiscoverPage extends ConsumerStatefulWidget {
 class _DiscoverPageState extends ConsumerState<DiscoverPage> {
   final _focus = FocusNode(debugLabel: 'discover search');
 
+  /// How long a query has to stay put, with answers, before it is a recent
+  /// search: the time it takes to stop typing and start reading. Recorded at
+  /// once, every prefix the debounce let through ("dun", then "dune") would
+  /// be a search of its own.
+  static const recentAfter = Duration(seconds: 2);
+  Timer? _recentTimer;
+
   @override
   void initState() {
     super.initState();
@@ -69,6 +78,7 @@ class _DiscoverPageState extends ConsumerState<DiscoverPage> {
 
   @override
   void dispose() {
+    _recentTimer?.cancel();
     _focus.removeListener(_onFocus);
     _focus.dispose();
     super.dispose();
@@ -107,15 +117,20 @@ class _DiscoverPageState extends ConsumerState<DiscoverPage> {
       rerunGlobalSearch(ref);
     });
 
-    // A query that found something is a recent search.
+    // A query that found something, and that the person stayed on, is a
+    // recent search.
     ref.listen<List<GlobalSearchServiceResults>>(globalSearchLanesProvider, (
       previous,
       next,
     ) {
       final q = ref.read(globalSearchQueryProvider).trim();
-      if (q.isNotEmpty && next.any((lane) => lane.results.isNotEmpty)) {
+      if (q.isEmpty || !next.any((lane) => lane.results.isNotEmpty)) return;
+      _recentTimer?.cancel();
+      _recentTimer = Timer(recentAfter, () {
+        if (!mounted) return;
+        if (ref.read(globalSearchQueryProvider).trim() != q) return;
         ref.read(recentSearchesProvider.notifier).add(q);
-      }
+      });
     });
 
     final searching = query.trim().isNotEmpty;
