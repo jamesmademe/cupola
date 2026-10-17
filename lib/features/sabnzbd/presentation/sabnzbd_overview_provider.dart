@@ -555,13 +555,13 @@ SabnzbdHistorySection sabnzbdHistoryToday(
 /// Its own request, at [sabnzbdHistoryPageSize] rather than the twenty
 /// [sabnzbdHistoryProvider] takes, because this section states counts for a day
 /// and a day does not fit in twenty records. Neither provider declares a
-/// `retry:`, so the derivation below has none to drop.
+/// `noProviderRetry`, and the derivation below carries it too.
 final sabnzbdOverviewHistoryPageProvider =
     FutureProvider.autoDispose<List<SabnzbdHistorySlot>>((ref) async {
       return ref
           .watch(sabnzbdClientProvider)
           .getHistory(limit: sabnzbdHistoryPageSize);
-    });
+    }, retry: noProviderRetry);
 
 /// Today's history, and whether that page was long enough to be the day.
 final sabnzbdOverviewHistoryProvider =
@@ -574,4 +574,4 @@ final sabnzbdOverviewHistoryProvider =
         // request that happened rather than about a default it assumed.
         pageSize: sabnzbdHistoryPageSize,
       );
-    });
+    }, retry: noProviderRetry);

@@ -251,13 +251,13 @@ Stream<T> firstEventWithin<T>(
 final dockgeStackDetailProvider = FutureProvider.autoDispose
     .family<DockgeStackDetail, String>((ref, name) async {
       return ref.watch(dockgeServiceProvider).getStack(name);
-    });
+    }, retry: noProviderRetry);
 
 /// Per-service container status for a single stack.
 final dockgeServiceStatusProvider = FutureProvider.autoDispose
     .family<List<DockgeServiceStatus>, String>((ref, name) async {
       return ref.watch(dockgeServiceProvider).getServiceStatusList(name);
-    });
+    }, retry: noProviderRetry);
 
 /// Combined stack terminal, accumulated as a bounded tail. Dockge exposes this
 /// as output only; there is no shell-input event in its public Socket.IO flow.
