@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/utils/dot_separator.dart';
+import 'package:cupola/features/activity/domain/activity_readout.dart';
+import 'package:cupola/features/home/domain/downloads.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
@@ -79,7 +82,12 @@ class InspectorPane extends ConsumerWidget {
                       if (value.noArrAnswered)
                         const _InspectorNote(_queueUnreadNote)
                       else if (value.items.isEmpty)
-                        _InspectorNote(_emptyQueueNote(value)),
+                        _InspectorNote(
+                          inspectorEmptyQueueNote(
+                            value,
+                            ref.watch(servicesInFlightProvider).value,
+                          ),
+                        ),
                       for (final item in value.items.take(8))
                         _QueueRow(item: item),
                     ],
@@ -104,7 +112,32 @@ const _queueUnreadNote = 'The queue could not be read. Open Activity to retry.';
 /// "Nothing downloading" is a claim about every \*arr, so with one of them
 /// silent or refusing it is only true of the others, and the note names the
 /// ones it leaves out, the way Activity's own readout does.
-String _emptyQueueNote(ActivityFeed feed) {
+///
+/// The rows here are the \*arrs' queues, and a download a client holds on its
+/// own (a torrent added in qBittorrent) is in none of them. So before saying
+/// "Nothing downloading" it asks the queues the Home's Downloads and Activity's
+/// readout read, all four clients included: with something moving or stuck
+/// there, it says that in the readout's words (`1 stuck`) instead, beside a Home
+/// that shows the same stuck download.
+@visibleForTesting
+String inspectorEmptyQueueNote(ActivityFeed feed, ServicesInFlight? inFlight) {
+  if (inFlight != null) {
+    final stuck = inFlight.faults
+        .where((item) => isDownloadFault(item.fault))
+        .length;
+    final parts = activityReadoutParts(
+      moving: inFlight.movingCount,
+      stuck: stuck,
+      rateBytesPerSecond: inFlight.rateBytesPerSecond,
+      coverage: inFlight.coverage,
+    );
+    if (inFlight.movingCount > 0 || stuck > 0) {
+      final line = parts
+          .map((part) => '${part.figure} ${part.words}')
+          .join(dotSeparator);
+      return '$line. Open Activity to see them.';
+    }
+  }
   final notCounted = feed.arrConnections
       .where((r) => r.failed)
       .toList(growable: false);
