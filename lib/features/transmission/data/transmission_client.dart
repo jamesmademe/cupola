@@ -94,7 +94,9 @@ class TransmissionException
 /// 100) failed logins flips the daemon to 403 *until it is restarted*. A client
 /// that re-sends a wrong password on a polling timer locks the user out of their
 /// own Transmission. [_credentialsRejected] makes the first 401 stick, so every
-/// later call fails immediately and locally.
+/// later call fails immediately and locally, until the person saves the
+/// connection again: the settings form then builds a new client, which asks
+/// once more.
 ///
 /// Basic credentials are base64, i.e. cleartext-equivalent, and are re-sent on
 /// **every** request, so a scheme-less URL defaults to HTTPS

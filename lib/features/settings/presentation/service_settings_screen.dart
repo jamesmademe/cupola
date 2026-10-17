@@ -26,6 +26,7 @@ import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/transmission/presentation/transmission_provider.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_client_provider.dart';
 import 'package:cupola/features/release_search/presentation/widgets/search_headroom_card.dart';
 import 'package:cupola/features/media/domain/operator_adds_via.dart';
@@ -735,6 +736,14 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     final notifier = ref.read(settingsProvider.notifier);
     await notifier.updateSettings(updated);
     if (!mounted) return;
+    // Saving is the person's word that the credentials are worth trying
+    // again, even unchanged (the password was fixed on the daemon, not here).
+    // Transmission's client stops asking after a refusal, so as not to spend
+    // the daemon's allowed failures, and only a new client asks again.
+    if (service == ServiceKey.transmission) {
+      ref.invalidate(transmissionClientProvider);
+      ref.invalidate(transmissionClientForProvider);
+    }
 
     // Offer to trust a self-signed certificate so the connection is
     // authenticated rather than blindly accepted. Only prompts when the
