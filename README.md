@@ -125,7 +125,7 @@ Two columns are worth reading before you judge an integration:
 | **Sonarr** | Everything Radarr does, plus seasons and episodes with per-season / per-episode search | API key | Read + write | ✅ |
 | **Lidarr** | Everything Radarr does, plus an artist's page with every album and where it stands | API key | Read + write | ✅ |
 | **Bazarr** | Subtitle library, wanted episodes and movies, history, providers (and resetting their throttles) | API key | Mostly read | ◐ |
-| **Readarr** | Author pages with every book and where it stands; search, monitor, add and delete | API key | Read + write | ◐ |
+| **Readarr** | Author pages with every book and where it stands; search, monitor and delete. Adding authors is left out: Readarr is retired and its metadata service no longer answers | API key | Manage | ◐ |
 
 ### Downloads
 
@@ -142,7 +142,7 @@ Two columns are worth reading before you judge an integration:
 | Service | What Cupola does | Auth | Control | Tested |
 | --- | --- | --- | --- | :-: |
 | **Jellyfin** | Who is watching right now, transcode reasons, resume points, libraries, users, devices and tasks; pause, stop or message a session | API key + viewer, or a user's own sign-in | Read + sessions | ✅ |
-| **Plex** | The same session-first board, driven by Plex's own semantics: libraries, on deck, devices, playlists; stop a session with a reason | Token | Read + stop | ○ |
+| **Plex** | The same session-first board, driven by Plex's own semantics: libraries, on deck, devices, playlists; stop a session with a reason | Token | Read + stop | ◐ |
 
 ### Infrastructure
 
@@ -150,8 +150,11 @@ Two columns are worth reading before you judge an integration:
 | --- | --- | --- | --- | :-: |
 | **TrueNAS** | Full console: dashboard, pools and disks, datasets and snapshots, SMB/NFS shares, apps, virtualization, replication and periodic tasks, reporting, users and groups; a disk with errors offers the scrub that repairs it | API key | Read + write | ◐ |
 | **Dockge** | Compose stacks with live terminal output: start, stop, restart, update, down, and edit or deploy the compose file itself | User + password | Read + write | ✅ |
-| **Unraid** | Array status, disks, shares, Docker containers, VMs and notifications; start and stop VMs, archive notifications | API key | Read + VMs | ○ |
+| **Unraid** | Array status, disks, shares, Docker containers, VMs and notifications; start and stop VMs, archive notifications | API key | Read + VMs | ○ ¹ |
 | **Nginx Proxy Manager** | What the box is fronting, what is broken, which certificates are about to lapse; enable/disable hosts, retarget a forward, renew a certificate | Email + password | Read + write | ◐ |
+
+¹ Unraid is an operating system rather than a container, and we do not run one, so its
+integration is tested against recorded answers from its API, never against a server.
 
 ---
 
@@ -212,6 +215,36 @@ TrueNAS's full console.
 - Grab something automatically, or open the release list and choose it yourself
 - Flip monitoring, change quality profile, import files that landed in the wrong place
 - Delete properly, with a clear say over the files and over whether it can come back
+
+</details>
+
+<details>
+<summary><b>Outside the app: widgets and notifications</b></summary>
+<br/>
+
+Home-screen widgets on iOS and Android: *Coming up* and *Downloads* for whoever runs
+the stack (Downloads also on the iPhone lock screen), *Requests* for a household
+member. Two notifications, both off until you turn them on in **Settings →
+Notifications**: *Needs you*, when something on the stack turns into a fault, and
+*Ready to watch*, when something you asked for arrives. The phone works them out
+itself, in the background, against your own services: there is no push server.
+How often that background run happens is up to the operating system.
+
+</details>
+
+<details>
+<summary><b>At home and away</b></summary>
+<br/>
+
+A connection can carry two addresses: the one it has at home and the one it has
+away from it (a reverse proxy, a tunnel, a VPN name). Cupola knocks on both and uses
+whichever answers, so the same app works on the sofa and on the train. A service that
+only exists at home says so, with the last thing it knew, instead of failing.
+
+Setting up a second phone takes one code: **Settings → Security → Set up another
+device** copies every connection across, encrypted, over your own Wi-Fi. To bring in
+someone from the household, **Invite someone** from Seerr gives them a link or a QR
+code that carries the server's address, never its API key.
 
 </details>
 
@@ -280,7 +313,7 @@ running while Cupola is open.
 | **Android** | Supported | `.apk` |
 | **macOS** | Supported | `.dmg` |
 | **iOS** | Supported (sideload) | unsigned `.ipa` |
-| Windows / Linux | Builds, untested | build from source, on that system |
+| Windows / Linux | Built by CI, untested | `.zip` / `.tar.gz` |
 | Web | Not a goal | none |
 
 <details>
@@ -310,7 +343,7 @@ that applies an ad-hoc signature on install:
 
 - [**AltStore**](https://altstore.io/): refreshes over Wi-Fi from the same machine
 - [**Sideloadly**](https://sideloadly.io/): desktop tool, no account needed on macOS
-- [**Sideload**](https://sideload.app/): web-based, runs in the browser
+- [**SideStore**](https://sidestore.io/): AltStore's sibling, refreshes on the phone itself
 
 Ad-hoc signatures expire, so the app needs periodic re-installation: **7 days** with
 a free Apple ID, **1 year** with a paid Apple Developer account.
@@ -321,9 +354,11 @@ a free Apple ID, **1 year** with a paid Apple Developer account.
 <summary><b>Windows, Linux</b></summary>
 <br/>
 
-Both have a real runner with the desktop window, and `scripts/release.sh windows` or
-`linux` builds them, but only on that operating system, and we have not run either
-yet. If you do, a report either way helps. There is no web client, by design.
+Both have a real runner with the desktop window. Each release carries a build made by
+GitHub Actions: on Windows unzip it and run `cupola.exe` (the build is not signed, so
+SmartScreen asks once); on Linux untar it and run `cupola` (it needs GTK 3 and
+libsecret, present on most desktops). We have not run either ourselves, so a report
+either way helps. There is no web client, by design.
 
 </details>
 
@@ -455,7 +490,7 @@ lib/
 | --- | --- |
 | UI | Flutter + Material 3, a fixed palette and design tokens, bundled Bricolage Grotesque, Onest and Geist Mono |
 | State | Riverpod 3: `FutureProvider` for loads, `NotifierProvider` for persisted state |
-| Navigation | go_router; every detail route resolves from path params alone, so any screen is addressable by path (no URL scheme is registered yet, so nothing outside the app can open one) |
+| Navigation | go_router; every detail route resolves from path params alone, so any screen is addressable by path, and the `cupola://` scheme lets a widget, a notification or an invite open one |
 | HTTP | Dio, shared `ApiClient` with `X-Api-Key` for the *arr family |
 | Other transports | qBittorrent WebUI v2 form login, Socket.IO for Dockge, WebSocket JSON-RPC for TrueNAS |
 | Storage | `flutter_secure_storage` for secrets, `shared_preferences` for settings |
@@ -486,10 +521,10 @@ page is implemented and running rather than planned. The badge at the top points
 latest published release, which trails `main` between tags. 1.0.0 is the first release
 of the Cupola line, and everything before it was published as Seekarr.
 
-- **17 services integrated.** **11 we have verified against real instances**, 4
-  partially, 2 written to the official API but not yet exercised live. The
+- **17 services integrated.** **11 we have verified against real instances**, 5
+  partially, and Unraid against recorded answers only. The
   [tables above](#supported-services) say which is which, per service.
-- **About 730 test files** covering models, services, providers and widgets, offline
+- **About 750 test files** covering models, services, providers and widgets, offline
   by default, with an opt-in Docker-backed end-to-end tier against real services
 - **Accessibility is part of the definition of done.** Dynamic Type, contrast, touch
   targets and screen-reader labels are held by tests. If something reads badly with
@@ -560,8 +595,8 @@ bug worth fixing).
 <details>
 <summary><b>Can I run it on Linux or Windows?</b></summary>
 <br/>
-You can build it on that system, and it should work: both have the same desktop window
-as macOS. We have not run either yet, so a report is welcome.
+Yes: each release carries a Windows and a Linux build made by GitHub Actions, with the
+same desktop window as macOS. We have not run either ourselves, so a report is welcome.
 </details>
 
 <details>

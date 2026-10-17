@@ -47,14 +47,23 @@ class DonationService {
 
   // ── IAP helpers ───────────────────────────────────────────────────────────
 
+  /// How long the sheet waits for the store before it falls back to Ko-fi. A
+  /// sideloaded build talks to a store that knows nothing of it, and a silent
+  /// one must not leave the sheet spinning.
+  static const Duration storeTimeout = Duration(seconds: 8);
+
   /// Queries the App Store for the configured products.
-  /// Throws if the store is unavailable.
+  /// Throws if the store is unavailable or does not answer in [storeTimeout].
   static Future<ProductDetailsResponse> fetchProducts() async {
-    final available = await InAppPurchase.instance.isAvailable();
+    final available = await InAppPurchase.instance.isAvailable().timeout(
+      storeTimeout,
+    );
     if (!available) {
       throw Exception('App Store is not available on this device.');
     }
-    return InAppPurchase.instance.queryProductDetails(productIds);
+    return InAppPurchase.instance
+        .queryProductDetails(productIds)
+        .timeout(storeTimeout);
   }
 
   /// Initiates a consumable purchase for the given [product].

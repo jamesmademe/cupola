@@ -81,7 +81,7 @@ class _DonationSheetState extends State<DonationSheet> {
         _loading = false;
       });
     } catch (_) {
-      // Store unavailable: fall back to Ko-fi.
+      // Store unavailable or silent: fall back to Ko-fi.
       if (!mounted) return;
       Navigator.of(context).pop(true);
     }
