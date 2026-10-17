@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -25,6 +26,65 @@ void main() {
     expect(alerts.single.kind, DecisionKind.storageAlert);
     expect(alerts.single.title, 'Disk sdd reports 8 uncorrectable errors');
     expect(alerts.single.instanceId, WorldIds.truenas);
+  });
+
+  test('an Unraid slot the array flagged and an unread warning sit beside '
+      'TrueNAS\'s alerts, each leading to its own page', () async {
+    final harness = await ProfileHarness.start(
+      Profiles.p1.withConnection(WorldConnections.unraid),
+    );
+    harness.network.on('unraid', 'POST', '/graphql', (r) {
+      final query = '${(r.json as Map)['query']}';
+      if (query.contains('array {')) {
+        return NetworkReply.json({
+          'data': {
+            'array': {
+              'state': 'STARTED',
+              'parities': [
+                {'name': 'parity', 'status': 'DISK_DSBL', 'temp': 34},
+              ],
+              'disks': [
+                {'name': 'disk1', 'status': 'DISK_OK', 'temp': 38},
+              ],
+              'caches': const <Object?>[],
+            },
+          },
+        });
+      }
+      return NetworkReply.json({
+        'data': {
+          'notifications': {
+            'list': [
+              {
+                'id': 'n1',
+                'title': 'Unraid Status',
+                'subject': 'Warning [TOWER] - Disk 1 SMART health [5]',
+                'description': 'ST4000VN008 (sdb)',
+                'importance': 'WARNING',
+                'type': 'UNREAD',
+                'timestamp': '2026-10-17T09:00:00Z',
+              },
+            ],
+          },
+        },
+      });
+    });
+
+    final alerts = await source(harness, DecisionSource.storage);
+    final unraid = [
+      for (final alert in alerts)
+        if (alert.service == ServiceKey.unraid) alert,
+    ];
+    expect(unraid.map((a) => a.title), [
+      'Parity is disabled',
+      'Disk 1 SMART health [5]',
+    ]);
+    expect(unraid.map((a) => a.route), [
+      ServiceRoutes.unraidArray,
+      ServiceRoutes.unraidNotifications,
+    ]);
+    expect(unraid.every((a) => a.kind == DecisionKind.storageAlert), isTrue);
+    expect(alerts.where((a) => a.service == ServiceKey.truenas), hasLength(1));
   });
 
   test('an arr\'s health check at the error level, in the app\'s words with '

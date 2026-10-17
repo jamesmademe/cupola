@@ -75,8 +75,9 @@ enum DecisionSource {
   /// The imports the \*arrs' history says failed.
   history([ServiceKey.radarr, ServiceKey.sonarr, ServiceKey.lidarr]),
 
-  /// TrueNAS's own alerts, at warning or worse.
-  storage([ServiceKey.truenas]),
+  /// The storage servers' own alerts: TrueNAS's at warning or worse, and
+  /// Unraid's flagged slots and unread notifications at warning or alert.
+  storage([ServiceKey.truenas, ServiceKey.unraid]),
 
   /// The \*arrs' own health checks that report an error.
   health([ServiceKey.radarr, ServiceKey.sonarr, ServiceKey.lidarr]),
@@ -148,8 +149,10 @@ enum DecisionKind {
   /// An \*arr history record whose import failed. Action: manual import.
   failedImport,
 
-  /// A TrueNAS alert at warning or worse: a disk reporting errors, a pool
-  /// degraded. Action: open the alert.
+  /// A storage server's own alert: TrueNAS's at warning or worse (a disk
+  /// reporting errors, a pool degraded), Unraid's flagged slot or unread
+  /// notification at warning or alert. Action: open the alert, on the
+  /// server's own page ([DashboardDecision.route]).
   storageAlert,
 
   /// A connection that answered, with a refusal or a fault: a refused key, a

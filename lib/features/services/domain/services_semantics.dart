@@ -216,6 +216,11 @@ enum SilenceScope {
 /// Sonarr did not answer`, and ` at 20:53` when the probe that found them
 /// silent is [at]. The Home's Needs you leads with it.
 ///
+/// [since] is when they stopped answering (`SilenceClock`), the latest of
+/// them: from a minute before [at], the clause says that instead, `Radarr
+/// has not answered since 20:41`, which tells a restart from an outage. A
+/// silence no older than the probe says only when the probe asked.
+///
 /// [scope] says where they were asked: at both of their addresses, `Radarr
 /// did not answer at home or away`, or every service at all, `No service
 /// answered, at home or away`. Neither takes the time, which `at home or
@@ -224,6 +229,7 @@ String servicesDidNotAnswer(
   List<String> offlineServiceTitles, {
   int maxNamed = 3,
   DateTime? at,
+  DateTime? since,
   SilenceScope scope = SilenceScope.asked,
 }) {
   final titles = offlineServiceTitles
@@ -246,6 +252,12 @@ String servicesDidNotAnswer(
       return '$subject $verb at home or away';
     case SilenceScope.asked:
       break;
+  }
+  if (since != null &&
+      at != null &&
+      at.difference(since) >= const Duration(minutes: 1)) {
+    final has = titles.length == 1 ? 'has' : 'have';
+    return '$subject $has not answered since ${formatClockTime(since)}';
   }
   return at == null
       ? '$subject $verb'

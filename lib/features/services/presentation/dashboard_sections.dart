@@ -398,11 +398,12 @@ Future<void> runDecision(
         instanceId: decision.instanceId,
       );
     case DecisionKind.storageAlert:
-      // TrueNAS's dashboard, where its alerts are, on the TrueNAS that
-      // raised this one: the page reads the lens.
-      await bringUnderLens(ref, ServiceKey.truenas, decision.instanceId);
+      // The server's own page where the alert is (TrueNAS's dashboard,
+      // Unraid's array or notifications), on the server that raised it:
+      // the page reads the lens.
+      await bringUnderLens(ref, decision.service, decision.instanceId);
       if (!context.mounted) return;
-      context.go(ServiceRoutes.truenasDashboard);
+      context.go(decision.route ?? ServiceRoutes.truenasDashboard);
     case DecisionKind.serviceHealth:
       // The \*arr's own status page, in the browser: a health check is
       // fixed in the \*arr's settings, which this app does not carry.

@@ -87,7 +87,8 @@ class NeedsYou {
 /// What Needs you says, or null when nothing does.
 ///
 /// [silent] are the services whose every connection did not answer, found
-/// silent by the probe that settled at [silentAt], and asked where
+/// silent by the probe that settled at [silentAt] and silent since
+/// [silentSince] (the latest of them, when every one is known), and asked where
 /// [silenceScope] says. [decisions] are the stack's,
 /// already folded and ranked; [floor] when the walk of the queues, where every
 /// group comes from, stopped before their end, so a group's count is at least
@@ -99,6 +100,7 @@ NeedsYou? needsYouOf({
   required List<DashboardDecision> decisions,
   required DateTime now,
   DateTime? silentAt,
+  DateTime? silentSince,
   SilenceScope silenceScope = SilenceScope.asked,
   bool floor = false,
   bool moreFloor = false,
@@ -113,6 +115,7 @@ NeedsYou? needsYouOf({
       line: servicesDidNotAnswer(
         [for (final service in silent) service.title],
         at: silentAt,
+        since: silentSince,
         scope: silenceScope,
       ),
       more: faults.length,

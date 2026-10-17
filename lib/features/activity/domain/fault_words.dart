@@ -55,7 +55,7 @@ FaultWords faultWordsOf(DashboardDecision decision) {
       source: source,
       why: null,
     ),
-    // TrueNAS's own sentence behind Why?, when the headline is the app's.
+    // The server's own sentence behind Why?, when the headline is the app's.
     DecisionKind.storageAlert => (
       headline: _withoutStop(decision.title),
       explanation: null,

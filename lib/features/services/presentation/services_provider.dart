@@ -80,6 +80,8 @@ import 'package:cupola/features/transmission/presentation/transmission_provider.
 import 'package:cupola/features/truenas/data/truenas_service.dart';
 import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 import 'package:cupola/features/unraid/data/unraid_client.dart';
+import 'package:cupola/features/unraid/domain/unraid_alerts.dart';
+import 'package:cupola/features/unraid/presentation/unraid_provider.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/truenas/domain/models/alert.dart';
@@ -3321,10 +3323,23 @@ final dashboardDecisionSourceProvider =
             coverage: history.coverage,
           );
         case DecisionSource.storage:
-          return _decisionsOnEveryConnection(
-            ref,
-            ServiceKey.truenas,
-            (source) => _storageAlertDecisions(ref, source),
+          final reads = await Future.wait([
+            _decisionsOnEveryConnection(
+              ref,
+              ServiceKey.truenas,
+              (source) => _storageAlertDecisions(ref, source),
+            ),
+            _decisionsOnEveryConnection(
+              ref,
+              ServiceKey.unraid,
+              (source) => _unraidAlertDecisions(ref, source),
+            ),
+          ]);
+          return (
+            decisions: [for (final read in reads) ...read.decisions],
+            coverage: SourceCoverage.merge([
+              for (final read in reads) read.coverage,
+            ]),
           );
         case DecisionSource.health:
           final reads = await Future.wait([
@@ -3668,6 +3683,45 @@ Future<List<DashboardDecision>> _storageAlertDecisions(
           connectionName: source.name,
           actionInstanceId: source.instanceId,
         ),
+  ];
+}
+
+/// What an Unraid server says needs somebody ([unraidAlerts]): the slots its
+/// array flagged, which lead to the array, and its unread notifications at
+/// warning or alert, which lead to its notifications.
+Future<List<DashboardDecision>> _unraidAlertDecisions(
+  Ref ref,
+  _MergeConnection source,
+) async {
+  final client = ref.watch(unraidClientForProvider(source.instanceId));
+  final (array, notifications) = await (
+    client.getArray(),
+    client.getNotifications(),
+  ).wait;
+  return [
+    for (final alert in unraidAlerts(
+      array: array,
+      notifications: notifications,
+    ))
+      DashboardDecision(
+        kind: DecisionKind.storageAlert,
+        id: 'unraid-${source.instanceId}-${alert.id}',
+        service: ServiceKey.unraid,
+        title: alert.title,
+        detail: serviceWithConnection(
+          ServiceKey.unraid,
+          source.name,
+          joiner: ' ',
+        ),
+        reason: alert.reason,
+        occurredAt: alert.occurredAt,
+        route: alert.isDisk
+            ? ServiceRoutes.unraidArray
+            : ServiceRoutes.unraidNotifications,
+        instanceId: source.instanceId,
+        connectionName: source.name,
+        actionInstanceId: source.instanceId,
+      ),
   ];
 }
 

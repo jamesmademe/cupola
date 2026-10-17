@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/status/silence_clock.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
@@ -13,6 +14,9 @@ import 'package:cupola/features/home/domain/needs_you.dart';
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
 import 'package:cupola/features/services/presentation/dashboard_retry.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/shell/domain/stack_health.dart';
 
 /// Needs you, the operator's first module: one line that says what is wrong,
@@ -42,6 +46,11 @@ class NeedsYouBanner extends ConsumerWidget {
       decisions: read.decisions,
       now: now,
       silentAt: checkedAt,
+      silentSince: silentSinceOf(
+        silent,
+        ref.read(silenceClockProvider),
+        ref.watch(currentSettingsProvider),
+      ),
       silenceScope: ref.watch(stackSilenceProvider).scopeOf(silent),
       // Only the queues' walk: every group is folded from it, and a history
       // page read whole or not says nothing about how many imports are
@@ -66,6 +75,29 @@ class NeedsYouBanner extends ConsumerWidget {
           : () => context.go(ServiceRoutes.activityNeedsYou),
     );
   }
+}
+
+/// Since when every one of [services] has not answered: the latest time any
+/// of them went silent, a service being silent from when the last of its
+/// connections stopped answering. Null when any silence is not on record,
+/// which says nothing rather than a time that is only part of the truth.
+@visibleForTesting
+DateTime? silentSinceOf(
+  List<ServiceKey> services,
+  SilenceClock clock,
+  SettingsModel settings,
+) {
+  DateTime? latest;
+  for (final service in services) {
+    final connections = settings.configuredInstancesOf(service);
+    if (connections.isEmpty) return null;
+    for (final connection in connections) {
+      final since = clock.since(silenceKey(service, connection.id));
+      if (since == null) return null;
+      if (latest == null || since.isAfter(latest)) latest = since;
+    }
+  }
+  return latest;
 }
 
 /// The line itself, given what it says: the glyph in the tone of the lead,

@@ -25,6 +25,73 @@ void main() {
     );
   });
 
+  test('a SMART alert up to 25.04 says what smartd saw, on the disk it '
+      'names', () {
+    TrueNasAlert smart(String message) => alert({
+      'klass': 'SMART',
+      'formatted': '$message.',
+      'args': {'device': "/dev/sda ('ZL2PQR7T')", 'message': message},
+    });
+    final cases = {
+      'Device: /dev/sda [SAT], 8 Currently unreadable (pending) sectors':
+          'Disk sda has 8 unreadable sectors',
+      'Device: /dev/sda [SAT], 1 Offline uncorrectable sectors':
+          'Disk sda has 1 uncorrectable sector',
+      'Device: /dev/sda [SAT], FAILED SMART self-check. BACK UP DATA NOW!':
+          'Disk sda failed its SMART health check',
+      'Device: /dev/sda, Self-Test Log error count increased from 0 to 1':
+          'Disk sda failed a SMART self-test',
+      'Device: /dev/sda [SAT], ATA error count increased from 0 to 3':
+          'Disk sda reports 3 ATA errors',
+      'Device: /dev/sda [SAT], not capable of SMART self-check':
+          'Disk sda reports a SMART problem',
+    };
+    for (final MapEntry(:key, :value) in cases.entries) {
+      expect(trueNasAlertHeadline(smart(key)), value, reason: key);
+    }
+    expect(
+      trueNasAlertHeadline(
+        alert({
+          'klass': 'SMART',
+          'formatted':
+              'Device: /dev/nvme0n1, 2 Currently unreadable (pending) sectors.',
+        }),
+      ),
+      'Disk nvme0n1 has 2 unreadable sectors',
+      reason: 'the disk from the message when the args are gone',
+    );
+  });
+
+  test('a SMART alert from 25.10 reads its class and its disk', () {
+    TrueNasAlert smart(String klass) => alert({
+      'klass': klass,
+      'formatted': 'sdb (W1) said something.',
+      'args': {'name': 'sdb', 'serial': 'W1'},
+    });
+    expect(
+      trueNasAlertHeadline(smart('SMARTFailedSelfTest')),
+      'Disk sdb failed a SMART self-test',
+    );
+    expect(
+      trueNasAlertHeadline(smart('SMARTSpareBlockCount')),
+      'Disk sdb is running low on spare blocks',
+    );
+    expect(
+      trueNasAlertHeadline(smart('SMARTEraseCycleCount')),
+      'Disk sdb has a high erase count',
+    );
+    expect(
+      trueNasAlertHeadline(
+        alert({
+          'klass': 'SMARTUncorrectedErrors',
+          'formatted': '3 uncorrectable errors reported for sdb (W1).',
+          'args': {'ue': 3, 'name': 'sdb', 'serial': 'W1'},
+        }),
+      ),
+      'Disk sdb reports 3 uncorrectable errors',
+    );
+  });
+
   test('any other alert reads its first sentence', () {
     expect(
       trueNasAlertHeadline(

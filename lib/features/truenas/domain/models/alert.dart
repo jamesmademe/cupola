@@ -82,13 +82,15 @@ final _uncorrected = RegExp(r'^(\d+) uncorrectable errors? reported for (\S+)');
 ///
 /// A disk's uncorrectable errors (TrueNAS's "Uncorrected Errors Detected",
 /// formatted from `ue`, `name` and `serial`) reads
-/// `Disk sdd reports 8 uncorrectable errors`. Any other alert reads its own
+/// `Disk sdd reports 8 uncorrectable errors`, and a disk's SMART alert says
+/// what the disk reported ([_smartHeadline]). Any other alert reads its own
 /// message, up to its first full stop: TrueNAS writes them as sentences.
 String trueNasAlertHeadline(TrueNasAlert alert) {
   if (trueNasDiskErrors(alert) case (:final disk, :final errors)) {
     return 'Disk $disk reports $errors uncorrectable '
         '${errors == 1 ? 'error' : 'errors'}';
   }
+  if (_smartHeadline(alert) case final headline?) return headline;
   final message = alert.message.trim();
   final stop = message.indexOf('. ');
   final sentence = stop < 0 ? message : message.substring(0, stop);
@@ -96,3 +98,70 @@ String trueNasAlertHeadline(TrueNasAlert alert) {
       ? sentence.substring(0, sentence.length - 1)
       : sentence;
 }
+
+/// What a disk's SMART alert says, in the app's words, or null when [alert]
+/// is not one.
+///
+/// TrueNAS has said it two ways. Up to 25.04 every SMART alert is the class
+/// `SMART`, `device` (`/dev/sda ('ZL2PQR7T')`) and `message`, smartd's own
+/// line: `Device: /dev/sda [SAT], 8 Currently unreadable (pending) sectors`.
+/// From 25.10 each has its class and its figures: `SMARTFailedSelfTest`,
+/// `SMARTSpareBlockCount`, `SMARTEraseCycleCount`, each with `name`. smartd's
+/// line stays behind Why?, which reads the alert's own message.
+String? _smartHeadline(TrueNasAlert alert) {
+  final klass = alert.klass;
+  if (!klass.startsWith('SMART')) return null;
+  final disk = switch (alert.args['name']) {
+    final String name when name.isNotEmpty => name,
+    _ => _smartDevice(alert),
+  };
+  final who = disk == null ? 'A disk' : 'Disk $disk';
+  switch (klass) {
+    case 'SMARTFailedSelfTest':
+      return '$who failed a SMART self-test';
+    case 'SMARTSpareBlockCount':
+      return '$who is running low on spare blocks';
+    case 'SMARTEraseCycleCount':
+      return '$who has a high erase count';
+    case 'SMART':
+      break;
+    default:
+      return '$who reports a SMART problem';
+  }
+  final line = switch (alert.args['message']) {
+    final String message => message,
+    _ => alert.message,
+  };
+  if (_count(line, r'(\d+) Currently unreadable \(pending\) sectors?')
+      case final n?) {
+    return '$who has $n unreadable ${n == 1 ? 'sector' : 'sectors'}';
+  }
+  if (_count(line, r'(\d+) Offline uncorrectable sectors?') case final n?) {
+    return '$who has $n uncorrectable ${n == 1 ? 'sector' : 'sectors'}';
+  }
+  if (line.contains('FAILED SMART self-check')) {
+    return '$who failed its SMART health check';
+  }
+  if (line.contains('Self-Test Log error count increased')) {
+    return '$who failed a SMART self-test';
+  }
+  if (_count(line, r'ATA error count increased from \d+ to (\d+)')
+      case final n?) {
+    return '$who reports $n ATA ${n == 1 ? 'error' : 'errors'}';
+  }
+  return '$who reports a SMART problem';
+}
+
+/// The disk a pre-25.10 SMART alert names: `sda` from `device`
+/// (`/dev/sda ('ZL2PQR7T')`), or from smartd's `Device: /dev/sda` in the
+/// message when the args are gone.
+String? _smartDevice(TrueNasAlert alert) {
+  final device = switch (alert.args['device']) {
+    final String device => device,
+    _ => alert.message,
+  };
+  return RegExp(r'/dev/([A-Za-z0-9]+)').firstMatch(device)?.group(1);
+}
+
+int? _count(String line, String pattern) =>
+    int.tryParse(RegExp(pattern).firstMatch(line)?.group(1) ?? '');

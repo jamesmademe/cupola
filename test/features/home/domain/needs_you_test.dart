@@ -78,6 +78,32 @@ void main() {
       expect(needs.lead, isNull);
     });
 
+    test('a silence older than the probe says since when; a fresh one says '
+        'when it was asked', () {
+      String line(List<ServiceKey> silent, DateTime since) => needsYouOf(
+        silent: silent,
+        decisions: const [],
+        now: now,
+        silentAt: DateTime(2026, 9, 29, 20, 53),
+        silentSince: since,
+      )!.line;
+      expect(
+        line(const [ServiceKey.radarr], DateTime(2026, 9, 29, 20, 41)),
+        'Radarr has not answered since 20:41',
+      );
+      expect(
+        line(const [
+          ServiceKey.radarr,
+          ServiceKey.sonarr,
+        ], DateTime(2026, 9, 29, 20, 41)),
+        'Radarr and Sonarr have not answered since 20:41',
+      );
+      expect(
+        line(const [ServiceKey.radarr], DateTime(2026, 9, 29, 20, 52, 30)),
+        'Radarr did not answer at 20:53',
+      );
+    });
+
     test('two silent services are one line and one Retry for both', () {
       final needs = needsYouOf(
         silent: const [ServiceKey.radarr, ServiceKey.sonarr],
