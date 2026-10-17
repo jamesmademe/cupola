@@ -66,7 +66,7 @@ class SettingsConnectionsScreen extends ConsumerWidget {
           ),
           children: [
             if (found.isNotEmpty) ...[
-              const SectionHeader(
+              const SectionHeader.inset(
                 title: 'Ready to add',
                 showChevron: false,
                 subtitle:
@@ -107,7 +107,7 @@ class SettingsConnectionsScreen extends ConsumerWidget {
               const SizedBox(height: AppSpacing.xl),
             ],
             if (configured.isNotEmpty) ...[
-              SectionHeader.action(
+              SectionHeader.insetAction(
                 // Not "Answering": this section is what has an address saved,
                 // and one of them being unreachable is exactly why you are here.
                 title: 'Your services',
@@ -132,7 +132,7 @@ class SettingsConnectionsScreen extends ConsumerWidget {
                 ..._domainGroup(context, domain, configured),
               const SizedBox(height: AppSpacing.xl),
             ],
-            SectionHeader(
+            SectionHeader.inset(
               title: available.isEmpty
                   ? 'Everything is set up'
                   : 'Add a service',

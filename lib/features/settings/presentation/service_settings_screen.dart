@@ -1794,7 +1794,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SectionHeader(
+        SectionHeader.inset(
           title: 'Connections',
           showChevron: false,
           subtitle: siblings.isEmpty
