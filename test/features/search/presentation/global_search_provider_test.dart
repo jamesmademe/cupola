@@ -587,6 +587,20 @@ void main() {
     },
   );
 
+  test('the stamp it watches never holds a credential', () {
+    const secret = 'radarr-secret-1234567890';
+    final settings = const SettingsModel().copyWithService(
+      ServiceKey.radarr,
+      url: 'http://radarr.local:7878',
+      apiKey: secret,
+    );
+
+    final stamp = globalSearchStamp(settings);
+
+    expect(stamp, contains('radarr.local'));
+    expect(stamp, isNot(contains(secret)));
+  });
+
   group('the media servers', () {
     /// Configures Jellyfin and Plex on top of the shared settings and points
     /// both lanes at scripted servers.

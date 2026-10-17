@@ -25,6 +25,7 @@ import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/models/stream_search_group.dart';
 import 'package:cupola/features/stream/domain/stream_server_client.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
@@ -104,6 +105,37 @@ const _catalogSources = {
   ServiceKey.plex,
 };
 
+/// The connections global search fans out to, as one comparable scalar. Not
+/// the whole model: a theme toggle would abort the user's in-flight search and
+/// start it again, and not a `List`, which compares by identity and would never
+/// settle. Every field that decides which server is reached is in here, so a
+/// connection edited mid-search re-runs and nothing else does.
+///
+/// It never holds a secret: the credential and each address's access are in it
+/// by their hash, because a provider's selected value is kept in memory and
+/// shown by any observer or debugger that prints it.
+String globalSearchStamp(SettingsModel s) {
+  final parts = <String>[];
+  for (final service in globalSearchServices) {
+    for (final instance in s.configuredInstancesOf(service)) {
+      // Both addresses, each with its pin and its access: which of the two a
+      // leg asks is its route's, which each leg watches itself.
+      final addresses = [
+        for (final address in [instance.home, ?instance.away])
+          '${address.url}|${s.pinForUrl(address.url)}'
+              '|${address.access.hashCode}',
+      ];
+      // The name too: it is on the lane's heading, and a heading that kept the
+      // old name after a rename would be naming nothing.
+      parts.add(
+        '${instance.id}|${instance.credential.hashCode}'
+        '|${s.connectionName(instance.id)}|${addresses.join('|')}',
+      );
+    }
+  }
+  return parts.join(';');
+}
+
 /// The connections the global search asks, in section order.
 ///
 /// One leg per configured connection rather than per service, so two Radarr
@@ -119,35 +151,7 @@ const _catalogSources = {
 /// keystroke would mint a new key for every lane and throw away the lane states
 /// the screen is drawing.
 final globalSearchLegsProvider = Provider.autoDispose<List<SearchLeg>>((ref) {
-  // The connections this fans out to, as one comparable scalar. Not the whole
-  // model: a theme toggle would abort the user's in-flight search and start it
-  // again, and not a `List`, which compares by identity and would never
-  // settle. Every field that decides which server is reached is in here, so a
-  // connection edited mid-search re-runs and nothing else does.
-  ref.watch(
-    currentSettingsProvider.select((s) {
-      final parts = <String>[];
-      for (final service in globalSearchServices) {
-        for (final instance in s.configuredInstancesOf(service)) {
-          // Both addresses, each with its pin and its access (by its hash,
-          // so the stamp never holds a secret): which of the two a leg asks
-          // is its route's, which each leg watches itself.
-          final addresses = [
-            for (final address in [instance.home, ?instance.away])
-              '${address.url}|${s.pinForUrl(address.url)}'
-                  '|${address.access.hashCode}',
-          ];
-          // The name too: it is on the lane's heading, and a heading that
-          // kept the old name after a rename would be naming nothing.
-          parts.add(
-            '${instance.id}|${instance.credential}'
-            '|${s.connectionName(instance.id)}|${addresses.join('|')}',
-          );
-        }
-      }
-      return parts.join(';');
-    }),
-  );
+  ref.watch(currentSettingsProvider.select(globalSearchStamp));
 
   final settings = ref.read(currentSettingsProvider);
   // The requester searches Seerr alone: what she can ask for, and whether the
