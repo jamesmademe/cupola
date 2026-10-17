@@ -460,7 +460,7 @@ void main() {
   });
 
   group('qbittorrentSessionFacts', () {
-    test('six facts, and the three the client cannot fetch are absent', () {
+    test('six facts when the server does not say its free space', () {
       final facts = qbittorrentSessionFacts(
         const TransferInfo(
           dlSpeed: 0,
@@ -490,19 +490,38 @@ void main() {
         '5.0\u00A0MB/s',
         'off',
       ]);
-      // Free space, DHT nodes and the listen port are on /sync/maindata, which
-      // this client never calls: absent, rather than an invented em dash for a
-      // figure nobody asked for.
+      // An old qBittorrent leaves free space out of its answer, and DHT nodes
+      // are not drawn yet: both absent, rather than an em dash for a figure
+      // that did not fail to answer.
       expect(facts.map((f) => f.label), isNot(contains('Free space')));
       expect(facts.map((f) => f.label), isNot(contains('DHT nodes')));
+    });
+
+    test('free space is the last fact, and a full disk reads 0 B', () {
+      TransferInfo withFree(int bytes) => TransferInfo(
+        dlSpeed: 0,
+        upSpeed: 0,
+        dlInfoData: 0,
+        upInfoData: 0,
+        dlRateLimit: 0,
+        upRateLimit: 0,
+        altSpeedEnabled: false,
+        freeSpace: bytes,
+      );
+
+      final facts = qbittorrentSessionFacts(withFree(4 * 1024 * 1024 * 1024));
+      expect(facts.last.label, 'Free space');
+      expect(facts.last.value, '4.0\u00A0GB');
+      // A full disk is the one figure a person most needs to read: never `—`.
+      expect(qbittorrentSessionFacts(withFree(0)).last.value, '0\u00A0B');
     });
 
     test('a counter that answered 0 reads 0 B, never an em dash', () {
       // `formatSize` would print `—` here, and it would be right to for a
       // torrent size: a magnet with no metadata reports 0 and no torrent is
       // zero bytes. A session counter is not a size: a daemon restarted ten
-      // minutes ago has genuinely moved nothing, and `/transfer/info` answered
-      // to say so.
+      // minutes ago has genuinely moved nothing, and the server answered to
+      // say so.
       expect(qbittorrentSessionTotalLabel(0), '0\u00A0B');
       expect(qbittorrentSessionTotalLabel(1024 * 1024), '1.0\u00A0MB');
       // Defensive only; no qB version is known to send one.

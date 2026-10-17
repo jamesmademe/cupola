@@ -143,35 +143,25 @@ Map<String, dynamic> _torrentJson({
 
 void main() {
   group('QbittorrentService', () {
-    test('getTorrents maps response into Torrent list', () async {
+    test('mainData reads sync/maindata from the start', () async {
       final adapter = _StubAdapter()
-        ..setJson('/api/v2/torrents/info', [_torrentJson()]);
+        ..setJson('/api/v2/sync/maindata', {
+          'rid': 1,
+          'full_update': true,
+          'torrents': {
+            'aaa': {..._torrentJson()}..remove('hash'),
+          },
+          'server_state': {'dl_info_speed': 1024, 'use_alt_speed_limits': true},
+        });
       final service = _service(adapter);
 
-      final torrents = await service.getTorrents();
-      expect(torrents, hasLength(1));
-      expect(torrents.first.hash, 'aaa');
-      expect(torrents.first.parsedState, TorrentState.downloading);
-      expect(adapter.requests.last.path, '/api/v2/torrents/info');
-    });
-
-    test('getTorrents forwards filter and category', () async {
-      final adapter = _StubAdapter()..setJson('/api/v2/torrents/info', []);
-      final service = _service(adapter);
-
-      await service.getTorrents(filter: 'downloading', category: 'linux');
-      final params = adapter.requests.last.queryParameters;
-      expect(params['filter'], 'downloading');
-      expect(params['category'], 'linux');
-    });
-
-    test('getTorrents forwards hashes for single-torrent queries', () async {
-      final adapter = _StubAdapter()..setJson('/api/v2/torrents/info', []);
-      final service = _service(adapter);
-
-      await service.getTorrents(hashes: 'abc');
-      final params = adapter.requests.last.queryParameters;
-      expect(params['hashes'], 'abc');
+      final data = await service.mainData();
+      expect(data.torrents.single.hash, 'aaa');
+      expect(data.torrents.single.parsedState, TorrentState.downloading);
+      expect(data.transfer.dlSpeed, 1024);
+      expect(data.transfer.altSpeedEnabled, isTrue);
+      expect(adapter.requests.last.path, '/api/v2/sync/maindata');
+      expect(adapter.requests.last.queryParameters['rid'], 0);
     });
 
     test('pauseTorrents joins hashes with pipe and POSTs', () async {
@@ -332,24 +322,6 @@ void main() {
       final req = adapter.requests.last;
       expect(req.path, '/api/v2/transfer/toggleSpeedLimitsMode');
       expect(req.method, 'POST');
-    });
-
-    test('getTransferInfo parses payload', () async {
-      final adapter = _StubAdapter()
-        ..setJson('/api/v2/transfer/info', {
-          'dl_info_speed': 1024,
-          'up_info_speed': 0,
-          'dl_info_data': 0,
-          'up_info_data': 0,
-          'dl_rate_limit': 0,
-          'up_rate_limit': 0,
-          'use_alt_speed_limits': false,
-        });
-      final service = _service(adapter);
-
-      final info = await service.getTransferInfo();
-      expect(info.dlSpeed, 1024);
-      expect(info.altSpeedEnabled, isFalse);
     });
 
     test('getTorrentFiles parses array payload', () async {

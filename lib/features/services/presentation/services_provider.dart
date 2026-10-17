@@ -2215,7 +2215,8 @@ Future<List<UnnamedDownload>> _clientList(Ref ref, InstanceRef client) async {
   return switch (client.service) {
     ServiceKey.qbittorrent => [
       for (final torrent
-          in await ref.watch(qbittorrentServiceForProvider(id)).getTorrents())
+          in (await ref.watch(qbittorrentServiceForProvider(id)).mainData())
+              .torrents)
         (id: torrent.hash, name: torrent.name, category: torrent.category),
     ],
     ServiceKey.transmission => [
@@ -2449,9 +2450,10 @@ Future<List<ServiceQueueItem>> _loadQbittorrentQueueItems(
   // other connection is asked through its own long-lived client.
   final torrents = source.isLens
       ? await ref.watch(allTorrentsProvider.future)
-      : await ref
-            .watch(qbittorrentServiceForProvider(source.instanceId))
-            .getTorrents();
+      : (await ref
+                .watch(qbittorrentServiceForProvider(source.instanceId))
+                .mainData())
+            .torrents;
   final now = ref.watch(stallClockProvider)();
   final read = [
     for (final torrent in torrents)

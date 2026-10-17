@@ -1,10 +1,11 @@
 /// What the qBittorrent Overview reads, and the pure functions that shape it.
 ///
-/// Everything on this page is derived from **two** calls the app already makes:
-/// `/api/v2/torrents/info` through [allTorrentsProvider], which the Queue tab
-/// and the KPI rail both already hold, and `/api/v2/transfer/info` through
-/// [transferInfoProvider]. Nothing here fetches on its own, so opening Overview
-/// costs no round trip that the service home was not already paying for.
+/// Everything on this page is derived from **one** answer the app already
+/// holds: the connection's copy of `/api/v2/sync/maindata`, read through
+/// [allTorrentsProvider] (which the Queue tab and the KPI rail both hold) and
+/// [transferInfoProvider] (its `server_state`). Nothing here fetches on its
+/// own, so opening Overview costs no round trip that the service home was not
+/// already paying for.
 ///
 /// Every windowing and folding rule lives in a top-level pure function taking an
 /// explicit `now` where it needs a clock, so the boundaries are unit-testable
@@ -31,6 +32,8 @@
 /// not ask" over an answer that arrived. `/transfer/info`'s session counters
 /// are plain counters: `0` is a fresh daemon, not a missing figure, so they
 /// go through [qbittorrentSessionTotalLabel] and never through `formatSize`.
+/// Free space is the same: `0` is a full disk, which is exactly the figure a
+/// person needs to read.
 library;
 
 import 'package:flutter/material.dart';
@@ -585,12 +588,14 @@ String qbittorrentSessionRatioLabel({
   return (uploaded / downloaded).toStringAsFixed(2);
 }
 
-/// What `/transfer/info` can honestly say about the session.
+/// What the session's figures can honestly say.
 ///
-/// Six facts and no more. The board's Session panel also asks for DHT nodes, the
-/// listen port's reachability and free disk space; none of the three is on any
-/// endpoint this client calls, so they are **absent rather than zeroed**: see
-/// the screen's own doc for which call would be needed.
+/// Six facts, and a seventh when the server says how much room is left where
+/// it saves (`free_space_on_disk`, absent on old versions: then the row is
+/// absent too, never `—`, since nothing failed to answer). The board's Session
+/// panel also asks for DHT nodes and the listen port's reachability; they are
+/// in the same answer but not drawn yet, so they are absent rather than
+/// zeroed.
 ///
 /// The two limits are the *effective* ones: when alternative limits are on, qB
 /// reports the alternative figures in these fields, which is why the alt row
@@ -633,6 +638,12 @@ List<QbittorrentSessionFact> qbittorrentSessionFacts(TransferInfo info) {
       value: info.altSpeedEnabled ? 'on' : 'off',
       icon: Icons.schedule_rounded,
     ),
+    if (info.freeSpace case final bytes?)
+      QbittorrentSessionFact(
+        label: 'Free space',
+        value: qbittorrentSessionTotalLabel(bytes),
+        icon: Icons.storage_rounded,
+      ),
   ]);
 }
 
@@ -688,7 +699,7 @@ final qbittorrentOverviewCategoryCountProvider =
       ).length;
     }, retry: noProviderRetry);
 
-/// The session facts, from `/transfer/info`.
+/// The session facts, from the answer's `server_state`.
 final qbittorrentOverviewSessionProvider =
     FutureProvider.autoDispose<List<QbittorrentSessionFact>>((ref) async {
       final info = await ref.watch(transferInfoProvider.future);

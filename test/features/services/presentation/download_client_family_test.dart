@@ -115,28 +115,32 @@ Future<ServiceQueueItem> _magnetWaiting(String state) async {
   harness.network.on(
     WorldIds.qbittorrent,
     'GET',
-    '/api/v2/torrents/info',
-    (request) => NetworkReply.json([
-      {
-        'hash': hash,
-        'name': 'Sintel.Magnet',
-        'state': state,
-        'progress': 0,
-        'size': 0,
-        'total_size': 0,
-        'dlspeed': 0,
-        'upspeed': 0,
-        'eta': 8640000,
-        'category': '',
-        'tags': '',
-        'added_on': since,
-        'last_activity': since,
-        'num_complete': 0,
-        'num_seeds': 0,
-        'num_leechs': 0,
-        'tracker': '',
+    '/api/v2/sync/maindata',
+    (request) => NetworkReply.json({
+      'rid': 1,
+      'full_update': true,
+      'torrents': {
+        hash: {
+          'name': 'Sintel.Magnet',
+          'state': state,
+          'progress': 0,
+          'size': 0,
+          'total_size': 0,
+          'dlspeed': 0,
+          'upspeed': 0,
+          'eta': 8640000,
+          'category': '',
+          'tags': '',
+          'added_on': since,
+          'last_activity': since,
+          'num_complete': 0,
+          'num_seeds': 0,
+          'num_leechs': 0,
+          'tracker': '',
+        },
       },
-    ]),
+      'server_state': <String, dynamic>{},
+    }),
   );
   final container = harness.container(retry: (_, _) => null);
   final inFlight = await container.read(servicesInFlightProvider.future);

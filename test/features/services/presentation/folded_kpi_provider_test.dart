@@ -10,7 +10,9 @@ import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_service.dart';
+import 'package:cupola/features/qbittorrent/data/qbittorrent_sync.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
+import 'package:cupola/features/qbittorrent/domain/models/transfer_info.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
@@ -73,13 +75,10 @@ class _Torrents extends QbittorrentService {
   final List<Torrent> torrents;
 
   @override
-  Future<List<Torrent>> getTorrents({
-    String? filter,
-    String? category,
-    String? sort,
-    bool? reverse,
-    String? hashes,
-  }) async => torrents;
+  Future<QbittorrentMainData> mainData() async => QbittorrentMainData(
+    torrents: torrents,
+    transfer: TransferInfo.fromJson(const {}),
+  );
 }
 
 ServiceSummary _summary(ServiceKey service, {required bool online}) =>

@@ -1,27 +1,21 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 
 import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
-import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
+import 'package:cupola/features/qbittorrent/data/qbittorrent_sync.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent_file.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent_properties.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent_tracker.dart';
-import 'package:cupola/features/qbittorrent/domain/models/transfer_info.dart';
 import 'package:cupola/features/qbittorrent/domain/models/rss.dart';
-
-List<Torrent> _parseTorrentList(List<dynamic> json) {
-  return json
-      .cast<Map<String, dynamic>>()
-      .map(Torrent.fromJson)
-      .toList(growable: false);
-}
-
-const int _torrentIsolateParseThreshold = 200;
 
 class QbittorrentService {
   final QbittorrentClient _client;
+  final QbittorrentSync _sync;
 
-  QbittorrentService(this._client);
+  /// [sync] is the connection's own copy (`qbittorrentSyncForProvider`); one
+  /// made here starts from nothing, so its first read is the whole state, as
+  /// a test or a one-off check wants.
+  QbittorrentService(this._client, [QbittorrentSync? sync])
+    : _sync = sync ?? QbittorrentSync(_client);
 
   String? get baseUrl => _client.baseUrl.isNotEmpty ? _client.baseUrl : null;
 
@@ -36,34 +30,20 @@ class QbittorrentService {
 
   Future<String> getVersion() => _client.getVersion();
 
-  Future<List<Torrent>> getTorrents({
-    String? filter,
-    String? category,
-    String? sort,
-    bool? reverse,
-    String? hashes,
+  /// Every torrent and the session's figures, from the connection's copy
+  /// after asking what changed ([QbittorrentSync]). What the list, the
+  /// Overview, Home and Activity read.
+  Future<QbittorrentMainData> mainData() => _sync.read();
+
+  /// Every write below goes through here, so a read in flight when it was
+  /// made is not taken as the answer after it ([QbittorrentSync.noteWrite]).
+  Future<void> _write(
+    String path, {
+    Map<String, dynamic>? data,
+    FormData? formData,
   }) async {
-    final params = <String, dynamic>{};
-    if (filter != null) params['filter'] = filter;
-    if (category != null) params['category'] = category;
-    if (sort != null) params['sort'] = sort;
-    if (reverse == true) params['reverse'] = true;
-    if (hashes != null) params['hashes'] = hashes;
-
-    final response = await _client.get(
-      '/api/v2/torrents/info',
-      queryParameters: params.isNotEmpty ? params : null,
-    );
-
-    final List<dynamic> raw = response.data is List
-        ? response.data as List<dynamic>
-        : [];
-    if (raw.length > _torrentIsolateParseThreshold) {
-      return compute(_parseTorrentList, raw);
-    }
-    return raw
-        .map((e) => Torrent.fromJson(e as Map<String, dynamic>))
-        .toList(growable: false);
+    _sync.noteWrite();
+    await _client.post(path, data: data, formData: formData);
   }
 
   Future<List<TorrentFile>> getTorrentFiles(String hash) async {
@@ -105,11 +85,6 @@ class QbittorrentService {
       queryParameters: {'hash': hash},
     );
     return TorrentProperties.fromJson(response.data as Map<String, dynamic>);
-  }
-
-  Future<TransferInfo> getTransferInfo() async {
-    final response = await _client.get('/api/v2/transfer/info');
-    return TransferInfo.fromJson(response.data as Map<String, dynamic>);
   }
 
   /// The configured RSS feed tree, including article state when available.
@@ -157,10 +132,10 @@ class QbittorrentService {
     required Map<String, dynamic> data,
   }) async {
     try {
-      await _client.post(path, data: data);
+      await _write(path, data: data);
     } on DioException catch (e) {
       if (e.response?.statusCode != 404) rethrow;
-      await _client.post(legacyPath, data: data);
+      await _write(legacyPath, data: data);
     }
   }
 
@@ -168,7 +143,7 @@ class QbittorrentService {
     List<String> hashes, {
     bool deleteFiles = false,
   }) async {
-    await _client.post(
+    await _write(
       '/api/v2/torrents/delete',
       data: {'hashes': hashes.join('|'), 'deleteFiles': deleteFiles.toString()},
     );
@@ -183,7 +158,7 @@ class QbittorrentService {
     if (category != null) data['category'] = category;
     if (savePath != null) data['savepath'] = savePath;
 
-    await _client.post('/api/v2/torrents/add', data: data);
+    await _write('/api/v2/torrents/add', data: data);
   }
 
   Future<void> addTorrentFiles(
@@ -198,25 +173,25 @@ class QbittorrentService {
     if (category != null) form.fields.add(MapEntry('category', category));
     if (savePath != null) form.fields.add(MapEntry('savepath', savePath));
 
-    await _client.post('/api/v2/torrents/add', formData: form);
+    await _write('/api/v2/torrents/add', formData: form);
   }
 
   Future<void> setCategory(List<String> hashes, String category) async {
-    await _client.post(
+    await _write(
       '/api/v2/torrents/setCategory',
       data: {'hashes': hashes.join('|'), 'category': category},
     );
   }
 
   Future<void> addTags(List<String> hashes, List<String> tags) async {
-    await _client.post(
+    await _write(
       '/api/v2/torrents/addTags',
       data: {'hashes': hashes.join('|'), 'tags': tags.join(',')},
     );
   }
 
   Future<void> removeTags(List<String> hashes, List<String> tags) async {
-    await _client.post(
+    await _write(
       '/api/v2/torrents/removeTags',
       data: {'hashes': hashes.join('|'), 'tags': tags.join(',')},
     );
@@ -226,7 +201,7 @@ class QbittorrentService {
     List<String> hashes,
     int limitBytesPerSecond,
   ) async {
-    await _client.post(
+    await _write(
       '/api/v2/torrents/setDownloadLimit',
       data: {'hashes': hashes.join('|'), 'limit': limitBytesPerSecond},
     );
@@ -236,21 +211,21 @@ class QbittorrentService {
     List<String> hashes,
     int limitBytesPerSecond,
   ) async {
-    await _client.post(
+    await _write(
       '/api/v2/torrents/setUploadLimit',
       data: {'hashes': hashes.join('|'), 'limit': limitBytesPerSecond},
     );
   }
 
   Future<void> setForceStart(List<String> hashes, bool value) async {
-    await _client.post(
+    await _write(
       '/api/v2/torrents/setForceStart',
       data: {'hashes': hashes.join('|'), 'value': value.toString()},
     );
   }
 
   Future<void> toggleAlternativeSpeedLimits() async {
-    await _client.post('/api/v2/transfer/toggleSpeedLimitsMode');
+    await _write('/api/v2/transfer/toggleSpeedLimitsMode');
   }
 
   Future<void> filePrio({
@@ -258,18 +233,18 @@ class QbittorrentService {
     required List<int> fileIndexes,
     required int priority,
   }) async {
-    await _client.post(
+    await _write(
       '/api/v2/torrents/filePrio',
       data: {'hash': hash, 'id': fileIndexes.join('|'), 'priority': priority},
     );
   }
 
   Future<void> recheck(String hash) async {
-    await _client.post('/api/v2/torrents/recheck', data: {'hashes': hash});
+    await _write('/api/v2/torrents/recheck', data: {'hashes': hash});
   }
 
   Future<void> reannounce(List<String> hashes) async {
-    await _client.post(
+    await _write(
       '/api/v2/torrents/reannounce',
       data: {'hashes': hashes.join('|')},
     );

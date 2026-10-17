@@ -27,7 +27,7 @@ import '../../../test_helpers/settings_scope.dart';
 
 const _interval = Duration(seconds: 3);
 const _loginPath = '/api/v2/auth/login';
-const _listPath = '/api/v2/torrents/info';
+const _listPath = '/api/v2/sync/maindata';
 
 /// A qBittorrent that can be switched off, held mid-request, or made to refuse
 /// the password, and that counts every request by path, because the defects
@@ -41,7 +41,7 @@ class _Qb implements HttpClientAdapter {
   /// The login answers 401, qBittorrent 5.1's wrong-password reply.
   bool rejectLogin = false;
 
-  /// While non-null, `/torrents/info` waits on it: a host that drops packets.
+  /// While non-null, the list's read waits on it: a host that drops packets.
   Completer<void>? hold;
 
   int count(String path) => calls[path] ?? 0;
@@ -68,16 +68,20 @@ class _Qb implements HttpClientAdapter {
       return _reply(rejectLogin ? '' : 'Ok.', rejectLogin ? 401 : 200);
     }
     final body = options.path == _listPath
-        ? jsonEncode([
-            {
-              'hash': 'aaa',
-              'name': 'Ubuntu.ISO',
-              'state': 'downloading',
-              'progress': 0.5,
-              'size': 1024,
-              'eta': 420,
+        ? jsonEncode({
+            'rid': 1,
+            'full_update': true,
+            'torrents': {
+              'aaa': {
+                'name': 'Ubuntu.ISO',
+                'state': 'downloading',
+                'progress': 0.5,
+                'size': 1024,
+                'eta': 420,
+              },
             },
-          ])
+            'server_state': <String, dynamic>{},
+          })
         : jsonEncode(<String, dynamic>{});
     return _reply(body, 200, json: true);
   }

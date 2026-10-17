@@ -37,24 +37,19 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// appears in both: `stalledDL`, `error` and `missingFiles` all fail the active
 /// test that builds the queue rows.
 ///
-/// **The Overview keeps three board regions out of its compact summary**:
-/// RSS is now a dedicated endpoint-backed tab; the disk-free figure, DHT
-/// nodes, listen port and all-time ratio remain absent because this client does
-/// not request trustworthy values for them. An em dash is reserved for a
-/// requested figure whose source did not answer, not for an endpoint we never
-/// asked for.
-///  * **Disk free**: the board's fourth readout, `4.1 TB /downloads`, lives in
-///    `server_state.free_space_on_disk` on `GET /api/v2/sync/maindata`, which
-///    this client never calls. It is left out of the Session list rather than
-///    printed as `—`: an em dash belongs to a figure whose source was asked and
-///    did not answer, and nobody asked this one.
-///  * **DHT nodes, listen port and the all-time global ratio**: same endpoint,
-///    same reasoning. The *session* ratio below is arithmetic on two figures
-///    `/transfer/info` did answer with, and is labelled as the session's.
+/// **The Overview keeps some board regions out of its compact summary**: RSS
+/// is a dedicated endpoint-backed tab; DHT nodes, the listen port and the
+/// all-time ratio are in the answer this page reads (`sync/maindata`'s
+/// `server_state`) but not drawn yet. An em dash is reserved for a requested
+/// figure whose source did not answer, so they are absent rather than `—`.
+///  * **Disk free**: the board's fourth readout is the Session list's last
+///    row, `Free space`, when the server says it (old versions do not, and the
+///    row is then absent).
+///  * The *session* ratio is arithmetic on the session's two totals, and is
+///    labelled as the session's.
 ///
-/// Sections load and fail independently. A qBittorrent answering
-/// `/torrents/info` but not `/transfer/info` still draws three regions, and the
-/// fourth says so in its own slot instead of taking the page down.
+/// Sections load and fail independently, each in its own slot, though today
+/// they all read one answer and so mostly fail together.
 class QbittorrentOverviewScreen extends ConsumerWidget {
   const QbittorrentOverviewScreen({
     super.key,

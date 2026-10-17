@@ -82,9 +82,9 @@ void main() {
       final container = harness.container();
 
       final queue = await container.read(radarrServiceProvider).getQueue();
-      final torrents = await container
-          .read(qbittorrentServiceProvider)
-          .getTorrents();
+      final torrents =
+          (await container.read(qbittorrentServiceProvider).mainData())
+              .torrents;
       final spriteFright = queue.cast<Map<String, dynamic>>().firstWhere(
         (row) => row['title'] == WorldDownloads.spriteFright.release,
       );

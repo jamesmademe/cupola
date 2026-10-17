@@ -125,8 +125,15 @@ void main() {
     final service = QbittorrentService(client);
     expect(await service.authenticate(), isTrue);
     expect(await service.getVersion(), isNotEmpty);
-    expect(await service.getTorrents(), isNotEmpty);
-    expect((await service.getTransferInfo()).dlSpeed, greaterThanOrEqualTo(0));
+    final first = await service.mainData();
+    expect(first.torrents, isNotEmpty);
+    expect(first.transfer.dlSpeed, greaterThanOrEqualTo(0));
+    // The next read asks only for what changed, and still holds every torrent.
+    final next = await service.mainData();
+    expect(
+      next.torrents.map((t) => t.hash).toSet(),
+      first.torrents.map((t) => t.hash).toSet(),
+    );
   });
 
   test('Transmission RPC auth + CSRF handshake', () async {

@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/misc.dart' show ProviderBase;
 
 import 'package:cupola/features/qbittorrent/data/qbittorrent_client_provider.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_service.dart';
+import 'package:cupola/features/qbittorrent/domain/torrent_list_order.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent_file.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent_properties.dart';
@@ -15,6 +16,9 @@ import 'package:cupola/features/qbittorrent/domain/models/torrent_tracker.dart';
 import 'package:cupola/features/qbittorrent/domain/models/transfer_info.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+
+export 'package:cupola/features/qbittorrent/domain/torrent_list_order.dart'
+    show TorrentFilter, TorrentSort;
 
 final qbittorrentServiceProvider = Provider<QbittorrentService>((ref) {
   // Selected rather than watching the whole model: only this service's own
@@ -27,6 +31,7 @@ final qbittorrentServiceProvider = Provider<QbittorrentService>((ref) {
   // keeps the session instead of signing in again.
   return QbittorrentService(
     ref.watch(qbittorrentClientForProvider(transport.instanceId)),
+    ref.watch(qbittorrentSyncForProvider(transport.instanceId)),
   );
 });
 
@@ -54,6 +59,7 @@ final qbittorrentServiceForProvider =
       transport.ensureConfigured(ServiceKey.qbittorrent);
       return QbittorrentService(
         ref.watch(qbittorrentClientForProvider(instanceId)),
+        ref.watch(qbittorrentSyncForProvider(instanceId)),
       );
     });
 
@@ -77,61 +83,6 @@ void clearQbittorrentLoginRefusal(WidgetRef ref) {
   }
 }
 
-enum TorrentFilter { all, downloading, seeding, completed, paused, queued }
-
-enum TorrentSort {
-  name,
-  size,
-  progress,
-  dlSpeed,
-  upSpeed,
-  eta,
-  addedOn,
-  state;
-
-  String get apiValue {
-    switch (this) {
-      case TorrentSort.name:
-        return 'name';
-      case TorrentSort.size:
-        return 'size';
-      case TorrentSort.progress:
-        return 'progress';
-      case TorrentSort.dlSpeed:
-        return 'dlspeed';
-      case TorrentSort.upSpeed:
-        return 'upspeed';
-      case TorrentSort.eta:
-        return 'eta';
-      case TorrentSort.addedOn:
-        return 'added_on';
-      case TorrentSort.state:
-        return 'state';
-    }
-  }
-
-  String get label {
-    switch (this) {
-      case TorrentSort.name:
-        return 'Name';
-      case TorrentSort.size:
-        return 'Size';
-      case TorrentSort.progress:
-        return 'Progress';
-      case TorrentSort.dlSpeed:
-        return '↓ Speed';
-      case TorrentSort.upSpeed:
-        return '↑ Speed';
-      case TorrentSort.eta:
-        return 'ETA';
-      case TorrentSort.addedOn:
-        return 'Added';
-      case TorrentSort.state:
-        return 'State';
-    }
-  }
-}
-
 final torrentFilterProvider = StateProvider<TorrentFilter>(
   (ref) => TorrentFilter.all,
 );
@@ -150,7 +101,13 @@ final torrentTrackerFilterProvider = StateProvider<String?>((ref) => null);
 
 final torrentSearchQueryProvider = StateProvider<String>((ref) => '');
 
-/// The whole torrent list.
+/// The whole torrent list, in the order the person chose.
+///
+/// Read from the connection's copy ([QbittorrentService.mainData]), which asks
+/// `/api/v2/sync/maindata` only for what changed since its last answer, then
+/// sorted here ([sortTorrents]). Invalidating it is a read: the copy asks the
+/// server again, and a write since the last read is never answered from before
+/// it (`QbittorrentSync.noteWrite`).
 ///
 /// **Every `FutureProvider` in this feature carries `retry: noProviderRetry`**,
 /// and this one is why. Riverpod's default re-runs a failed build ten times
@@ -165,20 +122,17 @@ final torrentSearchQueryProvider = StateProvider<String>((ref) => '');
 /// reintroduce the retry the source refused.
 ///
 /// **Where the list is noted as read** (`ReadClock`): here, right after the
-/// answer lands, for the connection this build resolved. The page's rows come
-/// from [torrentsProvider], which reuses this answer whenever the filter is
-/// `all`, so this is the read a retained list is as old as.
+/// answer lands, for the connection this build resolved. Every filtered view
+/// ([torrentsProvider]) derives from this answer, so this is the read a
+/// retained list is as old as.
 final allTorrentsProvider = FutureProvider<List<Torrent>>((ref) async {
   final service = ref.watch(qbittorrentServiceProvider);
   final sort = ref.watch(torrentSortProvider);
   final reverse = ref.watch(torrentSortReverseProvider);
   final noteRead = ref.queueReadNoter(ServiceKey.qbittorrent);
-  final torrents = await service.getTorrents(
-    sort: sort.apiValue,
-    reverse: reverse,
-  );
+  final data = await service.mainData();
   noteRead();
-  return torrents;
+  return sortTorrents(data.torrents, sort, reverse: reverse);
 }, retry: noProviderRetry);
 
 final availableCategoriesProvider = Provider<List<String>>((ref) {
@@ -212,11 +166,11 @@ final availableTrackersProvider = Provider<List<String>>((ref) {
   return trackers.toList()..sort();
 });
 
+/// The list as the tab, the chips and the search narrow it, all on the phone
+/// over [allTorrentsProvider]'s answer: no request of its own, so a new tab or
+/// a letter typed in the search costs nothing on the wire.
 final torrentsProvider = FutureProvider<List<Torrent>>((ref) async {
-  final service = ref.watch(qbittorrentServiceProvider);
   final filter = ref.watch(torrentFilterProvider);
-  final sort = ref.watch(torrentSortProvider);
-  final reverse = ref.watch(torrentSortReverseProvider);
   final categoryFilter = ref.watch(torrentCategoryFilterProvider);
   final tagFilter = ref.watch(torrentTagFilterProvider);
   final trackerFilter = ref.watch(torrentTrackerFilterProvider);
@@ -224,55 +178,11 @@ final torrentsProvider = FutureProvider<List<Torrent>>((ref) async {
       .watch(torrentSearchQueryProvider)
       .trim()
       .toLowerCase();
-  final noteRead = ref.queueReadNoter(ServiceKey.qbittorrent);
 
-  // Paused is deliberately absent: it is folded client-side below, because
-  // neither spelling of it survives every qBittorrent in the wild. `paused` is
-  // what 4.x and 5.0 understand; 5.1 renamed the concept and answers `stopped`.
-  // An unrecognised `filter` is not an error to qB: `/torrents/info` returns
-  // the UNFILTERED list, so whichever word is sent, half the installed base
-  // gets a Paused tab holding every torrent it has. A filter that silently does
-  // nothing is worse than one that fails. [TorrentState.fromString] already
-  // accepts both vocabularies, so the census the model builds is the only thing
-  // that spans them.
-  final apiFilter = switch (filter) {
-    TorrentFilter.downloading => 'downloading',
-    TorrentFilter.seeding => 'seeding',
-    TorrentFilter.completed => 'completed',
-    _ => 'all',
-  };
-
-  // Whenever the server-side filter resolves to "all", reuse
-  // allTorrentsProvider: it requests the very same /torrents/info payload
-  // (no `filter` param, which qB's WebUI v2 defaults to `all`) with the same
-  // sort and direction, and it is already alive on this screen. Fetching
-  // separately here would download and parse the identical body twice on
-  // every 3s poll tick. Sub-filters and the search query are applied
-  // client-side below, so they do not need their own request.
-  //
-  // Noted as read only when this provider made the request itself. An answer
-  // taken from [allTorrentsProvider] was noted there, when it landed: deriving
-  // a new filter from it later is not a read, and must not make an old list
-  // look fresh.
-  List<Torrent> torrents;
-  if (apiFilter == 'all') {
-    torrents = await ref.watch(allTorrentsProvider.future);
-  } else {
-    torrents = await service.getTorrents(
-      filter: apiFilter,
-      sort: sort.apiValue,
-      reverse: reverse,
-    );
-    noteRead();
-  }
-
-  if (filter == TorrentFilter.queued) {
-    torrents = torrents.where((t) => t.parsedState.isQueued).toList();
-  }
-
-  if (filter == TorrentFilter.paused) {
-    torrents = torrents.where((t) => t.parsedState.isPaused).toList();
-  }
+  var torrents = [
+    for (final t in await ref.watch(allTorrentsProvider.future))
+      if (torrentMatches(t, filter)) t,
+  ];
 
   if (categoryFilter != null && categoryFilter.isNotEmpty) {
     torrents = torrents.where((t) => t.category == categoryFilter).toList();
@@ -304,10 +214,14 @@ final torrentsProvider = FutureProvider<List<Torrent>>((ref) async {
 // [torrentDetailPollingProvider], so they fail fast for the reason
 // [allTorrentsProvider] states.
 
+/// The one torrent the detail screen shows, from the connection's copy: a
+/// read of what changed, not a request of its own. Empty when the server no
+/// longer holds it (deleted from elsewhere).
 final qbittorrentTorrentsProvider =
     FutureProvider.family<List<Torrent>, String>((ref, hash) async {
       final service = ref.watch(qbittorrentServiceProvider);
-      return service.getTorrents(hashes: hash);
+      final torrent = (await service.mainData()).torrent(hash);
+      return [?torrent];
     }, retry: noProviderRetry);
 
 final torrentFilesProvider = FutureProvider.family<List<TorrentFile>, String>((
@@ -330,9 +244,12 @@ final torrentPropertiesProvider =
       return service.getTorrentProperties(hash);
     }, retry: noProviderRetry);
 
+/// The session's figures, from the same answer as the list: the poll ticks
+/// both together, and the connection's copy asks once for the two
+/// (`QbittorrentSync`).
 final transferInfoProvider = FutureProvider<TransferInfo>((ref) async {
   final service = ref.watch(qbittorrentServiceProvider);
-  return service.getTransferInfo();
+  return (await service.mainData()).transfer;
 }, retry: noProviderRetry);
 
 final selectedTorrentHashesProvider = StateProvider.autoDispose<Set<String>>(
@@ -389,10 +306,9 @@ void _refreshUnlessInFlight(
 ///
 /// Invalidates only what the detail screen displays, and it is the only poll
 /// running while the detail is open: the list it was pushed from is covered, so
-/// that gate is shut. The saving is the list's whole tick: an unfiltered
-/// `/torrents/info` plus `/transfer/info`, not this screen's own filtered
-/// `/torrents/info`, which is a different request to the same endpoint and is
-/// what this page actually reads.
+/// that gate is shut. The torrent itself comes from the connection's copy, so
+/// its tick is one read of what changed, plus the files, trackers and
+/// properties only this screen shows.
 ///
 /// Popping back gives the list a catch-up tick, so what it shows is a frame
 /// behind the return rather than up to three seconds stale.

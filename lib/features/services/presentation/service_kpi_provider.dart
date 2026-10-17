@@ -41,6 +41,7 @@ import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
+import 'package:cupola/features/qbittorrent/domain/torrent_list_order.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/features/services/domain/download_client_faults.dart';
 import 'package:cupola/features/services/domain/kpi_aggregate.dart';
@@ -967,10 +968,13 @@ Future<List<ServiceKpi>> _qbittorrentKpis(Ref ref) async {
 
 Future<List<ServiceKpi>> _qbittorrentKpisFor(Ref ref, String instanceId) async {
   final now = ref.read(stallClockProvider)();
-  final torrents = await ref
+  final data = await ref
       .watch(qbittorrentServiceForProvider(instanceId))
-      .getTorrents(sort: 'added_on', reverse: true);
-  return _qbittorrentKpisFrom(torrents, now: now);
+      .mainData();
+  return _qbittorrentKpisFrom(
+    sortTorrents(data.torrents, TorrentSort.addedOn, reverse: true),
+    now: now,
+  );
 }
 
 /// qBittorrent's rail. Its last figure counts the stuck torrents, by the one

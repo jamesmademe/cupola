@@ -10,6 +10,11 @@ class TransferInfo {
   final int upRateLimit;
   final bool altSpeedEnabled;
 
+  /// Bytes free where qBittorrent saves, from `sync/maindata`'s
+  /// `server_state`. Null when the server did not say: older versions leave
+  /// the field out, and nothing stands in for it.
+  final int? freeSpace;
+
   const TransferInfo({
     required this.dlSpeed,
     required this.upSpeed,
@@ -18,6 +23,7 @@ class TransferInfo {
     required this.dlRateLimit,
     required this.upRateLimit,
     required this.altSpeedEnabled,
+    this.freeSpace,
   });
 
   factory TransferInfo.fromJson(Map<String, dynamic> json) {
@@ -34,6 +40,10 @@ class TransferInfo {
       // the alternative limits are off while they are on makes them throttle a
       // throttled client: see the bool row in this feature's AGENTS.md.
       altSpeedEnabled: parseBool(json['use_alt_speed_limits']),
+      freeSpace: switch (json['free_space_on_disk']) {
+        final num bytes => bytes.toInt(),
+        _ => null,
+      },
     );
   }
 

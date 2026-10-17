@@ -77,6 +77,24 @@ Map<String, dynamic> _torrentJson({
   'num_seeds': 0,
 };
 
+/// A whole `sync/maindata` answer holding [torrents], keyed by hash as the
+/// server keys them (a hash two rows share gets its row's index, so a test
+/// that only cares about another field keeps every row).
+Map<String, dynamic> _mainData(List<Map<String, dynamic>> torrents) {
+  final byHash = <String, Map<String, dynamic>>{};
+  for (final (i, t) in torrents.indexed) {
+    final hash = t['hash'] as String;
+    byHash[byHash.containsKey(hash) ? '$hash$i' : hash] = {...t}
+      ..remove('hash');
+  }
+  return {
+    'rid': 1,
+    'full_update': true,
+    'torrents': byHash,
+    'server_state': <String, dynamic>{},
+  };
+}
+
 ProviderContainer _container({
   SettingsModel? settings,
   Map<String, dynamic>? responses,
@@ -134,12 +152,12 @@ void main() {
       final container = _container(
         settings: settingsWith(qbittorrentUrl: 'http://localhost'),
         responses: {
-          '/api/v2/torrents/info': [
+          '/api/v2/sync/maindata': _mainData([
             _torrentJson(category: 'linux'),
             _torrentJson(category: 'movies'),
             _torrentJson(category: 'linux'), // duplicate
             _torrentJson(category: ''), // ignored
-          ],
+          ]),
         },
       );
 
@@ -154,10 +172,10 @@ void main() {
       final container = _container(
         settings: settingsWith(qbittorrentUrl: 'http://localhost'),
         responses: {
-          '/api/v2/torrents/info': [
+          '/api/v2/sync/maindata': _mainData([
             _torrentJson(tags: ['a', 'b']),
             _torrentJson(tags: ['b', 'c']),
-          ],
+          ]),
         },
       );
 
@@ -171,12 +189,12 @@ void main() {
       final container = _container(
         settings: settingsWith(qbittorrentUrl: 'http://localhost'),
         responses: {
-          '/api/v2/torrents/info': [
+          '/api/v2/sync/maindata': _mainData([
             _torrentJson(tracker: 'https://tracker.example/announce'),
             _torrentJson(tracker: 'https://other.example/announce'),
             _torrentJson(tracker: 'https://www.tracker.example/announce'),
             _torrentJson(tracker: ''),
-          ],
+          ]),
         },
       );
 
@@ -197,28 +215,25 @@ void main() {
   });
 
   group('torrentsProvider filters', () {
-    test(
-      'queued filter applies client-side even though api filter is all',
-      () async {
-        final container = _container(
-          settings: settingsWith(qbittorrentUrl: 'http://localhost'),
-          responses: {
-            '/api/v2/torrents/info': [
-              _torrentJson(hash: 'a', state: 'downloading'),
-              _torrentJson(hash: 'b', state: 'queuedDL'),
-              _torrentJson(hash: 'c', state: 'queuedUP'),
-            ],
-          },
-        );
+    test('queued filter holds both queued states', () async {
+      final container = _container(
+        settings: settingsWith(qbittorrentUrl: 'http://localhost'),
+        responses: {
+          '/api/v2/sync/maindata': _mainData([
+            _torrentJson(hash: 'a', state: 'downloading'),
+            _torrentJson(hash: 'b', state: 'queuedDL'),
+            _torrentJson(hash: 'c', state: 'queuedUP'),
+          ]),
+        },
+      );
 
-        container.read(torrentFilterProvider.notifier).state =
-            TorrentFilter.queued;
-        final torrents = await container.read(torrentsProvider.future);
+      container.read(torrentFilterProvider.notifier).state =
+          TorrentFilter.queued;
+      final torrents = await container.read(torrentsProvider.future);
 
-        expect(torrents.map((t) => t.hash), containsAll(['b', 'c']));
-        expect(torrents.map((t) => t.hash), isNot(contains('a')));
-      },
-    );
+      expect(torrents.map((t) => t.hash), containsAll(['b', 'c']));
+      expect(torrents.map((t) => t.hash), isNot(contains('a')));
+    });
 
     // `stopped` is the spelling qBittorrent introduced with the 5.1
     // pause-to-stop rename. On 4.x and 5.0 an unrecognised `filter` is not an
@@ -230,12 +245,12 @@ void main() {
       final container = _container(
         settings: settingsWith(qbittorrentUrl: 'http://localhost'),
         responses: {
-          '/api/v2/torrents/info': [
+          '/api/v2/sync/maindata': _mainData([
             _torrentJson(hash: 'a', state: 'downloading'),
             _torrentJson(hash: 'b', state: 'pausedDL'),
             _torrentJson(hash: 'c', state: 'uploading'),
             _torrentJson(hash: 'd', state: 'stoppedUP'),
-          ],
+          ]),
         },
       );
 
@@ -246,42 +261,44 @@ void main() {
       expect(torrents.map((t) => t.hash), ['b', 'd']);
     });
 
-    test('paused filter never sends a version-specific filter value', () async {
+    test('no tab asks the server to filter, in either vocabulary', () async {
       final adapter = _StubAdapter();
       final container = _container(
         settings: settingsWith(qbittorrentUrl: 'http://localhost'),
         adapter: adapter,
         responses: {
-          '/api/v2/torrents/info': [
+          '/api/v2/sync/maindata': _mainData([
             _torrentJson(hash: 'a', state: 'downloading'),
             _torrentJson(hash: 'b', state: 'pausedDL'),
-          ],
+          ]),
         },
       );
 
-      container.read(torrentFilterProvider.notifier).state =
-          TorrentFilter.paused;
-      await container.read(torrentsProvider.future);
+      for (final filter in TorrentFilter.values) {
+        container.read(torrentFilterProvider.notifier).state = filter;
+        await container.read(torrentsProvider.future);
+      }
 
-      final filters = adapter.requests
-          .where((r) => r.path == '/api/v2/torrents/info')
-          .map((r) => r.queryParameters['filter'])
-          .toList();
-      // Neither vocabulary: `stopped` is silently ignored before 5.1 and
-      // `paused` is deprecated from 5.1 on. The census the model already knows
-      // how to read is the only thing that spans both.
-      expect(filters, isNot(contains('stopped')));
-      expect(filters, isNot(contains('paused')));
+      // `stopped` is silently ignored before 5.1 and `paused` is deprecated
+      // from 5.1 on; the tabs filter on the phone, over the census the model
+      // already reads in both vocabularies, so neither is ever sent.
+      expect(adapter.requests.map((r) => r.path).toSet(), {
+        '/api/v2/sync/maindata',
+      });
+      expect(
+        adapter.requests.map((r) => r.queryParameters['filter']),
+        everyElement(isNull),
+      );
     });
 
-    test('category filter is applied on top of API filter', () async {
+    test('category filter is applied on top of the tab', () async {
       final container = _container(
         settings: settingsWith(qbittorrentUrl: 'http://localhost'),
         responses: {
-          '/api/v2/torrents/info': [
+          '/api/v2/sync/maindata': _mainData([
             _torrentJson(hash: 'a', category: 'linux'),
             _torrentJson(hash: 'b', category: 'movies'),
-          ],
+          ]),
         },
       );
 
@@ -297,10 +314,10 @@ void main() {
       final container = _container(
         settings: settingsWith(qbittorrentUrl: 'http://localhost'),
         responses: {
-          '/api/v2/torrents/info': [
+          '/api/v2/sync/maindata': _mainData([
             _torrentJson(hash: 'a', tags: ['4k', 'remux']),
             _torrentJson(hash: 'b', tags: ['1080p']),
-          ],
+          ]),
         },
       );
 
@@ -316,10 +333,10 @@ void main() {
       final container = _container(
         settings: settingsWith(qbittorrentUrl: 'http://localhost'),
         responses: {
-          '/api/v2/torrents/info': [
+          '/api/v2/sync/maindata': _mainData([
             _torrentJson(hash: 'a', tracker: 'https://alpha.example/announce'),
             _torrentJson(hash: 'b', tracker: 'https://beta.example/announce'),
-          ],
+          ]),
         },
       );
 
@@ -333,11 +350,11 @@ void main() {
   });
 
   group('qbittorrentTorrentsProvider', () {
-    test('forwards hashes query to service', () async {
+    test('reads the one torrent from the connection copy', () async {
       final container = _container(
         settings: settingsWith(qbittorrentUrl: 'http://localhost'),
         responses: {
-          '/api/v2/torrents/info': [_torrentJson(hash: 'a')],
+          '/api/v2/sync/maindata': _mainData([_torrentJson(hash: 'a')]),
         },
       );
 

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/misc.dart' show ProviderFamily;
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_refusal_store.dart';
+import 'package:cupola/features/qbittorrent/data/qbittorrent_sync.dart';
 import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_address.dart';
@@ -64,6 +65,31 @@ final ProviderFamily<QbittorrentClient, String> qbittorrentClientForProvider =
       // leaks.
       ref.onDispose(client.close);
       return client;
+    });
+
+/// The copy of each connection's torrents that `/api/v2/sync/maindata` keeps
+/// current ([QbittorrentSync]), beside that connection's one client.
+///
+/// Built from the client, so it goes when the client does: new credentials or
+/// a new address start a new session on the server, and the new copy's first
+/// answer is whole. An empty id is the lens's connection, resolved to that
+/// connection's entry like the client.
+final ProviderFamily<QbittorrentSync, String> qbittorrentSyncForProvider =
+    Provider.family<QbittorrentSync, String>((ref, instanceId) {
+      if (instanceId.isEmpty) {
+        final lens = ref.watch(
+          activeInstanceProvider(
+            ServiceKey.qbittorrent,
+          ).select((instance) => instance?.id ?? ''),
+        );
+        if (lens.isEmpty) {
+          throw const ServiceNotConfigured(ServiceKey.qbittorrent);
+        }
+        return ref.watch(qbittorrentSyncForProvider(lens));
+      }
+      return QbittorrentSync(
+        ref.watch(qbittorrentClientForProvider(instanceId)),
+      );
     });
 
 /// Where every connection's refused qBittorrent sign-in is kept

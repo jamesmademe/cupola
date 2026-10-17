@@ -118,10 +118,10 @@ void main() {
       await _probe(container);
 
       for (final read in [
-        () => container.read(qbittorrentServiceProvider).getTorrents(),
+        () => container.read(qbittorrentServiceProvider).mainData(),
         () => container
             .read(qbittorrentServiceForProvider(WorldIds.qbittorrent))
-            .getTorrents(),
+            .mainData(),
       ]) {
         try {
           await read();
@@ -148,7 +148,7 @@ void main() {
     final container = harness.container();
 
     expect((await _probe(container)).isOnline, isTrue);
-    await container.read(qbittorrentServiceProvider).getTorrents();
+    await container.read(qbittorrentServiceProvider).mainData();
     for (var pull = 0; pull < 3; pull++) {
       container.invalidate(instanceSummaryProvider);
       expect((await _probe(container)).isOnline, isTrue);

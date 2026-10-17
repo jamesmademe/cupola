@@ -14,7 +14,7 @@ import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
-/// Answers `/torrents/info` with one torrent, or fails it as a refused
+/// Answers `sync/maindata` with one torrent, or fails it as a refused
 /// connection, and remembers nothing else.
 class _Adapter implements HttpClientAdapter {
   bool down = false;
@@ -34,9 +34,14 @@ class _Adapter implements HttpClientAdapter {
         reason: 'Connection refused',
       );
     }
-    final body = jsonEncode([
-      {'hash': 'aaa', 'name': 'Ubuntu.ISO', 'state': 'downloading', 'eta': 60},
-    ]);
+    final body = jsonEncode({
+      'rid': 1,
+      'full_update': true,
+      'torrents': {
+        'aaa': {'name': 'Ubuntu.ISO', 'state': 'downloading', 'eta': 60},
+      },
+      'server_state': <String, dynamic>{},
+    });
     return ResponseBody.fromBytes(
       Uint8List.fromList(utf8.encode(body)),
       200,
@@ -146,7 +151,7 @@ void main() {
       expect(clock.at(_key('home')), now);
     });
 
-    test('through the page provider when the filter asks the server', () async {
+    test('through the page provider under any other tab', () async {
       final container = containerOn('home');
       container.read(torrentFilterProvider.notifier).state =
           TorrentFilter.downloading;
@@ -157,9 +162,9 @@ void main() {
     });
 
     test('and narrowing the page list again is not a read', () async {
-      // The list the page draws is derived from the one already in hand when
-      // the filter is `all`: deriving it again later, from an answer that has
-      // since gone stale, must not make it look fresh.
+      // The list the page draws is derived from the one already in hand:
+      // deriving it again later, from an answer that has since gone stale,
+      // must not make it look fresh.
       final container = containerOn('home');
       await container.read(torrentsProvider.future);
       final readAt = now;

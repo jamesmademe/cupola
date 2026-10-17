@@ -138,9 +138,16 @@ class QbittorrentFake extends ServiceFake {
           'rid': 1,
           'full_update': true,
           'torrents': {for (final d in rows) d.id.toLowerCase(): torrent(c, d)},
+          // What a real server_state carries: the session's figures under the
+          // same keys `/transfer/info` uses, and the ones it leaves out.
           'server_state': {
             'dl_info_speed': rows.fold<int>(0, (sum, d) => sum + d.speed),
             'up_info_speed': 1153433,
+            'dl_info_data': 42000000000,
+            'up_info_data': 77000000000,
+            'dl_rate_limit': 0,
+            'up_rate_limit': 0,
+            'dht_nodes': 380,
             'free_space_on_disk': 13634000000000,
             'alltime_dl': 9000000000000,
             'alltime_ul': 16560000000000,

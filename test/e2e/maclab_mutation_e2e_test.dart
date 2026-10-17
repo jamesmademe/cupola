@@ -38,7 +38,8 @@ void main() {
         'magnet:?xt=urn:btih:1234567890abcdef1234567890abcdef12345678'
         '&dn=Cupola%20Mutation%20qBittorrent';
 
-    Future<List<Torrent>> matching() async => (await service.getTorrents())
+    Future<List<Torrent>> matching() async => (await service.mainData())
+        .torrents
         .where((torrent) => torrent.name == marker)
         .toList(growable: false);
 
