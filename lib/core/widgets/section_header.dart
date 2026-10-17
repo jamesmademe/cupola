@@ -56,6 +56,13 @@ class SectionHeader extends StatelessWidget {
   /// silences, so a nested button stays reachable.
   final bool trailingIsInteractive;
 
+  /// Whether the header adds the page's horizontal inset itself.
+  ///
+  /// True for every constructor but [SectionHeader.inset] and
+  /// [SectionHeader.insetAction], which sit in a body the page has already
+  /// inset.
+  final bool _carriesInset;
+
   const SectionHeader({
     super.key,
     required this.title,
@@ -65,7 +72,8 @@ class SectionHeader extends StatelessWidget {
     this.subtitle,
     this.semanticLabel,
     this.semanticHint,
-  }) : trailingIsInteractive = false;
+  }) : trailingIsInteractive = false,
+       _carriesInset = true;
 
   /// A header whose [trailing] is its own control, a "New" button, say.
   ///
@@ -82,9 +90,45 @@ class SectionHeader extends StatelessWidget {
        showChevron = false,
        semanticHint = null,
        trailingIsInteractive = true,
+       _carriesInset = true,
        assert(
          trailing != null,
          'SectionHeader.action needs a trailing control',
+       );
+
+  /// The default header for a body whose own padding already carries the page
+  /// inset (a `ListView(padding: …horizontal: AppSpacing.lg…)`): it adds none,
+  /// so its title lines up with the rows under it instead of sitting at twice
+  /// the inset. Never wrap a [SectionHeader] in horizontal padding instead;
+  /// `test/core/widgets/section_header_inset_guard_test.dart` holds that.
+  const SectionHeader.inset({
+    super.key,
+    required this.title,
+    this.onTap,
+    this.showChevron = true,
+    this.trailing,
+    this.subtitle,
+    this.semanticLabel,
+    this.semanticHint,
+  }) : trailingIsInteractive = false,
+       _carriesInset = false;
+
+  /// [SectionHeader.action] for a body that is already inset: see
+  /// [SectionHeader.inset].
+  const SectionHeader.insetAction({
+    super.key,
+    required this.title,
+    required this.trailing,
+    this.subtitle,
+    this.semanticLabel,
+  }) : onTap = null,
+       showChevron = false,
+       semanticHint = null,
+       trailingIsInteractive = true,
+       _carriesInset = false,
+       assert(
+         trailing != null,
+         'SectionHeader.insetAction needs a trailing control',
        );
 
   @override
@@ -183,7 +227,9 @@ class SectionHeader extends StatelessWidget {
     );
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      padding: _carriesInset
+          ? const EdgeInsets.symmetric(horizontal: AppSpacing.lg)
+          : EdgeInsets.zero,
       child: Semantics(
         container: true,
         // Guarantees this node's label stays exactly `spokenLabel`, and that an

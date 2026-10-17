@@ -39,6 +39,27 @@ void main() {
         width: 360,
       ),
       CatalogScene(
+        'SectionHeader.inset · in a body the page already insets: the title '
+        'lines up with the rows, where the default would sit at twice the '
+        'inset',
+        (_) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SectionHeader.inset(
+                title: 'Interfaces',
+                showChevron: false,
+              ),
+              const Card(
+                child: ListTile(title: Text('enp3s0'), subtitle: Text('Up')),
+              ),
+            ],
+          ),
+        ),
+        width: 360,
+      ),
+      CatalogScene(
         'SectionHeader · long title at 1.6x text scale, clamped, wraps '
         'between words instead of breaking mid-word; the chevron stays on the '
         'title line, since only an explicit trailing stacks',
