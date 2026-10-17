@@ -56,6 +56,8 @@ void main() {
             _row('Avengers: Endgame (2019)', const MachineName.file(_file)),
             const SizedBox(height: AppSpacing.sm),
             _row('Spring (2019)', const MachineName.file(_shortFile)),
+            const SizedBox(height: AppSpacing.sm),
+            _row('Which episode?', const MachineName.fileTitle(_file)),
           ],
         ),
         width: 320,

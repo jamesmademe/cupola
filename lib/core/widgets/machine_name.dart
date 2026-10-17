@@ -25,7 +25,7 @@ enum _MachineNameKind {
 
 /// Where a [MachineName] sits: under a row's title, beside the subject of a
 /// detail card, or as that subject.
-enum _MachineNameShape { row, inFull, lead }
+enum _MachineNameShape { row, title, inFull, lead }
 
 /// The exact string of an object on disk or in a download, drawn as it came.
 ///
@@ -35,7 +35,7 @@ enum _MachineNameShape { row, inFull, lead }
 /// year cut off. A cleaned-up name looks like a title and is wrong with
 /// confidence.
 ///
-/// Six variants, as named constructors:
+/// Seven variants, as named constructors:
 ///
 /// * [MachineName.file] and [MachineName.release] sit under a row's title. One
 ///   line, with the ellipsis **in the middle**, because the front says what the
@@ -43,6 +43,9 @@ enum _MachineNameShape { row, inFull, lead }
 ///   ellipsis at the end deletes the half that answers "is this the right
 ///   file?". The extension is always kept whole. On a desktop the full name
 ///   shows on hover.
+/// * [MachineName.fileTitle] is the same row, in the ink, for a row whose
+///   title *is* the file: a file the service could not match, which has no
+///   other name to lead with.
 /// * [MachineName.fileLead] and [MachineName.releaseLead] are the subject of
 ///   a detail card, in the ink, as a card's title is: the File card of a movie,
 ///   whose page title already says *what* and whose card says *which copy*.
@@ -50,8 +53,8 @@ enum _MachineNameShape { row, inFull, lead }
 /// * [MachineName.fileInFull] and [MachineName.releaseInFull] are the same in
 ///   full form beside that subject, secondary: what the file was released as.
 ///
-/// A row's name and a secondary name are in the tertiary ink; only a lead
-/// takes the ink.
+/// A row's name and a secondary name are in the tertiary ink; only a lead and
+/// a file title take the ink.
 ///
 /// Copying is the same gesture everywhere: a long press on a phone, the
 /// context menu on a desktop, the copy button in full, and a custom
@@ -63,7 +66,12 @@ enum _MachineNameShape { row, inFull, lead }
 /// aloud it is unlistenable and it repeats the title, so the row variants
 /// exclude their text and contribute only the copy action, which merges into
 /// the row's node. A host must therefore not wrap this widget in
-/// `ExcludeSemantics`, or the action goes with it. In full, the name is its own
+/// `ExcludeSemantics`, or the action goes with it. A row that has to silence
+/// its whole subtree (a card that speaks one composed sentence) passes
+/// [fileCopyActions] or [releaseCopyActions] to its own node instead
+/// (`AppCard.customSemanticsActions`, or the `customSemanticsActions` of a
+/// bare `Semantics`), and the action lands on the node the row speaks from.
+/// In full, the name is its own
 /// node, read whole after its label (the [caption], or *File name* / *Release
 /// name*), and the copy button is a sibling node.
 class MachineName extends StatefulWidget {
@@ -72,6 +80,13 @@ class MachineName extends StatefulWidget {
     : caption = null,
       _kind = _MachineNameKind.file,
       _shape = _MachineNameShape.row;
+
+  /// A file name that is the title of its row, in the ink: one line, the
+  /// ellipsis in the middle.
+  const MachineName.fileTitle(this.name, {super.key})
+    : caption = null,
+      _kind = _MachineNameKind.file,
+      _shape = _MachineNameShape.title;
 
   /// A release name (a torrent, an NZB, a grabbed release) under a row's
   /// title: one line, the ellipsis in the middle.
@@ -107,6 +122,21 @@ class MachineName extends StatefulWidget {
     : _kind = _MachineNameKind.release,
       _shape = _MachineNameShape.inFull;
 
+  /// The copy action of a file name, for a host that silences its subtree and
+  /// so cannot take it from the widget: *Copy file name*, copying [name]
+  /// exactly and confirming with the toast *Copied*.
+  static Map<CustomSemanticsAction, VoidCallback> fileCopyActions(
+    BuildContext context,
+    String name,
+  ) => _copyActions(context, name, _MachineNameKind.file);
+
+  /// The copy action of a release name: *Copy release name*. See
+  /// [fileCopyActions].
+  static Map<CustomSemanticsAction, VoidCallback> releaseCopyActions(
+    BuildContext context,
+    String name,
+  ) => _copyActions(context, name, _MachineNameKind.release);
+
   /// The string, exactly as the service returned it.
   final String name;
 
@@ -122,6 +152,18 @@ class MachineName extends StatefulWidget {
   @override
   State<MachineName> createState() => _MachineNameState();
 }
+
+Map<CustomSemanticsAction, VoidCallback> _copyActions(
+  BuildContext context,
+  String name,
+  _MachineNameKind kind,
+) => {
+  CustomSemanticsAction(label: kind.copyLabel): () async {
+    await Clipboard.setData(ClipboardData(text: name));
+    if (!context.mounted) return;
+    SnackBarHelper.info(context, 'Copied');
+  },
+};
 
 class _MachineNameState extends State<MachineName> {
   /// The elided form per available width, for the style and scale it was
@@ -164,7 +206,9 @@ class _MachineNameState extends State<MachineName> {
   /// The ink for a lead, the tertiary ink for everything else: a name under
   /// a row's title, and a name beside a card's subject.
   TextStyle _nameStyle(BuildContext context) => AppType.mono.copyWith(
-    color: widget._shape == _MachineNameShape.lead
+    color:
+        widget._shape == _MachineNameShape.lead ||
+            widget._shape == _MachineNameShape.title
         ? Theme.of(context).colorScheme.onSurface
         : CupolaThemeColors.of(context).dimText,
   );
@@ -172,7 +216,8 @@ class _MachineNameState extends State<MachineName> {
   @override
   Widget build(BuildContext context) {
     final style = _nameStyle(context);
-    return widget._shape == _MachineNameShape.row
+    return widget._shape == _MachineNameShape.row ||
+            widget._shape == _MachineNameShape.title
         ? _buildRow(context, style)
         : _buildInFull(context, style);
   }

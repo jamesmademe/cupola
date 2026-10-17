@@ -24,7 +24,7 @@ Ignored when the card has no `onTap`.
 
 ## The consumer provides
 
-The child, and for a tappable card a `semanticLabel` (the card speaks one sentence; `AppCard`/`SettingsCard` are the reference for composing it), plus optional `semanticValue` and `semanticHint`. `excludeChildSemantics` hides the child's own nodes behind that label; leave it off when `child` holds a control of its own (a popup menu, a delete button) and wrap only the parts the label already speaks in `ExcludeSemantics` at the call site.
+The child, and for a tappable card a `semanticLabel` (the card speaks one sentence; `AppCard`/`SettingsCard` are the reference for composing it), plus optional `semanticValue` and `semanticHint`. `excludeChildSemantics` hides the child's own nodes behind that label; leave it off when `child` holds a control of its own (a popup menu, a delete button) and wrap only the parts the label already speaks in `ExcludeSemantics` at the call site. A card that silences its subtree still offers a descendant's custom actions through `customSemanticsActions`, published on the card's own node beside the tap (the copy action of a `MachineName` in the row's body: `MachineName.fileCopyActions`).
 
 ## States in the catalog
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/theme.dart';
@@ -131,5 +132,47 @@ void main() {
       expect(find.byType(PressableScale), findsNothing);
       expect(find.byType(InkWell), findsNothing);
     });
+  });
+
+  group('customSemanticsActions', () {
+    const action = CustomSemanticsAction(label: 'Copy file name');
+
+    for (final (name, feedback, onTap) in [
+      ('a tappable ink card', AppCardPressFeedback.ink, () {}),
+      ('a tappable scale card', AppCardPressFeedback.scale, () {}),
+      ('a card that does nothing', AppCardPressFeedback.ink, null),
+    ]) {
+      testWidgets('$name that silences its subtree still offers them', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.darkTheme(),
+            home: Scaffold(
+              body: AppCard.filled(
+                onTap: onTap,
+                pressFeedback: feedback,
+                semanticLabel: 'Row',
+                semanticValue: 'one sentence',
+                customSemanticsActions: {action: () {}},
+                excludeChildSemantics: true,
+                child: const Text('hidden'),
+              ),
+            ),
+          ),
+        );
+
+        final node = tester.getSemantics(find.byType(AppCard));
+        expect(
+          node.getSemanticsData().customSemanticsActionIds,
+          contains(CustomSemanticsAction.getIdentifier(action)),
+        );
+        expect(node.label, 'Row');
+        expect(node.value, 'one sentence');
+        expect(find.bySemanticsLabel('hidden'), findsNothing);
+        handle.dispose();
+      });
+    }
   });
 }

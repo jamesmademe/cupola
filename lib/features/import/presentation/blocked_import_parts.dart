@@ -19,8 +19,6 @@ import 'package:cupola/features/import/domain/manual_import_display.dart';
 import 'package:cupola/features/import/domain/manual_import_models.dart';
 import 'package:cupola/features/import/presentation/manual_import_fix_sheet.dart';
 import 'package:cupola/features/import/presentation/manual_import_provider.dart';
-import 'package:cupola/features/import/presentation/manual_import_review_rows.dart'
-    show FilenameText;
 import 'package:cupola/features/media/domain/quality_words.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -345,6 +343,10 @@ class _ClearRow extends StatelessWidget {
       container: true,
       checked: selected,
       label: '$label, ${file.fileName}',
+      customSemanticsActions: MachineName.fileCopyActions(
+        context,
+        file.fileName,
+      ),
       onTap: onToggle,
       excludeSemantics: true,
       child: InkWell(
@@ -369,12 +371,7 @@ class _ClearRow extends StatelessWidget {
                           label,
                           style: AppType.row.copyWith(color: room.ink),
                         ),
-                        FilenameText(
-                          filename: fileStem(file),
-                          style: AppType.mono.copyWith(
-                            color: room.inkSecondary,
-                          ),
-                        ),
+                        MachineName.file(file.fileName),
                       ],
                     ),
                   ),
@@ -616,6 +613,10 @@ class _BlockedImportNeedYouRowState
       button: true,
       expanded: widget.open,
       label: '${item.fileName}, $status',
+      customSemanticsActions: MachineName.fileCopyActions(
+        context,
+        item.fileName,
+      ),
       onTap: widget.onOpen,
       excludeSemantics: true,
       child: InkWell(
@@ -649,10 +650,7 @@ class _BlockedImportNeedYouRowState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      FilenameText(
-                        filename: fileStem(item),
-                        style: AppType.mono.copyWith(color: room.ink),
-                      ),
+                      MachineName.fileTitle(item.fileName),
                       Text(
                         status,
                         maxLines: 2,

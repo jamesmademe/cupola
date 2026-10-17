@@ -20,114 +20,6 @@ const _rowMargin = EdgeInsets.fromLTRB(
   AppSpacing.sm,
 );
 
-/// A filename that keeps both ends legible.
-///
-/// A release filename carries its identity at the front and its evidence at the
-/// back: `Boruto.S01E12.1080p.WEB-DL.x264-GROUP.mkv`. A trailing ellipsis
-/// deletes exactly the half that answers "is this the right file?", so the
-/// elision is moved to the middle and both ends survive.
-///
-/// The split point is measured rather than guessed. A fixed character budget
-/// would be wrong at every reading size but one, and pinning the tail in a
-/// `Row` overflows the moment the tail alone outgrows the row, which is how
-/// the first version painted overflow stripes at accessibility text sizes.
-class FilenameText extends StatelessWidget {
-  final String filename;
-  final TextStyle? style;
-
-  /// Characters of the tail worth protecting: the release group and extension.
-  ///
-  /// Kept short on purpose. Quality, language and size already have a line of
-  /// their own on these rows, so the filename's remaining job is to confirm the
-  /// title and episode code, which live at the front, and the tail only needs
-  /// to prove which file this is.
-  static const _tailLength = 10;
-
-  /// Separators that would otherwise collide with the ellipsis and read as a
-  /// run of dots: `Next.…264` looked like `Next.....264`.
-  static final _trailingSeparators = RegExp(r'[._\-\s]+$');
-
-  const FilenameText({super.key, required this.filename, this.style});
-
-  @override
-  Widget build(BuildContext context) {
-    final resolvedStyle = style ?? DefaultTextStyle.of(context).style;
-    final textScaler = MediaQuery.textScalerOf(context);
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final text = _fit(
-          available: constraints.maxWidth,
-          style: resolvedStyle,
-          textScaler: textScaler,
-        );
-        return Text(
-          text,
-          maxLines: 1,
-          softWrap: false,
-          // A last-resort guard: if even the shortest candidate cannot fit, the
-          // framework elides instead of overflowing.
-          overflow: TextOverflow.ellipsis,
-          style: style,
-          semanticsLabel: filename,
-        );
-      },
-    );
-  }
-
-  /// The longest middle-elided form of [filename] that fits [available].
-  String _fit({
-    required double available,
-    required TextStyle style,
-    required TextScaler textScaler,
-  }) {
-    if (!available.isFinite) return filename;
-
-    double widthOf(String value) {
-      final painter = TextPainter(
-        text: TextSpan(text: value, style: style),
-        textDirection: TextDirection.ltr,
-        textScaler: textScaler,
-        maxLines: 1,
-      )..layout();
-      final width = painter.width;
-      painter.dispose();
-      return width;
-    }
-
-    if (widthOf(filename) <= available) return filename;
-    if (filename.length <= _tailLength + 4) return filename;
-
-    final tail = filename.substring(filename.length - _tailLength);
-    final head = filename.substring(0, filename.length - _tailLength);
-
-    String candidate(int headLength) {
-      final trimmed = head
-          .substring(0, headLength)
-          .replaceFirst(_trailingSeparators, '');
-      return '$trimmed…$tail';
-    }
-
-    // Binary search the longest head that still leaves room for the tail.
-    var low = 0;
-    var high = head.length;
-    var best = 0;
-    while (low <= high) {
-      final mid = (low + high) ~/ 2;
-      if (widthOf(candidate(mid)) <= available) {
-        best = mid;
-        low = mid + 1;
-      } else {
-        high = mid - 1;
-      }
-    }
-
-    // No room for a head at all: the tail alone is the most useful thing left.
-    if (best == 0) return '…$tail';
-    return candidate(best);
-  }
-}
-
 /// A short positional code: `S2 E1`, a year, a track number.
 class IdentityCodeChip extends StatelessWidget {
   final String code;
@@ -476,6 +368,10 @@ class MatchedFileRow extends StatelessWidget {
             imported ? 'ticked to be imported again' : 'included in import',
         ].join(', '),
         semanticHint: 'opens quality, language and match options',
+        customSemanticsActions: MachineName.fileCopyActions(
+          context,
+          item.fileName,
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -530,10 +426,7 @@ class MatchedFileRow extends StatelessWidget {
                     // Line 2, unconditionally: the file on disk.
                     Padding(
                       padding: const EdgeInsets.only(top: 2),
-                      child: FilenameText(
-                        filename: item.fileName,
-                        style: dimStyle,
-                      ),
+                      child: MachineName.file(item.fileName),
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -676,6 +569,10 @@ class AttentionFileRow extends StatelessWidget {
           if (picked) 'ticked for shared assignment',
         ].join(', '),
         semanticHint: 'opens match assignment',
+        customSemanticsActions: MachineName.fileCopyActions(
+          context,
+          item.fileName,
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -691,12 +588,7 @@ class AttentionFileRow extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    FilenameText(
-                      filename: item.fileName,
-                      style: theme.textTheme.titleSmall!.weight(
-                        FontWeight.w600,
-                      ),
-                    ),
+                    MachineName.fileTitle(item.fileName),
                     const SizedBox(height: 2),
                     Text(
                       item.firstRejectionReason,
@@ -759,6 +651,10 @@ class OtherFileRow extends StatelessWidget {
         backgroundColor: colorScheme.surfaceContainerLow,
         semanticLabel: item.fileName,
         semanticValue: manualImportUnsupportedReason(service, item),
+        customSemanticsActions: MachineName.fileCopyActions(
+          context,
+          item.fileName,
+        ),
         excludeChildSemantics: true,
         child: Row(
           children: [
@@ -766,12 +662,7 @@ class OtherFileRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  FilenameText(
-                    filename: item.fileName,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
+                  MachineName.file(item.fileName),
                   Text(
                     '${item.extension}\u00A0· ${formatImportBytes(item.size)}',
                     style: theme.textTheme.labelSmall?.copyWith(
@@ -835,6 +726,10 @@ class InFlightFileRow extends StatelessWidget {
           if (identity.code != null) identity.code!,
         ].join(', '),
         semanticValue: '${item.fileName}, ${info.semanticLabel}',
+        customSemanticsActions: MachineName.fileCopyActions(
+          context,
+          item.fileName,
+        ),
         excludeChildSemantics: true,
         child: Row(
           children: [
@@ -864,12 +759,7 @@ class InFlightFileRow extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleSmall!.weight(FontWeight.w600),
                   ),
-                  FilenameText(
-                    filename: item.fileName,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
+                  MachineName.file(item.fileName),
                 ],
               ),
             ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 
 import 'package:cupola/core/app_animation.dart';
@@ -42,6 +43,11 @@ class PressableScale extends StatefulWidget {
   /// is the sort of gap only a screen reader notices.
   final String? semanticHint;
 
+  /// Custom screen-reader actions published on this control's node, for a
+  /// child that is silenced by [excludeChildSemantics] and so cannot offer
+  /// its own. [AppCard] hands its own down.
+  final Map<CustomSemanticsAction, VoidCallback>? customSemanticsActions;
+
   /// Whether to hide the child's own semantics behind [semanticLabel].
   final bool excludeChildSemantics;
 
@@ -59,6 +65,7 @@ class PressableScale extends StatefulWidget {
     this.semanticLabel,
     this.semanticValue,
     this.semanticHint,
+    this.customSemanticsActions,
     this.excludeChildSemantics = false,
     this.semanticSelected,
   });
@@ -110,7 +117,8 @@ class _PressableScaleState extends State<PressableScale> {
     // missing label alone would drop it.
     if (!enabled &&
         widget.semanticLabel == null &&
-        widget.semanticHint == null) {
+        widget.semanticHint == null &&
+        widget.customSemanticsActions == null) {
       return detector;
     }
 
@@ -129,6 +137,7 @@ class _PressableScaleState extends State<PressableScale> {
       // qBittorrent" is exactly that sentence. A sighted user reads the dimming
       // for free; dropping the hint charged a screen-reader user for it.
       hint: widget.semanticHint,
+      customSemanticsActions: widget.customSemanticsActions,
       excludeSemantics: widget.excludeChildSemantics,
       onTap: enabled ? _handleTap : null,
       onLongPress: widget.onLongPress,

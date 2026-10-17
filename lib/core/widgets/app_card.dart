@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:cupola/core/app_elevation.dart';
 import 'package:cupola/core/app_gradients.dart';
 import 'package:cupola/core/app_radius.dart';
@@ -127,6 +128,17 @@ class AppCard extends StatelessWidget {
   /// What tapping the card does, e.g. 'opens the queue item'.
   final String? semanticHint;
 
+  /// Custom screen-reader actions published on the card's own node.
+  ///
+  /// For a card that silences its subtree (an [ExcludeSemantics] around the
+  /// body, or [excludeChildSemantics]) and so discards every action a
+  /// descendant would have contributed: the copy action of a `MachineName`
+  /// under the row's title is the case. Pass what the descendant would have
+  /// offered (`MachineName.fileCopyActions`) and it lands on the one node the
+  /// row speaks from, beside the tap, without changing what the row says.
+  /// Ignored on a card with neither a [semanticLabel] nor actions to publish.
+  final Map<CustomSemanticsAction, VoidCallback>? customSemanticsActions;
+
   /// Whether to hide [child]'s own semantics behind [semanticLabel].
   final bool excludeChildSemantics;
 
@@ -146,6 +158,7 @@ class AppCard extends StatelessWidget {
     this.semanticLabel,
     this.semanticValue,
     this.semanticHint,
+    this.customSemanticsActions,
     this.excludeChildSemantics = false,
   });
 
@@ -165,6 +178,7 @@ class AppCard extends StatelessWidget {
     this.semanticLabel,
     this.semanticValue,
     this.semanticHint,
+    this.customSemanticsActions,
     this.excludeChildSemantics = false,
   }) : variant = AppCardVariant.filled;
 
@@ -184,6 +198,7 @@ class AppCard extends StatelessWidget {
     this.semanticLabel,
     this.semanticValue,
     this.semanticHint,
+    this.customSemanticsActions,
     this.excludeChildSemantics = false,
   }) : variant = AppCardVariant.outlined;
 
@@ -203,6 +218,7 @@ class AppCard extends StatelessWidget {
     this.semanticLabel,
     this.semanticValue,
     this.semanticHint,
+    this.customSemanticsActions,
     this.excludeChildSemantics = false,
   }) : variant = AppCardVariant.surfaceOutlined;
 
@@ -222,6 +238,7 @@ class AppCard extends StatelessWidget {
     this.semanticLabel,
     this.semanticValue,
     this.semanticHint,
+    this.customSemanticsActions,
     this.excludeChildSemantics = false,
   }) : variant = AppCardVariant.elevated;
 
@@ -344,6 +361,7 @@ class AppCard extends StatelessWidget {
         semanticLabel: semanticLabel,
         semanticValue: semanticValue,
         semanticHint: semanticHint,
+        customSemanticsActions: customSemanticsActions,
         excludeChildSemantics: excludeChildSemantics,
         child: body,
       );
@@ -375,7 +393,7 @@ class AppCard extends StatelessWidget {
   /// the [Material]/[InkWell] would leave `tester.getSemantics`, and the
   /// platform, resolving some other node, and the failure is silent.
   Widget _spoken(Widget card) {
-    if (semanticLabel == null) return card;
+    if (semanticLabel == null && customSemanticsActions == null) return card;
 
     return Semantics(
       container: true,
@@ -386,6 +404,7 @@ class AppCard extends StatelessWidget {
       label: semanticLabel,
       value: semanticValue,
       hint: onTap == null ? null : semanticHint,
+      customSemanticsActions: customSemanticsActions,
       excludeSemantics: excludeChildSemantics,
       // Forwarded because `excludeFromSemantics` above drops the InkWell's tap
       // action along with its labels; without this, double-tap stops working.

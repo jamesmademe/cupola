@@ -15,7 +15,6 @@ import 'package:cupola/features/import/domain/manual_import_display.dart';
 import 'package:cupola/features/import/domain/manual_import_models.dart';
 import 'package:cupola/features/import/domain/manual_import_status.dart';
 import 'package:cupola/features/import/presentation/manual_import_provider.dart';
-import 'package:cupola/features/import/presentation/manual_import_review_rows.dart';
 import 'package:cupola/features/import/presentation/manual_import_widgets.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -366,12 +365,7 @@ class _SubmittedFileRow extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleSmall!.weight(FontWeight.w600),
                   ),
-                  FilenameText(
-                    filename: item.fileName,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
+                  MachineName.file(item.fileName),
                   Text(
                     '${item.qualityLabel}\u00A0· ${formatImportBytes(item.size)}',
                     maxLines: 1,

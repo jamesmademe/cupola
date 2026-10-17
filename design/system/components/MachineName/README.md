@@ -6,7 +6,7 @@ Rendered from `lib/core/widgets/machine_name.dart` by `test/design_catalog/machi
 
 ## Where it goes
 
-Only in a row about a **copy**, under its title: a download (In flight, the Activity queues, a client's page), an acquisition (history, the Recently added rows), a refused release (the blocklist), a file to import, the file a session is playing. A row about a **title** never carries one: library grids, Discover, the calendar, Seerr requests, Wanted, the Home's Arrived cards. The requester never sees one. On a detail page the File section shows the file in full. **Today** only the File section of a movie's detail page uses it; the other surfaces take it up as they are redrawn.
+Only in a row about a **copy**, under its title: a download (In flight, the Activity queues, a client's page), an acquisition (history, the Recently added rows), a refused release (the blocklist), a file to import, the file a session is playing. A row about a **title** never carries one: library grids, Discover, the calendar, Seerr requests, Wanted, the Home's Arrived cards. The requester never sees one. On a detail page the File section shows the file in full. **Today** the File section of a movie's detail page, the copy panel and the file rows of manual import (review, in flight, blocked, submitted) use it; the other surfaces take it up as they are redrawn.
 
 ## Anatomy
 
@@ -17,6 +17,7 @@ Only in a row about a **copy**, under its title: a download (In flight, the Acti
 ## Variants
 
 - `MachineName.file(name)` and `MachineName.release(name)`: the row line.
+- `MachineName.fileTitle(name)`: the row line in the ink, for a row whose title *is* the file (a file the service could not match, and so has no other name to lead with).
 - `MachineName.fileLead(name)` and `MachineName.releaseLead(name)`: in full, as the subject of its card, in the ink. The File card's file name.
 - `MachineName.fileInFull(name, {caption})` and `MachineName.releaseInFull(name, {caption})`: in full, beside that subject, in the tertiary ink. The File card's *Released as* line.
 
@@ -38,14 +39,14 @@ The name, exactly as the service returned it, and in full the `caption` when the
 
 ## Semantics
 
-- **In a row the name is not part of the row's sentence.** Read aloud it is unlistenable and it repeats the title. The text is excluded and the component contributes one custom action, *Copy file name* or *Copy release name*, which merges into the row's node: the row still speaks one sentence and offers the copy. A host must therefore not wrap it in `ExcludeSemantics`, or the action goes too.
+- **In a row the name is not part of the row's sentence.** Read aloud it is unlistenable and it repeats the title. The text is excluded and the component contributes one custom action, *Copy file name* or *Copy release name*, which merges into the row's node: the row still speaks one sentence and offers the copy. A host must therefore not wrap it in `ExcludeSemantics`, or the action goes too. A card that has to silence its whole subtree to speak one composed sentence (the manual import rows) passes `MachineName.fileCopyActions(context, name)` (or `releaseCopyActions`) to its own node instead (`AppCard.customSemanticsActions`, or the `customSemanticsActions` of a bare `Semantics`): the action lands on the node the row speaks from and the sentence is unchanged.
 - **In full (lead or secondary) the name is read whole**, as its own node: the label is the caption (*Released as*) or *File name* / *Release name*, the value is the name, and the node carries the same custom action. The copy button is a sibling node, named by its tooltip.
 
 ## States in the catalog
 
 Each sheet is drawn in the dark and the light room.
 
-- `.release` and `.file` under a title, on a 320pt phone and a 400pt desktop row.
+- `.release` and `.file` under a title, and `.fileTitle` as a row's title, on a 320pt phone and a 400pt desktop row.
 - `.fileLead` with `.releaseInFull`, on a 358pt phone and a 560pt desktop.
 - Text at 200%: the four forms on a 358pt phone.
 
