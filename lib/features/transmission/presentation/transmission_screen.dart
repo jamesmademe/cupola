@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -326,13 +327,17 @@ class _TransmissionActionsBar extends ConsumerWidget {
   }
 }
 
-/// Prompts for a magnet link or `.torrent` URL and hands it to the daemon.
+/// Prompts for a magnet link, a `.torrent` URL or a `.torrent` file on this
+/// device, and hands it to the daemon.
 Future<void> _showAddTorrentDialog(BuildContext context, WidgetRef ref) async {
-  final value = (await showDialog<String>(
+  final picked = await showDialog<Object>(
     context: context,
     builder: (context) => const _AddTorrentDialog(),
-  ))?.trim();
-  if (value == null || value.isEmpty || !context.mounted) return;
+  );
+  if (!context.mounted) return;
+  final file = picked is Uint8List ? picked : null;
+  final link = picked is String ? picked.trim() : '';
+  if (file == null && link.isEmpty) return;
 
   // Not [runTransmissionAction]: its yes/no cannot say "already there" or
   // "may have been added", and this flow used to print "Torrent added" after
@@ -340,12 +345,14 @@ Future<void> _showAddTorrentDialog(BuildContext context, WidgetRef ref) async {
   await runTransmissionAdd(
     context,
     ref,
-    value,
+    link,
+    file: file,
     invalidate: _invalidateAfterAction,
   );
 }
 
-/// The link field of the add flow. Pops with the text on Add, null on Cancel.
+/// The link field of the add flow. Pops with the text on Add, a file's bytes
+/// once one is chosen, null on Cancel.
 ///
 /// A widget of its own so the field's controller lives exactly as long as the
 /// field. It used to be disposed the moment `showDialog` returned, which is
@@ -382,6 +389,10 @@ class _AddTorrentDialogState extends State<_AddTorrentDialog> {
       ),
       actions: [
         TextButton(
+          onPressed: _chooseFile,
+          child: const Text('Choose a .torrent file'),
+        ),
+        TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
         ),
@@ -391,6 +402,17 @@ class _AddTorrentDialogState extends State<_AddTorrentDialog> {
         ),
       ],
     );
+  }
+
+  Future<void> _chooseFile() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['torrent'],
+      withData: true,
+    );
+    final bytes = result?.files.singleOrNull?.bytes;
+    if (bytes == null || !mounted) return;
+    Navigator.of(context).pop(bytes);
   }
 }
 

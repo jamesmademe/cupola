@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
@@ -611,9 +612,35 @@ class TransmissionClient {
     String? downloadDir,
     bool paused = false,
     List<String>? labels,
+  }) => _add(
+    {'filename': filenameOrMagnet.trim()},
+    downloadDir: downloadDir,
+    paused: paused,
+    labels: labels,
+  );
+
+  /// Adds a torrent from a `.torrent` file's bytes, sent as `metainfo`
+  /// (base64): for a file on this device, which the daemon cannot fetch.
+  Future<({TransmissionTorrent? torrent, bool isDuplicate})> addTorrentFile(
+    Uint8List bytes, {
+    String? downloadDir,
+    bool paused = false,
+    List<String>? labels,
+  }) => _add(
+    {'metainfo': base64Encode(bytes)},
+    downloadDir: downloadDir,
+    paused: paused,
+    labels: labels,
+  );
+
+  Future<({TransmissionTorrent? torrent, bool isDuplicate})> _add(
+    Map<String, dynamic> source, {
+    String? downloadDir,
+    required bool paused,
+    List<String>? labels,
   }) async {
     final result = await _call('torrent-add', {
-      'filename': filenameOrMagnet.trim(),
+      ...source,
       'paused': paused,
       if (downloadDir != null && downloadDir.trim().isNotEmpty)
         'download-dir': downloadDir.trim(),

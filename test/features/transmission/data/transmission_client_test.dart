@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
@@ -475,6 +476,23 @@ void main() {
   });
 
   group('writes', () {
+    test(
+      'a .torrent file on this device goes as metainfo, in base64',
+      () async {
+        final adapter = ScriptedHttpAdapter([_ok(const {})]);
+        final client = TransmissionClient(
+          url: 'https://nas.local:9091',
+          dio: _dio(adapter),
+        );
+
+        await client.addTorrentFile(Uint8List.fromList([1, 2, 3]));
+        final body = adapter.lastRequest.body as Map<String, dynamic>;
+        expect(body['method'], 'torrent-add');
+        expect(body['arguments']['metainfo'], base64Encode([1, 2, 3]));
+        expect(body['arguments'], isNot(contains('filename')));
+      },
+    );
+
     test(
       'a torrent with no hash is addressed by its id, as a number',
       () async {

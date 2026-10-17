@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
@@ -172,12 +174,15 @@ class TransmissionAddReport {
   final String? detail;
 }
 
-/// Hands [link] to the daemon and says what came of it; see
+/// Hands [link] (or [file]) to the daemon and says what came of it; see
 /// [TransmissionAddReport.from]. The queue is re-read whatever the outcome.
+///
+/// [file], when given, is a `.torrent` file's bytes and [link] is ignored.
 Future<TransmissionAddVerdict> runTransmissionAdd(
   BuildContext context,
   WidgetRef ref,
   String link, {
+  Uint8List? file,
   List<ProviderOrFamily> invalidate = const [],
 }) async {
   TransmissionAddReport report;
@@ -185,7 +190,9 @@ Future<TransmissionAddVerdict> runTransmissionAdd(
     final client = ref.read(transmissionClientProvider);
     try {
       report = TransmissionAddReport.from(
-        outcome: await client.addTorrent(link),
+        outcome: file != null
+            ? await client.addTorrentFile(file)
+            : await client.addTorrent(link),
       );
     } catch (e) {
       report = TransmissionAddReport.from(error: e);
