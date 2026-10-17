@@ -62,10 +62,17 @@ class ConnectionsReadout {
   ///
   /// [notSetUp] is passed rather than derived because "not set up" is not a
   /// connection state the prober can return: nothing was dialled.
+  ///
+  /// [answeringServices], when given, is the count the summary prints, made by
+  /// the Stack's rule: a service that answered and refused the key answered.
+  /// The Stack counts it and names the refusal; this card used to leave it out
+  /// of the count and name it, which made `12 of 13` there and `11 answering`
+  /// here out of one stack. The fault groups still come from [states].
   factory ConnectionsReadout.from({
     required Map<ServiceKey, ConnectionPresentation> states,
     required List<ServiceKey> notSetUp,
     int registrySize = -1,
+    int? answeringServices,
   }) {
     var answering = 0;
     var checking = 0;
@@ -101,7 +108,7 @@ class ConnectionsReadout {
     return ConnectionsReadout._(
       registrySize: registrySize < 0 ? ServiceKey.values.length : registrySize,
       setUp: states.length,
-      answering: answering,
+      answering: answeringServices ?? answering,
       checking: checking,
       onlyAtHome: onlyAtHome,
       faults: [

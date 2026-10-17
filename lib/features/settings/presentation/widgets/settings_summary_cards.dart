@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/utils/unit_space.dart';
@@ -147,12 +148,24 @@ class ConnectionsSummaryCard extends ConsumerWidget {
 
     final states = <ServiceKey, ConnectionPresentation>{};
     final notSetUp = <ServiceKey>[];
+    // Counted by the Stack's rule (`foldedServiceHealthProvider`): a service
+    // that answered with a refusal or a fault answered. Its fault is still
+    // named in its group below.
+    var answered = 0;
     for (final service in ServiceKey.values) {
       if (!settings.hasServiceConnection(service)) {
         notSetUp.add(service);
         continue;
       }
       final async = ref.watch(serviceDiagnosisProvider(service));
+      final diagnosis = async.isLoading ? null : async.asData?.value;
+      final reason = diagnosis?.reason;
+      if (diagnosis?.status == ServiceConnectionStatus.connected ||
+          (reason != null &&
+              !failureDidNotAnswer(reason) &&
+              reason != ServiceFailureReason.sessionEnded)) {
+        answered++;
+      }
       states[service] = describeConnection(
         service,
         // Loading is a state of its own in the vocabulary, and a provider that
@@ -166,7 +179,11 @@ class ConnectionsSummaryCard extends ConsumerWidget {
       );
     }
 
-    final readout = ConnectionsReadout.from(states: states, notSetUp: notSetUp);
+    final readout = ConnectionsReadout.from(
+      states: states,
+      notSetUp: notSetUp,
+      answeringServices: answered,
+    );
 
     return _SummaryCard(
       label: 'Connections',

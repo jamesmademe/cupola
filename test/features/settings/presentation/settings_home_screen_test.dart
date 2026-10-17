@@ -109,8 +109,9 @@ void main() {
         diagnosis: ServiceDiagnosis.failed(_UnauthorizedFailure()),
       );
 
+      // A refused key answered: counted, as the Stack counts it, and named.
       expect(
-        find.text('1 of ${ServiceKey.values.length} set up\u00A0· 0 answering'),
+        find.text('1 of ${ServiceKey.values.length} set up\u00A0· 1 answering'),
         findsOneWidget,
       );
       // The failing services are grouped by the state they are in and named,
