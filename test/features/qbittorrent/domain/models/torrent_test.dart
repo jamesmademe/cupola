@@ -12,6 +12,11 @@ void main() {
       expect(TorrentState.fromString('stalledDL'), TorrentState.stalled);
       expect(TorrentState.fromString('stalledUP'), TorrentState.seeding);
       expect(TorrentState.fromString('checkingDL'), TorrentState.checking);
+      // Checking its saved state at startup: a check, not an unknown.
+      expect(
+        TorrentState.fromString('checkingResumeData'),
+        TorrentState.checking,
+      );
       expect(TorrentState.fromString('checkingUP'), TorrentState.checking);
       expect(TorrentState.fromString('pausedDL'), TorrentState.paused);
       expect(TorrentState.fromString('pausedUP'), TorrentState.paused);

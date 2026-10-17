@@ -63,7 +63,9 @@ enum TorrentState {
       'uploading' || 'forcedUP' => TorrentState.seeding,
       'stalledUP' => TorrentState.seeding,
       'stalledDL' => TorrentState.stalled,
-      'checkingUP' || 'checkingDL' => TorrentState.checking,
+      'checkingUP' ||
+      'checkingDL' ||
+      'checkingResumeData' => TorrentState.checking,
       'pausedUP' || 'pausedDL' => TorrentState.paused,
       'stoppedUP' || 'stoppedDL' || 'stopped' => TorrentState.paused,
       'queuedUP' => TorrentState.queuedUp,
