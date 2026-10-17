@@ -29,10 +29,15 @@ void main() {
   /// The third is the countdown of a pairing code, a once-a-second repaint of
   /// the time left to a moment the code itself holds. It asks no server: the
   /// code closes by its own clock, and the page says so when it does.
+  ///
+  /// The fourth is the Stack's headline, a once-a-minute repaint of how long
+  /// ago the stack was last checked. It reads the time of a check already made
+  /// and asks no server, so a stale minute under a pushed page costs nothing.
   const uiClocks = {
     'lib/core/widgets/interactive_search_sheet.dart',
     'lib/features/pairing/presentation/pair_code.dart',
     'lib/features/release_search/presentation/release_search_sheet.dart',
+    'lib/features/services/presentation/stack_screen.dart',
   };
 
   final libFiles = Directory('lib')
