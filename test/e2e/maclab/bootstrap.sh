@@ -231,6 +231,21 @@ new_password() {
 seerr_requester_password="$(new_password)"
 jellyfin_requester_password="$(new_password)"
 
+# A Plex server nobody claimed runs with local authentication off and takes
+# any token; once someone claims it, only the server's own token reads its
+# libraries. That token lives in its Preferences.xml, never on a command line.
+plex_token="$("$python_bin" - "$state_dir/plex" <<'PY'
+import pathlib, re, sys
+for prefs in pathlib.Path(sys.argv[1]).rglob('Preferences.xml'):
+    found = re.search(r'PlexOnlineToken="([^"]+)"', prefs.read_text(errors='ignore'))
+    if found:
+        print(found.group(1))
+        break
+else:
+    print('test-token')
+PY
+)"
+
 credentials="$state_dir/credentials.env"
 umask 077
 {
@@ -252,7 +267,7 @@ umask 077
   printf 'CUPOLA_MACLAB_TRANSMISSION_PASSWORD=transmission\n'
   printf 'CUPOLA_MACLAB_DOCKGE_USERNAME=cupola\n'
   printf 'CUPOLA_MACLAB_DOCKGE_PASSWORD=cupola-pass\n'
-  printf 'CUPOLA_MACLAB_PLEX_TOKEN=test-token\n'
+  printf 'CUPOLA_MACLAB_PLEX_TOKEN=%s\n' "$plex_token"
   printf 'CUPOLA_MACLAB_TRUENAS_CERT_FINGERPRINT=%s\n' "$truenas_cert_fingerprint"
 } >"$credentials"
 chmod 600 "$credentials"

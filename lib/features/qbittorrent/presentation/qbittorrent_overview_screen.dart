@@ -133,7 +133,7 @@ class _OverviewBody extends ConsumerWidget {
           ...sectionsOrOneLine(ref, ServiceKey.qbittorrent, [
             ServiceKpiPeek(
               kpis: ref.watch(serviceKpiProvider(ServiceKey.qbittorrent)),
-              accent: ServiceKey.qbittorrent.accent,
+              service: ServiceKey.qbittorrent,
             ),
             const _NeedsAttentionSection(),
             const _QueueSection(),

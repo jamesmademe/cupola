@@ -327,26 +327,12 @@ class BazarrBadges {
   }
 }
 
-/// The provider data Bazarr exposes through its supported badges endpoint.
+/// One provider Bazarr has enabled, as `/api/providers` lists it.
 ///
-/// Bazarr's local API contract does not expose provider names, quotas, or
-/// throttle windows. Keep this model deliberately aggregate-only so the UI
-/// cannot accidentally manufacture a provider table from unrelated fields.
-class BazarrProviderSummary {
-  final int? configuredCount;
-
-  const BazarrProviderSummary({this.configuredCount});
-
-  factory BazarrProviderSummary.fromJson(Map<String, dynamic> json) {
-    return BazarrProviderSummary(configuredCount: intOrNull(json['providers']));
-  }
-}
-
-/// A provider currently returned by Bazarr's provider-status endpoint.
-///
-/// Bazarr returns throttled providers by default, rather than a complete
-/// configured-provider registry. Missing fields therefore stay nullable and
-/// the UI must not turn the response into a fabricated healthy list.
+/// That list is every enabled provider (`general.enabled_providers` that
+/// Bazarr knows), each with `Good` when nothing holds it back, or the reason
+/// Bazarr is waiting it out (`TooManyRequests`) and when it asks again. The
+/// badge count of providers is the throttled ones only, never the enabled.
 class BazarrProviderStatus {
   final String? name;
   final String? status;
@@ -365,23 +351,119 @@ class BazarrProviderStatus {
     );
   }
 
-  StatusTone get tone => switch (status?.trim().toLowerCase()) {
-    null || '' => StatusTone.neutral,
-    'good' => StatusTone.success,
-    'history' => StatusTone.neutral,
-    _ => StatusTone.warning,
-  };
+  String get _status => status?.trim() ?? '';
 
-  String get displayName =>
-      name?.trim().isNotEmpty == true ? name!.trim() : 'Unnamed provider';
-
-  String get statusLabel =>
-      status?.trim().isNotEmpty == true ? status!.trim() : '—';
-
-  String get retryLabel {
-    final value = retry?.trim();
-    return value == null || value.isEmpty || value == '-' ? '—' : value;
+  /// Bazarr is waiting this provider out: anything but `Good` (and `History`,
+  /// the row a history query adds for a provider no longer enabled).
+  bool get throttled {
+    final word = _status.toLowerCase();
+    return word.isNotEmpty && word != 'good' && word != 'history';
   }
+
+  /// Amber while Bazarr waits a provider out; a provider ready to be asked
+  /// is the normal state and stays in ink.
+  StatusTone get tone => throttled ? StatusTone.warning : StatusTone.neutral;
+
+  /// The provider as Bazarr's own pages name it (`OpenSubtitles.com` for
+  /// `opensubtitlescom`), else Bazarr's name for it.
+  String get displayName {
+    final raw = name?.trim() ?? '';
+    if (raw.isEmpty) return 'Unnamed provider';
+    return _bazarrProviderNames[raw.toLowerCase()] ?? raw;
+  }
+
+  /// `Ready`, or why Bazarr waits: Bazarr's reason is a class name
+  /// (`TooManyRequests`), said in words.
+  String get statusLabel {
+    if (!throttled) return 'Ready';
+    return _bazarrThrottleWords[_status] ?? _spacedWords(_status);
+  }
+
+  /// When Bazarr asks the provider again (`in 2 hours`), or null.
+  String? get retryLabel {
+    final value = retry?.trim();
+    return value == null || value.isEmpty || value == '-' ? null : value;
+  }
+}
+
+/// Bazarr's names for the providers people use most, as its own settings
+/// page shows them.
+const Map<String, String> _bazarrProviderNames = {
+  'addic7ed': 'Addic7ed',
+  'animetosho': 'AnimeTosho',
+  'betaseries': 'BetaSeries',
+  'embeddedsubtitles': 'Embedded Subtitles',
+  'gestdown': 'Gestdown',
+  'jimaku': 'Jimaku',
+  'napiprojekt': 'NapiProjekt',
+  'opensubtitles': 'OpenSubtitles.org',
+  'opensubtitlescom': 'OpenSubtitles.com',
+  'podnapisi': 'Podnapisi',
+  'subdl': 'SubDL',
+  'subf2m': 'Subf2m',
+  'supersubtitles': 'Super Subtitles',
+  'titlovi': 'Titlovi',
+  'whisperai': 'Whisper',
+  'yifysubtitles': 'YIFY Subtitles',
+};
+
+/// Bazarr's throttle reasons in words.
+const Map<String, String> _bazarrThrottleWords = {
+  'TooManyRequests': 'Too many requests',
+  'DownloadLimitExceeded': 'Download limit reached',
+  'DownloadLimitPerDayExceeded': 'Daily download limit reached',
+  'AuthenticationError': 'Sign-in refused',
+  'ConfigurationError': 'Set up wrongly',
+  'PaymentRequired': 'Payment required',
+  'IPAddressBlocked': 'Address blocked',
+  'ServiceUnavailable': 'Did not answer',
+  'APIThrottled': 'Throttled',
+  'ConnectionError': 'Did not answer',
+  'Timeout': 'Timed out',
+  'ReadTimeout': 'Timed out',
+};
+
+/// `SomeReason` → `Some reason`; anything else unchanged.
+String _spacedWords(String value) {
+  final spaced = value.replaceAllMapped(
+    RegExp('(?<=[a-z])(?=[A-Z])'),
+    (_) => ' ',
+  );
+  if (spaced == value) return value;
+  return spaced[0] + spaced.substring(1).toLowerCase();
+}
+
+/// One of Bazarr's health issues (`/api/system/health`): what it is about and
+/// Bazarr's words for it.
+class BazarrHealthIssue {
+  final String object;
+  final String issue;
+
+  const BazarrHealthIssue({required this.object, required this.issue});
+
+  /// Null for an entry with nothing to say.
+  static BazarrHealthIssue? fromJson(Object? value) {
+    if (value is! Map) return null;
+    final object = stringOrNull(value['object'])?.trim() ?? '';
+    final issue = stringOrNull(value['issue'])?.trim() ?? '';
+    if (object.isEmpty && issue.isEmpty) return null;
+    return BazarrHealthIssue(object: object, issue: issue);
+  }
+
+  /// The issue as a headline, in the app's words where Bazarr's checks are
+  /// known; Bazarr's own stay behind Why?.
+  String get headline => switch (object) {
+    'Missing languages profile' => 'Bazarr has no languages profile',
+    'No assigned languages profile' =>
+      'Bazarr has a languages profile and nothing uses it',
+    _ when issue.contains('duplicate IDs') =>
+      'Bazarr\'s languages profile $object needs editing',
+    // A library folder Sonarr or Radarr names that Bazarr cannot use.
+    _ when object.startsWith('/') || object.contains(':\\') =>
+      'Bazarr cannot use $object',
+    '' => issue,
+    _ => object,
+  };
 }
 
 /// Bazarr's integer action codes for `TableHistory.action` /

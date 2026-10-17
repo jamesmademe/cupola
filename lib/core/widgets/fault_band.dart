@@ -219,6 +219,23 @@ class FaultBand extends StatelessWidget {
            ? null
            : FaultBandAction('Settings', onOpenSettings);
 
+  /// Level 2, when the sources that failed answered with a refusal the
+  /// connection's form fixes (a key refused, a session ended): the caller's
+  /// sentence, the fix in the amber fill ([remedy]), and Retry beside it only
+  /// when [onRetry] is given, which is where asking again can still succeed.
+  /// Retry alone here sent the same refused key again.
+  FaultBand.remedied({
+    super.key,
+    required this.message,
+    required FailureRemedy remedy,
+    VoidCallback? onRetry,
+  }) : tone = failureTone(remedy.reason),
+       icon = failureIcon(remedy.reason),
+       primaryAction = FaultBandAction._form(remedy),
+       secondaryAction = onRetry == null
+           ? null
+           : FaultBandAction('Retry', onRetry);
+
   /// Level 1 for services reached that never replied: they took the
   /// connection and said nothing in time (`Radarr, Sonarr and 6 others were
   /// reached but did not reply in time.`). The sentence is the caller's, which

@@ -153,6 +153,14 @@ void main() {
       expect(clipboardText, isEmpty);
     });
 
+    testWidgets('Plex\'s field names its token, not a key', (tester) async {
+      await _pumpServiceSettings(tester, service: ServiceKey.plex);
+
+      expect(find.byTooltip('Copy Plex token'), findsOneWidget);
+      expect(find.byTooltip('Show Plex token'), findsOneWidget);
+      expect(find.byTooltip('Copy API key'), findsNothing);
+    });
+
     testWidgets('a host that can hide the clip is used instead of a plain copy', (
       tester,
     ) async {

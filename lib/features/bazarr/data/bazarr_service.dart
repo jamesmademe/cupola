@@ -29,37 +29,35 @@ class BazarrService {
     throw Exception('Bazarr returned an unreadable badge payload');
   }
 
-  /// Returns the aggregate configured-provider count exposed by `/api/badges`.
-  ///
-  /// This is intentionally separate from [getProviderStatuses]: Bazarr's
-  /// `/api/providers` response reports providers currently carrying throttle
-  /// or degraded status, not a complete configured-provider registry. Healthy
-  /// provider names, quotas and throttle windows therefore remain unavailable
-  /// rather than guessed.
-  Future<BazarrProviderSummary> getProviderSummary() async {
-    final response = await client.get('/api/badges');
-    final raw = response.data;
-    if (raw is Map<String, dynamic>) {
-      return BazarrProviderSummary.fromJson(raw);
-    }
-    return const BazarrProviderSummary();
-  }
-
-  /// Returns the providers Bazarr currently reports as throttled or degraded.
-  ///
-  /// The upstream endpoint intentionally does not return every configured
-  /// provider on the default request; the configured count still comes from
-  /// `/api/badges`. Keeping these as two contracts lets the UI distinguish
-  /// "no provider needs attention" from "the status request failed".
+  /// Every provider Bazarr has enabled, each with `Good` or the reason it is
+  /// being waited out ([BazarrProviderStatus]). An answer that is not the
+  /// list throws: it is not a Bazarr with no providers.
   Future<List<BazarrProviderStatus>> getProviderStatuses() async {
     final response = await client.get('/api/providers');
     final raw = response.data;
     final data = raw is Map ? raw['data'] : raw;
-    if (data is! List) return const [];
+    if (data is! List) {
+      throw const FormatException(
+        'Bazarr returned an unreadable provider list',
+      );
+    }
     return data
         .map(BazarrProviderStatus.fromJson)
         .where((provider) => provider.name != null)
         .toList(growable: false);
+  }
+
+  /// Bazarr's health issues (`/api/system/health`): a languages profile
+  /// missing, a library folder it cannot use. Not a list is not a healthy
+  /// Bazarr: it throws.
+  Future<List<BazarrHealthIssue>> getHealthIssues() async {
+    final response = await client.get('/api/system/health');
+    final raw = response.data;
+    final data = raw is Map ? raw['data'] : raw;
+    if (data is! List) {
+      throw const FormatException('Bazarr returned unreadable health issues');
+    }
+    return [for (final item in data) ?BazarrHealthIssue.fromJson(item)];
   }
 
   /// Clears Bazarr's provider throttle state.

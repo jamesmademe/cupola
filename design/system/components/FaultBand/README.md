@@ -21,6 +21,7 @@ Rendered from `lib/core/widgets/fault_band.dart` by `test/design_catalog/fault_b
 | `.timedOut` | warning (`failureTone`) | `timer_off_rounded` (`failureIcon`) | The caller's own sentence for the servers reached that never replied, named as the silence names them: *Radarr, Sonarr and 6 others were reached but did not reply in time.* Amber, never red: the host is there and the server is stuck | Retry only, in the amber fill |
 | `.section` | error | `link_off_rounded` | The caller's own sentence, naming which source inside the service did not answer and what is missing | Retry · Settings (optional) |
 | `.partial` | warning | `playlist_remove_rounded` | The caller's own sentence, saying how much of a paged or merged read arrived: *Seerr returned 50 of 300 users; later pages are unavailable.* Amber, never red: the service just answered | Retry only, in the amber fill: asking again is this fault's remedy |
+| `.remedied` | warning (`failureTone` of the remedy's reason) | the reason's (`failureIcon`) | The caller's own sentence for a merged read whose sources refused what a connection's form fixes: *Plex answered but refused the token.* (a Home module, `HomeModuleFrame`) | The remedy in the amber fill (`FailureRemedy`, opening that connection's form), then Retry only when the caller passes `onRetry`, which is where asking again can still succeed for another source |
 | `.stale` | warning | `history_toggle_off_rounded` | *These figures are from 6 min ago.* + the caller's `detail`; under a minute, *These figures have stopped updating.* + `detail` | Refresh only, no dismiss |
 | `.offlinePush` | error | `cloud_off_rounded` | *Radarr stopped answering while this page was open. Everything here is the last render; a write will fail until it is back.* | Retry · Open Radarr (optional) |
 
@@ -30,7 +31,7 @@ Rendered from `lib/core/widgets/fault_band.dart` by `test/design_catalog/fault_b
 
 ## The consumer provides
 
-The service name (or, for `.timedOut`, `.section` and `.partial`, the whole sentence), the stale `age` and `detail`, and the callbacks. Actions are a label and a callback (`FaultBandAction`, or `FaultBandAction.remedy` for the amber fill), never a widget, so a caller cannot restyle the verb. `.fault` needs nothing more than a `serviceName` that starts with the service to open the form itself. `primaryAction` is always present: a band with nothing to do about it should not be on screen; `secondaryAction` is `null` on `.stale`.
+The service name (or, for `.timedOut`, `.section`, `.partial` and `.remedied`, the whole sentence; `.remedied` also takes its `FailureRemedy`), the stale `age` and `detail`, and the callbacks. Actions are a label and a callback (`FaultBandAction`, or `FaultBandAction.remedy` for the amber fill), never a widget, so a caller cannot restyle the verb. `.fault` needs nothing more than a `serviceName` that starts with the service to open the form itself. `primaryAction` is always present: a band with nothing to do about it should not be on screen; `secondaryAction` is `null` on `.stale`.
 
 ## Semantics
 
@@ -40,7 +41,7 @@ The band is one container node (`Semantics(container: true, explicitChildNodes: 
 
 Each sheet is drawn in the dark and the light room.
 
-- `.unreachable` with and without an age, `.fault` for a refused key, a qBittorrent sign-in, Cloudflare Access and a server error, `.timedOut`, `.section`, `.partial`, `.stale` (6 min and just now), `.offlinePush`.
+- `.unreachable` with and without an age, `.fault` for a refused key, a qBittorrent sign-in, Cloudflare Access and a server error, `.timedOut`, `.section`, `.partial`, `.remedied` (a refused Plex token), `.stale` (6 min and just now), `.offlinePush`.
 - A 390pt phone at 100%: two short verbs and one stay beside, a remedy with Retry goes under.
 - Text at 200% on a 390pt phone: `.unreachable`, `.fault` with its remedy, and `.partial` with `.stale`, every verb under its sentence.
 

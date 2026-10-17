@@ -158,7 +158,7 @@ class _OverviewBody extends ConsumerWidget {
           ...sectionsOrOneLine(ref, ServiceKey.nginxProxyManager, [
             ServiceKpiPeek(
               kpis: ref.watch(serviceKpiProvider(ServiceKey.nginxProxyManager)),
-              accent: ServiceKey.nginxProxyManager.accent,
+              service: ServiceKey.nginxProxyManager,
             ),
             // Above every section, in this order: a box that still answers to
             // `changeme` outranks anything a section could say, and the band

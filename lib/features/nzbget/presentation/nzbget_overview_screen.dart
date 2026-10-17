@@ -122,7 +122,7 @@ class _OverviewBody extends ConsumerWidget {
             // which says `Disk full` when the disk stopped the queue.
             ServiceKpiPeek(
               kpis: ref.watch(serviceKpiProvider(ServiceKey.nzbget)),
-              accent: ServiceKey.nzbget.accent,
+              service: ServiceKey.nzbget,
             ),
             const _HistorySection(),
             const _QueueSection(),

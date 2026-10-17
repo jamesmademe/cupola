@@ -20,6 +20,7 @@ import 'package:cupola/features/media/domain/quality_words.dart';
 import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
 import 'package:cupola/features/series/domain/sonarr_status.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/stream_external_match.dart';
@@ -571,11 +572,14 @@ MediaRowView? _connectionView(
       final since = lastKnown == null
           ? ''
           : ' since ${formatClockTime(lastKnown.at)}';
+      // A Seerr connection signed in as a member refused a sign-in, not a
+      // key; Plex refuses a token.
+      final credential = connection.account == null
+          ? refusedCredentialOf(connection.service)
+          : kRefusedSignIn;
       final remedy = failureRemedy(
         failure,
-        credential: connection.account == null
-            ? kRefusedCredential
-            : kRefusedSignIn,
+        credential: credential,
         gateway: gateway,
       );
       return MediaRowView(
@@ -584,7 +588,9 @@ MediaRowView? _connectionView(
         detail: known == null
             ? ''
             : 'Last known: ${[if (known.detail.isNotEmpty) known.detail, known.state].join(dotSeparator)}',
-        state: '${failureLabel(failure, gateway: gateway)}$since',
+        state:
+            '${failureLabel(failure, credential: credential, gateway: gateway)}'
+            '$since',
         tone: failureTone(failure),
         // The remedy the cause names, else Retry: a refused key is refused
         // again, and only its form fixes it.

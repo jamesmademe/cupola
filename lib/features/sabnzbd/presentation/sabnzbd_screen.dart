@@ -121,7 +121,7 @@ class _SabnzbdDashboard extends ConsumerWidget {
                 ),
               ServiceKpiPeek(
                 kpis: ref.watch(serviceKpiProvider(ServiceKey.sabnzbd)),
-                accent: ServiceKey.sabnzbd.accent,
+                service: ServiceKey.sabnzbd,
               ),
               const SizedBox(height: AppSpacing.sm),
               _SabnzbdActionsBar(queueAsync: queueAsync),

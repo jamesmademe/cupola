@@ -190,6 +190,33 @@ void main() {
         expect(router.state.uri.path, ServiceRoutes.home);
       });
 
+      testWidgets('one carrying a place\'s old spelling still opens it', (
+        tester,
+      ) async {
+        final container = await _pumpRouter(tester);
+        final router = container.read(routerProvider);
+
+        router.go(OutsideLink.to('/dashboard/radarr').toString());
+        await tester.pumpAndSettle();
+        expect(router.state.uri.path, startsWith(ServiceRoutes.radarr));
+        expect(find.textContaining('GoException'), findsNothing);
+      });
+
+      testWidgets('a place no route answers is said in the app\'s words, '
+          'with the way Home', (tester) async {
+        final container = await _pumpRouter(tester);
+        final router = container.read(routerProvider);
+
+        router.go('/no/such/place');
+        await tester.pumpAndSettle();
+        expect(find.text("This page isn't in Cupola"), findsOneWidget);
+        expect(find.textContaining('GoException'), findsNothing);
+
+        await tester.tap(find.text('Go to Home'));
+        await tester.pumpAndSettle();
+        expect(router.state.uri.path, ServiceRoutes.home);
+      });
+
       testWidgets('a first run still goes through the way in', (tester) async {
         final container = await _pumpRouter(tester, onboardingCompleted: false);
         final router = container.read(routerProvider);

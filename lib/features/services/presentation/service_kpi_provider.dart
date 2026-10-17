@@ -57,6 +57,7 @@ import 'package:cupola/features/transmission/presentation/transmission_provider.
 import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 import 'package:cupola/features/truenas/domain/models/dashboard.dart';
 import 'package:cupola/features/unraid/domain/models/unraid_models.dart';
+import 'package:cupola/features/unraid/domain/unraid_alerts.dart';
 import 'package:cupola/features/unraid/presentation/unraid_provider.dart';
 
 /// KPIs shown in the [ServiceKpiPeek] at the top of each service page.
@@ -1198,17 +1199,34 @@ List<ServiceKpi> _dockgeKpisFrom(List<DockgeStack> stacks) {
 }
 
 Future<List<ServiceKpi>> _bazarrKpis(Ref ref) async {
-  return _bazarrKpisFrom(await ref.watch(bazarrBadgesProvider.future));
+  final results = await Future.wait([
+    ref.watch(bazarrBadgesProvider.future),
+    ref.watch(bazarrProviderStatusesProvider.future),
+  ]);
+  return _bazarrKpisFrom(
+    results[0] as BazarrBadges,
+    results[1] as List<BazarrProviderStatus>,
+  );
 }
 
 Future<List<ServiceKpi>> _bazarrKpisFor(Ref ref, String instanceId) async {
-  final badges = await ref
-      .watch(bazarrServiceForProvider(instanceId))
-      .getBadges();
-  return _bazarrKpisFrom(badges);
+  final service = ref.watch(bazarrServiceForProvider(instanceId));
+  final results = await Future.wait([
+    service.getBadges(),
+    service.getProviderStatuses(),
+  ]);
+  return _bazarrKpisFrom(
+    results[0] as BazarrBadges,
+    results[1] as List<BazarrProviderStatus>,
+  );
 }
 
-List<ServiceKpi> _bazarrKpisFrom(BazarrBadges b) {
+/// Bazarr's badge of providers counts the throttled ones only, so the
+/// figure is the enabled list's length, amber while Bazarr waits one out.
+List<ServiceKpi> _bazarrKpisFrom(
+  BazarrBadges b,
+  List<BazarrProviderStatus> providers,
+) {
   return [
     ServiceKpi(
       label: 'Wanted',
@@ -1228,8 +1246,11 @@ List<ServiceKpi> _bazarrKpisFrom(BazarrBadges b) {
     ),
     ServiceKpi(
       label: 'Providers',
-      value: '${b.providers}',
+      value: '${providers.length}',
       icon: Icons.cloud_rounded,
+      tone: providers.any((provider) => provider.throttled)
+          ? StatusTone.warning
+          : null,
     ),
   ];
 }
@@ -1737,7 +1758,11 @@ List<ServiceKpi> _unraidKpisFrom(
   // section, whose capacity clause correctly disappears for the same input.
   final usedPercent = array.usedPercent;
   return [
-    ServiceKpi(label: 'Array', value: array.state, icon: Icons.dns_rounded),
+    ServiceKpi(
+      label: 'Array',
+      value: unraidArrayStateWords(array.state) ?? Lexicon.noFigure,
+      icon: Icons.dns_rounded,
+    ),
     if (usedPercent == null)
       const ServiceKpi.unavailable(
         label: 'Used',

@@ -43,7 +43,9 @@ void main() {
     expect(find.widgetWithText(SectionHeader, 'Providers'), findsNothing);
   });
 
-  testWidgets('the readouts are Bazarr\'s four badge figures', (tester) async {
+  testWidgets('the readouts are Bazarr\'s backlog and its providers', (
+    tester,
+  ) async {
     // Moved off the retired `BazarrScreen`, which was the only place asserting
     // that the rail's first figure is a *sum*: Wanted is episodes + movies, and
     // a rail that printed the episode count under a "Wanted" label would look
@@ -52,7 +54,13 @@ void main() {
     // cannot say which of the two drew it.
     await _pump(
       tester,
-      service: FakeBazarrService()..badges = _badges(episodes: 12, movies: 4),
+      service: FakeBazarrService()
+        ..badges = _badges(episodes: 12, movies: 4)
+        // Providers is the enabled list, not the badge (the throttled ones).
+        ..providerStatuses = [
+          for (final name in const ['a', 'b', 'c', 'd', 'e'])
+            BazarrProviderStatus(name: name, status: 'Good'),
+        ],
     );
 
     final peek = tester.widget<ServiceKpiPeek>(find.byType(ServiceKpiPeek));

@@ -77,6 +77,45 @@ String unraidSlotName(String name) {
   return number == null ? title : '$title $number';
 }
 
+/// The array's state in the app's words (`Started`, `Rebuilding a disk`), or
+/// null when Unraid did not say. Unraid's token (`RECON_DISK`) is no word a
+/// person reads.
+String? unraidArrayStateWords(String state) {
+  final token = state.trim().toUpperCase();
+  return switch (token) {
+    '' || 'UNKNOWN' => null,
+    'STARTED' => 'Started',
+    'STOPPED' => 'Stopped',
+    'NEW_ARRAY' => 'New array',
+    'RECON_DISK' => 'Rebuilding a disk',
+    'DISABLE_DISK' => 'Disabling a disk',
+    'SWAP_DSBL' => 'Swapping a disabled disk',
+    'INVALID_EXPANSION' => 'Expansion not valid',
+    'PARITY_NOT_BIGGEST' => 'Parity is not the largest disk',
+    'TOO_MANY_MISSING_DISKS' => 'Too many disks missing',
+    'NEW_DISK_TOO_SMALL' => 'New disk too small',
+    'NO_DATA_DISKS' => 'No data disks',
+    _ => '${token[0]}${token.substring(1).toLowerCase().replaceAll('_', ' ')}',
+  };
+}
+
+/// A slot's state in the app's words: `Healthy` for `DISK_OK`, what happened
+/// to a flagged one (as Needs you says it), Unraid's own token only for a
+/// state the app does not know.
+String unraidDiskStatusWords(String status) =>
+    switch (status.trim().toUpperCase()) {
+      'DISK_OK' => 'Healthy',
+      'DISK_NP' => 'Empty slot',
+      'DISK_NEW' => 'New disk',
+      'DISK_DSBL' => 'Disabled',
+      'DISK_NP_DSBL' => 'Missing and disabled',
+      'DISK_NP_MISSING' => 'Missing',
+      'DISK_DSBL_NEW' => 'Disabled, with a new disk to rebuild onto',
+      'DISK_INVALID' => 'Holds data the array cannot trust',
+      'DISK_WRONG' => 'Not the disk the array expects',
+      _ => status.trim(),
+    };
+
 /// A flagged slot, said as what happened to it. Unraid's token
 /// (`DISK_DSBL`) stays behind Why?.
 String unraidFlaggedSlotHeadline(UnraidDisk disk) {

@@ -113,7 +113,7 @@ class _OverviewBody extends ConsumerWidget {
           ...sectionsOrOneLine(ref, ServiceKey.transmission, [
             ServiceKpiPeek(
               kpis: ref.watch(serviceKpiProvider(ServiceKey.transmission)),
-              accent: ServiceKey.transmission.accent,
+              service: ServiceKey.transmission,
             ),
             const _TransferringSection(),
             const _LabelsSection(),

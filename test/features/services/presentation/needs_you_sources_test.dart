@@ -114,6 +114,59 @@ void main() {
     expect(checks.single.service, ServiceKey.radarr);
   });
 
+  test('Bazarr\'s health issue is a fault, in the app\'s words with its own '
+      'kept', () async {
+    final harness = await ProfileHarness.start(Profiles.p1);
+    harness.network.on(
+      WorldIds.bazarr,
+      'GET',
+      '/api/system/health',
+      (_) => NetworkReply.json({
+        'data': [
+          {
+            'object': 'Missing languages profile',
+            'issue':
+                'You must create at least one languages profile and assign it '
+                'to your content.',
+          },
+        ],
+      }),
+    );
+    final checks = await source(harness, DecisionSource.health);
+    final bazarr = checks.where((c) => c.service == ServiceKey.bazarr).single;
+    expect(bazarr.kind, DecisionKind.serviceHealth);
+    expect(bazarr.title, 'Bazarr has no languages profile');
+    expect(bazarr.reason, startsWith('You must create'));
+    expect(bazarr.route, ServiceRoutes.forService(ServiceKey.bazarr));
+  });
+
+  test('Readarr\'s health check at the error level is a fault', () async {
+    final harness = await ProfileHarness.start(
+      ConfigProfile(
+        id: 'T-readarr',
+        title: 'Readarr alone',
+        summary: 'Readarr, answering.',
+        cases: const {},
+        connections: [WorldConnections.readarr],
+      ),
+    );
+    harness.network.on(
+      'readarr',
+      'GET',
+      '/api/v1/health',
+      (_) => NetworkReply.json([
+        {
+          'source': 'RootFolderCheck',
+          'type': 'error',
+          'message': 'Missing root folder: /books',
+        },
+      ]),
+    );
+    final checks = await source(harness, DecisionSource.health);
+    expect(checks.single.service, ServiceKey.readarr);
+    expect(checks.single.title, 'A library folder is missing');
+  });
+
   test('the same check failing on three arrs is one fault', () async {
     final harness = await ProfileHarness.start(Profiles.p1);
     for (final (id, path, arr) in [

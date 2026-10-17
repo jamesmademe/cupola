@@ -237,6 +237,11 @@ final _gluedUnit = RegExp('[0-9$copyHole](?:d|h|m|ms|min|s)(?![A-Za-z0-9])');
 /// the reason.
 const _gluedAllowed = <({String file, String literal, String reason})>[
   (
+    file: 'lib/features/bazarr/domain/models/bazarr_models.dart',
+    literal: 'Subf2m',
+    reason: "a subtitle provider's name, as Bazarr spells it; not two minutes",
+  ),
+  (
     file: 'lib/core/utils/string_utils.dart',
     literal: '${copyHole}s',
     reason: 'the plural s of countLabel: a noun, not seconds',

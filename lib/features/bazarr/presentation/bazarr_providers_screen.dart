@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_card.dart';
@@ -18,12 +20,9 @@ import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-/// Bazarr's provider view, split between the aggregate configured count from
-/// `/api/badges` and the status rows returned by `/api/providers`.
-///
-/// The latter is a throttle/degraded-status feed, not a complete provider
-/// registry. The screen reports that boundary explicitly and never invents
-/// healthy provider names, quotas or missing timing data.
+/// Bazarr's providers: every one it has enabled, ready or waited out, from
+/// `/api/providers`, with the reason and the time Bazarr asks a throttled one
+/// again. A Bazarr with none enabled finds no subtitle, and the page says so.
 class BazarrProvidersScreen extends ConsumerWidget {
   const BazarrProvidersScreen({super.key, this.topPadding = 0});
 
@@ -40,67 +39,55 @@ class BazarrProvidersScreen extends ConsumerWidget {
       return NotConfiguredPlaceholder.forService(ServiceKey.bazarr);
     }
 
-    final summary = ref.watch(bazarrProviderSummaryProvider);
+    final providers = ref.watch(bazarrProviderStatusesProvider);
     return AmbientScaffold(
       accent: ServiceKey.bazarr.accent,
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(bazarrProviderSummaryProvider);
           ref.invalidate(bazarrProviderStatusesProvider);
-          await Future.wait([
-            ref.read(bazarrProviderSummaryProvider.future),
-            ref.read(bazarrProviderStatusesProvider.future),
-          ]);
+          await ref.read(bazarrProviderStatusesProvider.future);
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(
-            AppSpacing.lg,
+          // No side inset here: the header carries its own, and the rows
+          // take theirs below.
+          padding: EdgeInsets.only(
             // Under the host's bands, the status bar the upper one consumes
             // included: nothing on this page takes the inset off first.
-            topPadding + MediaQuery.paddingOf(context).top + AppSpacing.md,
-            AppSpacing.lg,
-            FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+            top: topPadding + MediaQuery.paddingOf(context).top + AppSpacing.md,
+            bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
           ),
           children: [
             SectionHeader(
               title: 'Providers',
-              subtitle: _countLabel(summary),
-              showChevron: false,
-              semanticLabel: 'Providers, ${_countLabel(summary)}',
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            AsyncValueWidget<BazarrProviderSummary>(
-              value: summary,
-              serviceName: 'Bazarr providers',
-              silentService: ServiceKey.bazarr,
-              loadingLabel: 'Loading Bazarr provider summary',
-              onRetry: () => ref.invalidate(bazarrProviderSummaryProvider),
-              data: (value) => _ProviderSummaryCard(summary: value),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            SectionHeader(
-              title: 'Needs attention',
-              subtitle: _statusCountLabel(
-                ref.watch(bazarrProviderStatusesProvider),
-              ),
+              subtitle: _countLabel(providers),
               showChevron: false,
             ),
             const SizedBox(height: AppSpacing.sm),
-            AsyncValueWidget<List<BazarrProviderStatus>>(
-              value: ref.watch(bazarrProviderStatusesProvider),
-              serviceName: 'Bazarr provider status',
-              silentService: ServiceKey.bazarr,
-              loadingLabel: 'Loading provider status',
-              onRetry: () => ref.invalidate(bazarrProviderStatusesProvider),
-              isEmpty: (items) => items.isEmpty,
-              emptyBuilder: const AppEmptyState.inline(
-                icon: Icons.check_circle_outline_rounded,
-                title: 'No providers throttled',
-              ),
-              data: (items) => _ProviderStatusList(
-                items: items,
-                onReset: () => _confirmReset(context, ref, items.length),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: AsyncValueWidget<List<BazarrProviderStatus>>(
+                value: providers,
+                serviceName: 'Bazarr providers',
+                silentService: ServiceKey.bazarr,
+                loadingLabel: 'Loading Bazarr providers',
+                onRetry: () => ref.invalidate(bazarrProviderStatusesProvider),
+                isEmpty: (items) => items.isEmpty,
+                emptyBuilder: const AppEmptyState.inline(
+                  icon: Icons.subtitles_off_outlined,
+                  title: 'No providers enabled',
+                  message:
+                      'Bazarr finds no subtitles until one is enabled in '
+                      'Bazarr → Settings → Providers.',
+                ),
+                data: (items) => _ProviderStatusList(
+                  items: items,
+                  onReset: () => _confirmReset(
+                    context,
+                    ref,
+                    items.where((item) => item.throttled).length,
+                  ),
+                ),
               ),
             ),
           ],
@@ -109,16 +96,15 @@ class BazarrProvidersScreen extends ConsumerWidget {
     );
   }
 
-  static String _countLabel(AsyncValue<BazarrProviderSummary> value) {
-    final count = value.asData?.value.configuredCount;
-    return count == null ? '—' : '$count configured';
-  }
-
-  static String _statusCountLabel(
-    AsyncValue<List<BazarrProviderStatus>> value,
-  ) {
-    final count = value.asData?.value.length;
-    return count == null ? '—' : '$count';
+  /// `4 enabled · 1 throttled`, or an em dash until Bazarr answers.
+  static String _countLabel(AsyncValue<List<BazarrProviderStatus>> value) {
+    final items = value.asData?.value;
+    if (items == null) return Lexicon.noFigure;
+    final throttled = items.where((item) => item.throttled).length;
+    return [
+      '${items.length} enabled',
+      if (throttled > 0) '$throttled throttled',
+    ].join(dotSeparator);
   }
 
   /// Asks before the throttles are cleared.
@@ -170,66 +156,6 @@ class BazarrProvidersScreen extends ConsumerWidget {
   }
 }
 
-class _ProviderSummaryCard extends StatelessWidget {
-  const _ProviderSummaryCard({required this.summary});
-
-  final BazarrProviderSummary summary;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final count = summary.configuredCount;
-    final countLabel = count?.toString() ?? '—';
-    final spoken = count == null
-        ? 'Bazarr providers, configured count unavailable'
-        : 'Bazarr providers, $count configured';
-
-    return AppCard.outlined(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      semanticLabel: spoken,
-      excludeChildSemantics: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ExcludeSemantics(
-                child: Icon(
-                  Icons.hub_outlined,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Text(
-                  'Configured providers',
-                  style: AppTheme.panelHeader(theme.brightness),
-                ),
-              ),
-              Text(
-                countLabel,
-                style: AppTheme.data(
-                  theme.brightness,
-                ).copyWith(color: ServiceKey.bazarr.accent),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Text('Provider status', style: AppTheme.rowTitle(theme.brightness)),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Bazarr reports throttled providers separately. A clear list means no provider currently needs attention; it is not a claim that no providers are configured.',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: CupolaThemeColors.of(context).dimText,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _ProviderStatusList extends StatelessWidget {
   const _ProviderStatusList({required this.items, required this.onReset});
 
@@ -245,16 +171,19 @@ class _ProviderStatusList extends StatelessWidget {
           _ProviderStatusCard(item: items[index]),
           if (index != items.length - 1) const SizedBox(height: AppSpacing.sm),
         ],
-        const SizedBox(height: AppSpacing.md),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: FilledButton.tonalIcon(
-            key: const ValueKey('bazarr-reset-provider-throttles'),
-            onPressed: onReset,
-            icon: const Icon(Icons.refresh_rounded),
-            label: const Text('Reset throttles'),
+        // Only while Bazarr waits one out: clearing nothing is no control.
+        if (items.any((item) => item.throttled)) ...[
+          const SizedBox(height: AppSpacing.md),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: FilledButton.tonalIcon(
+              key: const ValueKey('bazarr-reset-provider-throttles'),
+              onPressed: onReset,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Reset throttles'),
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -273,8 +202,12 @@ class _ProviderStatusCard extends StatelessWidget {
       item.tone,
       surface: theme.colorScheme.surfaceContainer,
     );
-    final sentence =
-        '${item.displayName}, ${item.statusLabel}, retry ${item.retryLabel}';
+    final retry = item.throttled ? item.retryLabel : null;
+    final sentence = [
+      item.displayName,
+      item.statusLabel,
+      if (retry != null) 'asks again $retry',
+    ].join(', ');
 
     return AppCard.outlined(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -300,12 +233,13 @@ class _ProviderStatusCard extends StatelessWidget {
               ],
             ),
           ),
-          Text(
-            item.retryLabel,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: CupolaThemeColors.of(context).dimText,
+          if (retry != null)
+            Text(
+              retry,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: CupolaThemeColors.of(context).dimText,
+              ),
             ),
-          ),
         ],
       ),
     );

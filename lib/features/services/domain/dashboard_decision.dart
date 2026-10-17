@@ -79,8 +79,15 @@ enum DecisionSource {
   /// Unraid's flagged slots and unread notifications at warning or alert.
   storage([ServiceKey.truenas, ServiceKey.unraid]),
 
-  /// The \*arrs' own health checks that report an error.
-  health([ServiceKey.radarr, ServiceKey.sonarr, ServiceKey.lidarr]),
+  /// The \*arrs' own health checks that report an error, and Bazarr's health
+  /// issues (every one of which stops it working).
+  health([
+    ServiceKey.radarr,
+    ServiceKey.sonarr,
+    ServiceKey.lidarr,
+    ServiceKey.readarr,
+    ServiceKey.bazarr,
+  ]),
 
   /// Connections that answered with a refusal or a fault: a refused key, a
   /// gateway answering in a service's place, a server error. Read off the

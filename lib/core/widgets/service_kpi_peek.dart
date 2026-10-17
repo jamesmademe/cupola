@@ -13,6 +13,8 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/reel_line.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/service_not_configured.dart';
 
 /// A premium horizontal rail of KPI "stat cards" shown at the top of a service
@@ -24,18 +26,20 @@ import 'package:cupola/features/settings/domain/service_not_configured.dart';
 class ServiceKpiPeek extends StatelessWidget {
   final AsyncValue<List<ServiceKpi>> kpis;
 
-  /// The service's accent (`ServiceKey.accent`), used for the glyph of a KPI
-  /// with no tone of its own. That accent is the lamp for every service, and
-  /// through `ServiceTheme.onTint` a glyph asked of the lamp is the room's
-  /// primary ink: an untoned KPI is monochrome, and only a tone carries a hue.
-  final Color accent;
+  /// Whose figures these are: its accent (`ServiceKey.accent`) is the glyph
+  /// of a KPI with no tone of its own, and its word for a refused credential
+  /// (`token`, `sign-in`) is the note of a rail it could not read. That accent
+  /// is the lamp for every service, and through `ServiceTheme.onTint` a glyph
+  /// asked of the lamp is the room's primary ink: an untoned KPI is
+  /// monochrome, and only a tone carries a hue.
+  final ServiceKey service;
 
   final EdgeInsetsGeometry padding;
 
   const ServiceKpiPeek({
     super.key,
     required this.kpis,
-    required this.accent,
+    required this.service,
     this.padding = const EdgeInsets.fromLTRB(
       AppSpacing.lg,
       AppSpacing.xs,
@@ -100,10 +104,11 @@ class ServiceKpiPeek extends StatelessWidget {
                 icon: Icons.remove_rounded,
                 note: failureLabel(
                   classifyConnectionFailure(error),
+                  credential: refusedCredentialOf(service),
                   gateway: accessGatewayOf(error),
                 ),
               ),
-              fallbackAccent: accent,
+              fallbackAccent: service.accent,
             ),
           ],
         );
@@ -114,7 +119,8 @@ class ServiceKpiPeek extends StatelessWidget {
           context: context,
           height: railHeight,
           children: [
-            for (final kpi in items) _KpiCard(kpi: kpi, fallbackAccent: accent),
+            for (final kpi in items)
+              _KpiCard(kpi: kpi, fallbackAccent: service.accent),
           ],
         );
       },

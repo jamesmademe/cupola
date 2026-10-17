@@ -178,7 +178,7 @@ class _OverviewBody extends ConsumerWidget {
           ...sectionsOrOneLine(ref, service, ownSilence: true, [
             ServiceKpiPeek(
               kpis: ref.watch(serviceKpiProvider(service)),
-              accent: service.accent,
+              service: service,
             ),
             if (serverDark)
               ServiceOfflineState.failure(

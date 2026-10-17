@@ -42,7 +42,7 @@ class NotConfiguredPlaceholder extends StatelessWidget {
   /// them onto the generic constructor silently downgraded four screens to
   /// "here is Settings, go find it yourself". The per-service page is also where
   /// [ServiceKey.setupNote] is rendered, so the guidance those copies printed
-  /// inline (Unraid's GraphQL sandbox, Plex's token flavour) is one tap away and
+  /// inline (Unraid's plugin before 7.2, Plex's token flavour) is one tap away and
   /// stated once rather than duplicated per surface.
   // `ServiceKey this.service` rather than a plain `this.service`: the field is
   // nullable for the generic form, and narrowing the formal here is what keeps

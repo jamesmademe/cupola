@@ -81,10 +81,8 @@ class StreamNowPlayingSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: SectionHeader(title: 'Now playing', showChevron: false),
-        ),
+        // The header carries the page inset itself.
+        const SectionHeader(title: 'Now playing', showChevron: false),
         if (ownerOnly)
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -321,7 +319,10 @@ class _IdleRoom extends StatelessWidget {
         children: [
           Icon(Icons.nights_stay_outlined, size: 16, color: color),
           const SizedBox(width: AppSpacing.sm),
+          // The sentence takes the line before the dash does: at an even
+          // split it broke in two beside half a line of scenery.
           Flexible(
+            flex: 4,
             child: Text(
               streamIdleMessage,
               style: theme.textTheme.bodyMedium?.copyWith(color: color),

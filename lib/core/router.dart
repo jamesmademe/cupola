@@ -24,6 +24,7 @@ import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/shell/domain/shell_branches.dart';
 import 'package:cupola/features/shell/presentation/branch_transition.dart';
 import 'package:cupola/features/shell/presentation/shell_screen.dart';
+import 'package:cupola/features/shell/presentation/unknown_place_screen.dart';
 import 'package:cupola/features/discover/presentation/seerr_overview_screen.dart';
 import 'package:cupola/features/discover/presentation/seerr_admin_screens.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
@@ -3180,6 +3181,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: _showsWelcome(ref)
         ? ServiceRoutes.welcome
         : ServiceRoutes.home,
+    errorBuilder: (context, state) => const UnknownPlaceScreen(),
     redirect: (context, state) {
       // A pairing link carries the key to every secret of the device that
       // made it: taken off the location here, before anything can keep it,
@@ -3198,7 +3200,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       // other (a first run still goes through the way in, the requester never
       // reaches the control room). A link that names none opens the Home.
       if (OutsideLink.isOpenUri(state.uri)) {
-        return OutsideLink.routeOf(state.uri) ?? ServiceRoutes.home;
+        final to = OutsideLink.routeOf(state.uri);
+        if (to == null) return ServiceRoutes.home;
+        // The router redirects again only onto a location some route
+        // matches, so an old spelling (`/dashboard/radarr`) is rewritten
+        // here rather than one hop later, which never came.
+        return _rewriteLegacyStackPath(Uri.parse(to)) ?? to;
       }
       final path = state.uri.path;
       if (path == ServiceRoutes.legacyOnboarding) return ServiceRoutes.welcome;

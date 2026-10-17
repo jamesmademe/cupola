@@ -131,7 +131,7 @@ CatalogScene _scene(
   CatalogPlatform platform = CatalogPlatform.phone,
 }) => CatalogScene(
   caption,
-  (_) => ServiceKpiPeek(kpis: kpis, accent: service.accent),
+  (_) => ServiceKpiPeek(kpis: kpis, service: service),
   width: width,
   platform: platform,
 );
@@ -204,7 +204,7 @@ void main() {
             const ServiceNotConfigured(ServiceKey.radarr),
             StackTrace.empty,
           ),
-          accent: ServiceKey.radarr.accent,
+          service: ServiceKey.radarr,
         ),
         width: 390,
       ),
@@ -212,7 +212,7 @@ void main() {
         'At 2× reading size · the rail grows with the text, clamped at 1.6×',
         (_) => ServiceKpiPeek(
           kpis: const AsyncValue.data(_radarr),
-          accent: ServiceKey.radarr.accent,
+          service: ServiceKey.radarr,
         ),
         width: 390,
         textScale: catalogTextScale,
@@ -225,11 +225,11 @@ void main() {
           children: [
             ServiceKpiPeek(
               kpis: const AsyncValue.data(_radarrSilent),
-              accent: ServiceKey.radarr.accent,
+              service: ServiceKey.radarr,
             ),
             ServiceKpiPeek(
               kpis: const AsyncValue.data(_jellyfinMember),
-              accent: ServiceKey.jellyfin.accent,
+              service: ServiceKey.jellyfin,
             ),
           ],
         ),

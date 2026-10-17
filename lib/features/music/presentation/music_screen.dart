@@ -153,7 +153,7 @@ class MusicScreen extends ConsumerWidget {
           .maybeWhen(data: (ids) => ids, orElse: () => null),
       kpiPeek: ServiceKpiPeek(
         kpis: ref.watch(serviceKpiProvider(ServiceKey.lidarr)),
-        accent: ServiceKey.lidarr.accent,
+        service: ServiceKey.lidarr,
       ),
     );
   }

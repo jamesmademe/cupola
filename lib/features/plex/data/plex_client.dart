@@ -847,10 +847,8 @@ class PlexClient implements StreamServerClient {
     int? year,
     CancelToken? cancelToken,
   }) async {
-    // Plex indexes external ids as `Guid[]` entries and filters on them through
-    // `?guid=`, one value at a time, unlike Jellyfin's comma-delimited OR. So
-    // this tries each id in turn, cheapest identifier first: TMDB is what Radarr
-    // carries and what Plex's Movie agent writes.
+    // The ids the arr offered, cheapest first: TMDB is what Radarr carries and
+    // what Plex's Movie agent writes.
     final guids = <String>[
       if (tmdbId != null && tmdbId.isNotEmpty) 'tmdb://$tmdbId',
       if (tvdbId != null && tvdbId.isNotEmpty) 'tvdb://$tvdbId',
@@ -873,14 +871,45 @@ class PlexClient implements StreamServerClient {
     // Nothing to ask by, so nothing to verify: no claim either way.
     if (guids.isEmpty) return const StreamExternalLookup.notVerified();
 
+    // Plex filters `?guid=` on an item's own guid (`plex://movie/…`), never on
+    // its `Guid[]` entries: a current server answers `?guid=tmdb://603` with no
+    // rows from a library that holds The Matrix. So an external id is first
+    // turned into Plex's own guid by the server's matcher, the one its Fix
+    // Match dialog asks, and the library is filtered on that. Only this answer
+    // can say a title is not in the library.
+    switch (await _resolvePlexGuid(guids, kind, cancelToken)) {
+      case _PlexGuidResolved(:final guid):
+        final container = await _container(
+          '/library/all',
+          queryParameters: {
+            'guid': guid,
+            'includeGuids': 1,
+            'X-Plex-Container-Start': 0,
+            'X-Plex-Container-Size': _kExternalMatchCandidates,
+          },
+          cancelToken: cancelToken,
+        );
+        final items = await _itemsFromAsync(container['Metadata']);
+        final match = bestStreamExternalMatch(items, query);
+        if (match != null) return StreamExternalLookup.found(match);
+        return items.isEmpty
+            ? const StreamExternalLookup.notInLibrary()
+            : const StreamExternalLookup.notVerified();
+      case _PlexGuidNoLibrary():
+        // No library of this kind at all: nothing to find it in.
+        return const StreamExternalLookup.notInLibrary();
+      case _PlexGuidUnresolved():
+        // The matcher could not be asked (every library of the kind on an old
+        // agent, or the server unable to reach Plex's metadata): the direct
+        // probe below, whose empty answer proves nothing.
+        break;
+    }
+
     StreamItem? best;
     var bestScore = -1;
-    // What the rounds said, beyond the best row: whether any of them answered
-    // at all, and whether any answered with rows that did not verify. A title
-    // is "not in the library" only when a round answered and every answer was
-    // empty; when no round answered, the failure is the answer.
+    // Whether any round answered at all: when none did, the failure is the
+    // answer.
     var answered = false;
-    var sawCandidates = false;
     Object? lastFailure;
     for (final guid in guids) {
       try {
@@ -901,7 +930,6 @@ class PlexClient implements StreamServerClient {
         );
         final items = await _itemsFromAsync(container['Metadata']);
         answered = true;
-        if (items.isNotEmpty) sawCandidates = true;
         final match = bestStreamExternalMatch(items, query);
         if (match == null) continue;
         final score = streamExternalMatchScore(match, query) ?? -1;
@@ -923,13 +951,138 @@ class PlexClient implements StreamServerClient {
     // No round answered: that is the answer, and it is not "not there".
     final failure = lastFailure;
     if (!answered && failure != null) throw failure;
-    return sawCandidates
-        ? const StreamExternalLookup.notVerified()
-        : const StreamExternalLookup.notInLibrary();
+    // Answered, and found nothing it could verify: a current server answers
+    // an external id with no rows whether or not it holds the title, so this
+    // is no claim either way.
+    return const StreamExternalLookup.notVerified();
   }
 
   /// How many rows one `?guid=` probe reads: see [findByExternalId].
   static const int _kExternalMatchCandidates = 10;
+
+  /// The item each section type's matcher asks through, by type (`movie`,
+  /// `show`); see [_matchAnchor].
+  final Map<String, Future<_PlexMatchAnchor>> _matchAnchors = {};
+
+  /// An external guid on a section type (`movie|tmdb://603`) → Plex's own
+  /// (`plex://movie/…`), as the matcher answered: a title keeps its guid.
+  final Map<String, String> _plexGuids = {};
+
+  /// Plex's own guid for the first of [guids] its matcher knows, on the
+  /// section types [kind] can be in.
+  ///
+  /// The matcher (`/library/metadata/{id}/matches`, `title=tmdb-603`) answers
+  /// only through an item of a section the same kind of agent manages: asked
+  /// through a film, the series agent finds no show. It asks Plex's metadata
+  /// service, which the server reaches and this device never does.
+  Future<_PlexGuidResolution> _resolvePlexGuid(
+    List<String> guids,
+    StreamItemKind? kind,
+    CancelToken? cancelToken,
+  ) async {
+    final types = switch (kind) {
+      StreamItemKind.movie => const ['movie'],
+      StreamItemKind.series => const ['show'],
+      _ => const ['movie', 'show'],
+    };
+    var anySection = false;
+    for (final type in types) {
+      final _PlexMatchAnchor anchor;
+      try {
+        anchor = await _matchAnchor(type, cancelToken);
+      } catch (_) {
+        return const _PlexGuidUnresolved();
+      }
+      anySection = anySection || anchor.hasSection;
+      final ratingKey = anchor.ratingKey;
+      final agent = anchor.agent;
+      if (ratingKey == null || agent == null) continue;
+      for (final external in guids) {
+        final key = '$type|$external';
+        final known = _plexGuids[key];
+        if (known != null) return _PlexGuidResolved(known);
+        try {
+          final container = await _container(
+            '/library/metadata/${_pathSegment(ratingKey)}/matches',
+            queryParameters: {
+              'manual': 1,
+              'title': external.replaceFirst('://', '-'),
+              'agent': agent,
+            },
+            cancelToken: cancelToken,
+          );
+          final results = container['SearchResult'];
+          final guid = results is List
+              ? results
+                    .whereType<Map>()
+                    .map((result) => result['guid'])
+                    .whereType<String>()
+                    .where((guid) => guid.startsWith('plex://'))
+                    .firstOrNull
+              : null;
+          if (guid == null) continue;
+          _plexGuids[key] = guid;
+          return _PlexGuidResolved(guid);
+        } catch (_) {
+          // The server could not ask Plex's metadata service: try the next id,
+          // then the direct probe.
+          continue;
+        }
+      }
+    }
+    return anySection
+        ? const _PlexGuidUnresolved()
+        : const _PlexGuidNoLibrary();
+  }
+
+  /// The server's sections, read once for the matcher; a failed read is not
+  /// kept.
+  Future<List<Map<dynamic, dynamic>>>? _matchSections;
+
+  /// Whether a section of [type] exists, and the first item of the first one a
+  /// current Plex agent (`tv.plex.agents.*`) manages, with that agent. Kept
+  /// for the client's life; a failed read is not kept.
+  Future<_PlexMatchAnchor> _matchAnchor(String type, CancelToken? cancelToken) {
+    final pending = _matchAnchors[type] ??= () async {
+      final all = await (_matchSections ??= () async {
+        final container = await _container(
+          '/library/sections',
+          cancelToken: cancelToken,
+        );
+        final directories = container['Directory'];
+        return [if (directories is List) ...directories.whereType<Map>()];
+      }());
+      final sections = [
+        for (final section in all)
+          if (section['type'] == type) section,
+      ];
+      for (final section in sections) {
+        final agent = section['agent'];
+        final key = section['key'];
+        if (agent is! String || !agent.startsWith('tv.plex.agents.')) continue;
+        if (key == null) continue;
+        final page = await _container(
+          '/library/sections/${_pathSegment('$key')}/all',
+          queryParameters: {
+            'X-Plex-Container-Start': 0,
+            'X-Plex-Container-Size': 1,
+          },
+          cancelToken: cancelToken,
+        );
+        final first = (page['Metadata'] as List?)?.whereType<Map>().firstOrNull;
+        final ratingKey = first?['ratingKey'];
+        if (ratingKey == null) continue;
+        return (hasSection: true, ratingKey: '$ratingKey', agent: agent);
+      }
+      return (hasSection: sections.isNotEmpty, ratingKey: null, agent: null);
+    }();
+    pending.catchError((Object _) {
+      _matchAnchors.remove(type);
+      _matchSections = null;
+      return (hasSection: false, ratingKey: null, agent: null);
+    });
+    return pending;
+  }
 
   /// `GET /library/metadata/{ratingKey}/children`: show → seasons, season →
   /// episodes, album → tracks.
@@ -1388,3 +1541,32 @@ typedef _PlexLensRequest = ({
   Map<String, dynamic> query,
   bool Function(StreamItem item)? keep,
 });
+
+/// See [PlexClient._matchAnchor].
+typedef _PlexMatchAnchor = ({
+  bool hasSection,
+  String? ratingKey,
+  String? agent,
+});
+
+/// What [PlexClient._resolvePlexGuid] found.
+sealed class _PlexGuidResolution {
+  const _PlexGuidResolution();
+}
+
+/// Plex's own guid for the title.
+final class _PlexGuidResolved extends _PlexGuidResolution {
+  const _PlexGuidResolved(this.guid);
+
+  final String guid;
+}
+
+/// No library of the kind on the server.
+final class _PlexGuidNoLibrary extends _PlexGuidResolution {
+  const _PlexGuidNoLibrary();
+}
+
+/// The matcher could not say.
+final class _PlexGuidUnresolved extends _PlexGuidResolution {
+  const _PlexGuidUnresolved();
+}

@@ -13,6 +13,7 @@ import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/models/stream_library_page.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
+import 'package:cupola/features/stream/domain/stream_external_match.dart';
 
 import '../../../test_helpers/capturing_http_adapter.dart';
 import '../../../test_helpers/fixtures.dart';
@@ -1737,7 +1738,7 @@ void main() {
 
       await _client(adapter).findByExternalId(tmdbId: '603');
 
-      final query = adapter.requests.single.uri.queryParameters;
+      final query = adapter.probes.single.uri.queryParameters;
       expect(query['guid'], 'tmdb://603');
       expect(query['includeGuids'], '1');
       // A server that ignores `?guid=` answers with the whole library.
@@ -1762,7 +1763,7 @@ void main() {
 
       expect(item, isNull);
       // Both ids were tried before giving up.
-      expect(adapter.requests, hasLength(2));
+      expect(adapter.probes, hasLength(2));
     });
 
     test('skips a wrong first row and returns the verified one', () async {
@@ -1830,7 +1831,7 @@ void main() {
       ).findByExternalId(tmdbId: '1396', tvdbId: '81189');
 
       expect(item?.id, 'show');
-      expect(adapter.requests, hasLength(1));
+      expect(adapter.probes, hasLength(1));
     });
 
     test('a legacy agent guid is read as the item\'s id', () async {
@@ -1845,6 +1846,102 @@ void main() {
       });
 
       expect((await _client(adapter).findByExternalId(tmdbId: '603'))?.id, '2');
+    });
+  });
+
+  group('lookupByExternalId through the matcher', () {
+    test(
+      'an external id is turned into Plex\'s own guid, then found by it',
+      () async {
+        final adapter = _MatcherAdapter(
+          matches: {'tmdb-603': 'plex://movie/5d776827880197001ec90904'},
+          byPlexGuid: {'plex://movie/5d776827880197001ec90904': _matrixRow()},
+        );
+
+        final lookup = await _client(
+          adapter,
+        ).lookupByExternalId(tmdbId: '603', kind: StreamItemKind.movie);
+
+        expect(lookup.outcome, StreamLookupOutcome.found);
+        expect(lookup.item?.id, '2');
+        final asked = adapter.pathed('/matches').single.uri.queryParameters;
+        expect(asked['title'], 'tmdb-603');
+        expect(asked['agent'], 'tv.plex.agents.movie');
+        expect(
+          adapter.pathed('/library/all').single.uri.queryParameters['guid'],
+          'plex://movie/5d776827880197001ec90904',
+        );
+      },
+    );
+
+    test('Plex\'s own guid with no rows is not in the library', () async {
+      final adapter = _MatcherAdapter(
+        matches: {'tmdb-603': 'plex://movie/5d776827880197001ec90904'},
+      );
+
+      final lookup = await _client(
+        adapter,
+      ).lookupByExternalId(tmdbId: '603', kind: StreamItemKind.movie);
+
+      expect(lookup.outcome, StreamLookupOutcome.notInLibrary);
+    });
+
+    test('a server with no library of the kind holds nothing', () async {
+      final adapter = _MatcherAdapter(showSection: false);
+
+      final lookup = await _client(
+        adapter,
+      ).lookupByExternalId(tvdbId: '81189', kind: StreamItemKind.series);
+
+      expect(lookup.outcome, StreamLookupOutcome.notInLibrary);
+      expect(adapter.pathed('/matches'), isEmpty);
+    });
+
+    test('a matcher that fails falls back to the direct probe, whose silence '
+        'proves nothing', () async {
+      final adapter = _MatcherAdapter(matchesStatus: 500);
+
+      final lookup = await _client(
+        adapter,
+      ).lookupByExternalId(tmdbId: '603', kind: StreamItemKind.movie);
+
+      expect(lookup.outcome, StreamLookupOutcome.notVerified);
+      expect(
+        adapter.pathed('/library/all').single.uri.queryParameters['guid'],
+        'tmdb://603',
+      );
+    });
+
+    test('libraries on the old agents are probed directly, and an empty '
+        'answer is no claim', () async {
+      final lookup = await _client(
+        _GuidAdapter(const {}),
+      ).lookupByExternalId(tmdbId: '603', kind: StreamItemKind.movie);
+
+      expect(lookup.outcome, StreamLookupOutcome.notVerified);
+    });
+
+    test('the sections, the anchor and the guid are asked once', () async {
+      final adapter = _MatcherAdapter(
+        matches: {'tmdb-603': 'plex://movie/5d776827880197001ec90904'},
+        byPlexGuid: {'plex://movie/5d776827880197001ec90904': _matrixRow()},
+      );
+      final client = _client(adapter);
+
+      for (var i = 0; i < 2; i++) {
+        await client.lookupByExternalId(
+          tmdbId: '603',
+          kind: StreamItemKind.movie,
+        );
+      }
+
+      expect(adapter.pathed('/library/sections/1/all'), hasLength(1));
+      expect(
+        adapter.requests.where((r) => r.uri.path.endsWith('/library/sections')),
+        hasLength(1),
+      );
+      expect(adapter.pathed('/matches'), hasLength(1));
+      expect(adapter.pathed('/library/all'), hasLength(2));
     });
   });
 
@@ -1877,12 +1974,41 @@ void main() {
 
 /// Answers `/library/all` per `?guid=` value, and records every request. The
 /// join probes one id at a time, so which ids were tried is the behaviour.
+/// A film section and a show section on the agents before Plex's current
+/// ones, whose items the matcher cannot be asked through.
+const _legacySections = {
+  'MediaContainer': {
+    'size': 2,
+    'Directory': [
+      {
+        'key': '1',
+        'type': 'movie',
+        'agent': 'com.plexapp.agents.themoviedb',
+        'title': 'Movies',
+      },
+      {
+        'key': '2',
+        'type': 'show',
+        'agent': 'com.plexapp.agents.thetvdb',
+        'title': 'TV Shows',
+      },
+    ],
+  },
+};
+
+/// Answers `?guid=` probes from [byGuid], over [_legacySections].
 class _GuidAdapter implements HttpClientAdapter {
   _GuidAdapter(this.byGuid);
 
   final Map<String, Object> byGuid;
 
   final List<RequestOptions> requests = [];
+
+  /// The direct `?guid=` probes, without the read of the sections.
+  List<RequestOptions> get probes => [
+    for (final request in requests)
+      if (request.uri.queryParameters.containsKey('guid')) request,
+  ];
 
   @override
   void close({bool force = false}) {}
@@ -1894,11 +2020,12 @@ class _GuidAdapter implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) async {
     requests.add(options);
-    final body =
-        byGuid[options.uri.queryParameters['guid']] ??
-        const {
-          'MediaContainer': {'size': 0},
-        };
+    final body = options.uri.path.endsWith('/library/sections')
+        ? _legacySections
+        : byGuid[options.uri.queryParameters['guid']] ??
+              const {
+                'MediaContainer': {'size': 0},
+              };
     return ResponseBody.fromString(
       jsonEncode(body),
       200,
@@ -1926,4 +2053,105 @@ extension on PlexClient {
     startIndex: startIndex,
     limit: limit,
   )).items;
+}
+
+/// The Matrix as `/library/all?guid=plex://…&includeGuids=1` returns it.
+Map<String, dynamic> _matrixRow() => {
+  'ratingKey': '2',
+  'key': '/library/metadata/2',
+  'guid': 'plex://movie/5d776827880197001ec90904',
+  'title': 'The Matrix',
+  'type': 'movie',
+  'year': 1999,
+  'Guid': [
+    {'id': 'imdb://tt0133093'},
+    {'id': 'tmdb://603'},
+  ],
+};
+
+/// A server on Plex's current agents: a film section whose first item is
+/// `10`, a show section (empty unless [showItem]), a matcher answering
+/// [matches] by its `title=` (with [matchesStatus]), and the library filtered
+/// by Plex's own guid from [byPlexGuid].
+class _MatcherAdapter implements HttpClientAdapter {
+  _MatcherAdapter({
+    this.matches = const {},
+    this.byPlexGuid = const {},
+    this.matchesStatus = 200,
+    this.showSection = true,
+  });
+
+  final Map<String, String> matches;
+  final Map<String, Map<String, dynamic>> byPlexGuid;
+  final int matchesStatus;
+  final bool showSection;
+
+  final List<RequestOptions> requests = [];
+
+  List<RequestOptions> pathed(String path) => [
+    for (final request in requests)
+      if (request.uri.path.endsWith(path)) request,
+  ];
+
+  @override
+  void close({bool force = false}) {}
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    requests.add(options);
+    final path = options.uri.path;
+    final query = options.uri.queryParameters;
+    var status = 200;
+    Object body;
+    if (path.endsWith('/library/sections')) {
+      body = {
+        'MediaContainer': {
+          'Directory': [
+            {'key': '1', 'type': 'movie', 'agent': 'tv.plex.agents.movie'},
+            if (showSection)
+              {'key': '2', 'type': 'show', 'agent': 'tv.plex.agents.series'},
+          ],
+        },
+      };
+    } else if (path.endsWith('/library/sections/1/all')) {
+      body = {
+        'MediaContainer': {
+          'size': 1,
+          'Metadata': [
+            {'ratingKey': '10', 'type': 'movie', 'title': 'Anchor'},
+          ],
+        },
+      };
+    } else if (path.endsWith('/matches')) {
+      status = matchesStatus;
+      final guid = matches[query['title']];
+      body = {
+        'MediaContainer': {
+          'SearchResult': [
+            if (guid != null)
+              {'guid': guid, 'name': 'The Matrix', 'year': 1999},
+          ],
+        },
+      };
+    } else {
+      final row = byPlexGuid[query['guid']];
+      body = {
+        'MediaContainer': {
+          'size': row == null ? 0 : 1,
+          'Metadata': [?row],
+        },
+      };
+    }
+    return ResponseBody.fromString(
+      jsonEncode(body),
+      status,
+      headers: {
+        Headers.contentTypeHeader: ['application/json; charset=utf-8'],
+      },
+    );
+  }
 }

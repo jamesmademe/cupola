@@ -2298,7 +2298,9 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
               : [
                   if (credentialPath != null)
                     '${service.title} → $credentialPath',
-                  if (_hasAway) 'The same key at both addresses.',
+                  if (_hasAway)
+                    'The same ${refusedCredentialOf(service)} at both '
+                        'addresses.',
                 ].join('\n'),
           helperMaxLines: 3,
           suffixIcon: Row(
@@ -2314,12 +2316,14 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
                       : Icons.visibility_rounded,
                 ),
                 onPressed: () => setState(() => _revealApiKey = !_revealApiKey),
-                tooltip: _revealApiKey ? 'Hide API key' : 'Show API key',
+                tooltip: _revealApiKey
+                    ? 'Hide ${service.credentialLabel}'
+                    : 'Show ${service.credentialLabel}',
               ),
               IconButton(
                 icon: const Icon(Icons.copy_rounded),
                 onPressed: _copyApiKey,
-                tooltip: 'Copy API key',
+                tooltip: 'Copy ${service.credentialLabel}',
               ),
             ],
           ),
@@ -2435,7 +2439,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     // the app and when it will be taken back.
     SnackBarHelper.info(
       context,
-      'API key copied, the clipboard is cleared in '
+      '${service.credentialLabel} copied, the clipboard is cleared in '
       '${_copiedCredentialLifetime.inSeconds} seconds',
     );
     unawaited(_expireCopiedCredential(apiKey));

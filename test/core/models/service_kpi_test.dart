@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/models/service_kpi.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/widgets/service_kpi_peek.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 void main() {
   group('a figure whose source did not answer', () {
@@ -67,7 +68,7 @@ void main() {
           home: Scaffold(
             body: ServiceKpiPeek(
               kpis: AsyncValue.data([kpi]),
-              accent: Colors.amber,
+              service: ServiceKey.radarr,
             ),
           ),
         ),

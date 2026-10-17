@@ -10,6 +10,8 @@
 /// Pure and top-level, so each mapping is testable without a container.
 library;
 
+import 'dart:math' as math;
+
 import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
@@ -118,7 +120,11 @@ InFlightReading? transmissionInFlight(
   }
   if (torrent.isStalled && torrent.status == TransmissionStatus.download) {
     return _stuckOnceIdle(
-      idleSince(lastActivity: torrent.activityDate, added: torrent.addedDate),
+      idleSince(
+        lastActivity: torrent.activityDate,
+        added: torrent.addedDate,
+        started: torrent.startDate,
+      ),
       now,
       unknownIsStuck: true,
     );
@@ -196,12 +202,18 @@ InFlightReading? qbittorrentInFlight(Torrent torrent, {required DateTime now}) {
 /// minute of a healthy download.
 const Duration stuckAfter = Duration(minutes: 30);
 
-/// When a torrent last received anything, from the client's epoch seconds:
-/// [lastActivity] when the client recorded one, else [added], since a torrent
-/// that never received a byte has waited since it was added. Null when the
-/// client gave neither.
-DateTime? idleSince({required int lastActivity, required int added}) {
-  final seconds = lastActivity > 0 ? lastActivity : added;
+/// Since when a torrent has waited with nothing arriving, from the client's
+/// epoch seconds: the latest of [lastActivity], [added] and [started]. A
+/// torrent that never received a byte has waited since it was added, and one
+/// stopped for weeks and started again has waited since it started (Transmission
+/// says when, `startDate`): counting from its addition called it stuck the
+/// moment it was resumed, `for 26 days`. Null when the client gave none.
+DateTime? idleSince({
+  required int lastActivity,
+  required int added,
+  int started = 0,
+}) {
+  final seconds = [lastActivity, added, started].reduce(math.max);
   if (seconds <= 0) return null;
   return DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
 }

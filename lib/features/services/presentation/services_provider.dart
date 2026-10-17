@@ -23,6 +23,7 @@ import 'package:cupola/features/plex/data/plex_client.dart';
 import 'package:cupola/features/dockge/data/dockge_service.dart';
 import 'package:cupola/features/nzbget/data/nzbget_client.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
+import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
 import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
@@ -2584,6 +2585,7 @@ Future<List<ServiceQueueItem>> _loadTransmissionQueueItems(
             : idleSince(
                 lastActivity: torrent.activityDate,
                 added: torrent.addedDate,
+                started: torrent.startDate,
               ),
         detail: joinDisplayParts([
           formatSpeed(torrent.rateDownload),
@@ -3733,9 +3735,15 @@ Future<List<DashboardDecision>> _healthDecisions(
   Ref ref,
   _MergeConnection source,
 ) async {
+  if (source.service == ServiceKey.bazarr) {
+    return _bazarrHealthDecisions(ref, source);
+  }
   final ArrActivityMixin arr = switch (source.service) {
     ServiceKey.radarr => ref.watch(radarrServiceForProvider(source.instanceId)),
     ServiceKey.sonarr => ref.watch(sonarrServiceForProvider(source.instanceId)),
+    ServiceKey.readarr => ref.watch(
+      readarrServiceForProvider(source.instanceId),
+    ),
     _ => ref.watch(lidarrServiceForProvider(source.instanceId)),
   };
   final checks = await arr.getHealth();
@@ -3760,6 +3768,39 @@ Future<List<DashboardDecision>> _healthDecisions(
           connectionName: source.name,
           actionInstanceId: source.instanceId,
         ),
+  ];
+}
+
+/// Bazarr's health issues, each a fault: without a languages profile, or
+/// with a library folder it cannot use, Bazarr fetches nothing. The headline
+/// is the app's where the check is known, Bazarr's own words stay behind Why?.
+Future<List<DashboardDecision>> _bazarrHealthDecisions(
+  Ref ref,
+  _MergeConnection source,
+) async {
+  final issues = await ref
+      .watch(bazarrServiceForProvider(source.instanceId))
+      .getHealthIssues();
+  final name = serviceWithConnection(source.service, source.name, joiner: ' ');
+  return [
+    for (final issue in issues)
+      DashboardDecision(
+        kind: DecisionKind.serviceHealth,
+        id:
+            'health-${source.service.routeParam}-${source.instanceId}-'
+            '${issue.object.hashCode}-${issue.issue.hashCode}',
+        service: source.service,
+        title: issue.headline,
+        detail: name,
+        reason: issue.issue.isEmpty ? null : issue.issue,
+        subject: 'bazarr:${issue.object}',
+        // Bazarr does not date an issue.
+        occurredAt: null,
+        route: ServiceRoutes.forService(source.service),
+        instanceId: source.instanceId,
+        connectionName: source.name,
+        actionInstanceId: source.instanceId,
+      ),
   ];
 }
 

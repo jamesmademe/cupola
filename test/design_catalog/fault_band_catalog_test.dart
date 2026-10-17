@@ -5,7 +5,9 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/fault_band.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 import 'catalog.dart';
 
@@ -103,6 +105,17 @@ void main() {
           message:
               'Seerr returned 50 of 300 users; later pages are unavailable.',
           onRetry: () {},
+        ),
+      ),
+      CatalogScene(
+        '.remedied · a module whose source refused its token: the fix in the '
+        'amber fill, no Retry',
+        (_) => FaultBand.remedied(
+          message: 'Plex answered but refused the token.',
+          remedy: FailureRemedy.forReason(
+            ServiceKey.plex,
+            ServiceFailureReason.unauthorized,
+          )!,
         ),
       ),
       CatalogScene(

@@ -132,7 +132,7 @@ class MoviesScreen extends ConsumerWidget {
           .maybeWhen(data: (ids) => ids, orElse: () => null),
       kpiPeek: ServiceKpiPeek(
         kpis: ref.watch(serviceKpiProvider(ServiceKey.radarr)),
-        accent: ServiceKey.radarr.accent,
+        service: ServiceKey.radarr,
       ),
     );
   }

@@ -82,7 +82,7 @@ class _DockgeDashboard extends ConsumerWidget {
           if (topPadding > 0) SizedBox(height: topPadding),
           ServiceKpiPeek(
             kpis: ref.watch(serviceKpiProvider(ServiceKey.dockge)),
-            accent: ServiceKey.dockge.accent,
+            service: ServiceKey.dockge,
           ),
           const SizedBox(height: AppSpacing.xs),
           SectionHeader.action(

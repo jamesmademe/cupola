@@ -64,9 +64,10 @@ typed read, not merely that a container is running. Empty lists are valid
 data; a failed health, authentication or payload probe fails the test.
 It also probes wrong credentials against every transport: sixteen services
 must reject them. The separate Plex negative probe is reported as skipped when
-the disposable container is running with local authentication disabled, since
-that mode accepts an arbitrary `X-Plex-Token`; use a claimed/authenticated Plex
-server for the token-rejection check.
+the container was never claimed: an unclaimed Plex runs with local
+authentication disabled and accepts any `X-Plex-Token`. Once the server is
+claimed, the bootstrap writes the server's own token (from its
+`Preferences.xml`) to the credentials file and the probe runs.
 
 The TrueNAS checks go over TLS with the fingerprint the bootstrap recorded in
 `CUPOLA_MACLAB_TRUENAS_CERT_FINGERPRINT`, at the address a person saves,
@@ -93,7 +94,7 @@ recorded fingerprint, which is what ties the bootstrap's text to the app's.
 | SABnzbd | http://127.0.0.1:8082 | test-key | query API |
 | NZBGet | http://127.0.0.1:6789 | nzbget / tegbzn6789 | JSON-RPC + Basic |
 | Jellyfin | http://127.0.0.1:8096 | generated token + user id; a requester user with a generated password | REST |
-| Plex | http://127.0.0.1:32400 | local auth disabled in the disposable image | REST/XML-or-JSON |
+| Plex | http://127.0.0.1:32400 | unclaimed: any token; claimed: the server's own token, read by the bootstrap | REST/XML-or-JSON |
 | Dockge | http://127.0.0.1:5001 | disposable account provisioned by bootstrap | Socket.IO |
 | Nginx Proxy Manager | http://127.0.0.1:8181 | admin@example.com / changeme | REST + JWT |
 | TrueNAS fixture | wss://127.0.0.1:8460 (self-signed; the app saves https://127.0.0.1:8460) | test-key | WebSocket JSON-RPC over TLS |
@@ -103,9 +104,9 @@ qBittorrent 5.1 validates the Host/Origin port, so the full lab uses host
 port 8080 for qBittorrent and 8082 for SABnzbd. Transmission's LinuxServer
 image consumes USER/PASS; the Compose file uses those names and the harness
 asserts both the 409 CSRF challenge and the 401 wrong-password path.
-Plex is intentionally a transport/shape fixture here, not an
-authenticated-token fixture: obtaining a real claim token would make the lab
-depend on an external Plex account.
+Unclaimed, Plex is a transport/shape fixture: claiming it ties the lab to a
+Plex account, which is the owner's choice and never the bootstrap's. Claimed,
+its token stays in the chmod-600 credentials file like every other secret.
 
 Dockge deliberately has no Docker socket mounted. Login, Socket.IO session and
 read-only stack discovery are safe to test. Terminal and stack-mutating

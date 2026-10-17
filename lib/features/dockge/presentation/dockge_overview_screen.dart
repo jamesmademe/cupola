@@ -141,7 +141,7 @@ class _OverviewBody extends ConsumerWidget {
           ...sectionsOrOneLine(ref, ServiceKey.dockge, [
             ServiceKpiPeek(
               kpis: ref.watch(serviceKpiProvider(ServiceKey.dockge)),
-              accent: ServiceKey.dockge.accent,
+              service: ServiceKey.dockge,
             ),
             const _StacksSection(),
             const _AgentsSection(),

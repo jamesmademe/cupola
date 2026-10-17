@@ -155,7 +155,7 @@ void main() {
     await _pump(tester, const UnraidScreen.array(showAppBar: false));
 
     expect(find.text('Array disks'), findsOneWidget);
-    expect(find.text('disk1'), findsOneWidget);
+    expect(find.text('Disk 1'), findsOneWidget);
     expect(find.text('Containers'), findsNothing);
     expect(find.text('immich'), findsNothing);
   });
@@ -168,7 +168,7 @@ void main() {
     expect(find.text('Containers'), findsOneWidget);
     expect(find.text('immich'), findsOneWidget);
     expect(find.text('Array disks'), findsNothing);
-    expect(find.text('disk1'), findsNothing);
+    expect(find.text('Disk 1'), findsNothing);
   });
 
   testWidgets('neither half repeats the readouts', (tester) async {

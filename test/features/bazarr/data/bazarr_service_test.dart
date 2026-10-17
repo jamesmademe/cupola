@@ -43,22 +43,39 @@ void main() {
     });
   });
 
-  group('BazarrService.getProviderSummary', () {
-    test('reads the supported aggregate provider count from badges', () async {
-      final client = FakeApiClient()..getResponseData = {'providers': 5};
+  group('BazarrService.getHealthIssues', () {
+    test(
+      'reads Bazarr\'s issues, each with its object and its words',
+      () async {
+        final client = FakeApiClient()
+          ..getResponseData = {
+            'data': [
+              {
+                'object': 'Missing languages profile',
+                'issue':
+                    'You must create at least one languages profile and assign '
+                    'it to your content.',
+              },
+              {'object': '', 'issue': ''},
+            ],
+          };
 
-      final summary = await BazarrService(client).getProviderSummary();
+        final issues = await BazarrService(client).getHealthIssues();
 
-      expect(client.lastGetPath, '/api/badges');
-      expect(summary.configuredCount, 5);
-    });
+        expect(client.lastGetPath, '/api/system/health');
+        expect(issues, hasLength(1));
+        expect(issues.single.headline, 'Bazarr has no languages profile');
+        expect(issues.single.issue, startsWith('You must create'));
+      },
+    );
 
-    test('keeps the count unavailable when badges omit it', () async {
-      final client = FakeApiClient()..getResponseData = <String, dynamic>{};
+    test('an answer that is not the list is no healthy Bazarr', () async {
+      final client = FakeApiClient()..getResponseData = '<html></html>';
 
-      final summary = await BazarrService(client).getProviderSummary();
-
-      expect(summary.configuredCount, isNull);
+      expect(
+        BazarrService(client).getHealthIssues(),
+        throwsA(isA<FormatException>()),
+      );
     });
   });
 
@@ -68,11 +85,11 @@ void main() {
         ..getResponseData = {
           'data': [
             {
-              'name': 'OpenSubtitles',
-              'status': 'Too many requests',
-              'retry': '2026-09-18 15:00',
+              'name': 'opensubtitlescom',
+              'status': 'TooManyRequests',
+              'retry': 'in 2 hours',
             },
-            {'name': 'Subscene', 'status': 'Good', 'retry': '-'},
+            {'name': 'podnapisi', 'status': 'Good', 'retry': '-'},
           ],
         };
 
@@ -80,10 +97,26 @@ void main() {
 
       expect(client.lastGetPath, '/api/providers');
       expect(providers, hasLength(2));
-      expect(providers.first.name, 'OpenSubtitles');
-      expect(providers.first.status, 'Too many requests');
-      expect(providers.first.retryLabel, '2026-09-18 15:00');
-      expect(providers.last.tone, StatusTone.success);
+      // Every enabled provider is listed: the throttled one in its reason's
+      // words, the ready one ready.
+      expect(providers.first.displayName, 'OpenSubtitles.com');
+      expect(providers.first.throttled, isTrue);
+      expect(providers.first.statusLabel, 'Too many requests');
+      expect(providers.first.retryLabel, 'in 2 hours');
+      expect(providers.first.tone, StatusTone.warning);
+      expect(providers.last.throttled, isFalse);
+      expect(providers.last.statusLabel, 'Ready');
+      expect(providers.last.retryLabel, isNull);
+      expect(providers.last.tone, StatusTone.neutral);
+    });
+
+    test('an answer that is not the list is no Bazarr without providers', () {
+      final client = FakeApiClient()..getResponseData = '<html></html>';
+
+      expect(
+        BazarrService(client).getProviderStatuses(),
+        throwsA(isA<FormatException>()),
+      );
     });
 
     test('resets provider throttles through the official action', () async {

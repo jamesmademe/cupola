@@ -130,7 +130,7 @@ class SeriesScreen extends ConsumerWidget {
           .maybeWhen(data: (ids) => ids, orElse: () => null),
       kpiPeek: ServiceKpiPeek(
         kpis: ref.watch(serviceKpiProvider(ServiceKey.sonarr)),
-        accent: ServiceKey.sonarr.accent,
+        service: ServiceKey.sonarr,
       ),
     );
   }

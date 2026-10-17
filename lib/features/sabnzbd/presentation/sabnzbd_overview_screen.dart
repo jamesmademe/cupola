@@ -124,7 +124,7 @@ class _OverviewBody extends ConsumerWidget {
               kpis: ref
                   .watch(sabnzbdQueueProvider)
                   .whenData(sabnzbdOverviewReadouts),
-              accent: ServiceKey.sabnzbd.accent,
+              service: ServiceKey.sabnzbd,
             ),
             const _QueueSection(),
             const _HistoryTodaySection(),

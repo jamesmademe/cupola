@@ -23,6 +23,8 @@ import 'package:cupola/features/qbittorrent/data/qbittorrent_service.dart';
 import 'package:cupola/features/readarr/data/readarr_service.dart';
 import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
+import 'package:cupola/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/stream/domain/stream_external_match.dart';
 import 'package:cupola/features/transmission/data/transmission_client.dart';
 import 'package:cupola/features/truenas/data/truenas_service.dart';
 import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
@@ -216,6 +218,15 @@ void main() {
     expect(await client.probeVersion(), isNotEmpty);
     expect(await client.getIdentity(), isNotNull);
     expect(await client.getLibraries(), isNotEmpty);
+    // A real server filters `?guid=` on its own guid only: the external id
+    // reaches the title through the server's matcher. Needs the server online
+    // to Plex's metadata, and The Matrix in its Films library.
+    final lookup = await client.lookupByExternalId(
+      tmdbId: '603',
+      kind: StreamItemKind.movie,
+    );
+    expect(lookup.outcome, StreamLookupOutcome.found, reason: 'Plex');
+    expect(lookup.item?.title, 'The Matrix');
   });
 
   test('Dockge Socket.IO login + stack list', () async {

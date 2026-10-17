@@ -103,7 +103,7 @@ class _OverviewBody extends ConsumerWidget {
           ...sectionsOrOneLine(ref, ServiceKey.prowlarr, [
             ServiceKpiPeek(
               kpis: ref.watch(serviceKpiProvider(ServiceKey.prowlarr)),
-              accent: ServiceKey.prowlarr.accent,
+              service: ServiceKey.prowlarr,
             ),
             const _AttentionSection(),
             const _IndexersSection(),

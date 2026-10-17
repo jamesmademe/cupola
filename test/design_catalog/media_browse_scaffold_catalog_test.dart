@@ -247,7 +247,7 @@ Widget _scaffold(
           ]
         : const [],
     kpiPeek: peek
-        ? ServiceKpiPeek(kpis: _kpis, accent: ServiceKey.radarr.accent)
+        ? ServiceKpiPeek(kpis: _kpis, service: ServiceKey.radarr)
         : null,
   );
 }

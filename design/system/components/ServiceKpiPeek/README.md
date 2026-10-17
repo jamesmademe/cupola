@@ -26,7 +26,7 @@ The rule is the app's tone rule. A backlog figure (Missing, Waiting for approval
 
 ## The consumer provides
 
-An `AsyncValue<List<ServiceKpi>>` (label, value, icon, optional tone, optional note) and the service `accent` (the lamp, from `ServiceKey.accent`). Real labels include Movies, Monitored, Missing, Queue; Active, Download, Upload, Seeding, Downloading (a speed card reads the brand book's `↓ 22.4 MB/s` by its south or north glyph beside the rate, and its word names the rate); Streams, Transcodes, Libraries; Requests, Waiting for approval, Processing, Available; Pools, Used, Alerts.
+An `AsyncValue<List<ServiceKpi>>` (label, value, icon, optional tone, optional note) and the `service` (`ServiceKey`): its accent is the lamp (`ServiceKey.accent`), and its word for a refused credential (`key`, `token`, `sign-in`, `refusedCredentialOf`) is the note of a rail it could not read (*Refused the token*). Real labels include Movies, Monitored, Missing, Queue; Active, Download, Upload, Seeding, Downloading (a speed card reads the brand book's `↓ 22.4 MB/s` by its south or north glyph beside the rate, and its word names the rate); Streams, Transcodes, Libraries; Requests, Waiting for approval, Processing, Available; Pools, Used, Alerts.
 
 ## Semantics
 

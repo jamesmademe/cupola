@@ -490,6 +490,23 @@ final _britishSpelling = RegExp(
 /// The words that stay, each with the reason it is not the banned state.
 const _allowed = <({String file, String literal, String reason})>[
   (
+    file: 'lib/features/settings/domain/service_key.dart',
+    literal:
+        'Unraid 7.2 and later have the API built in; on an older release, '
+        'install the Unraid Connect plugin first. Then create an API key '
+        'under Settings → Management Access → API Keys.',
+    reason:
+        'Unraid Connect is the name of the plugin that carries the API before '
+        'Unraid 7.2, the words a person searches its app store for',
+  ),
+  (
+    file: 'lib/features/settings/domain/service_key.dart',
+    literal:
+        'Before Unraid 7.2 the API comes with the Unraid Connect plugin, and '
+        'the endpoint stays silent without it.',
+    reason: 'Unraid Connect is the plugin\'s name, as above',
+  ),
+  (
     file: 'lib/features/discover/data/seerr_service.dart',
     literal: 'pending',
     reason:

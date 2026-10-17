@@ -144,7 +144,7 @@ class _TransmissionDashboard extends ConsumerWidget {
                 ),
               ServiceKpiPeek(
                 kpis: ref.watch(serviceKpiProvider(ServiceKey.transmission)),
-                accent: ServiceKey.transmission.accent,
+                service: ServiceKey.transmission,
               ),
               const SizedBox(height: AppSpacing.sm),
               const _TransmissionActionsBar(),

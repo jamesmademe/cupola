@@ -259,14 +259,14 @@ void main() {
       const sleeping = UnraidDisk(name: 'disk2', status: 'DISK_OK', temp: null);
 
       expect(unraidDiskReading(sleeping), 'spun down');
-      expect(unraidDiskSpoken(sleeping), 'disk2, DISK_OK, spun down');
+      expect(unraidDiskSpoken(sleeping), 'Disk 2, Healthy, spun down');
     });
 
     test('a row speaks one sentence with the unit said, not glyphed', () {
       const warm = UnraidDisk(name: 'disk1', status: 'DISK_OK', temp: 47);
 
       expect(unraidDiskReading(warm), '47\u00A0°C');
-      expect(unraidDiskSpoken(warm), 'disk1, DISK_OK, 47 degrees');
+      expect(unraidDiskSpoken(warm), 'Disk 1, Healthy, 47 degrees');
     });
   });
 

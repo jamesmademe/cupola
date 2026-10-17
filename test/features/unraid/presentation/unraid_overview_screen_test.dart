@@ -42,8 +42,14 @@ void main() {
     expect(find.text('VMs'), findsNothing);
     expect(find.text('Notifications'), findsNothing);
     expect(find.text('Shares'), findsNothing);
-    // Nor a parity verdict, which the `array` document does not carry.
-    expect(find.textContaining('Parity'), findsNothing);
+    // Nor a parity verdict, which the `array` document does not carry: the
+    // slot called Parity is a disk row, not a verdict on it.
+    expect(
+      find.textContaining(
+        RegExp('parity (is|valid|check|error)', caseSensitive: false),
+      ),
+      findsNothing,
+    );
   });
 
   testWidgets('each section link is named after the tab it opens', (
@@ -90,7 +96,7 @@ void main() {
     // One node for the whole row, with the unit said rather than glyphed, not
     // three fragments a screen reader walks separately.
     expect(
-      find.semantics.byLabel('parity, DISK_OK, spun down'),
+      find.semantics.byLabel('Parity, Healthy, spun down'),
       findsOneWidget,
     );
   });

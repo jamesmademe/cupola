@@ -89,7 +89,7 @@ class _HubGrid extends ConsumerWidget {
         children: [
           ServiceKpiPeek(
             kpis: ref.watch(serviceKpiProvider(ServiceKey.truenas)),
-            accent: ServiceKey.truenas.accent,
+            service: ServiceKey.truenas,
           ),
           const TrueNasVersionBanner(),
           Padding(

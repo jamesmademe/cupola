@@ -14,31 +14,32 @@ import '../../../test_helpers/fake_bazarr_service.dart';
 import '../../../test_helpers/settings_scope.dart';
 
 void main() {
-  testWidgets('shows the aggregate and throttled provider status', (
-    tester,
-  ) async {
+  testWidgets('lists every enabled provider, and the throttled one in its '
+      'reason\'s words with when Bazarr asks again', (tester) async {
     final service = FakeBazarrService()
-      ..providerSummary = const BazarrProviderSummary(configuredCount: 5)
       ..providerStatuses = const [
         BazarrProviderStatus(
-          name: 'OpenSubtitles',
-          status: 'Too many requests',
-          retry: '2026-09-18 15:00',
+          name: 'opensubtitlescom',
+          status: 'TooManyRequests',
+          retry: 'in 2 hours',
         ),
+        BazarrProviderStatus(name: 'podnapisi', status: 'Good', retry: '-'),
       ];
     await _pump(tester, service: service);
 
-    expect(find.text('5 configured'), findsOneWidget);
-    expect(find.text('Configured providers'), findsOneWidget);
-    expect(find.text('OpenSubtitles'), findsOneWidget);
+    expect(find.text('2 enabled\u00A0· 1 throttled'), findsOneWidget);
+    expect(find.text('OpenSubtitles.com'), findsOneWidget);
     expect(find.text('Too many requests'), findsOneWidget);
-    expect(find.text('2026-09-18 15:00'), findsOneWidget);
+    expect(find.text('in 2 hours'), findsOneWidget);
+    expect(find.text('Podnapisi'), findsOneWidget);
+    expect(find.text('Ready'), findsOneWidget);
     expect(
       find.semantics.byLabel(
-        'OpenSubtitles, Too many requests, retry 2026-09-18 15:00',
+        'OpenSubtitles.com, Too many requests, asks again in 2 hours',
       ),
       findsOneWidget,
     );
+    expect(find.semantics.byLabel('Podnapisi, Ready'), findsOneWidget);
 
     // Asks first, and Cancel sends nothing.
     await tester.tap(
@@ -64,6 +65,32 @@ void main() {
     expect(find.text('Provider throttles reset'), findsOneWidget);
   });
 
+  testWidgets('nothing throttled offers no reset', (tester) async {
+    await _pump(
+      tester,
+      service: FakeBazarrService()
+        ..providerStatuses = const [
+          BazarrProviderStatus(name: 'podnapisi', status: 'Good', retry: '-'),
+        ],
+    );
+
+    expect(find.text('1 enabled'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('bazarr-reset-provider-throttles')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('a Bazarr with no provider enabled says it finds no subtitles', (
+    tester,
+  ) async {
+    await _pump(tester, service: FakeBazarrService());
+
+    expect(find.text('0 enabled'), findsOneWidget);
+    expect(find.text('No providers enabled'), findsOneWidget);
+    expect(find.textContaining('finds no subtitles'), findsOneWidget);
+  });
+
   testWidgets(
     'does not read the provider endpoint when Bazarr is unconfigured',
     (tester) async {
@@ -71,21 +98,9 @@ void main() {
       await _pump(tester, service: service, configured: false);
 
       expect(find.byType(NotConfiguredPlaceholder), findsOneWidget);
-      expect(find.text('Configured providers'), findsNothing);
+      expect(find.text('No providers enabled'), findsNothing);
     },
   );
-
-  testWidgets('renders an em dash when the supported response has no count', (
-    tester,
-  ) async {
-    await _pump(
-      tester,
-      service: FakeBazarrService()
-        ..providerSummary = const BazarrProviderSummary(),
-    );
-
-    expect(find.text('—'), findsNWidgets(2));
-  });
 }
 
 Future<void> _pump(

@@ -129,11 +129,16 @@ class ServiceTabBar extends StatelessWidget {
         children: [
           for (final tab in tabs) ...[
             if (tab != tabs.first) const SizedBox(width: AppSpacing.xs),
-            _Tab(
-              tab: tab,
-              selected: tab == current,
-              onTap: () => onSelected(tab),
-            ),
+            if (tab == current)
+              _InView(
+                child: _Tab(
+                  tab: tab,
+                  selected: true,
+                  onTap: () => onSelected(tab),
+                ),
+              )
+            else
+              _Tab(tab: tab, selected: false, onTap: () => onSelected(tab)),
           ],
         ],
       ),
@@ -296,6 +301,40 @@ class _Identity extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Brings the selected tab into the strip's view once it is laid out: a page
+/// opened on its fifth tab (`Providers`, from a link or a Needs you row) drew
+/// the bar from its start, with the selected tab past the edge. Only past the
+/// end, and at once: a tab already in view does not move the strip.
+class _InView extends StatefulWidget {
+  const _InView({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_InView> createState() => _InViewState();
+}
+
+class _InViewState extends State<_InView> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // A bar in a branch not on screen is built and never laid out: there is
+      // nothing to bring into a view nobody sees.
+      final box = context.findRenderObject();
+      if (box is! RenderBox || !box.attached || !box.hasSize) return;
+      Scrollable.ensureVisible(
+        context,
+        alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// One tab, the brand book's way: the selected one is the room's strong fill under the

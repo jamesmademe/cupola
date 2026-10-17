@@ -109,6 +109,7 @@ class TransmissionTorrent {
     required this.addedDate,
     required this.doneDate,
     required this.activityDate,
+    this.startDate = 0,
     required this.peersConnected,
     required this.peersSendingToUs,
     required this.peersGettingFromUs,
@@ -170,6 +171,9 @@ class TransmissionTorrent {
   final int addedDate;
   final int doneDate;
   final int activityDate;
+
+  /// When the torrent was last started, epoch seconds; `0` when never.
+  final int startDate;
 
   final int peersConnected;
   final int peersSendingToUs;
@@ -249,6 +253,7 @@ class TransmissionTorrent {
       addedDate: parseInt(json['addedDate']),
       doneDate: parseInt(json['doneDate']),
       activityDate: parseInt(json['activityDate']),
+      startDate: parseInt(json['startDate']),
       peersConnected: parseInt(json['peersConnected']),
       peersSendingToUs: parseInt(json['peersSendingToUs']),
       peersGettingFromUs: parseInt(json['peersGettingFromUs']),

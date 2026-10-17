@@ -34,6 +34,21 @@ void main() {
   }
 
   group('ServiceTabBar', () {
+    testWidgets('a page opened on a tab past the edge brings it into view', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        service: ServiceKey.bazarr,
+        current: ServiceTab.providers,
+      );
+      await tester.pumpAndSettle();
+
+      final tab = tester.getRect(find.text('Providers'));
+      expect(tab.right, lessThanOrEqualTo(390));
+      expect(tab.left, greaterThanOrEqualTo(0));
+    });
+
     testWidgets('draws the service\'s own bar, in order', (tester) async {
       await pump(tester, size: const Size(1440, 900));
 

@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
+import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/fault_band.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/features/home/data/home_last_known.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// One module of the Home, in the slab every module shares.
@@ -256,9 +259,37 @@ class HomeModuleFrame extends StatelessWidget {
     }
     // Red only when a source did not answer; amber when every one of them
     // answered with a fault. The words and the remedy are the band's.
-    return coverage.anyDidNotAnswer
-        ? FaultBand.section(message: message, onRetry: onRetry!)
-        : FaultBand.partial(message: message, onRetry: onRetry!);
+    if (coverage.anyDidNotAnswer) {
+      return FaultBand.section(message: message, onRetry: onRetry!);
+    }
+    // A refusal the connection's form fixes (`Paste the token again`) leads,
+    // the first the sentence names; Retry follows only where asking again
+    // can still succeed for one of them.
+    final remedy = coverage.failedInOrder
+        .map(
+          (source) => FailureRemedy.forReason(
+            source.service,
+            coverage.failed[source]!,
+            instanceId: source.instanceId.isEmpty ? null : source.instanceId,
+            gateway: coverage.gateways[source],
+          ),
+        )
+        .nonNulls
+        .firstOrNull;
+    if (remedy == null) {
+      return FaultBand.partial(message: message, onRetry: onRetry!);
+    }
+    final retryHelps = coverage.failed.entries.any(
+      (failure) => failureRetryHelps(
+        failure.value,
+        credential: refusedCredentialOf(failure.key.service),
+      ),
+    );
+    return FaultBand.remedied(
+      message: message,
+      remedy: remedy,
+      onRetry: retryHelps ? onRetry : null,
+    );
   }
 
   /// Not set up: a dashed outline instead of the slab, since there is

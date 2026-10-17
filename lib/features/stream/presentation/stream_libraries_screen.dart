@@ -165,20 +165,18 @@ class _LibrariesSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: SectionHeader(
-            title: 'Libraries',
-            // Null until the list lands, so the header never prints "0
-            // libraries" over a region that is still loading. A figure whose
-            // source has not answered is not zero. A list that failed with
-            // nothing retained says so with an em dash; a retained one keeps
-            // the census of the rows still drawn under the fault band.
-            subtitle: libraries.hasError && !libraries.hasValue
-                ? '—'
-                : _summaryOf(libraries.value),
-            showChevron: false,
-          ),
+        // The header carries the page inset itself.
+        SectionHeader(
+          title: 'Libraries',
+          // Null until the list lands, so the header never prints "0
+          // libraries" over a region that is still loading. A figure whose
+          // source has not answered is not zero. A list that failed with
+          // nothing retained says so with an em dash; a retained one keeps
+          // the census of the rows still drawn under the fault band.
+          subtitle: libraries.hasError && !libraries.hasValue
+              ? '—'
+              : _summaryOf(libraries.value),
+          showChevron: false,
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),

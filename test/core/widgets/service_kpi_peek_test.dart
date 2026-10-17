@@ -19,7 +19,7 @@ Future<void> _pump(
   await tester.pumpWidget(
     MaterialApp(
       home: Scaffold(
-        body: ServiceKpiPeek(kpis: kpis, accent: const Color(0xFF4F8DF7)),
+        body: ServiceKpiPeek(kpis: kpis, service: ServiceKey.radarr),
       ),
     ),
   );

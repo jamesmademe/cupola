@@ -547,7 +547,7 @@ extension ServiceKeyExtension on ServiceKey {
     ServiceKey.sabnzbd => 'Config → General → API Key',
     ServiceKey.jellyfin => 'Dashboard → Advanced → API Keys',
     ServiceKey.truenas => 'Credentials → API Keys',
-    ServiceKey.unraid => 'Settings → Management Access → Developer Options',
+    ServiceKey.unraid => 'Settings → Management Access → API Keys',
     ServiceKey.plex => 'any item → Get Info → View XML → copy X-Plex-Token',
     // Web-UI login: the user already has these.
     ServiceKey.qbittorrent ||
@@ -573,10 +573,9 @@ extension ServiceKeyExtension on ServiceKey {
           'API key under Credentials → Local Users, and use the https:// '
           'address of the web UI.',
     ServiceKey.unraid =>
-      'Enable the Unraid API first: Settings → Management Access → '
-          'Developer Options → turn on the GraphQL sandbox, then create an '
-          'API key under API Keys. Without this the endpoint will not '
-          'respond.',
+      'Unraid 7.2 and later have the API built in; on an older release, '
+          'install the Unraid Connect plugin first. Then create an API key '
+          'under Settings → Management Access → API Keys.',
     // Readarr development stopped upstream. Saying so here is the honest
     // thing: the integration works against the last released API, but the
     // user should know they are pointing at a project that will not receive
@@ -657,8 +656,8 @@ extension ServiceKeyExtension on ServiceKey {
           'working against its last released API, but expect no new '
           'server-side fixes.',
     ServiceKey.unraid =>
-      'Enable the Unraid API first, under Settings → Management Access → '
-          'Developer Options. The endpoint stays silent until it is on.',
+      'Before Unraid 7.2 the API comes with the Unraid Connect plugin, and '
+          'the endpoint stays silent without it.',
     ServiceKey.jellyfin =>
       'The key signs in as an administrator but carries no user of its '
           'own, so pick whose watch state to read in Settings afterwards.',

@@ -496,6 +496,7 @@ class TransmissionClient {
     'addedDate',
     'doneDate',
     'activityDate',
+    'startDate',
     'peersConnected',
     'peersSendingToUs',
     'peersGettingFromUs',

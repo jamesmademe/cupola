@@ -21,6 +21,7 @@ TransmissionTorrent _torrent({
   bool isStalled = false,
   int activityDate = 0,
   int addedDate = 0,
+  int startDate = 0,
   double? percentDone,
 }) => TransmissionTorrent.fromJson({
   'hashString': 'abc',
@@ -32,6 +33,7 @@ TransmissionTorrent _torrent({
   'isStalled': isStalled,
   'activityDate': activityDate,
   'addedDate': addedDate,
+  'startDate': startDate,
 });
 
 Torrent _qb(
@@ -320,6 +322,27 @@ void main() {
           now: _now,
         ),
         const InFlightReading.moving(),
+      );
+    });
+
+    test('Transmission: a torrent stopped for weeks and started again waits '
+        'from when it started, not from when it was added', () {
+      final resumed = _torrent(
+        isStalled: true,
+        addedDate: _secondsAgo(const Duration(days: 26)),
+        startDate: _secondsAgo(const Duration(minutes: 10)),
+      );
+      expect(
+        transmissionInFlight(resumed, now: _now),
+        const InFlightReading.moving(),
+      );
+      expect(
+        idleSince(
+          lastActivity: resumed.activityDate,
+          added: resumed.addedDate,
+          started: resumed.startDate,
+        ),
+        DateTime.fromMillisecondsSinceEpoch(resumed.startDate * 1000),
       );
     });
 

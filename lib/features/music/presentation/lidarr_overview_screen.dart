@@ -145,7 +145,7 @@ class _OverviewBody extends ConsumerWidget {
           ...sectionsOrOneLine(ref, ServiceKey.lidarr, [
             ServiceKpiPeek(
               kpis: ref.watch(serviceKpiProvider(ServiceKey.lidarr)),
-              accent: ServiceKey.lidarr.accent,
+              service: ServiceKey.lidarr,
             ),
             const _NeedsAttentionSection(),
             const _RecentlyAddedSection(),

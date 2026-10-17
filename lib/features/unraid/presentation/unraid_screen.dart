@@ -19,6 +19,7 @@ import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/unraid/domain/unraid_alerts.dart';
 import 'package:cupola/features/unraid/domain/models/unraid_models.dart';
 import 'package:cupola/features/unraid/presentation/unraid_capability.dart';
 import 'package:cupola/features/unraid/presentation/unraid_provider.dart';
@@ -765,12 +766,12 @@ class _DiskTile extends StatelessWidget {
 
     return Semantics(
       container: true,
-      // Three fragments (a device name, a `DISK_OK` token and a bare numeral)
-      // read as three unrelated stops. One sentence, in the order a person
-      // would say it, with the unit spoken rather than glyphed.
+      // Three fragments (a slot, its state and a bare numeral) read as three
+      // unrelated stops. One sentence, in the order a person would say it,
+      // with the unit spoken rather than glyphed.
       label: [
-        disk.name,
-        if (disk.status.isNotEmpty) disk.status,
+        unraidSlotName(disk.name),
+        if (disk.status.isNotEmpty) unraidDiskStatusWords(disk.status),
         disk.spunDown ? 'spun down' : '${disk.temp} degrees',
       ].join(', '),
       child: ExcludeSemantics(
@@ -810,7 +811,7 @@ class _DiskTile extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          disk.name,
+                          unraidSlotName(disk.name),
                           style: Theme.of(
                             context,
                           ).textTheme.bodyMedium!.weight(FontWeight.w600),
@@ -819,7 +820,7 @@ class _DiskTile extends StatelessWidget {
                         ),
                         if (disk.status.isNotEmpty)
                           Text(
-                            disk.status,
+                            unraidDiskStatusWords(disk.status),
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
                                   color: disk.tone == StatusTone.warning

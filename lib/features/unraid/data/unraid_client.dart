@@ -95,9 +95,10 @@ UnraidException unraidGraphQlError(Object? error) {
 /// says can reach the document. That is the whole of the exception; a field
 /// name that came from outside the enum would be an injection.
 ///
-/// The Unraid API must be enabled server-side (Settings → Management Access →
-/// Developer Options → GraphQL Sandbox) and an API key created before this can
-/// connect. Field names below follow the documented schema but may differ by
+/// The Unraid API is built into Unraid 7.2 and later and comes with the
+/// Unraid Connect plugin before that; an API key is created under Settings →
+/// Management Access → API Keys. The GraphQL sandbox is only the explorer, not
+/// a switch for the API. Field names below follow the documented schema but may differ by
 /// Unraid release; confirm against the instance's SDL.
 class UnraidClient {
   /// [certFingerprint], when non-empty, is a self-signed certificate the user

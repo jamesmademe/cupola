@@ -118,7 +118,7 @@ class _NzbgetDashboard extends ConsumerWidget {
                 ),
               ServiceKpiPeek(
                 kpis: ref.watch(serviceKpiProvider(ServiceKey.nzbget)),
-                accent: ServiceKey.nzbget.accent,
+                service: ServiceKey.nzbget,
               ),
               const SizedBox(height: AppSpacing.sm),
               const _NzbgetActionsBar(),

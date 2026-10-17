@@ -280,7 +280,7 @@ class _NpmSection extends ConsumerWidget {
           if (section == NpmSection.everything)
             ServiceKpiPeek(
               kpis: ref.watch(serviceKpiProvider(ServiceKey.nginxProxyManager)),
-              accent: ServiceKey.nginxProxyManager.accent,
+              service: ServiceKey.nginxProxyManager,
             ),
           const NpmDefaultAdminWarning(),
           NpmCapabilityBannerSlot(

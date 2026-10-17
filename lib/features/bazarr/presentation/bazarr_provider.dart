@@ -47,13 +47,7 @@ final bazarrBadgesProvider = FutureProvider<BazarrBadges>((ref) async {
   return ref.watch(bazarrServiceProvider).getBadges();
 });
 
-/// Aggregate provider data supported by Bazarr's badges endpoint.
-final bazarrProviderSummaryProvider = FutureProvider<BazarrProviderSummary>(
-  (ref) async => ref.watch(bazarrServiceProvider).getProviderSummary(),
-  retry: noProviderRetry,
-);
-
-/// Providers that Bazarr currently reports as throttled or degraded.
+/// Every provider Bazarr has enabled, ready or waited out.
 final bazarrProviderStatusesProvider =
     FutureProvider<List<BazarrProviderStatus>>(
       (ref) async => ref.watch(bazarrServiceProvider).getProviderStatuses(),

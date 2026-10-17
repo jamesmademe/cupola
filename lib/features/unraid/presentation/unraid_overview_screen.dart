@@ -7,6 +7,7 @@ import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/unraid/domain/unraid_alerts.dart';
 import 'package:cupola/features/unraid/domain/models/unraid_models.dart';
 import 'package:cupola/features/unraid/presentation/unraid_overview_provider.dart';
 import 'package:cupola/features/unraid/presentation/unraid_provider.dart';
@@ -132,7 +133,7 @@ class _OverviewBody extends ConsumerWidget {
           ...sectionsOrOneLine(ref, ServiceKey.unraid, [
             ServiceKpiPeek(
               kpis: ref.watch(serviceKpiProvider(ServiceKey.unraid)),
-              accent: ServiceKey.unraid.accent,
+              service: ServiceKey.unraid,
             ),
             // The order the mobile board keeps once the regions with no read
             // layer fall away: the array, then the containers. System comes
@@ -222,11 +223,11 @@ class _DiskRow extends StatelessWidget {
         margin: const EdgeInsets.only(top: 5),
         decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
       ),
-      title: disk.name,
-      // Unraid's own token (`DISK_OK`, `DISK_DSBL`), exactly as the Array tab
-      // prints it. Translating it into friendlier words here would give one
-      // service two vocabularies for one field, two taps apart.
-      detail: disk.status,
+      // The slot as Unraid's pages name it (`Disk 1`), and its state in the
+      // app's words, the same as the Array tab and Needs you say them; Unraid's
+      // token (`DISK_OK`) is no word a person reads.
+      title: unraidSlotName(disk.name),
+      detail: unraidDiskStatusWords(disk.status),
       // `spun down` in the figure's place, never `0 °C` and never an em dash:
       // we know precisely why there is no reading, and saying so is the rule
       // the Array tab already states.

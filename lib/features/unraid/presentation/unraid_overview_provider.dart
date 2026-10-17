@@ -35,6 +35,7 @@ import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
+import 'package:cupola/features/unraid/domain/unraid_alerts.dart';
 import 'package:cupola/features/unraid/domain/models/unraid_models.dart';
 import 'package:cupola/features/unraid/presentation/unraid_provider.dart';
 
@@ -205,11 +206,8 @@ String? unraidCapacityLabel(UnraidArray array) {
 /// the model's stand-in for an absent field rather than a state the array
 /// reported, so it is dropped: an array that did not say is not an array in an
 /// unknown state.
-String? unraidArrayStateLabel(String state) {
-  final value = state.trim();
-  if (value.isEmpty || value.toUpperCase() == 'UNKNOWN') return null;
-  return value.toLowerCase();
-}
+String? unraidArrayStateLabel(String state) =>
+    unraidArrayStateWords(state)?.toLowerCase();
 
 /// Everything the Array section needs, folded once.
 @immutable
@@ -354,8 +352,8 @@ String unraidDiskReading(UnraidDisk disk) {
 /// speaks, because two tabs of one service describing the same drive in two
 /// different sentences is how a user stops trusting either.
 String unraidDiskSpoken(UnraidDisk disk) => joinSpokenParts([
-  disk.name,
-  if (disk.status.isNotEmpty) disk.status,
+  unraidSlotName(disk.name),
+  if (disk.status.isNotEmpty) unraidDiskStatusWords(disk.status),
   disk.spunDown ? 'spun down' : '${disk.temp} degrees',
 ]);
 
