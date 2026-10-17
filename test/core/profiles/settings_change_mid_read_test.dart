@@ -151,6 +151,11 @@ void main() {
 
     expect(_didNotAnswer(), findsNothing);
 
+    // The read again goes out on the rebuilt client one latency later. Waited
+    // for in time, not by `settle`: nothing on the page animates meanwhile
+    // (the KPI rail keeps its figures through a reload), so there may be no
+    // frame scheduled while the request is still on its way.
+    await tester.pump(_latency * 2);
     await harness.settle(tester);
     expect(_didNotAnswer(), findsNothing);
     expect(_freshQueueReads(harness), isNotEmpty);

@@ -66,7 +66,13 @@ class ServiceKpiPeek extends StatelessWidget {
       base: _height,
       textHeight: 34,
     );
+    // `skipLoadingOnReload`: a page's poll asks its sources again every few
+    // seconds, and each ask reloads this rail. Back to skeleton on every tick
+    // made the figures blink, and on a client that stopped answering left the
+    // rail blank until the read timed out, under a fault band that already
+    // says the page is old. The last figures stay until new ones arrive.
     return kpis.when(
+      skipLoadingOnReload: true,
       loading: () => _rail(
         context: context,
         height: railHeight,

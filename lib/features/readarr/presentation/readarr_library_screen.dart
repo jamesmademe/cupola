@@ -75,7 +75,7 @@ class ReadarrLibraryScreen extends ConsumerWidget {
           child: authorsAsync.when(
             data: (authors) {
               if (authors.isEmpty) {
-                return const _EmptyLibrary();
+                return _EmptyLibrary(topPadding: topPadding);
               }
               final sorted = [...authors]
                 ..sort(
@@ -133,15 +133,26 @@ class ReadarrLibraryScreen extends ConsumerWidget {
 }
 
 class _EmptyLibrary extends StatelessWidget {
-  const _EmptyLibrary();
+  const _EmptyLibrary({required this.topPadding});
+
+  /// The page's header and tab bar, which the list scrolls under.
+  final double topPadding;
 
   @override
   Widget build(BuildContext context) {
+    // The other libraries' words, plus where an author comes from: Cupola
+    // manages Readarr's library but adds no one to it (its metadata source is
+    // gone), so an empty shelf points to Readarr itself.
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.only(top: topPadding),
       children: const [
-        SizedBox(height: 120),
-        Center(child: Text('No authors in the library yet.')),
+        SizedBox(height: AppSpacing.xxl),
+        AppEmptyState.compact(
+          icon: Icons.menu_book_outlined,
+          title: 'Your Readarr library is empty',
+          message: 'Authors are added in Readarr itself.',
+        ),
       ],
     );
   }

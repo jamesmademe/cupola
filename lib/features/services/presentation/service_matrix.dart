@@ -828,8 +828,8 @@ class ServiceMatrixCell extends ConsumerWidget {
       // on the line below it, and a cell whose *title* is an address reads as
       // a different kind of object from its neighbours.
       displayName: instance == null
-          ? service.title
-          : settings.connectionName(instance.id) ?? service.title,
+          ? service.shortTitle
+          : settings.connectionName(instance.id) ?? service.shortTitle,
     );
   }
 }
@@ -876,7 +876,7 @@ class _NotSetUpCell extends StatelessWidget {
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
-                  service.title,
+                  service.shortTitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodyMedium
@@ -1050,7 +1050,10 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
       // The card dips under the thumb instead of rippling. A ripple flooding a
       // card is how a chip signals selection, not how a surface signals a touch.
       pressFeedback: AppCardPressFeedback.scale,
-      semanticLabel: displayName,
+      // The full name aloud: the short one is for the tile's width.
+      semanticLabel: displayName == service.shortTitle
+          ? service.title
+          : displayName,
       semanticValue: serviceMatrixCellValue(
         statusLabel: statusLabel,
         signalSpoken: signalsFailed

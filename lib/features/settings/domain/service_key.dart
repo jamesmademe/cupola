@@ -90,6 +90,14 @@ extension ServiceKeyExtension on ServiceKey {
   bool get isFullConsole =>
       this == ServiceKey.truenas || this == ServiceKey.dockge;
 
+  /// The name where a half-width tile has room for about a dozen letters:
+  /// the Stack's cells. The full [title] everywhere else, and always for a
+  /// screen reader, which has no width to run out of.
+  String get shortTitle => switch (this) {
+    ServiceKey.nginxProxyManager => 'Proxy Manager',
+    _ => title,
+  };
+
   String get title => switch (this) {
     ServiceKey.seerr => 'Seerr',
     ServiceKey.radarr => 'Radarr',

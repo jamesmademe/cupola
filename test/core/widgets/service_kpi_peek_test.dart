@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -136,6 +137,55 @@ void main() {
       await _pump(tester, const AsyncValue.data(<ServiceKpi>[]));
 
       expect(find.byType(ListView), findsNothing);
+    });
+
+    testWidgets('keeps its figures while a poll asks again', (tester) async {
+      // A page's poll reloads the rail every few seconds. On a client that has
+      // stopped answering the new read hangs until it times out, and the rail
+      // used to fall back to skeleton for all of it.
+      // The rail reads a provider derived from its sources, as
+      // `serviceKpiProvider` does: a source asked again reloads it.
+      var reads = 0;
+      final again = Completer<int>();
+      final source = FutureProvider<int>((ref) {
+        reads++;
+        return reads == 1 ? Future.value(128) : again.future;
+      });
+      final rail = FutureProvider<List<ServiceKpi>>((ref) async {
+        final series = await ref.watch(source.future);
+        return [
+          ServiceKpi(label: 'Series', value: '$series', icon: Icons.tv_rounded),
+        ];
+      });
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              body: Consumer(
+                builder: (context, ref, _) => ServiceKpiPeek(
+                  kpis: ref.watch(rail),
+                  service: ServiceKey.radarr,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(findLine('128'), findsOneWidget);
+
+      ProviderScope.containerOf(
+        tester.element(find.byType(ServiceKpiPeek)),
+      ).invalidate(source);
+      await tester.pump();
+      await tester.pump();
+
+      expect(reads, 2, reason: 'the second read is in flight');
+      expect(findLine('128'), findsOneWidget);
+      again.complete(130);
+      await tester.pump();
+      await tester.pump();
+      expect(findLine('130'), findsOneWidget);
     });
   });
 }
