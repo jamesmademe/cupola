@@ -139,6 +139,38 @@ List<Override> _ambient() => [
 ];
 
 void main() {
+  testWidgets('the queue reads itself again every three seconds while it is '
+      'on screen', (tester) async {
+    var reads = 0;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => _configured),
+          ..._ambient(),
+          sabnzbdQueueProvider.overrideWith((ref) async {
+            reads++;
+            return _queue(paused: false);
+          }),
+          sabnzbdCategoriesProvider.overrideWith(
+            (ref) async => const <String>[],
+          ),
+        ],
+        child: const MaterialApp(home: SabnzbdScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final first = reads;
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump();
+    expect(reads, greaterThan(first));
+    // Leaving the page drops the watch, and the timer with it.
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 1));
+    final after = reads;
+    await tester.pump(const Duration(seconds: 6));
+    expect(reads, after);
+  });
+
   testWidgets('an unconfigured SABnzbd renders the shared placeholder', (
     tester,
   ) async {
@@ -553,6 +585,9 @@ void main() {
             overrides: [
               currentSettingsProvider.overrideWith((ref) => _configured),
               readClockProvider.overrideWithValue(ReadClock(now: () => now)),
+              // This group fails the probe and keeps the list: the live poll would
+              // read the list again past the failure.
+              sabnzbdPollingProvider.overrideWith((ref) {}),
               // A queue that came through the provider that notes it, or one
               // handed in whole, which nothing recorded.
               if (recorded)

@@ -1,9 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/lifecycle/gated_poll.dart';
+
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/read_clock.dart';
 import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -109,3 +112,21 @@ final sabnzbdServersProvider = FutureProvider<List<SabnzbdServerConfig>>((
 final sabnzbdCategoriesProvider = FutureProvider<List<String>>((ref) async {
   return ref.watch(sabnzbdClientProvider).getCategories();
 }, retry: noProviderRetry);
+
+/// The queue's live refresh, for as long as the queue is the page on screen
+/// (`watchWhileLive`): every three seconds, as qBittorrent's, and never over a
+/// read still in flight, which a black-holed host would otherwise keep
+/// restarting before it could fail. Without it the queue stayed as it was
+/// opened, a stopped container's downloads still `Downloading`.
+final sabnzbdPollingProvider = Provider.autoDispose<void>((ref) {
+  ref.gatedPoll(
+    id: 'sabnzbd.queue',
+    interval: const Duration(seconds: 3),
+    onTick: () {
+      ref.readAgainUnlessInFlight([sabnzbdQueueProvider]);
+      // The page's band reads the probe: asked on its own, so a list stuck
+      // in flight does not hold back the word that the server went quiet.
+      readProbeAgainUnlessInFlight(ref, ServiceKey.sabnzbd);
+    },
+  );
+});

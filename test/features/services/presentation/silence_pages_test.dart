@@ -117,6 +117,10 @@ void main() {
       instanceSummaryProvider((service: page.service, instanceId: page.id)),
     );
     await harness.settle(tester);
+    // A client's queue reads itself again on its own tick: its list, failed
+    // while the server was quiet, is read again within one.
+    await tester.pump(const Duration(seconds: 3));
+    await harness.settle(tester);
   }
 
   /// A minute of the page's own clock: the span it prints is renewed once a

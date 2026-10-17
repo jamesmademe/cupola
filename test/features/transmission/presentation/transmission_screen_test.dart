@@ -112,6 +112,51 @@ String? _subtitleOf(WidgetTester tester, String title) {
 }
 
 void main() {
+  testWidgets('a poll that times out over rows already read keeps them under '
+      'one band, before the probe says so', (tester) async {
+    var reads = 0;
+    await _pump(tester, [
+      transmissionTorrentsProvider.overrideWith((ref) async {
+        reads++;
+        if (reads == 1) return [_torrent(1, status: 4)];
+        await Future<void>.delayed(const Duration(seconds: 10));
+        throw DioException(
+          requestOptions: RequestOptions(path: '/'),
+          type: DioExceptionType.receiveTimeout,
+        );
+      }),
+    ]);
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(seconds: 3));
+    }
+    expect(find.text('Download 1'), findsOneWidget);
+    expect(find.byType(FaultBand), findsOneWidget);
+    expect(find.textContaining('not shown'), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 11));
+  });
+
+  testWidgets('the queue reads itself again every three seconds while it is '
+      'on screen', (tester) async {
+    var reads = 0;
+    await _pump(tester, [
+      transmissionTorrentsProvider.overrideWith((ref) async {
+        reads++;
+        return [_torrent(1, status: 4)];
+      }),
+    ]);
+    final first = reads;
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump();
+    expect(reads, greaterThan(first));
+    // Leaving the page drops the watch, and the timer with it.
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 1));
+    final after = reads;
+    await tester.pump(const Duration(seconds: 6));
+    expect(reads, after);
+  });
+
   group('transmissionTorrentCountLabel', () {
     test('states the count, and nothing while there is nothing to count', () {
       expect(transmissionTorrentCountLabel(null), isNull);
@@ -215,6 +260,9 @@ void main() {
         tester,
         [
           readClockProvider.overrideWithValue(clock),
+          // This group fails the probe and keeps the list: the live poll would
+          // read the list again past the failure.
+          transmissionPollingProvider.overrideWith((ref) {}),
           transmissionClientProvider.overrideWithValue(client),
         ],
         summary: serviceSummaryProvider.overrideWith((ref, service) async {

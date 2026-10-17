@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
+import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/status/read_age.dart';
@@ -60,12 +61,17 @@ class _SabnzbdDashboard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Live while this page is the page on screen.
+    ref.watchWhileLive(context, sabnzbdPollingProvider);
     final watched = ref.watch(sabnzbdQueueProvider);
     final summaryAsync = ref.watch(serviceSummaryProvider(ServiceKey.sabnzbd));
     // A failed probe, in its own words: "did not answer" only when nothing did,
     // the refusal and its remedy when the key was refused.
-    final failed = summaryAsync.whenOrNull(
-      data: (summary) => summary.isOnline ? null : summary,
+    // The list's own failure bands too, until the probe says it.
+    final failed = clientPageFailure(
+      ServiceKey.sabnzbd,
+      summary: summaryAsync,
+      list: watched,
     );
     // How long the connection has not answered, said only when that is what
     // the probe found: a fault is an answer, and carries no span.

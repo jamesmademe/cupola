@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/lifecycle/gated_poll.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
@@ -280,6 +281,38 @@ final serviceSummaryProvider =
         )).future,
       );
     });
+
+/// What a download client's page bands over its rows: the probe's failure,
+/// or, while the probe has not said so yet, the failure of the [list] the page
+/// polls, over rows already read. The list is read every three seconds and the
+/// probe's own deadline is longer: without this a stopped client's sections
+/// each said their list was not shown, and the rows read before went with
+/// them.
+ServiceSummary? clientPageFailure(
+  ServiceKey service, {
+  required AsyncValue<ServiceSummary> summary,
+  required AsyncValue<Object?> list,
+}) {
+  final probed = summary.whenOrNull(data: (s) => s.isOnline ? null : s);
+  if (probed != null) return probed;
+  if (!list.hasError || !list.hasValue) return null;
+  return ServiceSummary.failed(
+    service,
+    host: summary.whenOrNull(data: (s) => s.host) ?? '',
+    error: list.error!,
+  );
+}
+
+/// Probes [service]'s lens connection again for a page's poll tick, unless
+/// the last probe is still out. [serviceSummaryProvider] only delegates, so
+/// reading it again rereads the probe's last answer; this asks the server.
+void readProbeAgainUnlessInFlight(Ref ref, ServiceKey service) {
+  final instance = ref.read(activeInstanceProvider(service));
+  if (instance == null) return;
+  ref.readAgainUnlessInFlight([
+    instanceSummaryProvider((service: service, instanceId: instance.id)),
+  ]);
+}
 
 /// Everything a status probe reads about one service, as a single comparable
 /// value.
