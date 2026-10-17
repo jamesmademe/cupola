@@ -20,6 +20,14 @@ class MainFlutterWindow: NSWindow {
     // `AppBreakpoints.desktopMinimumWindow`, which window_manager applies too.
     self.minSize = NSSize(width: 360, height: 450)
 
+    // The strip Flutter draws under the traffic lights, set before the saved
+    // frame is restored. `DesktopWindow.ensureReady` asks window_manager for the
+    // same style once Dart runs; applied only then, the frame restored for a
+    // titled window lost the title bar's height on every launch.
+    self.titleVisibility = .hidden
+    self.titlebarAppearsTransparent = true
+    self.styleMask.insert(.fullSizeContentView)
+
     let autosaveName = "CupolaMainWindow"
     let isFirstLaunch =
       UserDefaults.standard.object(forKey: "NSWindow Frame \(autosaveName)") == nil
