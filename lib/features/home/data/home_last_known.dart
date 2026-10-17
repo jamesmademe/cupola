@@ -368,7 +368,7 @@ class _LastKnownMarkState extends ConsumerState<LastKnownMark> {
 
 /// The words of the drawing a module stands on (`As of 20:41`), for a line
 /// under it that says why it is one: away from home, `Lidarr only works at
-/// home. As of 20:41.` (P-t2-5-note). Put there by [LastKnownMark].
+/// home. As of 20:41.` Put there by [LastKnownMark].
 class LastKnownWords extends InheritedWidget {
   const LastKnownWords({super.key, required this.words, required super.child});
 

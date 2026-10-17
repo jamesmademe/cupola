@@ -67,7 +67,7 @@ enum StateWord {
 
   /// Away from home, a connection with no address away: nothing was asked,
   /// so nothing failed to answer. The state; the setup it comes from is
-  /// [Lexicon.homeOnly] (P-t2-two-words, 13/10).
+  /// [Lexicon.homeOnly].
   onlyAtHome('Only at home', StatusTone.neutral);
 
   const StateWord(this.label, this.tone);

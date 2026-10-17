@@ -11,7 +11,7 @@ enum OutsideMetrics {
   static let tinyPoster = CGSize(width: 20, height: 30)
 
   /// The column of day names in Coming up's rows (`Tomorrow`, `Wednesday`), so
-  /// that the titles beside it line up, from the approved board.
+  /// that the titles beside it line up.
   static let dayColumn: CGFloat = 78
 
   /// Rows that fit a medium widget under its header and beside its lead.
@@ -172,7 +172,7 @@ struct OutsideHeader: View {
 
 /// A medium list widget: its header, and what it lists directly under it,
 /// top-aligned, with the spare room at the foot. (Coming up's medium is not
-/// one: its lead is at the top and its rows at the foot, as the board has it.)
+/// one: its lead is at the top and its rows at the foot.)
 struct OutsideMediumList<Content: View>: View {
   let leading: String
   let face: OutsideFace

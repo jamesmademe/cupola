@@ -12,7 +12,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/service_only_at_home.dart';
 
 /// Away from home, a module whose sources are reached only there says so in
-/// a grey line: no band, no Retry (Q1; P-t2-5-note, 13/10).
+/// a grey line: no band, no Retry.
 void main() {
   Future<void> pump(WidgetTester tester, Widget frame) => tester.pumpWidget(
     MaterialApp(

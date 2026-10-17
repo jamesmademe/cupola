@@ -240,7 +240,7 @@ List<MediaPreview> interleave(List<List<MediaPreview>> lists) {
 }
 
 /// "Hide what I have": one choice for the whole catalogue, kept across
-/// launches (the charter's global switch). Off at first.
+/// launches (one global switch, not one per shelf). Off at first.
 final catalogHideOwnedProvider =
     NotifierProvider<CatalogHideOwnedNotifier, bool>(
       CatalogHideOwnedNotifier.new,

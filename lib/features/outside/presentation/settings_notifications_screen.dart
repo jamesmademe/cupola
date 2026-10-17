@@ -24,10 +24,9 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_master_detail.dart';
 import 'package:cupola/features/shell/domain/shell_audience.dart';
 
-/// Settings › Notifications: the two things Cupola tells (P-t3-scope), each
+/// Settings › Notifications: the two things Cupola tells, each
 /// off until the person turns it on, the permission asked for at that moment
-/// and never at launch, and the platform's own honesty about when it checks
-/// (P-notify-honest).
+/// and never at launch, and the platform's own honesty about when it checks.
 ///
 /// A phone's page only: a desktop has no background run to tell anything
 /// from (`outsidePlatformProvider`), and no row leads here there.

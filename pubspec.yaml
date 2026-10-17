@@ -63,7 +63,7 @@ dependencies:
   # cache folder, where a file that may be purged and is never backed up
   # belongs (`lib/core/last_known/last_known_store.dart`).
   path_provider: ^2.1.5
-  # The QR of an invite (P-t2-7-qr): encoding only, pure Dart. The code is
+  # The QR of an invite: encoding only, pure Dart. The code is
   # drawn by Cupola's own painter (`lib/core/widgets/qr_code_view.dart`).
   qr: ^3.0.2
   infinite_scroll_pagination: ^5.1.1
@@ -89,7 +89,7 @@ dependencies:
   flutter_local_notifications: ^22.2.0
   # Runs the widgets' and notifications' read with the app off the screen:
   # Android's WorkManager every 15 minutes with a network, iOS's
-  # BGAppRefreshTask when the system allows (P-notify-honest, P-t3-scope).
+  # BGAppRefreshTask when the system allows.
   # Pinned to an exact version: pre-1.0, and it reaches into both platforms'
   # schedulers. Its two foreground-service permissions are removed in
   # `AndroidManifest.xml`, since no task here runs as one.

@@ -1,7 +1,7 @@
 /// What Cupola says in a notification, and the memory that keeps it from
 /// saying a thing twice.
 ///
-/// A notification is a new fact or nothing (the charter's `never`): so what is
+/// A notification is a new fact or nothing, never a reminder: so what is
 /// said is what is there now and was not there the last time anyone looked.
 /// "Anyone looked" includes the person opening the app: a run in the
 /// foreground records what the Home shows without saying it

@@ -74,7 +74,7 @@ void main() {
 
   // Carrier NAT, Tailscale's range, and its MagicDNS names: the traffic
   // leaves through the tunnel, so the permission does not call it local, and
-  // WireGuard encrypts it, so nothing warns about http:// (P-tailscale-clear).
+  // WireGuard encrypts it, so nothing warns about http://.
   test('a tailnet is not the local network, and nothing warns', () {
     for (final host in const [
       '100.64.1.2',

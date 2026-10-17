@@ -7,7 +7,7 @@ import 'package:cupola/features/outside/domain/outside_notices.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 
 /// The notification kinds the person turned on in Settings › Notifications:
-/// none until they do (P-t3-scope). Kept in the preferences, which the run
+/// none until they do. Kept in the preferences, which the run
 /// with the app away reads as it starts, so a switch turned off is honoured
 /// by the next run without the app having to be open.
 class OutsideNoticeKinds extends Notifier<Set<OutsideNoticeKind>> {

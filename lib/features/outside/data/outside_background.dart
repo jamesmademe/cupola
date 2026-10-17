@@ -1,7 +1,7 @@
 /// The run with the app off the screen: when it is asked for, and what it
 /// does when the system starts it.
 ///
-/// Android vero, iOS onesto (P-notify-honest): on Android, WorkManager runs it
+/// True to each platform, and honest about it: on Android, WorkManager runs it
 /// every fifteen minutes while the phone has a network, later when the phone
 /// sleeps; on iOS, a BGAppRefreshTask runs it when the system decides, which
 /// can be hours apart and is never if the person closed the app by hand. Its

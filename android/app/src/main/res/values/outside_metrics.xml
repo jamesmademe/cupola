@@ -14,7 +14,7 @@
     <dimen name="outside_tiny_poster_height">30dp</dimen>
 
     <!-- The column of day names in Coming up's rows (`Tomorrow`, `Wednesday`),
-         so that the titles beside it line up, from the approved board. In sp:
+         so that the titles beside it line up. In sp:
          it grows with the words it holds. -->
     <dimen name="outside_day_column">78sp</dimen>
 

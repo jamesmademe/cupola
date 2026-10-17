@@ -4,7 +4,7 @@
 /// One run for every place it starts from. The app runs it in its own
 /// container as it leaves the screen, and some seconds after a start, so a
 /// widget is as fresh as the last look at the app, which on iOS is the
-/// common case; with nothing on the screen (T3.2's WorkManager and
+/// common case; with nothing on the screen (Android's WorkManager and iOS's
 /// BGAppRefresh), it runs in a container built from the same startup
 /// (`readHeadlessStartup`). Either way it reads the same providers the
 /// Home's modules read, through the same route, access and pins, so what a
@@ -255,7 +255,7 @@ Future<List<int>?> fetchOutsidePicture(ImageSource source) async {
   return file.readAsBytes();
 }
 
-/// Says notifications. Posting is the platform's (T3.3): the run hands it
+/// Says notifications. Posting is the platform's: the run hands it
 /// what is new and the shelf the pictures are on.
 abstract interface class OutsideSpeaker {
   Future<void> say(List<OutsideNotice> notices, OutsideShelf shelf);

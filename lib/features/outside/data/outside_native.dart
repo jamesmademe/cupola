@@ -1,6 +1,6 @@
 /// The native side of what Cupola shows outside itself, over one channel:
 /// where the widgets read their file, and the widgets themselves. A build
-/// without them (T3.4 and T3.5 bring them) answers nothing, and the app goes
+/// without them (a test, a desktop) answers nothing, and the app goes
 /// on as if there were no widget.
 library;
 

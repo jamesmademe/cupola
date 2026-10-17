@@ -32,8 +32,8 @@ const _regenerate = 'UPDATE_NATIVE_STYLE=1 flutter test $_testPath';
 
 /// A scrim over artwork is the same in both rooms: the picture is dark or
 /// light whatever room the phone is in, so the words over it never follow the
-/// room. These are the approved board's own bytes (T3 board: `_onArt`,
-/// `_onArtDim`, and the `0A0A0D` foot of `_ArtPlate`). The scrim is the dark
+/// room. These are the design's own values (the words over a picture, the
+/// dimmer words, and the `0A0A0D` foot of its scrim). The scrim is the dark
 /// room's own ground, so a tone over it is the dark room's tone, already
 /// walked for that ground (asserted below).
 const _onArt = Color(0xFFF7F6F2);
