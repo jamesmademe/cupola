@@ -23,6 +23,50 @@ void main() {
         expect(result.headers, isNull);
       });
 
+      test('takes TMDB\'s original at the size the app draws it', () {
+        final poster = ImageUtils.extractPosterUrl(
+          [
+            {
+              'coverType': 'poster',
+              'remoteUrl': 'https://image.tmdb.org/t/p/original/abc.jpg',
+            },
+          ],
+          baseUrl: 'http://radarr:7878',
+          apiKey: 'k',
+        );
+        expect(poster.url, 'https://image.tmdb.org/t/p/w780/abc.jpg');
+
+        final fanart = ImageUtils.extractPosterUrl(
+          [
+            {
+              'coverType': 'fanart',
+              'remoteUrl': 'https://image.tmdb.org/t/p/original/def.jpg',
+            },
+          ],
+          baseUrl: 'http://radarr:7878',
+          apiKey: 'k',
+          coverTypes: const ['fanart'],
+        );
+        expect(fanart.url, 'https://image.tmdb.org/t/p/w1280/def.jpg');
+      });
+
+      test('leaves other hosts and other kinds as they came', () {
+        expect(
+          ImageUtils.sizedRemote(
+            'https://artworks.thetvdb.com/banners/posters/1.jpg',
+            'poster',
+          ),
+          'https://artworks.thetvdb.com/banners/posters/1.jpg',
+        );
+        expect(
+          ImageUtils.sizedRemote(
+            'https://image.tmdb.org/t/p/original/logo.png',
+            'clearlogo',
+          ),
+          'https://image.tmdb.org/t/p/original/logo.png',
+        );
+      });
+
       test('builds URL with auth headers when remoteUrl is relative', () {
         final images = [
           {

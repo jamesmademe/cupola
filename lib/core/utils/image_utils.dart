@@ -46,7 +46,10 @@ class ImageUtils {
 
     // Prefer remote URL if it's a full HTTP URL
     if (remoteUrl != null && remoteUrl.startsWith('http')) {
-      return (url: remoteUrl, headers: null);
+      return (
+        url: sizedRemote(remoteUrl, coverImage['coverType']?.toString()),
+        headers: null,
+      );
     }
 
     // Fall back to building a local URL authenticated via headers: the key,
@@ -65,6 +68,27 @@ class ImageUtils {
     }
 
     return (url: '', headers: null);
+  }
+
+  /// [url] at the size the app draws a [coverType] at, where its host
+  /// serves one: an arr hands TMDB's artwork over at `original`, a poster of
+  /// a few megabytes for a tile a few hundred pixels wide, and TMDB serves
+  /// the same picture smaller under the same path. A poster is drawn at most
+  /// as the hero of a title's page, about 600 pixels wide on a dense phone,
+  /// and `w780` covers it; a fanart spans a phone or a window's well, and
+  /// `w1280` covers that. Every other host, and every other kind, is left as
+  /// it came.
+  static String sizedRemote(String url, String? coverType) {
+    final size = switch (coverType) {
+      'poster' => 'w780',
+      'fanart' => 'w1280',
+      _ => null,
+    };
+    if (size == null) return url;
+    const original = 'https://image.tmdb.org/t/p/original/';
+    return url.startsWith(original)
+        ? 'https://image.tmdb.org/t/p/$size/${url.substring(original.length)}'
+        : url;
   }
 
   /// Builds a TMDB poster URL from a poster path.
