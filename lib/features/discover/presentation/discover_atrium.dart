@@ -56,7 +56,11 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// anything, and the atrium says so once, in the classified words, instead of
 /// a failure under every door and shelf.
 class DiscoverAtrium extends ConsumerStatefulWidget {
-  const DiscoverAtrium({super.key, this.bottomPadding = 0});
+  const DiscoverAtrium({super.key, this.head, this.bottomPadding = 0});
+
+  /// The tab's title and its field, scrolled away with the doors under them
+  /// as drawn; null where the page draws its own head.
+  final Widget? head;
 
   /// The room the floating bar takes at the foot of the list.
   final double bottomPadding;
@@ -136,11 +140,12 @@ class _DiscoverAtriumState extends ConsumerState<DiscoverAtrium> {
       onRefresh: () async => DiscoverAtrium.invalidate(ref),
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.only(
-          top: AppSpacing.sm,
-          bottom: widget.bottomPadding,
-        ),
-        children: children,
+        padding: EdgeInsets.only(bottom: widget.bottomPadding),
+        children: [
+          ?widget.head,
+          const SizedBox(height: AppSpacing.sm),
+          ...children,
+        ],
       ),
     );
   }

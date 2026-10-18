@@ -296,6 +296,25 @@ void main() {
       );
     });
 
+    testWidgets('at rest the field sits under the title, and taking the '
+        'title\'s place it keeps its focus', (tester) async {
+      await _pump(tester, query: '');
+      expect(
+        tester.getTopLeft(find.byType(SearchBar)).dy,
+        greaterThan(tester.getBottomLeft(find.text('Discover')).dy),
+      );
+
+      await tester.tap(find.byType(SearchBar));
+      await _frames(tester);
+      expect(find.text('Discover'), findsNothing);
+
+      // The same field, still focused: what is typed now is the query.
+      tester.testTextInput.enterText('nosferatu');
+      await tester.pump(const Duration(seconds: 1));
+      await _frames(tester);
+      expect(_containerOf(tester).read(globalSearchQueryProvider), 'nosferatu');
+    });
+
     testWidgets('with a mouse, a recent search runs: the click does not '
         'take the field away first', (tester) async {
       SharedPreferences.setMockInitialValues({

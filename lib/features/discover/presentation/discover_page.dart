@@ -63,6 +63,12 @@ class DiscoverPage extends ConsumerStatefulWidget {
 class _DiscoverPageState extends ConsumerState<DiscoverPage> {
   final _focus = FocusNode(debugLabel: 'discover search');
 
+  /// The field's place in the tree, wherever it is drawn. At rest it heads
+  /// the atrium and scrolls with it; in use, it takes the title's place at
+  /// the top. The key carries the one field from the first place to the
+  /// second with its focus and its keyboard, and a screen reader stays on it.
+  final _fieldKey = GlobalKey(debugLabel: 'discover field');
+
   /// How long a query has to stay put, with answers, before it is a recent
   /// search: the time it takes to stop typing and start reading. Recorded at
   /// once, every prefix the debounce let through ("dun", then "dune") would
@@ -138,18 +144,32 @@ class _DiscoverPageState extends ConsumerState<DiscoverPage> {
     final seerr = watchSeerrConfigured(ref);
     final requester = ref.watch(audienceProvider) == Audience.requester;
 
-    final field = SearchBarHeader(
-      key: ValueKey(fieldVersion),
-      initialQuery: query,
-      focusNode: _focus,
-      // People come from Seerr: without it the field finds titles alone.
-      hintText: seerr || requester
-          ? 'Movies, series, people'
-          : 'Movies and series',
-      onQueryChanged: (value) {
-        ref.read(globalSearchQueryProvider.notifier).state = value;
-      },
-      onCancel: () {},
+    // People come from Seerr: without it the field finds titles alone.
+    final hint = seerr || requester
+        ? 'Movies, series, people'
+        : 'Movies and series';
+    final field = KeyedSubtree(
+      key: _fieldKey,
+      child: SearchBarHeader(
+        key: ValueKey(fieldVersion),
+        initialQuery: query,
+        focusNode: _focus,
+        hintText: hint,
+        onQueryChanged: (value) {
+          ref.read(globalSearchQueryProvider.notifier).state = value;
+        },
+        onCancel: () {},
+      ),
+    );
+
+    // At rest, as drawn: the tab's title in the tab-root role, its region
+    // beside it, the field under them, all scrolled away with the doors.
+    final head = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _DiscoverTitle(region: seerr),
+        field,
+      ],
     );
 
     final Widget body;
@@ -158,14 +178,26 @@ class _DiscoverPageState extends ConsumerState<DiscoverPage> {
     } else if (engaged) {
       body = _Recents(onPick: _run, bottomPadding: bottomPadding);
     } else if (seerr) {
-      body = DiscoverAtrium(bottomPadding: bottomPadding);
+      body = DiscoverAtrium(head: head, bottomPadding: bottomPadding);
     } else if (ref
         .watch(currentSettingsProvider)
         .hasServiceConnection(ServiceKey.seerr)) {
       // A Seerr whose session ended: that, and the way back.
-      body = NotConfiguredPlaceholder.forService(ServiceKey.seerr);
+      body = Column(
+        children: [
+          head,
+          Expanded(
+            child: NotConfiguredPlaceholder.forService(ServiceKey.seerr),
+          ),
+        ],
+      );
     } else {
-      body = _WithoutSeerr(bottomPadding: bottomPadding);
+      body = Column(
+        children: [
+          head,
+          Expanded(child: _WithoutSeerr(bottomPadding: bottomPadding)),
+        ],
+      );
     }
 
     return AmbientScaffold(
@@ -175,34 +207,62 @@ class _DiscoverPageState extends ConsumerState<DiscoverPage> {
       // answers to a search are rows, and take the reading well inside it
       // (`_rowsPadding`).
       contentWellWidth: AppBreakpoints.contentWell,
-      // Engaged, the field takes the title's place, as drawn.
-      appBar: engaged
-          ? null
-          : GlassAppBar(
-              title: const Text('Discover'),
-              actions: [
-                if (seerr)
-                  const Padding(
-                    padding: EdgeInsets.only(right: AppSpacing.lg),
-                    child: DiscoverRegionChip(),
-                  ),
-              ],
-            ),
-      body: Column(
+      body: Stack(
         children: [
-          if (engaged) SizedBox(height: MediaQuery.paddingOf(context).top),
-          // Engaged, the field and its Cancel take the column its answers
-          // read in; at rest it spans the tab, over the doors. The same
-          // widgets either way, so focusing it never rebuilds it.
-          LayoutBuilder(
-            builder: (context, box) => Padding(
-              padding: EdgeInsets.only(
-                right: engaged ? _rowsInset(box.maxWidth) : 0,
+          if (engaged)
+            // Engaged, the field takes the title's place, as drawn, and with
+            // its Cancel takes the column its answers read in.
+            Column(
+              children: [
+                SizedBox(height: MediaQuery.paddingOf(context).top),
+                LayoutBuilder(
+                  builder: (context, box) => Padding(
+                    padding: EdgeInsets.only(right: _rowsInset(box.maxWidth)),
+                    child: field,
+                  ),
+                ),
+                Expanded(child: body),
+              ],
+            )
+          else
+            body,
+          // The doors pass under the clock, as every tab root's content does.
+          const Positioned(top: 0, left: 0, right: 0, child: StatusBarScrim()),
+        ],
+      ),
+    );
+  }
+}
+
+/// `Discover`, said once in the tab-root role, as Activity and the Stack say
+/// theirs, and Seerr's region beside it when there is a Seerr to read it.
+class _DiscoverTitle extends StatelessWidget {
+  const _DiscoverTitle({required this.region});
+
+  final bool region;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.gutter,
+        MediaQuery.paddingOf(context).top + AppSpacing.sm,
+        AppSpacing.gutter,
+        AppSpacing.s,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Semantics(
+              header: true,
+              child: Text(
+                'Discover',
+                style: AppType.screen.copyWith(color: room.ink),
               ),
-              child: field,
             ),
           ),
-          Expanded(child: body),
+          if (region) const DiscoverRegionChip(),
         ],
       ),
     );

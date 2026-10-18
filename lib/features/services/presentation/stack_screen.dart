@@ -7,6 +7,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/lifecycle/refresh_on_return.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
+import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
@@ -71,21 +72,35 @@ class StackScreen extends ConsumerWidget {
         // services, and each is named by its mark and its title, never a hue.
         body: allUnconfigured
             ? NothingSetUpView(bottomPadding: bottomPadding)
-            : RefreshIndicator(
-                onRefresh: () => _refreshStack(ref),
-                child: ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: EdgeInsets.only(bottom: bottomPadding),
-                  //  * the header is one line of StackHealth under the title, and
-                  //    it is neutral when clear: no permanent green
-                  //  * the band is absent unless something stopped answering
-                  //  * the stack is the instrument and the launcher
-                  children: const [
-                    _StackHeadline(),
-                    ServicesAlertBand(),
-                    ServiceMatrix(),
-                  ],
-                ),
+            : Stack(
+                children: [
+                  RefreshIndicator(
+                    onRefresh: () => _refreshStack(ref),
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: EdgeInsets.only(bottom: bottomPadding),
+                      //  * the header is one line of StackHealth under the
+                      //    title, and it is neutral when clear: no permanent
+                      //    green
+                      //  * the band is absent unless something stopped
+                      //    answering
+                      //  * the stack is the instrument and the launcher
+                      children: const [
+                        _StackHeadline(),
+                        ServicesAlertBand(),
+                        ServiceMatrix(),
+                      ],
+                    ),
+                  ),
+                  // The fleet passes under the clock, as Activity's rows do,
+                  // and fades into the room there instead of colliding with it.
+                  const Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: StatusBarScrim(),
+                  ),
+                ],
               ),
       ),
     );
