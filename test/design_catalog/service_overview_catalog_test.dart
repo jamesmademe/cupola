@@ -431,6 +431,20 @@ class _RowKinds extends StatelessWidget {
             ),
           ),
           ServiceOverviewRow(
+            spoken: 'Stuck, Nickel Boys, a door with a long verb',
+            leading: glyph(Icons.sync_problem_rounded),
+            title: 'Stuck\u00A0· Nickel Boys',
+            titleColor: amber,
+            detail: '18%\u00A0· idle 42\u00A0min\u00A0· no seeds',
+            onTap: () {},
+            doorHint: 'opens this download',
+            action: ServiceOverviewRowAction(
+              label: 'Look for peers again',
+              hint: 'asks the trackers again for Nickel Boys',
+              onPressed: () {},
+            ),
+          ),
+          ServiceOverviewRow(
             spoken: 'immich is stopped, a verb alone',
             leading: glyph(Icons.stop_circle_outlined),
             title: '1 stack is stopped',
@@ -559,17 +573,19 @@ void main() {
         'ServiceOverviewRow · what a row can be: a plain row (only read), a '
         'door with its chevron (one button, the whole row at least 44 tall), '
         'a door with a figure, a door with a verb beside it (the verb is the '
-        'mark, in the ink, never the fault\'s tone) and a verb with no door',
+        'mark, in the ink, never the fault\'s tone), the same with a long verb '
+        '(capped under half the row, the words keep the rest) and a verb with '
+        'no door',
         (_) => const _RowKinds(),
         width: 390,
-        height: 440,
+        height: 520,
       ),
       CatalogScene(
         'Text at 200% · ServiceOverviewRow as a door and as a door with its '
         'verb: the title wraps, the verb stays one line at its 44pt floor',
         (_) => const _RowKinds(),
         width: 390,
-        height: 1100,
+        height: 1500,
         textScale: catalogTextScale,
       ),
       CatalogScene(
