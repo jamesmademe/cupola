@@ -196,7 +196,7 @@ class _NeedsAttentionSection extends ConsumerWidget {
       subtitle: npmAttentionSubtitle(items.asData?.value),
       // No link: a refused configuration belongs to Proxy hosts and a lapsing
       // certificate to Certificates, and one destination would have to lie
-      // about half the rows.
+      // about half the rows. Each row is its own door instead.
       child: AsyncValueWidget<List<NpmAttentionItem>>.section(
         value: items,
         service: ServiceKey.nginxProxyManager,
@@ -243,12 +243,21 @@ class _AttentionRow extends StatelessWidget {
       surface: colorScheme.surfaceContainerLow,
     );
 
+    final door = item.door;
+
     return ServiceOverviewRow(
       spoken: item.spoken,
       leading: Icon(item.icon, size: 18, color: tone),
       title: item.headline,
       titleColor: tone,
       detail: item.detail,
+      onTap: door == null
+          ? null
+          : () =>
+                openAttentionDoor(context, ServiceKey.nginxProxyManager, door),
+      doorHint: door == null
+          ? null
+          : attentionDoorHint(ServiceKey.nginxProxyManager, door),
     );
   }
 }

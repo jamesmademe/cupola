@@ -4,6 +4,8 @@ import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/npm/data/npm_upstream_probe.dart';
 import 'package:cupola/features/npm/domain/models/npm_models.dart';
 import 'package:cupola/features/npm/presentation/npm_overview_provider.dart';
+import 'package:cupola/features/services/domain/attention_door.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
 
 /// Every rule on the NPM Overview is a pure function taking an explicit `now`,
 /// so a certificate that lapses at midnight is a test rather than a screenshot
@@ -323,6 +325,97 @@ void main() {
         items.single.spoken,
         'nginx refused, photos.example.net, http://immich.lan:2283',
       );
+    });
+  });
+
+  group('npmAttentionItems lead to the tab that lists the fault', () {
+    test('a refused host opens Proxy hosts, a lapsed or lapsing certificate '
+        'opens Certificates', () {
+      final items = npmAttentionItems(
+        hosts: [_host(id: 1, domain: 'a.example.net', configLoaded: false)],
+        certificates: [
+          _cert(name: 'gone', expiresIn: const Duration(days: -1)),
+          _cert(name: 'soon', expiresIn: const Duration(days: 5)),
+        ],
+        now: now,
+      );
+
+      expect(items.map((item) => item.door), [
+        const AttentionDoor.tab(ServiceTab.proxyHosts),
+        const AttentionDoor.tab(ServiceTab.certificates),
+        const AttentionDoor.tab(ServiceTab.certificates),
+      ]);
+    });
+
+    test('several refused hosts are one row naming them, and the census '
+        'still counts the hosts', () {
+      final items = npmAttentionItems(
+        hosts: [
+          for (final domain in ['a', 'b', 'c', 'd'])
+            _host(
+              id: domain.codeUnitAt(0),
+              domain: '$domain.example.net',
+              configLoaded: false,
+            ),
+        ],
+        certificates: const [],
+        now: now,
+      );
+
+      final row = items.single;
+      expect(row.kind, NpmAttentionKind.nginxRefused);
+      expect(row.headline, '4 hosts refused by nginx');
+      expect(
+        row.detail,
+        'a.example.net, b.example.net, c.example.net and 1 more',
+      );
+      expect(row.count, 4);
+      expect(row.door, const AttentionDoor.tab(ServiceTab.proxyHosts));
+      expect(row.tone, StatusTone.warning);
+      expect(row.spoken, startsWith('4 hosts refused by nginx, a.example.net'));
+      expect(npmAttentionSubtitle(items), '4');
+    });
+
+    test('several lapsed certificates are one row, and a lone one keeps its '
+        'own', () {
+      final lapsed = npmAttentionItems(
+        hosts: const [],
+        certificates: [
+          _cert(id: 1, name: 'one', expiresIn: const Duration(days: -4)),
+          _cert(id: 2, name: 'two', expiresIn: const Duration(days: -2)),
+        ],
+        now: now,
+      );
+      expect(lapsed.single.headline, '2 certificates expired');
+      expect(lapsed.single.detail, 'one, two');
+      expect(
+        lapsed.single.door,
+        const AttentionDoor.tab(ServiceTab.certificates),
+      );
+      expect(npmAttentionSubtitle(lapsed), '2');
+
+      final lone = npmAttentionItems(
+        hosts: const [],
+        certificates: [_cert(name: 'one', expiresIn: const Duration(days: -4))],
+        now: now,
+      );
+      expect(lone.single.headline, 'Certificate expired · one');
+    });
+
+    test('the set of expiring certificates is one errand and counts as one, '
+        'as it always has', () {
+      final items = npmAttentionItems(
+        hosts: const [],
+        certificates: [
+          _cert(id: 1, name: 'a', expiresIn: const Duration(days: 12)),
+          _cert(id: 2, name: 'b', expiresIn: const Duration(days: 9)),
+        ],
+        now: now,
+      );
+
+      expect(items.single.headline, '2 certificates expiring');
+      expect(items.single.count, 1);
+      expect(npmAttentionSubtitle(items), '1');
     });
   });
 

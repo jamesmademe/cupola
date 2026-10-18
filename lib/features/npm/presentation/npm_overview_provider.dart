@@ -61,6 +61,8 @@ import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/features/npm/data/npm_upstream_probe.dart';
 import 'package:cupola/features/npm/domain/models/npm_models.dart';
 import 'package:cupola/features/npm/presentation/npm_provider.dart';
+import 'package:cupola/features/services/domain/attention_door.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 
 /// Fault rows the Needs attention region draws before its header's census is
@@ -168,12 +170,23 @@ enum NpmAttentionKind {
 }
 
 /// One row of Needs attention: what is wrong, to what, and the evidence.
+///
+/// Every row leads to the tab that lists it: Proxy hosts for a refused
+/// configuration, Certificates for a lapsed or lapsing one. NPM's hosts and
+/// certificates have no page of their own in the app, so the tab is the most
+/// specific place there is. No row carries a verb: Renew reaches Let's
+/// Encrypt, and a renewal fired from a row is one mis-tap from spending the
+/// account's rate limits, so the Certificates tab owns it and its
+/// confirmation.
 @immutable
 class NpmAttentionItem {
   const NpmAttentionItem({
     required this.kind,
     required this.headline,
     required this.detail,
+    this.door,
+    this.subject,
+    this.count = 1,
   });
 
   final NpmAttentionKind kind;
@@ -184,6 +197,18 @@ class NpmAttentionItem {
   /// The evidence: nginx's own message, the forward target, how long is left.
   /// Empty when the record carried none.
   final String detail;
+
+  /// The tab that lists what the row is about.
+  final AttentionDoor? door;
+
+  /// The host or certificate, bare, for a folded row to name.
+  final String? subject;
+
+  /// How many faults the header counts the row as: one, or the hosts or
+  /// certificates a folded row folds. A set of certificates inside their
+  /// renewal window is one errand (renewal is not working) and counts as one,
+  /// as it always has.
+  final int count;
 
   StatusTone get tone => kind.tone;
   IconData get icon => kind.icon;
@@ -229,6 +254,8 @@ List<NpmAttentionItem> npmAttentionItems({
           detail: host.errorText.trim().isNotEmpty
               ? host.errorText.trim()
               : host.target,
+          door: const AttentionDoor.tab(ServiceTab.proxyHosts),
+          subject: host.primaryDomain,
         ),
       );
     }
@@ -253,6 +280,8 @@ List<NpmAttentionItem> npmAttentionItems({
             npmCertificateProviderLabel(certificate),
             npmCertificateExpiryLabel(certificate, now),
           ]),
+          door: const AttentionDoor.tab(ServiceTab.certificates),
+          subject: certificate.displayName,
         ),
       );
     }
@@ -297,12 +326,39 @@ List<NpmAttentionItem> npmAttentionItems({
             expiring.map((c) => c.displayName).take(3).join(dotSeparator),
           if (stalled) 'renewal has not completed',
         ]),
+        door: const AttentionDoor.tab(ServiceTab.certificates),
+        subject: soonest.displayName,
       ),
     );
   }
 
   items.sort((a, b) => a.kind.index.compareTo(b.kind.index));
-  return List.unmodifiable(items);
+  // Several refused hosts, or several lapsed certificates, are one row each:
+  // the tab that lists them is the door, and the header still counts them.
+  return foldAttention<NpmAttentionItem, NpmAttentionKind>(
+    items,
+    kindOf: (item) => item.kind,
+    merge: (kind, members) => NpmAttentionItem(
+      kind: kind,
+      headline: switch (kind) {
+        NpmAttentionKind.nginxRefused =>
+          '${members.length} hosts refused by nginx',
+        NpmAttentionKind.certificateExpired =>
+          '${members.length} certificates expired',
+        // Already one row for the set: never folded here.
+        NpmAttentionKind.certificateExpiring =>
+          '${members.length} certificates expiring',
+      },
+      detail: attentionNames(members.map((member) => member.subject ?? '')),
+      door: switch (kind) {
+        NpmAttentionKind.nginxRefused => const AttentionDoor.tab(
+          ServiceTab.proxyHosts,
+        ),
+        _ => const AttentionDoor.tab(ServiceTab.certificates),
+      },
+      count: members.length,
+    ),
+  );
 }
 
 /// The Needs attention header: the census.
@@ -313,7 +369,8 @@ List<NpmAttentionItem> npmAttentionItems({
 /// coverage: nothing in the census comes from the probe.
 String npmAttentionSubtitle(List<NpmAttentionItem>? items) {
   if (items == null) return '—';
-  return '${items.length}';
+  // What the rows stand for: three refused hosts are three, though one row.
+  return '${items.fold(0, (sum, item) => sum + item.count)}';
 }
 
 /// Hosts and certificates: what NPM itself declared.
