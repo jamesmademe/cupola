@@ -7,6 +7,9 @@ import 'package:cupola/features/readarr/data/readarr_service.dart';
 import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
 import 'package:cupola/features/readarr/presentation/readarr_overview_provider.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
+import 'package:cupola/features/services/domain/attention_door.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 
 import '../../../test_helpers/fake_api_client.dart';
 
@@ -81,7 +84,12 @@ ProviderContainer _container(_ScriptedReadarr service) {
     // A failed provider would otherwise be retried on a backoff and leave a
     // pending timer behind the test that asked for the failure.
     retry: (_, _) => null,
-    overrides: [readarrServiceProvider.overrideWith((ref) => service)],
+    overrides: [
+      readarrServiceProvider.overrideWith((ref) => service),
+      // The connection the lens is on, which a download's door is addressed
+      // by: none here, so the door names no connection.
+      activeInstanceProvider.overrideWith((ref, service) => null),
+    ],
   );
   addTearDown(container.dispose);
   return container;
@@ -216,6 +224,80 @@ void main() {
         'Import failed, Orbital, epub could not be matched',
       );
       expect(items.single.spoken, isNot(contains('·')));
+    });
+  });
+
+  group('readarrQueueFaults lead to where the fault is fixed', () {
+    Map<String, dynamic> stalled(
+      String title, {
+      required int id,
+      required String downloadId,
+    }) => {
+      'id': id,
+      'book': {'title': title},
+      'status': 'warning',
+      'errorMessage': 'The download is stalled with no connections',
+      'downloadId': downloadId,
+    };
+
+    test('one stuck download opens its own page', () {
+      final items = readarrQueueFaults(
+        [stalled('Orbital', id: 4, downloadId: 'ABC')],
+        now: DateTime(2026, 9, 16, 15),
+        instanceId: 'readarr',
+      );
+
+      expect(
+        items.single.door,
+        const AttentionDoor.download(instanceId: 'readarr', key: 'ABC'),
+      );
+    });
+
+    test('several stuck downloads are one row that opens the Queue tab', () {
+      final items = readarrQueueFaults([
+        stalled('Orbital', id: 1, downloadId: 'A'),
+        stalled('Piranesi', id: 2, downloadId: 'B'),
+      ], now: DateTime(2026, 9, 16, 15));
+
+      final row = items.single;
+      expect(row.headline, '2 downloads stuck');
+      expect(row.detail, 'Orbital, Piranesi');
+      expect(row.count, 2);
+      expect(row.door, const AttentionDoor.tab(ServiceTab.queue));
+    });
+
+    test('the books of one torrent are one fault, and a floor is spoken as '
+        'at least', () {
+      final one = readarrQueueFaults([
+        stalled('Orbital', id: 1, downloadId: 'PACK'),
+        stalled('Piranesi', id: 2, downloadId: 'PACK'),
+      ], now: DateTime(2026, 9, 16, 15));
+      expect(one, hasLength(1));
+
+      final floor = readarrQueueFaults(
+        [
+          stalled('Orbital', id: 1, downloadId: 'A'),
+          stalled('Piranesi', id: 2, downloadId: 'B'),
+        ],
+        now: DateTime(2026, 9, 16, 15),
+        cutShort: true,
+      );
+      expect(floor.single.headline, '2+ downloads stuck');
+      expect(
+        floor.single.spoken,
+        'at least 2 downloads stuck, Orbital, Piranesi',
+      );
+    });
+
+    test('both backlog rows open Wanted', () {
+      expect(
+        readarrBelowCutoffItem(3)!.door,
+        const AttentionDoor.tab(ServiceTab.wanted),
+      );
+      expect(
+        readarrMissingBooksItem([_author(books: 3, files: 1)])!.door,
+        const AttentionDoor.tab(ServiceTab.wanted),
+      );
     });
   });
 

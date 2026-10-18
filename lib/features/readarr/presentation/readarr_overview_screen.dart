@@ -148,7 +148,12 @@ class _NeedsAttentionSection extends ConsumerWidget {
     // unreachable band. Read through `asData` the header printed "—" over rows
     // it was still showing. A source that never answered has no retained value
     // and still reads "—".
-    final count = items.hasValue ? items.requireValue.length : null;
+    //
+    // The faults the rows stand for, not the rows: a folded row of three
+    // downloads is three.
+    final count = items.hasValue
+        ? items.requireValue.fold(0, (sum, item) => sum + item.count)
+        : null;
     // A queue walk that stopped short: see the Radarr home's twin.
     final floor =
         ref.watch(readarrQueueRecordsProvider).value?.cutShort ?? false;
@@ -161,7 +166,7 @@ class _NeedsAttentionSection extends ConsumerWidget {
       subtitle: count == null ? '—' : (floor ? Lexicon.floor(count) : '$count'),
       // No link: these rows belong to different tabs: Queue for a stalled
       // import, Wanted for the backlog, and a single destination would have to
-      // lie about one of the two.
+      // lie about one of the two. Each row is its own door instead.
       child: AsyncValueWidget<List<ReadarrAttentionItem>>.section(
         value: items,
         service: ServiceKey.readarr,
@@ -209,12 +214,20 @@ class _AttentionRow extends StatelessWidget {
       surface: colorScheme.surfaceContainerLow,
     );
 
+    final door = item.door;
+
     return ServiceOverviewRow(
       spoken: item.spoken,
       leading: Icon(item.icon, size: 18, color: tone),
       title: item.headline,
       titleColor: tone,
       detail: item.detail,
+      onTap: door == null
+          ? null
+          : () => openAttentionDoor(context, ServiceKey.readarr, door),
+      doorHint: door == null
+          ? null
+          : attentionDoorHint(ServiceKey.readarr, door),
     );
   }
 }

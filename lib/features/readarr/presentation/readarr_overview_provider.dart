@@ -39,7 +39,11 @@ import 'package:cupola/core/utils/release_utils.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
+import 'package:cupola/features/services/domain/attention_door.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// One page of history, and deliberately only one.
 ///
@@ -113,17 +117,22 @@ enum ReadarrAttentionKind {
 
 /// One row of Needs attention: what happened, to what, and when.
 ///
-/// The per-row cross-service action the board draws ("Manual import", "Search
-/// all") is deliberately absent: both are `POST /api/v1/command` writes the
-/// client does not make, and a button that cannot do the thing it names is
-/// worse than no button.
+/// Every row leads somewhere: a download's own page for one stuck or failed
+/// download, the Queue tab for the several a folded row stands for, the
+/// Wanted tab for the backlog. What Readarr can do about a download it cannot
+/// import ("Manual import", "Search all") is a `POST /api/v1/command` write
+/// the client does not make, so no row carries a verb: the page it opens does.
 @immutable
 class ReadarrAttentionItem {
   const ReadarrAttentionItem({
     required this.kind,
     required this.headline,
     required this.detail,
-  });
+    this.door,
+    this.subject,
+    this.count = 1,
+    String? spokenHeadline,
+  }) : _spokenHeadline = spokenHeadline;
 
   final ReadarrAttentionKind kind;
 
@@ -134,14 +143,31 @@ class ReadarrAttentionItem {
   /// Empty when the record carried none.
   final String detail;
 
+  /// Where the row leads, or null where the app has no place that shows it.
+  final AttentionDoor? door;
+
+  /// What the fault is about, bare (`Orbital`), for a folded row to name.
+  final String? subject;
+
+  /// How many faults the row stands for: one, or the downloads a folded row
+  /// folds. The section's own count adds these, so folding never changes how
+  /// many things need attention.
+  final int count;
+
+  /// [headline] as the ear should hear it, where it differs (`at least 3`
+  /// for a floor).
+  final String? _spokenHeadline;
+
   StatusTone get tone => kind.tone;
   IconData get icon => kind.icon;
 
   /// The row as a sentence, with the dots the layout uses turned back into
   /// commas: `·` is decoration, and a screen reader either names it or drops
   /// it depending on the user's punctuation setting.
-  String get spoken =>
-      joinSpokenParts([spokenFromDotted(headline), spokenFromDotted(detail)]);
+  String get spoken => joinSpokenParts([
+    spokenFromDotted(_spokenHeadline ?? headline),
+    spokenFromDotted(detail),
+  ]);
 }
 
 // There is no standing "upstream is archived" row here, and its absence is
@@ -164,9 +190,19 @@ class ReadarrAttentionItem {
 /// Stalled is tested before import: a transfer that is not moving has not
 /// reached the import stage at all, and Readarr marks both with the same
 /// `trackedDownloadStatus: warning`.
+///
+/// Several downloads in one of the two states are one row (`3 downloads
+/// stuck`, the titles in the detail) whose door is the Queue tab, which lists
+/// them all; one of a kind keeps its own row and opens its own page. The
+/// records of one download count once. [instanceId] is the connection the
+/// records were read from, which a download's page is addressed by, and
+/// [cutShort] says the walk stopped on a full page, so a count taken in it is
+/// a floor.
 List<ReadarrAttentionItem> readarrQueueFaults(
   List<Map<String, dynamic>> records, {
   required DateTime now,
+  String instanceId = '',
+  bool cutShort = false,
 }) {
   final items = <ReadarrAttentionItem>[];
   for (final record in records) {
@@ -175,6 +211,7 @@ List<ReadarrAttentionItem> readarrQueueFaults(
     final age = when == null ? null : formatRelativeDateTime(when, now: now);
     final message =
         stringOrNull(record['errorMessage']) ?? arrQueueWarningMessage(record);
+    final door = arrQueueRecordDoor(record, instanceId: instanceId);
 
     if (_isStalled(record)) {
       items.add(
@@ -186,6 +223,8 @@ List<ReadarrAttentionItem> readarrQueueFaults(
             message,
             age,
           ]),
+          door: door,
+          subject: title,
         ),
       );
       continue;
@@ -197,11 +236,31 @@ List<ReadarrAttentionItem> readarrQueueFaults(
           kind: ReadarrAttentionKind.importFailed,
           headline: 'Import failed\u00A0· $title',
           detail: joinDisplayParts([message, age]),
+          door: door,
+          subject: title,
         ),
       );
     }
   }
-  return List.unmodifiable(items);
+  return foldAttention<ReadarrAttentionItem, ReadarrAttentionKind>(
+    items,
+    kindOf: (item) => item.kind,
+    // The download a row is: the books of one torrent are one fault.
+    identityOf: (item) => item.door ?? item,
+    merge: (kind, members) {
+      final words = kind == ReadarrAttentionKind.stalled
+          ? stuckDownloadsWords(members.length, floor: cutShort)
+          : failedImportsWords(members.length, floor: cutShort);
+      return ReadarrAttentionItem(
+        kind: kind,
+        headline: words.headline,
+        spokenHeadline: words.spoken,
+        detail: attentionNames(members.map((member) => member.subject ?? '')),
+        door: const AttentionDoor.tab(ServiceTab.queue),
+        count: members.length,
+      );
+    },
+  );
 }
 
 /// The backlog row (books with no file), or null when there is none.
@@ -243,6 +302,7 @@ ReadarrAttentionItem? readarrMissingBooksItem(List<ReadarrAuthor> authors) {
     detail: authorsWithGaps == 1
         ? 'across 1 author'
         : 'across $authorsWithGaps authors',
+    door: const AttentionDoor.tab(ServiceTab.wanted),
   );
 }
 
@@ -269,6 +329,8 @@ ReadarrAttentionItem? readarrBelowCutoffItem(int? total) {
         ? '1 book below your quality cutoff'
         : '$total books below your quality cutoff',
     detail: 'Readarr keeps searching for an upgrade',
+    // Wanted lists what is below its cutoff beside what is missing.
+    door: const AttentionDoor.tab(ServiceTab.wanted),
   );
 }
 
@@ -346,7 +408,15 @@ final readarrNeedsAttentionProvider =
       final cutoff = await ref.watch(readarrBelowCutoffProvider.future);
       final backlog = readarrMissingBooksItem(authors);
       return [
-        ...readarrQueueFaults(page.recordMaps, now: DateTime.now()),
+        ...readarrQueueFaults(
+          page.recordMaps,
+          now: DateTime.now(),
+          // The connection the queue was read from: a download's page is
+          // addressed by it.
+          instanceId:
+              ref.watch(activeInstanceProvider(ServiceKey.readarr))?.id ?? '',
+          cutShort: page.cutShort,
+        ),
         ?backlog,
         ?cutoff,
       ];
