@@ -992,6 +992,38 @@ class SeerrService {
     return score is num && score > 0 ? score.round() : null;
   }
 
+  /// Rotten Tomatoes' critics score (0..100) and IMDb's rating (0..10) for a
+  /// movie, which TMDB's record carries neither of; each null when there is
+  /// none. `/movie/:id/ratingscombined` answers both; a server without it
+  /// (404) is asked `/movie/:id/ratings`, Rotten Tomatoes alone. Throws on
+  /// any other remote failure.
+  Future<({int? rottenTomatoes, double? imdb})> getMovieScores(
+    int movieId,
+  ) async {
+    int? tomatoes(Object? rt) {
+      final score = rt is Map ? rt['criticsScore'] : null;
+      return score is num && score > 0 ? score.round() : null;
+    }
+
+    try {
+      final response = await _client.get(
+        '/api/v1/movie/$movieId/ratingscombined',
+      );
+      final data = response.data;
+      if (data is! Map) return (rottenTomatoes: null, imdb: null);
+      final imdb = data['imdb'];
+      final rating = imdb is Map ? imdb['criticsScore'] : null;
+      return (
+        rottenTomatoes: tomatoes(data['rt']),
+        imdb: rating is num && rating > 0 ? rating.toDouble() : null,
+      );
+    } catch (error) {
+      if (!_isNotFound(error)) rethrow;
+    }
+    final response = await _client.get('/api/v1/movie/$movieId/ratings');
+    return (rottenTomatoes: tomatoes(response.data), imdb: null);
+  }
+
   /// A collection and its member films, `{}` when Seerr answered that there is
   /// no such collection (404).
   ///

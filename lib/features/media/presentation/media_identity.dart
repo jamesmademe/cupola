@@ -236,11 +236,17 @@ typedef MediaScores = ({
   int? metacritic,
 });
 
-/// The scores [rows] carry: an arr's record carries all four for a title it
-/// holds; otherwise TMDB's through Seerr.
+/// The scores [rows] carry.
+///
+/// TMDB's is the one Seerr read, when it did: the figure every poster and
+/// search result shows for the title, so the page agrees with the card that
+/// opened it. An arr's record, a copy refreshed on its own schedule, fills
+/// what Seerr left out, and Seerr's IMDb and Rotten Tomatoes fill what the
+/// arr left out (a title no arr holds).
 MediaScores mediaScoresOf(List<MediaRow> rows, MediaIdentity? identity) {
   List<RatingSource>? arr;
   int? seerrTomatoes;
+  double? seerrImdb;
   for (final row in rows) {
     if (row case MediaConnectionRow(
       reading: MediaReadingAnswered(:final answer),
@@ -250,8 +256,12 @@ MediaScores mediaScoresOf(List<MediaRow> rows, MediaIdentity? identity) {
         MediaSonarrCopy(:final series?) => series.ratings,
         _ => null,
       };
-      if (answer.value case MediaSeerrRecord(:final rottenTomatoes?)) {
+      if (answer.value case MediaSeerrRecord(
+        :final rottenTomatoes,
+        :final imdb,
+      )) {
         seerrTomatoes ??= rottenTomatoes;
+        seerrImdb ??= imdb;
       }
     }
   }
@@ -267,8 +277,8 @@ MediaScores mediaScoresOf(List<MediaRow> rows, MediaIdentity? identity) {
   }
 
   return (
-    tmdb: score('tmdb') ?? identity?.tmdbScore,
-    imdb: score('imdb'),
+    tmdb: identity?.tmdbScore ?? score('tmdb'),
+    imdb: score('imdb') ?? seerrImdb,
     rottenTomatoes: score('rottenTomatoes')?.round() ?? seerrTomatoes,
     metacritic: score('metacritic')?.round(),
   );

@@ -630,6 +630,29 @@ void main() {
       expect(await service.getPerson(5), isEmpty);
     });
 
+    test('a movie\'s scores come from ratingscombined', () async {
+      client.getResponseData = {
+        'rt': {'criticsScore': 93, 'audienceScore': 88},
+        'imdb': {'criticsScore': 7.8},
+      };
+      final scores = await service.getMovieScores(653);
+      expect(client.lastGetPath, '/api/v1/movie/653/ratingscombined');
+      expect(scores.rottenTomatoes, 93);
+      expect(scores.imdb, 7.8);
+    });
+
+    test('a movie with no scores reads none, not zero', () async {
+      client.getResponseData = <String, dynamic>{};
+      final scores = await service.getMovieScores(653);
+      expect(scores.rottenTomatoes, isNull);
+      expect(scores.imdb, isNull);
+    });
+
+    test('a movie\'s scores throw when Seerr did not answer', () async {
+      client.getException = Exception('offline');
+      await expectLater(service.getMovieScores(653), throwsException);
+    });
+
     test('deleteMedia hits /api/v1/media/:id', () async {
       await service.deleteMedia(123);
       expect(client.lastDeletePath, '/api/v1/media/123');

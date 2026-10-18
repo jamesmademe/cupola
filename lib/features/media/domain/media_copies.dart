@@ -151,6 +151,7 @@ class MediaSeerrRecord {
     required this.details,
     this.arrServers,
     this.rottenTomatoes,
+    this.imdb,
     this.numbering,
   });
 
@@ -159,10 +160,13 @@ class MediaSeerrRecord {
   /// differs between them is then not guessed.
   final SeerrNumbering? numbering;
 
-  /// Rotten Tomatoes' critics score for a series, which TMDB's record does
-  /// not carry; null for a movie, and when there is none or it could not be
-  /// read.
+  /// Rotten Tomatoes' critics score, which TMDB's record does not carry;
+  /// null when there is none or it could not be read.
   final int? rottenTomatoes;
+
+  /// IMDb's rating of a movie, as Seerr reads it; null for a series, and
+  /// when there is none or it could not be read.
+  final double? imdb;
 
   /// `/movie/:id` or `/tv/:id`, as Seerr answered: identity, ratings, cast and
   /// the `mediaInfo` the rows read.

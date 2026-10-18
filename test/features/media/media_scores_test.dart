@@ -1,4 +1,4 @@
-/// The four scores read from an arr's record when Seerr has none.
+/// The four scores of a title's page, and where each one comes from.
 library;
 
 import 'package:flutter_test/flutter_test.dart';
@@ -77,4 +77,67 @@ void main() {
     // A critics' score carries no votes, and stands.
     expect(scores.rottenTomatoes, 60);
   });
+
+  test('TMDB\'s score is Seerr\'s, the one the poster showed', () {
+    final movie = RadarrMovie.fromJson({
+      'id': 7,
+      'title': 'Nosferatu',
+      'tmdbId': 653,
+      'year': 1922,
+      'ratings': {
+        'imdb': {'value': 7.8, 'votes': 113000},
+        'tmdb': {'value': 7.6, 'votes': 2400},
+      },
+    });
+    final rows = [
+      _seerr(const MediaSeerrRecord(details: _nosferatu)),
+      MediaConnectionRow<MediaRadarrCopy>(
+        const ServiceInstance(id: 'radarr', service: ServiceKey.radarr),
+        MediaReadingAnswered(
+          MediaAnswer(
+            MediaRadarrCopy(movie: movie, queue: ArrQueueSnapshot.empty),
+            DateTime(2026, 10, 3),
+          ),
+        ),
+      ),
+    ];
+
+    final scores = mediaScoresOf(rows, MediaIdentity.of(rows));
+
+    expect(scores.tmdb, 7.9);
+    expect(scores.imdb, 7.8);
+  });
+
+  test('without an arr, Seerr fills IMDb and Rotten Tomatoes', () {
+    final rows = [
+      _seerr(
+        const MediaSeerrRecord(
+          details: _nosferatu,
+          rottenTomatoes: 97,
+          imdb: 7.8,
+        ),
+      ),
+    ];
+
+    final scores = mediaScoresOf(rows, MediaIdentity.of(rows));
+
+    expect(scores.tmdb, 7.9);
+    expect(scores.imdb, 7.8);
+    expect(scores.rottenTomatoes, 97);
+    expect(scores.metacritic, isNull);
+  });
 }
+
+const _nosferatu = <String, dynamic>{
+  'id': 653,
+  'title': 'Nosferatu',
+  'releaseDate': '1922-03-04',
+  'voteAverage': 7.9,
+  'voteCount': 2500,
+};
+
+MediaConnectionRow<MediaSeerrRecord> _seerr(MediaSeerrRecord record) =>
+    MediaConnectionRow<MediaSeerrRecord>(
+      const ServiceInstance(id: 'seerr', service: ServiceKey.seerr),
+      MediaReadingAnswered(MediaAnswer(record, DateTime(2026, 10, 3))),
+    );

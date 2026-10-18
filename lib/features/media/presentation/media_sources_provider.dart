@@ -261,19 +261,23 @@ final mediaSeerrRecordProvider = FutureProvider.autoDispose
         servers = null;
       }
       int? rottenTomatoes;
-      if (!source.key.isMovie) {
-        try {
+      double? imdb;
+      try {
+        if (source.key.isMovie) {
+          (:rottenTomatoes, :imdb) = await seerr.getMovieScores(tmdbId);
+        } else {
           rottenTomatoes = await seerr.getTvCriticsScore(tmdbId);
-        } catch (_) {
-          // A score that did not answer reads `—`: never the record's
-          // failure.
         }
+      } catch (_) {
+        // A score that did not answer reads `—`: never the record's
+        // failure.
       }
       return MediaAnswer(
         MediaSeerrRecord(
           details: details,
           arrServers: servers,
           rottenTomatoes: rottenTomatoes,
+          imdb: imdb,
           // Asked of a public route, once per connection; a silence leaves
           // the codes that differ undecoded.
           numbering: await seerr.numbering().catchError((Object _) => null),
