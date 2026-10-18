@@ -588,6 +588,10 @@ ServiceReachability serviceReachabilityOf(AsyncValue<ServiceSummary> summary) =>
         ServiceSummaryStatus.fault => ServiceReachability.fault,
         ServiceSummaryStatus.offline => ServiceReachability.offline,
         ServiceSummaryStatus.onlyAtHome => ServiceReachability.onlyAtHome,
+        // A cell is drawn only for a configured connection: one read as not
+        // set up lost its key a moment ago, and its cell goes with the next
+        // build. Until then it says nothing about the server.
+        ServiceSummaryStatus.notSetUp => ServiceReachability.checking,
       },
       AsyncError(:final error) =>
         failureDidNotAnswer(classifyConnectionFailure(error))

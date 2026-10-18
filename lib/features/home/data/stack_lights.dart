@@ -33,14 +33,17 @@ final stackLightsProvider = Provider.autoDispose<StackLights>((ref) {
               service: service,
               probes: [
                 for (final id in ref.watch(serviceInstanceIdsProvider(service)))
-                  _probeOf(
-                    ref.watch(
-                      instanceSummaryProvider((
-                        service: service,
-                        instanceId: id,
-                      )),
-                    ),
-                  ),
+                  if (ref.watch(
+                        instanceSummaryProvider((
+                          service: service,
+                          instanceId: id,
+                        )),
+                      )
+                      case final summary
+                      // A connection saved without its key was not asked:
+                      // the service is read off its other connections.
+                      when !(summary.value?.isNotSetUp ?? false))
+                    _probeOf(summary),
               ],
             ),
     ],

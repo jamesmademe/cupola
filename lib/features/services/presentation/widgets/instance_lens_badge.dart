@@ -281,6 +281,9 @@ class _LensOptions extends ConsumerWidget {
     return describeConnection(
       service,
       status: switch (summary) {
+        // Saved without its key: not asked, and said as not set up.
+        AsyncData(:final value) when value.isNotSetUp =>
+          ServiceConnectionStatus.notConfigured,
         AsyncData(:final value) =>
           value.isOnline
               ? ServiceConnectionStatus.connected

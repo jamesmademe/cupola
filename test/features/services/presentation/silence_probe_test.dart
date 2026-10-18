@@ -290,7 +290,9 @@ void main() {
         instanceSummaryProvider(sabnzbd()).future,
       );
 
-      expect(summary.didNotAnswer, isTrue);
+      // Not asked, so neither silent nor dark: not set up.
+      expect(summary.isNotSetUp, isTrue);
+      expect(summary.didNotAnswer, isFalse);
       expect(silentSince(ServiceKey.sabnzbd, WorldIds.sabnzbd), isNull);
     });
   });

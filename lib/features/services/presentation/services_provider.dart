@@ -149,6 +149,7 @@ final foldedServiceHealthProvider =
       var stuck = 0;
       var checking = 0;
       var onlyAtHome = 0;
+      var notSetUp = 0;
       for (final id in ids) {
         final summary = ref.watch(
           instanceSummaryProvider((service: service, instanceId: id)),
@@ -156,6 +157,10 @@ final foldedServiceHealthProvider =
         switch (summary) {
           case AsyncData(:final value) when value.isOnlyAtHome:
             onlyAtHome++;
+          // Not asked, and not part of how the service stands: read off its
+          // other connections.
+          case AsyncData(:final value) when value.isNotSetUp:
+            notSetUp++;
           case AsyncData(:final value):
             if (value.didNotAnswer) offline++;
             if (value.isStuck) {
@@ -181,7 +186,7 @@ final foldedServiceHealthProvider =
         }
       }
       return (
-        total: ids.length,
+        total: ids.length - notSetUp,
         offline: offline,
         faulted: faulted,
         stuck: stuck,
@@ -474,7 +479,15 @@ Future<ServiceSummary> _loadServiceSummary(
         error: const ClassifiedFailure(ServiceFailureReason.secretUnread),
       );
     }
-    return _offlineSummary(service, host: host);
+    // Saved without its key: not asked, so not silent either. Read as
+    // `did not answer`, it put a connection nobody had asked into the
+    // Stack's count of the dark ones.
+    return ServiceSummary(
+      service: service,
+      status: ServiceSummaryStatus.notSetUp,
+      host: host,
+      version: null,
+    );
   }
 
   final String? version;

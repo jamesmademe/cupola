@@ -394,6 +394,9 @@ class ServiceOverviewIdentity extends ConsumerWidget {
       error: (_, _) => ServiceConnectionStatus.disconnected,
       data: (value) => value.isOnline
           ? ServiceConnectionStatus.connected
+          // Saved without its key: not asked, and said as not set up.
+          : value.isNotSetUp
+          ? ServiceConnectionStatus.notConfigured
           : ServiceConnectionStatus.disconnected,
     );
     final reason = summary.when(

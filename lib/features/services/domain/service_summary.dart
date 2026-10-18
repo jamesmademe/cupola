@@ -24,6 +24,12 @@ enum ServiceSummaryStatus {
   /// silent, not a fault, and counted apart (`7 of 7 answering · 6 only at
   /// home`).
   onlyAtHome,
+
+  /// Not asked: the connection is saved without what it needs to be asked
+  /// (its key, or its password). Neutral, like [onlyAtHome]: nothing answered
+  /// and nothing was silent, so it is neither answering nor dark, and the
+  /// service is read off its other connections.
+  notSetUp,
 }
 
 /// Whether a configured service is answering, and what it says it is.
@@ -57,9 +63,10 @@ class ServiceSummary {
   /// known.
   final String? version;
 
-  /// Why the probe failed, classified, when it did. Null while online, and on a
-  /// summary built for a connection that was never asked (not set up, or
-  /// removed mid-flight), which reads as offline.
+  /// Why the probe failed, classified, when it did. Null while online, for a
+  /// connection not set up ([ServiceSummaryStatus.notSetUp]), and on a
+  /// summary built for a connection removed mid-flight, which reads as
+  /// offline.
   final ClassifiedFailure? failure;
 
   const ServiceSummary({
@@ -99,6 +106,9 @@ class ServiceSummary {
   /// Not asked, away from home: the neutral state.
   bool get isOnlyAtHome => status == ServiceSummaryStatus.onlyAtHome;
 
+  /// Saved without what it needs to be asked: never asked, neutral.
+  bool get isNotSetUp => status == ServiceSummaryStatus.notSetUp;
+
   /// Answered with a refusal or a fault: amber.
   bool get isFault => status == ServiceSummaryStatus.fault;
 
@@ -116,6 +126,7 @@ class ServiceSummary {
     ServiceSummaryStatus.fault =>
       failure?.reason ?? ServiceFailureReason.unknown,
     ServiceSummaryStatus.onlyAtHome => ServiceFailureReason.onlyAtHome,
+    ServiceSummaryStatus.notSetUp => null,
   };
 
   String get versionLabel {
