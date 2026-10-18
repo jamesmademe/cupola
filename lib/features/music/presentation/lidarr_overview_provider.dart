@@ -41,7 +41,11 @@ import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
 import 'package:cupola/features/music/presentation/music_provider.dart';
+import 'package:cupola/features/services/domain/attention_door.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Artists on the Recently added rail.
 const int lidarrRecentlyAddedLimit = 6;
@@ -204,15 +208,20 @@ enum LidarrAttentionKind {
 
 /// One row of Needs attention: what happened, to what, and when.
 ///
-/// The per-row cross-service action the board draws ("Fix", "Search all") is
-/// deliberately absent: those need a write this client does not make, and a
-/// button that cannot do the thing it names is worse than no button.
+/// Every row leads somewhere: a download's own page for one stuck or failed
+/// download, the Queue tab for the several a folded row stands for, the
+/// Wanted tab for the backlog. What Lidarr can do about a download it cannot
+/// import ("Fix", "Search all") needs a write this client does not make, so no
+/// row carries a verb: the page it opens does.
 @immutable
 class LidarrAttentionItem {
   const LidarrAttentionItem({
     required this.kind,
     required this.headline,
     required this.detail,
+    this.door,
+    this.subject,
+    this.count = 1,
     String? spokenHeadline,
   }) : _spokenHeadline = spokenHeadline;
 
@@ -224,6 +233,18 @@ class LidarrAttentionItem {
   /// The evidence: the service's own message, the client, the timestamp.
   /// Empty when the record carried none.
   final String detail;
+
+  /// Where the row leads, or null where the app has no place that shows it.
+  final AttentionDoor? door;
+
+  /// Whose fault it is, bare (`Alvvays`), for a folded row to name: the
+  /// artist, so the names of several albums of one artist are said once.
+  final String? subject;
+
+  /// How many faults the row stands for: one, or the downloads a folded row
+  /// folds. The section's own count adds these, so folding never changes how
+  /// many things need attention.
+  final int count;
 
   /// [headline] with its em dash resolved into a clause, when the two differ.
   final String? _spokenHeadline;
@@ -255,18 +276,29 @@ class LidarrAttentionItem {
 /// under a heading that says "Needs attention" is the heading lying about its
 /// own contents. It belongs to the Queue tab, which is where the header's link
 /// would send you and where the same record is already drawn with its progress.
+///
+/// Several downloads in one of the two states are one row (`3 downloads
+/// stuck`, the artists in the detail) whose door is the Queue tab, which lists
+/// them all; one of a kind keeps its own row and opens its own page.
+/// [instanceId] is the connection the records were read from, which a
+/// download's page is addressed by, and [cutShort] says the walk stopped on a
+/// full page, so a count taken in it is a floor.
 List<LidarrAttentionItem> lidarrQueueFaults(
   List<Map<String, dynamic>> records, {
   required DateTime now,
+  String instanceId = '',
+  bool cutShort = false,
 }) {
   final items = <LidarrAttentionItem>[];
   for (final record in records) {
     final title = lidarrRecordTitle(record);
     final spokenTitle = lidarrRecordSpokenTitle(record);
+    final subject = arrArtistName(record) ?? title;
     final when = _parseLocal(stringOrNull(record['added']));
     final age = when == null ? null : formatRelativeDateTime(when, now: now);
     final message =
         stringOrNull(record['errorMessage']) ?? arrQueueWarningMessage(record);
+    final door = arrQueueRecordDoor(record, instanceId: instanceId);
 
     if (_isStalled(record)) {
       items.add(
@@ -279,6 +311,8 @@ List<LidarrAttentionItem> lidarrQueueFaults(
             message,
             age,
           ]),
+          door: door,
+          subject: subject,
         ),
       );
       continue;
@@ -291,11 +325,32 @@ List<LidarrAttentionItem> lidarrQueueFaults(
           headline: 'Import failed\u00A0· $title',
           spokenHeadline: 'Import failed\u00A0· $spokenTitle',
           detail: joinDisplayParts([message, age]),
+          door: door,
+          subject: subject,
         ),
       );
     }
   }
-  return List.unmodifiable(items);
+  return foldAttention<LidarrAttentionItem, LidarrAttentionKind>(
+    items,
+    kindOf: (item) => item.kind,
+    // The download a row is: the albums of one discography torrent are one
+    // fault, not one each.
+    identityOf: (item) => item.door ?? item,
+    merge: (kind, members) {
+      final words = kind == LidarrAttentionKind.stalled
+          ? stuckDownloadsWords(members.length, floor: cutShort)
+          : failedImportsWords(members.length, floor: cutShort);
+      return LidarrAttentionItem(
+        kind: kind,
+        headline: words.headline,
+        spokenHeadline: words.spoken,
+        detail: attentionNames(members.map((member) => member.subject ?? '')),
+        door: const AttentionDoor.tab(ServiceTab.queue),
+        count: members.length,
+      );
+    },
+  );
 }
 
 bool _isStalled(Map<String, dynamic> record) {
@@ -363,6 +418,7 @@ LidarrAttentionItem? lidarrMissingAlbumsItem(ArrRecordPage page) {
     // Names the mechanism rather than an instruction: nothing is wrong, Lidarr
     // is simply still looking.
     detail: joinDisplayParts([spread, 'Lidarr keeps searching for them']),
+    door: const AttentionDoor.tab(ServiceTab.wanted),
   );
 }
 
@@ -402,7 +458,15 @@ final lidarrNeedsAttentionProvider =
       final missing = await ref.watch(lidarrMissingPageProvider.future);
       final backlog = lidarrMissingAlbumsItem(missing);
       return [
-        ...lidarrQueueFaults(page.recordMaps, now: DateTime.now()),
+        ...lidarrQueueFaults(
+          page.recordMaps,
+          now: DateTime.now(),
+          // The connection the queue was read from: a download's page is
+          // addressed by it.
+          instanceId:
+              ref.watch(activeInstanceProvider(ServiceKey.lidarr))?.id ?? '',
+          cutShort: page.cutShort,
+        ),
         ?backlog,
       ];
     });

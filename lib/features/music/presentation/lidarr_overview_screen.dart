@@ -166,7 +166,9 @@ class _NeedsAttentionSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final items = ref.watch(lidarrNeedsAttentionProvider);
-    final count = items.asData?.value.length;
+    // The faults the rows stand for, not the rows: a folded row of three
+    // downloads is three.
+    final count = items.asData?.value.fold(0, (sum, item) => sum + item.count);
     // A queue walk that stopped short: see the Radarr home's twin.
     final floor =
         ref.watch(lidarrQueueRecordsProvider).value?.cutShort ?? false;
@@ -179,7 +181,8 @@ class _NeedsAttentionSection extends ConsumerWidget {
       // made, and it is the reassuring direction of wrong.
       subtitle: count == null ? '—' : (floor ? Lexicon.floor(count) : '$count'),
       // No link: the fault rows belong to Queue and the backlog row to Wanted,
-      // and a single destination would have to lie about one of them.
+      // and a single destination would have to lie about one of them. Each row
+      // is its own door instead.
       child: AsyncValueWidget<List<LidarrAttentionItem>>.section(
         value: items,
         service: ServiceKey.lidarr,
@@ -224,12 +227,20 @@ class _AttentionRow extends StatelessWidget {
       surface: colorScheme.surfaceContainerLow,
     );
 
+    final door = item.door;
+
     return ServiceOverviewRow(
       spoken: item.spoken,
       leading: Icon(item.icon, size: 18, color: tone),
       title: item.headline,
       titleColor: tone,
       detail: item.detail,
+      onTap: door == null
+          ? null
+          : () => openAttentionDoor(context, ServiceKey.lidarr, door),
+      doorHint: door == null
+          ? null
+          : attentionDoorHint(ServiceKey.lidarr, door),
     );
   }
 }

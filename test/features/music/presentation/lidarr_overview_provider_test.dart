@@ -6,6 +6,9 @@ import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
 import 'package:cupola/features/music/presentation/lidarr_overview_provider.dart';
+import 'package:cupola/features/services/domain/attention_door.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 
 import '../../../test_helpers/fake_services.dart';
 
@@ -123,6 +126,83 @@ void main() {
         items.single.spoken,
         'Import failed, Alvvays, Blue Rev, Could not move the file',
       );
+    });
+  });
+
+  group('lidarrQueueFaults lead to where the fault is fixed', () {
+    Map<String, dynamic> stalled(
+      String artist,
+      String album, {
+      required int id,
+      required String downloadId,
+    }) => {
+      'id': id,
+      'artist': {'artistName': artist},
+      'album': {'title': album},
+      'status': 'warning',
+      'errorMessage': 'The download is stalled with no connections',
+      'downloadId': downloadId,
+    };
+
+    test('one stuck download opens its own page', () {
+      final items = lidarrQueueFaults(
+        [stalled('Alvvays', 'Blue Rev', id: 4, downloadId: 'ABC')],
+        now: now,
+        instanceId: 'lidarr',
+      );
+
+      expect(
+        items.single.door,
+        const AttentionDoor.download(instanceId: 'lidarr', key: 'ABC'),
+      );
+    });
+
+    test('several stuck downloads are one row naming their artists, and '
+        'opening the Queue tab', () {
+      final items = lidarrQueueFaults([
+        stalled('Alvvays', 'Blue Rev', id: 1, downloadId: 'A'),
+        stalled('Alvvays', 'Antisocialites', id: 2, downloadId: 'B'),
+        stalled('Beach House', 'Depression Cherry', id: 3, downloadId: 'C'),
+      ], now: now);
+
+      final row = items.single;
+      expect(row.headline, '3 downloads stuck');
+      // The artist once, not once per album.
+      expect(row.detail, 'Alvvays, Beach House');
+      expect(row.count, 3);
+      expect(row.door, const AttentionDoor.tab(ServiceTab.queue));
+    });
+
+    test('the albums of one discography torrent are one fault', () {
+      final items = lidarrQueueFaults([
+        stalled('Alvvays', 'Blue Rev', id: 1, downloadId: 'PACK'),
+        stalled('Alvvays', 'Antisocialites', id: 2, downloadId: 'PACK'),
+      ], now: now);
+
+      expect(items, hasLength(1));
+      expect(items.single.count, 1);
+    });
+
+    test('the backlog opens Wanted, which lists the albums with no files', () {
+      final item = lidarrMissingAlbumsItem(
+        const ArrRecordPage(records: [], total: 5),
+      );
+
+      expect(item!.door, const AttentionDoor.tab(ServiceTab.wanted));
+    });
+
+    test('a floor is spoken as at least', () {
+      final items = lidarrQueueFaults(
+        [
+          stalled('A', 'x', id: 1, downloadId: 'A'),
+          stalled('B', 'y', id: 2, downloadId: 'B'),
+        ],
+        now: now,
+        cutShort: true,
+      );
+
+      expect(items.single.headline, '2+ downloads stuck');
+      expect(items.single.spoken, 'at least 2 downloads stuck, A, B');
     });
   });
 
@@ -479,7 +559,12 @@ void main() {
         ),
       );
       final container = ProviderContainer(
-        overrides: [lidarrServiceProvider.overrideWith((ref) => service)],
+        overrides: [
+          lidarrServiceProvider.overrideWith((ref) => service),
+          // The connection the lens is on, which a download's door is
+          // addressed by: none here.
+          activeInstanceProvider.overrideWith((ref, service) => null),
+        ],
       );
       addTearDown(container.dispose);
 
