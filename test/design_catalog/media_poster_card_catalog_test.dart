@@ -73,7 +73,7 @@ Widget _grid() => MediaGrid<_Film>(
         ],
   idExtractor: (film) => film.id,
   titleExtractor: (film) => film.title,
-  statusExtractor: (film) => film.status,
+  statusExtractor: (movie) => movie.status,
   baseUrl: '',
   apiKey: '',
   heroTagPrefix: 'movie',

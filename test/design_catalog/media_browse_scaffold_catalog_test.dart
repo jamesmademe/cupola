@@ -238,7 +238,7 @@ Widget _scaffold(
             {'coverType': 'poster', 'remoteUrl': film.poster},
           ],
     idExtractor: (film) => film.id,
-    statusExtractor: status ? (film) => film.status : null,
+    statusExtractor: status ? (movie) => movie.status : null,
     settingsSelector: (_) => ('', '', const NoAccess()),
     onItemTap: (_, _, _) {},
     emptyIcon: emptyIcon,
