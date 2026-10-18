@@ -231,6 +231,47 @@ void main() {
       expect(tested, 1, reason: 'the door does not also run the verb');
     });
 
+    testWidgets('an amber fault\'s remedy is the amber fill under the row\'s '
+        'words, named by its label and hint', (tester) async {
+      var tested = 0;
+      var opened = 0;
+      await tester.pumpWidget(
+        _host(
+          row(
+            onTap: () => opened++,
+            doorHint: 'opens the indexer',
+            action: ServiceOverviewRowAction.remedy(
+              label: 'Test',
+              hint: 'tests Nyaa',
+              onPressed: () => tested++,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(TextButton), findsNothing);
+      final button = find.byType(FilledButton);
+      expect(button, findsOneWidget);
+      // Under the words, so a long name keeps the row's width.
+      expect(
+        tester.getTopLeft(button).dy,
+        greaterThanOrEqualTo(tester.getBottomLeft(find.text('Nyaa')).dy),
+      );
+      expect(
+        tester.getSemantics(button),
+        containsSemantics(
+          label: 'Test',
+          hint: 'tests Nyaa',
+          isButton: true,
+          hasTapAction: true,
+        ),
+      );
+
+      await tester.tap(button);
+      expect(tested, 1);
+      expect(opened, 0, reason: 'the remedy does not also open the door');
+    });
+
     testWidgets('a verb on a row with no door is still a button, and the row '
         'is still one sentence', (tester) async {
       await tester.pumpWidget(

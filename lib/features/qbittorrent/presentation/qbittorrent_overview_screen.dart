@@ -241,7 +241,7 @@ class _AttentionRow extends ConsumerWidget {
           ? null
           : attentionDoorHint(ServiceKey.qbittorrent, door),
       action: hash != null && item.kind == QbittorrentFaultKind.stalled
-          ? ServiceOverviewRowAction(
+          ? ServiceOverviewRowAction.remedy(
               label: 'Look for peers again',
               hint: 'asks the trackers again for ${item.subject}',
               onPressed: () => runTorrentAction(

@@ -275,7 +275,7 @@ class _AttentionRow extends ConsumerWidget {
           : attentionDoorHint(ServiceKey.prowlarr, door),
       action: indexerId == null
           ? null
-          : ServiceOverviewRowAction(
+          : ServiceOverviewRowAction.remedy(
               label: 'Test',
               hint: 'tests ${row.headline}',
               onPressed: () => _test(context, ref, indexerId),

@@ -417,28 +417,28 @@ class _RowKinds extends StatelessWidget {
             doorHint: 'opens the Prowlarr Indexers tab',
           ),
           ServiceOverviewRow(
-            spoken: 'Nyaa failing, a door with a verb',
+            spoken: 'Nyaa failing, a door with its remedy',
             leading: glyph(Icons.error_outline_rounded),
             title: 'Nyaa',
             titleColor: amber,
             detail: 'failing\u00A0· disabled until 15:40',
             onTap: () {},
             doorHint: 'opens Nyaa',
-            action: ServiceOverviewRowAction(
+            action: ServiceOverviewRowAction.remedy(
               label: 'Test',
               hint: 'tests Nyaa',
               onPressed: () {},
             ),
           ),
           ServiceOverviewRow(
-            spoken: 'Stuck, Nickel Boys, a door with a long verb',
+            spoken: 'Stuck, Nickel Boys, a door with a long remedy',
             leading: glyph(Icons.sync_problem_rounded),
-            title: 'Stuck\u00A0· Nickel Boys',
+            title: 'Stuck\u00A0· Nickel.Boys.2024.2160p.WEB-DL',
             titleColor: amber,
             detail: '18%\u00A0· idle 42\u00A0min\u00A0· no seeds',
             onTap: () {},
             doorHint: 'opens this download',
-            action: ServiceOverviewRowAction(
+            action: ServiceOverviewRowAction.remedy(
               label: 'Look for peers again',
               hint: 'asks the trackers again for Nickel Boys',
               onPressed: () {},

@@ -8,6 +8,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/dot_separator.dart';
+import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/widgets/section_header.dart';
@@ -236,11 +237,26 @@ const double _actionMaxFraction = 0.45;
 /// the touch target or the spoken name: [ServiceOverviewRow] draws it.
 @immutable
 class ServiceOverviewRowAction {
+  /// A verb beside the row, a text button in the ink: what a row that is not
+  /// a fault offers (a stopped stack's Start).
   const ServiceOverviewRowAction({
     required this.label,
     required this.hint,
     required this.onPressed,
-  });
+  }) : remedy = false;
+
+  /// The remedy of an amber fault (a stalled torrent's Look for peers again,
+  /// a failing indexer's Test): the one amber fill, under the row's words,
+  /// as the Home's Downloads draw the same remedy, so the words keep the
+  /// row's width and the same cure looks the same wherever it is offered.
+  const ServiceOverviewRowAction.remedy({
+    required this.label,
+    required this.hint,
+    required this.onPressed,
+  }) : remedy = true;
+
+  /// Whether this is an amber fault's remedy ([ServiceOverviewRowAction.remedy]).
+  final bool remedy;
 
   /// The verb, in the word the app already uses for it (`Test`, `Start`).
   final String label;
@@ -422,10 +438,49 @@ class ServiceOverviewRow extends StatelessWidget {
     return verb == null ? opens : _withAction(opens, verb);
   }
 
-  /// [body] with [verb] beside it, outside the body's own semantics: the
-  /// verb is a control, and a node that silences its subtree would take it
-  /// out of the tree.
+  /// [body] with [verb] beside it, or under it for a remedy, outside the
+  /// body's own semantics: the verb is a control, and a node that silences
+  /// its subtree would take it out of the tree.
   static Widget _withAction(Widget body, ServiceOverviewRowAction verb) =>
+      verb.remedy ? _withRemedy(body, verb) : _beside(body, verb);
+
+  /// Where a row's words start: the attention rows' 18pt glyph and its gap.
+  static const double _wordsInset = 18 + AppSpacing.sm;
+
+  /// [body], then [verb] in the amber fill under its words.
+  static Widget _withRemedy(Widget body, ServiceOverviewRowAction verb) =>
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          body,
+          Padding(
+            padding: const EdgeInsets.only(
+              left: _wordsInset,
+              bottom: AppSpacing.md,
+            ),
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: Builder(
+                builder: (context) => FilledButton(
+                  onPressed: verb.onPressed,
+                  style: remedyFillStyle(context, compact: true),
+                  // Annotated inside the button, as the text verb is.
+                  child: Semantics(
+                    hint: verb.hint,
+                    child: Text(
+                      verb.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+
+  static Widget _beside(Widget body, ServiceOverviewRowAction verb) =>
       LayoutBuilder(
         builder: (context, constraints) => Row(
           crossAxisAlignment: CrossAxisAlignment.center,
