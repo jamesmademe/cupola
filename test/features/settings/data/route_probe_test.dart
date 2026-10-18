@@ -44,10 +44,12 @@ class _Settings extends Notifier<SettingsModel> {
 
 final _settings = NotifierProvider<_Settings, SettingsModel>(_Settings.new);
 
-/// Which addresses answer, by URL, and every knock asked.
+/// Which addresses answer, by URL, and every knock asked. With [gate], every
+/// knock waits for it before it answers.
 class _Knocks {
   final answering = <String>{};
   final asked = <String>[];
+  Completer<void>? gate;
 
   Future<bool> knock(
     ServiceKey service,
@@ -55,6 +57,7 @@ class _Knocks {
     required Duration timeout,
   }) async {
     asked.add(reach.url);
+    await gate?.future;
     return answering.contains(reach.url);
   }
 }
@@ -220,6 +223,48 @@ void main() {
 
       expect(c.read(unansweredConnectionProvider('radarr')), isNull);
       expect(c.read(unansweredAddressesProvider), isEmpty);
+    });
+  });
+
+  group('a request that opened no connection', () {
+    test('waits for the knocks it set going, and the connection has moved '
+        'when it fails', () async {
+      knocks.answering.add('http://192.168.1.20:7878');
+      final c = await container();
+      await started(c);
+      expect(routeOf(c, 'radarr'), isNot(ConnectionRoute.away));
+
+      // Out of the house: home stops answering, away answers, slowly.
+      knocks
+        ..answering.clear()
+        ..answering.add('https://radarr.example.com')
+        ..gate = Completer<void>();
+      var settled = false;
+      final waiting = UnreachedOrigins.reportAndSettle(
+        Uri.parse('http://192.168.1.20:7878/api/v3/movie'),
+      ).then((_) => settled = true);
+      await pumpEventQueue();
+      expect(settled, isFalse, reason: 'the knocks are still out');
+
+      knocks.gate!.complete();
+      await waiting;
+      expect(routeOf(c, 'radarr'), ConnectionRoute.away);
+    });
+
+    test('to a connection with one address does not wait', () async {
+      final c = await container();
+      await started(c);
+      knocks.gate = Completer<void>();
+
+      var settled = false;
+      final waiting = UnreachedOrigins.reportAndSettle(
+        Uri.parse('http://192.168.1.20:8989/api/v3/series'),
+      ).then((_) => settled = true);
+      await pumpEventQueue();
+
+      expect(settled, isTrue);
+      await waiting;
+      knocks.gate!.complete();
     });
   });
 

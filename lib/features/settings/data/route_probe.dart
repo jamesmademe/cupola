@@ -15,6 +15,7 @@ import 'package:cupola/features/settings/data/route_knock.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_address.dart';
 import 'package:cupola/features/settings/domain/connection_reach.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
 /// How long the address at home has to answer a knock before the one away
@@ -77,6 +78,7 @@ class RouteProbe {
   final _inFlight = <String, Future<void>>{};
   final _lastUnreachedProbe = <String, DateTime>{};
   StreamSubscription<String>? _unreached;
+  void Function()? _unsettle;
   late final GatedPollTimer _recheck;
   late final GatedPollTimer _unansweredRecheck;
   var _foreground = true;
@@ -96,6 +98,7 @@ class RouteProbe {
       clock: _ref.read(pollClockProvider),
     );
     _unreached = UnreachedOrigins.stream.listen(_onUnreached);
+    _unsettle = UnreachedOrigins.settleWith(_settle);
     // A new network: every connection with an address away is asked again,
     // and the wait between probes on a failed request starts over.
     _ref.listen(networkChangesProvider, (previous, next) {
@@ -183,13 +186,7 @@ class RouteProbe {
     final routes = _ref.read(connectionRoutesProvider);
     final now = _ref.read(calendarClockProvider)();
     for (final instance in away) {
-      final reach = reachOf(
-        settings,
-        instance,
-        routes[instance.id] ?? ConnectionRoute.home,
-      );
-      final uri = Uri.tryParse(UrlUtils.normalizeBaseUrl(reach.url));
-      if (uri == null || UnreachedOrigins.originOf(uri) != origin) continue;
+      if (_originNow(settings, routes, instance) != origin) continue;
       final last = _lastUnreachedProbe[instance.id];
       if (last != null && now.difference(last) < unreachedProbeInterval) {
         continue;
@@ -197,6 +194,35 @@ class RouteProbe {
       _lastUnreachedProbe[instance.id] = now;
       unawaited(probe(instance.id));
     }
+  }
+
+  /// What a failed request to [origin] waits for: the knocks running on each
+  /// connection whose address in use is there. None running, no wait.
+  Future<void> _settle(String origin) {
+    if (_disposed) return Future.value();
+    final settings = _ref.read(currentSettingsProvider);
+    final routes = _ref.read(connectionRoutesProvider);
+    return Future.wait([
+      for (final instance in settings.instances)
+        if (instance.away != null &&
+            _originNow(settings, routes, instance) == origin)
+          ?_inFlight[instance.id],
+    ]);
+  }
+
+  /// The origin of the address [instance] is reached at now.
+  String? _originNow(
+    SettingsModel settings,
+    Map<String, ConnectionRoute> routes,
+    ServiceInstance instance,
+  ) {
+    final reach = reachOf(
+      settings,
+      instance,
+      routes[instance.id] ?? ConnectionRoute.home,
+    );
+    final uri = Uri.tryParse(UrlUtils.normalizeBaseUrl(reach.url));
+    return uri == null ? null : UnreachedOrigins.originOf(uri);
   }
 
   Future<void> _probeUnanswered() async {
@@ -231,6 +257,7 @@ class RouteProbe {
   void dispose() {
     _disposed = true;
     unawaited(_unreached?.cancel());
+    _unsettle?.call();
     _recheck.dispose();
     _unansweredRecheck.dispose();
   }

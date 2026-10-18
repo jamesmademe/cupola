@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 
 import 'package:cupola/core/network/answer_guard.dart';
@@ -407,7 +409,10 @@ class UnansweredMark extends Interceptor {
 }
 
 /// Tells [UnreachedOrigins] of a request that opened no connection, or none
-/// in time, and passes the failure on unchanged.
+/// in time, and passes the failure on unchanged once its origin has settled
+/// ([UnreachedOrigins.reportAndSettle]): leaving home with the app open, the
+/// route probe moves the connection away while the failure waits, and the
+/// reader, rebuilt on the address away, never draws it.
 ///
 /// Off for the route probe's own knocks ([guardedDio]'s `reportUnreached`):
 /// an address that does not answer a knock is the probe's answer already,
@@ -417,10 +422,15 @@ class UnreachedReporter extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    if (err.type == DioExceptionType.connectionTimeout ||
-        err.type == DioExceptionType.connectionError) {
-      UnreachedOrigins.report(err.requestOptions.uri);
+    if (err.type != DioExceptionType.connectionTimeout &&
+        err.type != DioExceptionType.connectionError) {
+      handler.next(err);
+      return;
     }
-    handler.next(err);
+    unawaited(
+      UnreachedOrigins.reportAndSettle(
+        err.requestOptions.uri,
+      ).whenComplete(() => handler.next(err)),
+    );
   }
 }
