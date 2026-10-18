@@ -168,10 +168,15 @@ final mediaSonarrCopyProvider = FutureProvider.autoDispose
 /// does: a client that forgets to verify cannot put a wrong Play on the page.
 final mediaStreamCopyProvider = FutureProvider.autoDispose
     .family<MediaAnswer<MediaStreamCopy>, MediaSource>((ref, source) async {
-      final connection = ref
-          .watch(currentSettingsProvider)
-          .instanceById(source.connectionId);
-      final client = switch (connection?.service) {
+      // Which server the connection is, and nothing else of the settings: a
+      // write elsewhere (the region, another connection) asks nothing again.
+      // Its address and access reach the client through its own route.
+      final service = ref.watch(
+        currentSettingsProvider.select(
+          (settings) => settings.instanceById(source.connectionId)?.service,
+        ),
+      );
+      final client = switch (service) {
         ServiceKey.jellyfin => ref.watch(
           jellyfinClientForProvider(source.connectionId),
         ),
