@@ -555,11 +555,9 @@ void main() {
       expectClearsTheBar(tester, find.byType(AppEmptyState));
     });
 
-    testWidgets('a Library still loading starts below the tab bar', (
-      tester,
-    ) async {
-      // Its rows were already padded by the room the bands take, inside a
-      // `SafeArea` that took the inset; the skeleton alone was not.
+    testWidgets('Readarr Library starts below the tab bar', (tester) async {
+      // The shared browse scaffold, as Radarr's: its header adds the room the
+      // bands take and the inset itself.
       await pumpHosted(
         tester,
         service: ServiceKey.readarr,
@@ -571,7 +569,7 @@ void main() {
         ),
       );
 
-      expectClearsTheBar(tester, find.byType(ListRowsShimmer));
+      expectClearsTheBar(tester, find.byType(SearchBarHeader));
     });
   });
 

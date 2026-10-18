@@ -23,6 +23,7 @@ class ReadarrAuthor {
     this.qualityProfileId,
     this.titleSlug,
     this.sizeOnDisk = 0,
+    this.added,
   });
 
   final int id;
@@ -52,6 +53,10 @@ class ReadarrAuthor {
   /// What the author's files take on disk, in bytes.
   final int sizeOnDisk;
 
+  /// When the author joined the library, as Readarr writes it (an ISO
+  /// string), or null when it does not say.
+  final String? added;
+
   /// Monitored books still missing a file.
   int get missingBookCount => (bookCount - bookFileCount).clamp(0, bookCount);
 
@@ -78,6 +83,7 @@ class ReadarrAuthor {
       qualityProfileId: intOrNull(json['qualityProfileId']),
       titleSlug: json['titleSlug']?.toString(),
       sizeOnDisk: intOrNull(statsMap['sizeOnDisk']) ?? 0,
+      added: json['added']?.toString(),
     );
   }
 }

@@ -4,7 +4,13 @@
     "authorName": "Brandon Sanderson",
     "monitored": true,
     "status": "continuing",
-    "statistics": {"bookCount": 20, "bookFileCount": 15, "totalBookCount": 25}
+    "added": "2026-03-01T09:30:00Z",
+    "statistics": {
+      "bookCount": 20,
+      "bookFileCount": 15,
+      "totalBookCount": 25,
+      "sizeOnDisk": 5368709120
+    }
   },
   {
     "id": 2,

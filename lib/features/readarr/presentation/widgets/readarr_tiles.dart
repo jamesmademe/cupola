@@ -7,7 +7,6 @@ import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
-import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Visual style (icon + colour + label) for a Readarr history event type.
 ///
@@ -60,93 +59,6 @@ IconData _glyphIcon(StatusGlyph? glyph) {
     // the honest picture for "something happened that has no shape".
     null => Icons.history_rounded,
   };
-}
-
-/// A bordered list row for a Readarr author, matching the app's service-row
-/// anatomy (accent icon square, title, dot-joined subtitle, trailing marker).
-class ReadarrAuthorTile extends StatelessWidget {
-  const ReadarrAuthorTile({super.key, required this.author, this.onTap});
-
-  final ReadarrAuthor author;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final subtitle = <String>[
-      '${author.bookFileCount}/${author.bookCount} books',
-      if (author.missingBookCount > 0) '${author.missingBookCount} missing',
-    ].join(dotSeparator);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Material(
-        color: colorScheme.surface,
-        borderRadius: AppRadius.borderRadiusMd,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: AppRadius.borderRadiusMd,
-          child: Container(
-            padding: const EdgeInsets.all(11),
-            decoration: BoxDecoration(
-              border: Border.all(color: colorScheme.outlineVariant),
-              borderRadius: AppRadius.borderRadiusMd,
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: ServiceKey.readarr.accent.withValues(alpha: 0.12),
-                    borderRadius: AppRadius.borderRadiusSm,
-                  ),
-                  alignment: Alignment.center,
-                  child: const Icon(Icons.person_rounded, size: 16),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        author.authorName,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.titleSmall!.weight(FontWeight.w600),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        subtitle,
-                        // "3/12 books · 4 missing": counts that move as the
-                        // library is scanned.
-                        style: Theme.of(context).textTheme.bodySmall!.tabular
-                            .copyWith(color: colorScheme.onSurfaceVariant),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                if (!author.monitored) ...[
-                  const SizedBox(width: 8),
-                  Tooltip(
-                    message: 'Not monitored',
-                    child: Icon(
-                      Icons.visibility_off_rounded,
-                      size: 16,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 /// A bordered list row for a Readarr history event.

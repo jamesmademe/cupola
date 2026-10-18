@@ -23,6 +23,22 @@ void main() {
       expect(authors[1].monitored, isFalse);
     });
 
+    test(
+      'an author carries when Readarr added them and what they take',
+      () async {
+        final client = FakeApiClient()
+          ..getResponseData = jsonFixtureList('readarr/author_list.json');
+
+        final authors = await ReadarrService(client).getAuthors();
+
+        expect(authors.first.added, '2026-03-01T09:30:00Z');
+        expect(authors.first.sizeOnDisk, 5368709120);
+        // Not every Readarr says: no date is no date, never a made-up one.
+        expect(authors[1].added, isNull);
+        expect(authors[1].sizeOnDisk, 0);
+      },
+    );
+
     test('getRecentHistory maps records from /api/v1/history', () async {
       final client = FakeApiClient()
         ..getResponseData = jsonFixtureMap('readarr/history.json');
