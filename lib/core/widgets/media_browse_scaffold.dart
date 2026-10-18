@@ -260,7 +260,11 @@ final RegExp _sectionLetter = RegExp(r'^[A-Z]$');
 ///
 /// Provides the shared AppBar, search bar, navigation refresh listener,
 /// library refresh flow, and search results layout used by the Movies, Series,
-/// and Music screens.
+/// Music and Authors screens.
+///
+/// What a screen cannot answer it leaves out rather than faking: no
+/// [cutoffUnmetIds] draws no Cutoff unmet chip, and no [statusExtractor] draws
+/// none of the chips that put a question to a status.
 ///
 class MediaBrowseScaffold<T> extends ConsumerStatefulWidget {
   final String title;
@@ -314,6 +318,15 @@ class MediaBrowseScaffold<T> extends ConsumerStatefulWidget {
   /// library holds something else (a series passes the television).
   final IconData posterFallbackIcon;
 
+  /// The glyph over an empty library: the film strip unless the library holds
+  /// something else (Readarr's passes the book).
+  final IconData emptyIcon;
+
+  /// A line under `Your <service> library is empty`, for a library the app
+  /// cannot fill itself: where its items come from. Null says nothing more.
+  /// Only the empty library reads it; a chip that hides every title does not.
+  final String? emptyMessage;
+
   /// The ids the service reported under `wanted/cutoff`, or null when this
   /// screen has no cutoff source.
   ///
@@ -355,6 +368,8 @@ class MediaBrowseScaffold<T> extends ConsumerStatefulWidget {
     this.cutoffUnmetIds,
     this.tileShape = MediaBrowseTileShape.poster,
     this.posterFallbackIcon = Icons.movie_outlined,
+    this.emptyIcon = Icons.video_library_outlined,
+    this.emptyMessage,
   });
 
   @override
@@ -427,16 +442,25 @@ class _MediaBrowseScaffoldState<T>
   /// The chips this screen can honestly offer.
   ///
   /// Cutoff unmet is conditional on a source; see
-  /// [MediaBrowseScaffold.cutoffUnmetIds]. Unmonitored never is: `monitored`
-  /// rides on every resolved status already, so the chip cannot be wrong.
-  List<MediaBrowseFilter> get _filterOptions => [
-    MediaBrowseFilter.all,
-    MediaBrowseFilter.available,
-    MediaBrowseFilter.missing,
-    MediaBrowseFilter.inQueue,
-    if (widget.cutoffUnmetIds != null) MediaBrowseFilter.cutoffUnmet,
-    MediaBrowseFilter.unmonitored,
-  ];
+  /// [MediaBrowseScaffold.cutoffUnmetIds]. Available, Missing, In queue and
+  /// Unmonitored are questions put to each title's status, so they are
+  /// conditional on [MediaBrowseScaffold.statusExtractor]: a title with no
+  /// status reads as a gap, which would answer Missing for the whole library
+  /// and Available and In queue for none of it. A screen that cannot resolve
+  /// a status says nothing rather than that.
+  List<MediaBrowseFilter> get _filterOptions {
+    final hasStatus = widget.statusExtractor != null;
+    return [
+      MediaBrowseFilter.all,
+      if (hasStatus) ...[
+        MediaBrowseFilter.available,
+        MediaBrowseFilter.missing,
+        MediaBrowseFilter.inQueue,
+      ],
+      if (widget.cutoffUnmetIds != null) MediaBrowseFilter.cutoffUnmet,
+      if (hasStatus) MediaBrowseFilter.unmonitored,
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -676,8 +700,9 @@ class _MediaBrowseScaffoldState<T>
           // says which chip and offers the way back.
           if (_selectedFilter == MediaBrowseFilter.all)
             AppEmptyState.compact(
-              icon: Icons.video_library_outlined,
+              icon: widget.emptyIcon,
               title: 'Your ${widget.serviceName} library is empty',
+              message: widget.emptyMessage,
             )
           else
             AppEmptyState.compact(
@@ -1059,6 +1084,12 @@ class _MediaBrowseFilterChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // One chip is no choice, any more than one order is: a lone `All` filters
+    // nothing and only says that the screen has no question to put.
+    final hasChips = filters.length > 1;
+    final hasSort = sortOptions.length > 1;
+    if (!hasChips && !hasSort) return const SizedBox.shrink();
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -1072,30 +1103,33 @@ class _MediaBrowseFilterChips extends StatelessWidget {
       // does not belong to is a control nobody finds.
       child: Row(
         children: [
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  for (final filter in filters)
-                    _MediaBrowseFilterChip(
-                      label: switch (filter) {
-                        MediaBrowseFilter.all => 'All',
-                        MediaBrowseFilter.available => 'Available',
-                        MediaBrowseFilter.missing => 'Missing',
-                        MediaBrowseFilter.inQueue => 'In queue',
-                        MediaBrowseFilter.cutoffUnmet => 'Cutoff unmet',
-                        MediaBrowseFilter.unmonitored => 'Unmonitored',
-                      },
-                      color: color,
-                      selected: selectedFilter == filter,
-                      onTap: () => onSelected(filter),
-                    ),
-                ],
+          if (hasChips)
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    for (final filter in filters)
+                      _MediaBrowseFilterChip(
+                        label: switch (filter) {
+                          MediaBrowseFilter.all => 'All',
+                          MediaBrowseFilter.available => 'Available',
+                          MediaBrowseFilter.missing => 'Missing',
+                          MediaBrowseFilter.inQueue => 'In queue',
+                          MediaBrowseFilter.cutoffUnmet => 'Cutoff unmet',
+                          MediaBrowseFilter.unmonitored => 'Unmonitored',
+                        },
+                        color: color,
+                        selected: selectedFilter == filter,
+                        onTap: () => onSelected(filter),
+                      ),
+                  ],
+                ),
               ),
-            ),
-          ),
-          if (sortOptions.length > 1)
+            )
+          else
+            const Spacer(),
+          if (hasSort)
             _MediaBrowseSortControl(
               label: sortLabel,
               options: sortOptions,

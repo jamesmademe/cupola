@@ -367,6 +367,102 @@ void main() {
       expect(find.text('Available Item'), findsOneWidget);
     });
 
+    testWidgets('an empty library carries the screen\'s own icon and line', (
+      tester,
+    ) async {
+      final empty = FutureProvider<List<String>>((ref) async => const []);
+      final container = ProviderContainer(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        _buildCustomTestApp(
+          container: container,
+          libraryProvider: empty,
+          searchQueryProvider: testSearchQueryProvider,
+          searchResultsProvider: testSearchResultsProvider,
+          emptyIcon: Icons.menu_book_outlined,
+          emptyMessage: 'Items are added in the service itself.',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Your Test Service library is empty'), findsOneWidget);
+      expect(
+        find.text('Items are added in the service itself.'),
+        findsOneWidget,
+      );
+      expect(find.byIcon(Icons.menu_book_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.video_library_outlined), findsNothing);
+    });
+
+    testWidgets('an empty library with no line of its own says only that it '
+        'is empty', (tester) async {
+      final empty = FutureProvider<List<String>>((ref) async => const []);
+      final container = ProviderContainer(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        _buildCustomTestApp(
+          container: container,
+          libraryProvider: empty,
+          searchQueryProvider: testSearchQueryProvider,
+          searchResultsProvider: testSearchResultsProvider,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Your Test Service library is empty'), findsOneWidget);
+      expect(find.byIcon(Icons.video_library_outlined), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(AppEmptyState),
+          matching: find.byType(Text),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a chip that hides every title keeps its own words, not the '
+        'library\'s line', (tester) async {
+      final libraryProvider = FutureProvider<List<String>>(
+        (ref) async => ['Available Item'],
+      );
+      final container = ProviderContainer(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        _buildCustomTestApp(
+          container: container,
+          libraryProvider: libraryProvider,
+          searchQueryProvider: testSearchQueryProvider,
+          searchResultsProvider: testSearchResultsProvider,
+          statusExtractor: _available,
+          emptyIcon: Icons.menu_book_outlined,
+          emptyMessage: 'Items are added in the service itself.',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Missing'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nothing is missing'), findsOneWidget);
+      expect(find.text('Items are added in the service itself.'), findsNothing);
+      expect(find.byIcon(Icons.menu_book_outlined), findsNothing);
+    });
+
     testWidgets('lists a series the server never resolved under Missing', (
       tester,
     ) async {
@@ -714,12 +810,13 @@ void main() {
           libraryProvider: testLibraryProvider,
           searchQueryProvider: testSearchQueryProvider,
           searchResultsProvider: testSearchResultsProvider,
+          statusExtractor: _available,
         ),
       );
       await tester.pumpAndSettle();
       expect(find.text('Cutoff unmet'), findsNothing);
-      // Unmonitored rides on the status every screen already resolves, so it
-      // is never conditional.
+      // Unmonitored rides on the status the screen resolves, so it is there
+      // whenever there is one (and only then: see the next test).
       expect(find.text('Unmonitored'), findsOneWidget);
 
       final withSource = ProviderContainer(
@@ -735,6 +832,7 @@ void main() {
           libraryProvider: testLibraryProvider,
           searchQueryProvider: testSearchQueryProvider,
           searchResultsProvider: testSearchResultsProvider,
+          statusExtractor: _available,
           cutoffUnmetIds: {'Alpha'.hashCode},
         ),
       );
@@ -744,6 +842,118 @@ void main() {
       await tester.tap(find.text('Cutoff unmet'));
       await tester.pumpAndSettle();
 
+      expect(find.text('Alpha'), findsOneWidget);
+      expect(find.text('Beta'), findsNothing);
+    });
+
+    testWidgets('a screen that resolves no status offers none of the chips '
+        'that ask one', (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // No `statusExtractor`: every title would read as a gap, so Missing
+      // would list the whole library and Available and In queue none of it.
+      await tester.pumpWidget(
+        _buildCustomTestApp(
+          container: container,
+          libraryProvider: testLibraryProvider,
+          searchQueryProvider: testSearchQueryProvider,
+          searchResultsProvider: testSearchResultsProvider,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      for (final chip in const [
+        'All',
+        'Available',
+        'Missing',
+        'In queue',
+        'Cutoff unmet',
+        'Unmonitored',
+      ]) {
+        expect(find.text(chip), findsNothing, reason: chip);
+      }
+      expect(find.text('Alpha'), findsOneWidget);
+      expect(find.text('Beta'), findsOneWidget);
+    });
+
+    testWidgets('with no chips the sort control is still there, and with '
+        'neither the strip is not drawn', (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        _buildCustomTestApp(
+          container: container,
+          libraryProvider: testLibraryProvider,
+          searchQueryProvider: testSearchQueryProvider,
+          searchResultsProvider: testSearchResultsProvider,
+          sorts: [
+            MediaBrowseSort<String>(
+              label: 'Reverse',
+              compare: (left, right) => right.compareTo(left),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(PopupMenuButton<int>), findsOneWidget);
+      expect(find.text('Title A–Z'), findsOneWidget);
+
+      final bare = ProviderContainer(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+      );
+      addTearDown(bare.dispose);
+      await tester.pumpWidget(
+        _buildCustomTestApp(
+          container: bare,
+          libraryProvider: testLibraryProvider,
+          searchQueryProvider: testSearchQueryProvider,
+          searchResultsProvider: testSearchResultsProvider,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(PopupMenuButton<int>), findsNothing);
+      expect(find.byType(SingleChildScrollView), findsNothing);
+    });
+
+    testWidgets('a cutoff source alone still draws its chip beside All', (
+      tester,
+    ) async {
+      final container = ProviderContainer(
+        overrides: [
+          currentSettingsProvider.overrideWith((ref) => const SettingsModel()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        _buildCustomTestApp(
+          container: container,
+          libraryProvider: testLibraryProvider,
+          searchQueryProvider: testSearchQueryProvider,
+          searchResultsProvider: testSearchResultsProvider,
+          cutoffUnmetIds: {'Alpha'.hashCode},
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('All'), findsOneWidget);
+      expect(find.text('Cutoff unmet'), findsOneWidget);
+      expect(find.text('Missing'), findsNothing);
+
+      await tester.tap(find.text('Cutoff unmet'));
+      await tester.pumpAndSettle();
       expect(find.text('Alpha'), findsOneWidget);
       expect(find.text('Beta'), findsNothing);
     });
@@ -1094,6 +1304,9 @@ Future<void> _pumpLargeWall(
   await tester.pumpAndSettle();
 }
 
+MediaStatusInfo? _available(String _) =>
+    const MediaStatusInfo(availability: MediaAvailability.available);
+
 Widget _buildTestApp() {
   return ProviderScope(
     overrides: [
@@ -1119,6 +1332,8 @@ Widget _buildTestScaffold() {
     subtitleExtractor: (_) => '',
     imagesExtractor: (_) => null,
     idExtractor: (item) => item.hashCode,
+    statusExtractor: (_) =>
+        const MediaStatusInfo(availability: MediaAvailability.available),
     settingsSelector: (settings) =>
         (settings.radarrUrl, settings.radarrApiKey, const NoAccess()),
     onItemTap: (_, _, _) {},
@@ -1138,6 +1353,8 @@ Widget _buildCustomTestApp({
   Set<int>? cutoffUnmetIds,
   MediaBrowseTileShape tileShape = MediaBrowseTileShape.poster,
   Color? accentColor,
+  IconData emptyIcon = Icons.video_library_outlined,
+  String? emptyMessage,
 }) {
   return UncontrolledProviderScope(
     container: container,
@@ -1165,6 +1382,8 @@ Widget _buildCustomTestApp({
         cutoffUnmetIds: cutoffUnmetIds,
         tileShape: tileShape,
         accentColor: accentColor,
+        emptyIcon: emptyIcon,
+        emptyMessage: emptyMessage,
       ),
     ),
   );

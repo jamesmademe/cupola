@@ -212,6 +212,9 @@ Widget _scaffold(
   String title = 'Movies',
   FutureProvider<List<_Film>?>? results,
   ServiceKey? service,
+  bool status = true,
+  IconData emptyIcon = Icons.video_library_outlined,
+  String? emptyMessage,
 }) {
   return MediaBrowseScaffold<_Film>(
     title: title,
@@ -235,9 +238,11 @@ Widget _scaffold(
             {'coverType': 'poster', 'remoteUrl': film.poster},
           ],
     idExtractor: (film) => film.id,
-    statusExtractor: (film) => film.status,
+    statusExtractor: status ? (film) => film.status : null,
     settingsSelector: (_) => ('', '', const NoAccess()),
     onItemTap: (_, _, _) {},
+    emptyIcon: emptyIcon,
+    emptyMessage: emptyMessage,
     tileShape: shape,
     cutoffUnmetIds: cutoff,
     sorts: sorts
@@ -346,6 +351,44 @@ void main() {
             peek: false,
           ),
           _scaffold(3, sorts: false, cutoff: null, peek: false),
+        ]),
+      ),
+      CatalogScene(
+        'MediaBrowseScaffold · a wall with no status to resolve (Readarr\'s '
+        'authors): circular, the sort control alone on the strip, no status '
+        'chips, no peek · and with neither chips nor sort the strip is not '
+        'drawn · an empty library with its own glyph and line',
+        (_) => _phones([
+          _scaffold(
+            15,
+            library: _shelfProvider,
+            title: 'Authors',
+            shape: MediaBrowseTileShape.circle,
+            peek: false,
+            status: false,
+            cutoff: null,
+          ),
+          _scaffold(
+            0,
+            library: _shelfProvider,
+            title: 'Authors',
+            shape: MediaBrowseTileShape.circle,
+            peek: false,
+            status: false,
+            sorts: false,
+            cutoff: null,
+          ),
+          _scaffold(
+            6,
+            library: _emptyProvider,
+            title: 'Authors',
+            peek: false,
+            status: false,
+            sorts: false,
+            cutoff: null,
+            emptyIcon: Icons.menu_book_outlined,
+            emptyMessage: 'Authors are added in the service itself.',
+          ),
         ]),
       ),
       CatalogScene(
