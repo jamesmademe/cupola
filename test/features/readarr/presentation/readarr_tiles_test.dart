@@ -1,12 +1,70 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
+import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
 import 'package:cupola/features/readarr/presentation/widgets/readarr_tiles.dart';
 
 void main() {
+  group('ReadarrHistoryTile', () {
+    testWidgets('is laid out on the spacing scale', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.darkTheme(),
+          home: const Scaffold(
+            body: ReadarrHistoryTile(
+              item: ReadarrHistoryItem(
+                id: 1,
+                eventType: 'grabbed',
+                sourceTitle: 'Orbital',
+                authorName: 'Samantha Harvey',
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // The card sits in the page's gutter, one row-gap from the next, and
+      // holds its content at the card padding of the Activity history rows.
+      final outer = tester.widget<Padding>(
+        find
+            .ancestor(of: find.byType(Material), matching: find.byType(Padding))
+            .first,
+      );
+      expect(
+        outer.padding,
+        const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.xs,
+        ),
+      );
+      final card = tester.widget<Container>(
+        find
+            .descendant(
+              of: find.byType(Material),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      expect(card.padding, const EdgeInsets.all(AppSpacing.md));
+      // The gaps between the glyph, the words and the label.
+      final gaps = tester
+          .widgetList<SizedBox>(
+            find.descendant(
+              of: find.byType(Row),
+              matching: find.byType(SizedBox),
+            ),
+          )
+          .map((box) => box.width)
+          .whereType<double>()
+          .toList();
+      expect(gaps, containsAll([AppSpacing.row, AppSpacing.sm]));
+    });
+  });
+
   group('readarrEventStyle', () {
     /// Both schemes, because the whole point of walking a tone is that the
     /// answer depends on the ground.

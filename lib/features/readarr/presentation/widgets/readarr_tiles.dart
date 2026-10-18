@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/unit_space.dart';
@@ -81,12 +82,17 @@ class ReadarrHistoryTile extends StatelessWidget {
     ];
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xs,
+      ),
       child: Material(
         color: colorScheme.surface,
         borderRadius: AppRadius.borderRadiusMd,
         child: Container(
-          padding: const EdgeInsets.all(11),
+          // The card padding of the Activity history rows, the app's other
+          // bordered history card.
+          padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
             border: Border.all(color: colorScheme.outlineVariant),
             borderRadius: AppRadius.borderRadiusMd,
@@ -103,7 +109,7 @@ class ReadarrHistoryTile extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Icon(event.icon, size: 16, color: event.color),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: AppSpacing.row),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -128,9 +134,12 @@ class ReadarrHistoryTile extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.s,
+                  vertical: AppSpacing.xxs,
+                ),
                 decoration: BoxDecoration(
                   color: event.color.withValues(alpha: 0.12),
                   borderRadius: AppRadius.borderRadiusSm,
