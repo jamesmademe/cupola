@@ -70,4 +70,31 @@ void main() {
     expect(semantics.flagsCollection.isButton, isTrue);
     expect(semantics.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
   });
+
+  testWidgets('a field with Cancel keeps the keyboard it opens on the first '
+      'tap', (tester) async {
+    var query = '';
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.darkTheme(),
+        home: Scaffold(
+          body: SearchBarHeader(
+            onCancel: () {},
+            onQueryChanged: (value) => query = value,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byType(SearchBar));
+    await tester.pump();
+    expect(find.text('Cancel'), findsOneWidget);
+    // `Cancel` arriving beside the field does not rebuild the field, which
+    // would drop the keyboard it had just opened.
+    expect(tester.testTextInput.hasAnyClients, isTrue);
+
+    tester.testTextInput.enterText('nosferatu');
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(query, 'nosferatu');
+  });
 }

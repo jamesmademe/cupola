@@ -221,25 +221,30 @@ class _SearchBarHeaderState extends State<SearchBarHeader> {
   }
 
   /// The field, and `Cancel` after it while the search is engaged.
+  ///
+  /// One shape whether `Cancel` shows or not: a field that moved into a row
+  /// as it took the focus would be built again there, and the new one would
+  /// hold the focus without the keyboard the first had just opened.
   Widget _withCancel(Widget field) {
-    if (widget.onCancel == null || !(_focusNode.hasFocus || _hasText)) {
-      return field;
-    }
+    if (widget.onCancel == null) return field;
+    final engaged = _focusNode.hasFocus || _hasText;
     return Row(
       children: [
         Expanded(child: field),
-        const SizedBox(width: AppSpacing.xs),
-        TextButton(
-          onPressed: _cancel,
-          style: TextButton.styleFrom(
-            minimumSize: const Size(44, 44),
-            visualDensity: VisualDensity.standard,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-            foregroundColor: Theme.of(context).colorScheme.onSurface,
-            textStyle: AppType.button,
+        if (engaged) ...[
+          const SizedBox(width: AppSpacing.xs),
+          TextButton(
+            onPressed: _cancel,
+            style: TextButton.styleFrom(
+              minimumSize: const Size(44, 44),
+              visualDensity: VisualDensity.standard,
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+              foregroundColor: Theme.of(context).colorScheme.onSurface,
+              textStyle: AppType.button,
+            ),
+            child: const Text('Cancel'),
           ),
-          child: const Text('Cancel'),
-        ),
+        ],
       ],
     );
   }
