@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
-import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/dockge/presentation/dockge_actions.dart';
 import 'package:cupola/features/dockge/presentation/dockge_overview_provider.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
@@ -27,6 +26,11 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// reports none: a stopped stack may have been brought down on purpose, and
 /// the push says nothing more. A Dockge that does not answer is the stacks
 /// region's own error.
+///
+/// What is not running still leads to where it is looked after: every row is
+/// a door. A stack opens its own page (its log and its controls); a row that
+/// sums several opens the Stacks tab; and one stopped stack can be started
+/// from its row, through the action the Stacks tab runs.
 ///
 /// **It draws neither the app bar nor the tab bar.** `ServiceHomeScreen` owns
 /// the first, including the agent lens, which is an app-bar control and not a
@@ -269,36 +273,44 @@ class _StackRow extends StatelessWidget {
       surface: colorScheme.surfaceContainerLow,
     );
 
-    return _StackLink(
-      stackName: row.name,
-      child: ServiceOverviewRow(
-        spoken: row.spoken,
-        // A dot rather than a glyph: every row in this section is one state of
-        // one healthy thing, and an icon per row would read as a kind of event.
-        leading: Container(
-          width: 8,
-          height: 8,
-          margin: const EdgeInsets.only(top: 5),
-          decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
-        ),
-        // The name stays in ink: the tone belongs to the dot, and a page where
-        // every title is coloured has no way left to say one of them differs.
-        title: row.name,
-        detail: row.detail,
+    // Every stack is a door: its own page carries the log and the controls,
+    // and the hint says so, because "opens the stack" does not explain why
+    // somebody looking at it would want to.
+    return ServiceOverviewRow(
+      spoken: row.spoken,
+      // A dot rather than a glyph: every row in this section is one state of
+      // one healthy thing, and an icon per row would read as a kind of event.
+      leading: Container(
+        width: 8,
+        height: 8,
+        margin: const EdgeInsets.only(top: 5),
+        decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
       ),
+      // The name stays in ink: the tone belongs to the dot, and a page where
+      // every title is coloured has no way left to say one of them differs.
+      title: row.name,
+      detail: row.detail,
+      onTap: () => openAttentionDoor(context, ServiceKey.dockge, row.door),
+      doorHint: attentionDoorHint(ServiceKey.dockge, row.door),
     );
   }
 }
 
 /// The stacks in one state that is not running, summed: neutral, because
 /// Dockge does not say whether a stop was meant.
-class _IdleRow extends StatelessWidget {
+///
+/// A row about one stack opens that stack's page, and a stopped one can be
+/// started from here, through the action the Stacks tab and the stack's page
+/// already run (Start is additive, so it stays one tap, as it is there). A row
+/// that sums several has no single stack to open or start: its door is the
+/// Stacks tab, which lists them all.
+class _IdleRow extends ConsumerWidget {
   const _IdleRow({required this.group});
 
   final DockgeIdleGroup group;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     // Through the tone rule, never a colour constant. Every group is neutral:
     // a stack somebody brought down is backlog, and painting it the amber of
@@ -308,15 +320,35 @@ class _IdleRow extends StatelessWidget {
       group.tone,
       surface: colorScheme.surfaceContainerLow,
     );
+    final door = group.door;
+    final stack = group.stack;
 
-    // About several stacks at once, so there is no single one to open: the
-    // row stays inert, and the section's link leads to the Stacks tab.
     return ServiceOverviewRow(
       spoken: group.spoken,
       leading: Icon(group.icon, size: 18, color: tone),
       title: group.headline,
       titleColor: tone,
       detail: group.detail,
+      onTap: door == null
+          ? null
+          : () => openAttentionDoor(context, ServiceKey.dockge, door),
+      doorHint: door == null
+          ? null
+          : attentionDoorHint(ServiceKey.dockge, door),
+      action: group.startable && stack != null
+          ? ServiceOverviewRowAction(
+              label: 'Start',
+              hint: 'starts $stack',
+              onPressed: () => runDockgeStackAction(
+                context,
+                ref,
+                (client) => client.startStack(stack),
+                'Started $stack',
+                'Could not start $stack',
+                invalidate: [dockgeStackListProvider],
+              ),
+            )
+          : null,
     );
   }
 }
@@ -427,64 +459,4 @@ class _AgentDot extends StatelessWidget {
       child: dot,
     );
   }
-}
-
-// ─── The way into a stack ───────────────────────────────────────────────────
-
-/// A row that opens its stack.
-///
-/// Local to this feature rather than added to `ServiceOverviewSection`'s family
-/// in `lib/core/widgets/`: the shared row is inert by design, and three sibling
-/// agents are writing against that file today. A tappable variant belongs
-/// there eventually: this is the shape it should take.
-///
-/// Three things are load-bearing:
-///
-///  * **`PressableScale` carries the label, the row does not.** A button is a
-///    semantic boundary, so a hint or a label wrapped *around* one is dropped;
-///    here the button node and the annotation are the same node, and
-///    `excludeChildSemantics` silences the row's own container underneath so
-///    the sentence is announced once rather than twice.
-///  * **`GoRouter.maybeOf`, not `context.push`.** An Overview is legitimately
-///    built outside a router (a widget test, a preview), and there the row
-///    simply does not act rather than throwing. It is the reasoning
-///    `ServiceOverviewSection`'s own tab link already uses for
-///    `StatefulNavigationShell.maybeOf`.
-///  * **44pt minimum.** The two-line row clears it on its own at the default
-///    reading size, but only just, and a tap target is not something to leave
-///    to the sum of three paddings.
-class _StackLink extends StatelessWidget {
-  const _StackLink({required this.stackName, required this.child});
-
-  final String stackName;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final router = GoRouter.maybeOf(context);
-
-    return PressableScale(
-      onTap: router == null
-          ? null
-          : () => router.push(ServiceRoutes.dockgeStack(stackName)),
-      semanticLabel: _spokenOf(child),
-      // Names the destination and what is there, because "opens the stack" does
-      // not explain why someone looking at a stopped stack would want to: the
-      // log and the controls are the answer, and they are one tap away.
-      semanticHint: 'opens $stackName, with its log and controls',
-      excludeChildSemantics: true,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 44),
-        child: child,
-      ),
-    );
-  }
-
-  /// The sentence the row already composed, reused as the button's name.
-  ///
-  /// Reaching into the child rather than taking a second `spoken` parameter:
-  /// two strings for one row is two strings that drift, and the row is the one
-  /// that knows how its parts were joined.
-  static String? _spokenOf(Widget child) =>
-      child is ServiceOverviewRow ? child.spoken : null;
 }

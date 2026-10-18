@@ -45,9 +45,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_agent.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
+import 'package:cupola/features/services/domain/attention_door.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 
 /// Rows in the Stacks preview.
@@ -62,6 +65,13 @@ const int dockgeStackPreviewLimit = 5;
 /// Three, because the row is one line of evidence and not a list. The Stacks
 /// tab is the list.
 const int dockgeAggregateNamesLimit = 3;
+
+/// Where a stack's own page is, said for a screen reader: the log and the
+/// controls are why somebody looking at a stopped stack would open it.
+AttentionDoor dockgeStackDoor(String name) => AttentionDoor.page(
+  location: ServiceRoutes.dockgeStack(name),
+  hint: 'opens $name, with its log and controls',
+);
 
 // ─── The census ─────────────────────────────────────────────────────────────
 
@@ -153,6 +163,9 @@ class DockgeIdleGroup {
     required this.icon,
     required this.headline,
     required this.detail,
+    this.door,
+    this.stack,
+    this.startable = false,
   });
 
   final StatusTone tone;
@@ -166,6 +179,18 @@ class DockgeIdleGroup {
   /// aggregate. Often empty, and that emptiness is the truth: see the library
   /// doc on why there is no timestamp and no exit code to print here.
   final String detail;
+
+  /// Where the row leads: the stack's own page when the row is about one
+  /// stack, the Stacks tab, which lists them all, when it sums several.
+  final AttentionDoor? door;
+
+  /// The one stack the row is about, or null for a row that sums several.
+  final String? stack;
+
+  /// Whether Start is offered: the row is about one stack and it is stopped.
+  /// An inactive stack was brought down or never started, and a stack that
+  /// reports no state may be anything: neither is offered a start from here.
+  final bool startable;
 
   /// The row as one sentence, with the layout's `·` turned back into commas:
   /// `·` is decoration, and a screen reader either names it or drops it
@@ -229,6 +254,9 @@ List<DockgeIdleGroup> dockgeIdleGroups(List<DockgeStack> stacks) {
           _namesLabel(stopped),
           'Dockge does not say why',
         ]),
+        door: _doorOf(stopped),
+        stack: stopped.length == 1 ? stopped.single : null,
+        startable: stopped.length == 1,
       ),
     if (inactive.isNotEmpty)
       DockgeIdleGroup(
@@ -243,6 +271,8 @@ List<DockgeIdleGroup> dockgeIdleGroups(List<DockgeStack> stacks) {
           _namesLabel(inactive),
           'brought down, or never started',
         ]),
+        door: _doorOf(inactive),
+        stack: inactive.length == 1 ? inactive.single : null,
       ),
     if (unknown.isNotEmpty)
       DockgeIdleGroup(
@@ -252,9 +282,17 @@ List<DockgeIdleGroup> dockgeIdleGroups(List<DockgeStack> stacks) {
             ? '1 stack reports no state'
             : '${unknown.length} stacks report no state',
         detail: joinDisplayParts([_namesLabel(unknown), 'Dockge did not say']),
+        door: _doorOf(unknown),
+        stack: unknown.length == 1 ? unknown.single : null,
       ),
   ]);
 }
+
+/// The door of a row about [names]: the stack's own page for one, the Stacks
+/// tab for several.
+AttentionDoor _doorOf(List<String> names) => names.length == 1
+    ? dockgeStackDoor(names.single)
+    : const AttentionDoor.tab(ServiceTab.stacks);
 
 // ─── Stacks ─────────────────────────────────────────────────────────────────
 
@@ -274,6 +312,9 @@ class DockgeStackRow {
   /// out rather than left to the dot beside it: colour is not information, and
   /// a screen reader hears nothing at all from a coloured circle.
   final String detail;
+
+  /// The stack's own page: its log and its controls.
+  AttentionDoor get door => dockgeStackDoor(name);
 
   String get spoken => joinSpokenParts([name, spokenFromDotted(detail)]);
 }

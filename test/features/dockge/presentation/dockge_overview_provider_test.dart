@@ -4,6 +4,8 @@ import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_agent.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
 import 'package:cupola/features/dockge/presentation/dockge_overview_provider.dart';
+import 'package:cupola/features/services/domain/attention_door.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
 
 /// The folding rules of the Dockge Overview, exercised as the pure functions
 /// they are: no container, no socket, no clock.
@@ -156,6 +158,59 @@ void main() {
       expect(
         rows.single.detail,
         'a, b, c and 2 more\u00A0· brought down, or never started',
+      );
+    });
+  });
+
+  group('where a not-running row leads', () {
+    test('one stopped stack opens its page and can be started', () {
+      final row = dockgeIdleGroups([
+        _stack('immich', status: DockgeStackStatus.exited),
+        _stack('media'),
+      ]).single;
+
+      expect(row.stack, 'immich');
+      expect(row.startable, isTrue);
+      expect(row.door, dockgeStackDoor('immich'));
+      expect(
+        (row.door! as AttentionPage).location,
+        '/stack/dockge/stacks/stack/immich',
+      );
+      expect(
+        (row.door! as AttentionPage).hint,
+        'opens immich, with its log and controls',
+      );
+    });
+
+    test('several stopped stacks sum to a row that opens the Stacks tab, '
+        'with no stack to start', () {
+      final row = dockgeIdleGroups([
+        _stack('a', status: DockgeStackStatus.exited),
+        _stack('b', status: DockgeStackStatus.exited),
+      ]).single;
+
+      expect(row.stack, isNull);
+      expect(row.startable, isFalse);
+      expect(row.door, const AttentionDoor.tab(ServiceTab.stacks));
+    });
+
+    test('an inactive or stateless stack is a door and never a start: it was '
+        'brought down, or nobody knows', () {
+      final rows = dockgeIdleGroups([
+        _stack('draft', status: DockgeStackStatus.createdStack),
+        _stack('odd', status: DockgeStackStatus.unknown),
+      ]);
+
+      expect(rows, hasLength(2));
+      expect(rows.every((row) => !row.startable), isTrue);
+      expect(rows[0].door, dockgeStackDoor('draft'));
+      expect(rows[1].door, dockgeStackDoor('odd'));
+    });
+
+    test('a running stack opens its page', () {
+      expect(
+        dockgeRunningRows([_stack('media')]).single.door,
+        dockgeStackDoor('media'),
       );
     });
   });
