@@ -7,6 +7,7 @@ import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 
+import 'package:cupola/features/prowlarr/presentation/prowlarr_indexer_actions.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_overview_provider.dart';
 
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
@@ -134,7 +135,7 @@ class _AttentionSection extends ConsumerWidget {
       subtitle: total == null ? '—' : '$total',
       // No link: a failing indexer belongs to Indexers and a health check
       // belongs to nowhere on the bar, so one destination would lie about half
-      // the rows.
+      // the rows. Each row is its own door instead.
       child: AsyncValueWidget<ProwlarrOverviewSection>.section(
         value: section,
         service: ServiceKey.prowlarr,
@@ -153,10 +154,7 @@ class _AttentionSection extends ConsumerWidget {
           label: 'Every indexer is answering',
         ),
         data: (data) => Column(
-          children: [
-            for (final row in data.rows)
-              _ProwlarrRow(row: row, icon: Icons.error_outline_rounded),
-          ],
+          children: [for (final row in data.rows) _AttentionRow(row: row)],
         ),
       ),
     );
@@ -239,13 +237,69 @@ class _RecentSection extends ConsumerWidget {
   }
 }
 
-class _ProwlarrRow extends StatelessWidget {
-  const _ProwlarrRow({required this.row, this.icon});
+/// A row of Needs attention: a fault, and the way to where it is fixed.
+///
+/// Several failing indexers are one row whose door is the Indexers tab; one
+/// failing indexer opens its own page and can be tested from here, through
+/// the same flow the page and the list run (`testIndexerFlow`). A health
+/// check has no page in the app, so it is only read.
+class _AttentionRow extends ConsumerWidget {
+  const _AttentionRow({required this.row});
 
   final ProwlarrOverviewRow row;
 
-  /// A glyph instead of the dot, for the section where every row is a fault.
-  final IconData? icon;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    // Through the tone rule, never a raw `AppColors.*`: a failing indexer is
+    // amber, and red is kept for a Prowlarr that did not answer at all.
+    final tone = statusToneColor(
+      colorScheme,
+      row.tone,
+      surface: colorScheme.surfaceContainerLow,
+    );
+    final door = row.door;
+    final indexerId = row.indexerId;
+
+    return ServiceOverviewRow(
+      spoken: row.spoken,
+      leading: Icon(Icons.error_outline_rounded, size: 18, color: tone),
+      title: row.headline,
+      detail: row.detail,
+      trailing: row.trailing,
+      onTap: door == null
+          ? null
+          : () => openAttentionDoor(context, ServiceKey.prowlarr, door),
+      doorHint: door == null
+          ? null
+          : attentionDoorHint(ServiceKey.prowlarr, door),
+      action: indexerId == null
+          ? null
+          : ServiceOverviewRowAction(
+              label: 'Test',
+              hint: 'tests ${row.headline}',
+              onPressed: () => _test(context, ref, indexerId),
+            ),
+    );
+  }
+
+  /// Tests the indexer through the flow the indexer's page and the list run.
+  /// The indexer is read at the tap: the row holds its id and a name, and the
+  /// test sends the whole saved indexer.
+  Future<void> _test(BuildContext context, WidgetRef ref, int id) async {
+    final indexers = await ref.read(prowlarrIndexersProvider.future);
+    final indexer = indexers.where((each) => each.id == id).firstOrNull;
+    if (indexer == null || !context.mounted) return;
+    await testIndexerFlow(context, ref, indexer);
+  }
+}
+
+/// A row of the two regions that are inventory and history: a dot in the
+/// row's tone. (Needs attention has its own, [_AttentionRow].)
+class _ProwlarrRow extends StatelessWidget {
+  const _ProwlarrRow({required this.row});
+
+  final ProwlarrOverviewRow row;
 
   @override
   Widget build(BuildContext context) {
@@ -257,18 +311,15 @@ class _ProwlarrRow extends StatelessWidget {
       row.tone,
       surface: colorScheme.surfaceContainerLow,
     );
-    final glyph = icon;
 
     return ServiceOverviewRow(
       spoken: row.spoken,
-      leading: glyph == null
-          ? Container(
-              width: 8,
-              height: 8,
-              margin: const EdgeInsets.only(top: 5),
-              decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
-            )
-          : Icon(glyph, size: 18, color: tone),
+      leading: Container(
+        width: 8,
+        height: 8,
+        margin: const EdgeInsets.only(top: 5),
+        decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
+      ),
       title: row.headline,
       detail: row.detail,
       trailing: row.trailing,

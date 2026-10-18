@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_overview_provider.dart';
+import 'package:cupola/features/services/domain/attention_door.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
 
 void main() {
   final now = DateTime(2026, 9, 16, 15, 0);
@@ -118,6 +120,102 @@ void main() {
         isTrue,
       );
     });
+  });
+
+  group('prowlarrNeedsAttention folds the failing indexers', () {
+    List<ProwlarrIndexer> named(List<String> names) => [
+      for (final (i, name) in names.indexed)
+        ProwlarrIndexer(id: i + 1, name: name),
+    ];
+
+    test(
+      'several failing indexers are one row that opens the Indexers tab',
+      () {
+        final section = prowlarrNeedsAttention(
+          const [
+            ProwlarrIndexerStatus(indexerId: 1),
+            ProwlarrIndexerStatus(indexerId: 2),
+            ProwlarrIndexerStatus(indexerId: 3),
+          ],
+          named(['Nyaa', '1337x', 'Bitsearch']),
+          const [],
+          now: now,
+        );
+
+        final row = section.rows.single;
+        expect(row.headline, '3 indexers failing');
+        expect(row.detail, 'Nyaa, 1337x, Bitsearch');
+        expect(row.tone, StatusTone.warning);
+        expect(row.door, const AttentionDoor.tab(ServiceTab.indexers));
+        // A folded row is about no one indexer, so it carries no id to test.
+        expect(row.indexerId, isNull);
+        expect(row.spoken, '3 indexers failing, Nyaa, 1337x, Bitsearch');
+      },
+    );
+
+    test('the header still counts the faults, not the rows', () {
+      final section = prowlarrNeedsAttention(
+        const [
+          ProwlarrIndexerStatus(indexerId: 1),
+          ProwlarrIndexerStatus(indexerId: 2),
+          ProwlarrIndexerStatus(indexerId: 3),
+        ],
+        named(['A', 'B', 'C']),
+        const [
+          ProwlarrHealthIssue(
+            source: 'ApplicationLongTermStatusCheck',
+            type: 'error',
+            message: 'Applications unavailable: Lidarr',
+          ),
+        ],
+        now: now,
+      );
+
+      expect(section.rows, hasLength(2));
+      expect(section.total, 4);
+    });
+
+    test('the names stop at three and count the rest', () {
+      final section = prowlarrNeedsAttention(
+        [for (var i = 1; i <= 5; i++) ProwlarrIndexerStatus(indexerId: i)],
+        named(['A', 'B', 'C', 'D', 'E']),
+        const [],
+        now: now,
+      );
+
+      expect(section.rows.single.headline, '5 indexers failing');
+      expect(section.rows.single.detail, 'A, B, C and 2 more');
+    });
+
+    test('one failing indexer keeps its own row and opens its own page', () {
+      final section = prowlarrNeedsAttention(
+        const [ProwlarrIndexerStatus(indexerId: 2)],
+        named(['Nyaa', '1337x']),
+        const [],
+        now: now,
+      );
+
+      final row = section.rows.single;
+      expect(row.headline, '1337x');
+      expect(row.indexerId, 2);
+      expect(row.door, isA<AttentionPage>());
+      final door = row.door! as AttentionPage;
+      expect(door.location, '/stack/prowlarr/indexers/indexer/2');
+      expect(door.hint, 'opens 1337x, with its status and history');
+    });
+
+    test(
+      'a health check is neither folded nor given a door: no page lists it',
+      () {
+        final section = prowlarrNeedsAttention(const [], const [], const [
+          ProwlarrHealthIssue(source: 'A', type: 'warning', message: 'one'),
+          ProwlarrHealthIssue(source: 'B', type: 'warning', message: 'two'),
+        ], now: now);
+
+        expect(section.rows, hasLength(2));
+        expect(section.rows.every((row) => row.door == null), isTrue);
+      },
+    );
   });
 
   group('prowlarrIndexerRows', () {

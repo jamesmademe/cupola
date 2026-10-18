@@ -24,10 +24,13 @@ import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/date_format.dart'
     show formatClockTime, formatRelativeDateTime;
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_history_format.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
+import 'package:cupola/features/services/domain/attention_door.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 
 /// Indexer rows the table draws before the header's count is the only place the
@@ -57,6 +60,8 @@ class ProwlarrOverviewRow {
     required this.tone,
     this.trailing,
     this.indexerId,
+    this.door,
+    this.count = 1,
   });
 
   /// `Nyaa`, `Dune.Part.Three.2026.2160p · grabbed`.
@@ -73,6 +78,16 @@ class ProwlarrOverviewRow {
 
   /// The indexer this row is about, where it is about one.
   final int? indexerId;
+
+  /// Where the row leads: the indexer's own page for one failing indexer, the
+  /// Indexers tab for the several a folded row stands for. Null for a health
+  /// check, which no page of the app lists.
+  final AttentionDoor? door;
+
+  /// How many faults the row stands for: one, or the indexers a folded row
+  /// folds. The section's own count adds these, so folding rows never changes
+  /// how many things need attention.
+  final int count;
 
   /// The row as one sentence, with the layout's `·` turned back into commas.
   String get spoken => joinSpokenParts([
@@ -122,9 +137,7 @@ List<ProwlarrOverviewRow> prowlarrIndexerFaultRows(
   return List.unmodifiable([
     for (final status in statuses)
       ProwlarrOverviewRow(
-        headline: names[status.indexerId]?.trim().isNotEmpty == true
-            ? names[status.indexerId]!.trim()
-            : 'Indexer ${status.indexerId}',
+        headline: _indexerName(names, status.indexerId),
         detail: joinDisplayParts([
           'failing',
           prowlarrDisabledLabel(status.disabledTill, now: now),
@@ -132,9 +145,18 @@ List<ProwlarrOverviewRow> prowlarrIndexerFaultRows(
         ]),
         tone: StatusTone.warning,
         indexerId: status.indexerId,
+        door: AttentionDoor.page(
+          location: ServiceRoutes.prowlarrIndexer(status.indexerId),
+          hint:
+              'opens ${_indexerName(names, status.indexerId)}, with its '
+              'status and history',
+        ),
       ),
   ]);
 }
+
+String _indexerName(Map<int, String?> names, int id) =>
+    names[id]?.trim().isNotEmpty == true ? names[id]!.trim() : 'Indexer $id';
 
 String? _lastFailure(ProwlarrIndexerStatus status, {required DateTime now}) {
   final last = _parseLocal(status.mostRecentFailure);
@@ -160,18 +182,41 @@ List<ProwlarrOverviewRow> prowlarrHealthRows(
       ),
 ]);
 
+/// Several failing indexers as one row: `3 indexers failing`, the names in
+/// the detail, and the Indexers tab, which lists them all, as its door.
+///
+/// One failing indexer keeps its own row (see [prowlarrIndexerFaultRows]): it
+/// has a page, and the fault says which. Five rows of one kind bury the one
+/// that is different.
+ProwlarrOverviewRow prowlarrIndexersFailingRow(
+  List<ProwlarrOverviewRow> faults,
+) => ProwlarrOverviewRow(
+  headline: '${faults.length} indexers failing',
+  detail: attentionNames(faults.map((row) => row.headline)),
+  tone: StatusTone.warning,
+  count: faults.length,
+  door: const AttentionDoor.tab(ServiceTab.indexers),
+);
+
 /// Faults first, then the health checks that say something else.
+///
+/// The failing indexers are one row when there are several, and the section's
+/// [total] counts the faults the rows stand for, not the rows.
 ProwlarrOverviewSection prowlarrNeedsAttention(
   List<ProwlarrIndexerStatus> statuses,
   List<ProwlarrIndexer> indexers,
   List<ProwlarrHealthIssue> issues, {
   required DateTime now,
 }) {
+  final faults = prowlarrIndexerFaultRows(statuses, indexers, now: now);
   final rows = <ProwlarrOverviewRow>[
-    ...prowlarrIndexerFaultRows(statuses, indexers, now: now),
+    if (faults.length > 1) prowlarrIndexersFailingRow(faults) else ...faults,
     ...prowlarrHealthRows(issues),
   ];
-  return (rows: List.unmodifiable(rows), total: rows.length);
+  return (
+    rows: List.unmodifiable(rows),
+    total: rows.fold(0, (sum, row) => sum + row.count),
+  );
 }
 
 // ─── The indexer table ──────────────────────────────────────────────────────
