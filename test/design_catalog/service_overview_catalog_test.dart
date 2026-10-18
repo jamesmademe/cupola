@@ -12,7 +12,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
+import 'package:cupola/core/widgets/service_overview.dart';
 import 'package:cupola/core/widgets/service_tab_bar.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/movies/presentation/radarr_overview_screen.dart';
@@ -368,6 +370,83 @@ Widget _radarr(
   ),
 ], child);
 
+/// The five shapes a [ServiceOverviewRow] takes, one under another, as a
+/// Needs attention section would draw them. Tones are walked against the
+/// surface the rows sit on, as the screens do.
+class _RowKinds extends StatelessWidget {
+  const _RowKinds();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final amber = statusToneColor(
+      scheme,
+      StatusTone.warning,
+      surface: scheme.surfaceContainerLow,
+    );
+    Widget glyph(IconData icon) => Icon(icon, size: 18, color: amber);
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ServiceOverviewRow(
+            spoken: 'Nickel Boys, only read',
+            leading: glyph(Icons.sync_problem_rounded),
+            title: 'Stuck · Nickel Boys',
+            titleColor: amber,
+            detail: 'qBittorrent · Nothing is arriving',
+          ),
+          ServiceOverviewRow(
+            spoken: '3 indexers failing, a door',
+            leading: glyph(Icons.error_outline_rounded),
+            title: '3 indexers failing',
+            titleColor: amber,
+            detail: 'Nyaa, 1337x, Bitsearch',
+            onTap: () {},
+            doorHint: 'opens the Prowlarr Indexers tab',
+          ),
+          ServiceOverviewRow(
+            spoken: 'Nyaa, a door with a figure',
+            leading: glyph(Icons.error_outline_rounded),
+            title: 'Nyaa',
+            detail: 'failing · disabled until 15:40',
+            trailing: '298 queries',
+            onTap: () {},
+            doorHint: 'opens the Prowlarr Indexers tab',
+          ),
+          ServiceOverviewRow(
+            spoken: 'Nyaa failing, a door with a verb',
+            leading: glyph(Icons.error_outline_rounded),
+            title: 'Nyaa',
+            titleColor: amber,
+            detail: 'failing · disabled until 15:40',
+            onTap: () {},
+            doorHint: 'opens Nyaa',
+            action: ServiceOverviewRowAction(
+              label: 'Test',
+              hint: 'tests Nyaa',
+              onPressed: () {},
+            ),
+          ),
+          ServiceOverviewRow(
+            spoken: 'immich is stopped, a verb alone',
+            leading: glyph(Icons.stop_circle_outlined),
+            title: '1 stack is stopped',
+            detail: 'immich · Dockge does not say why',
+            action: ServiceOverviewRowAction(
+              label: 'Start',
+              hint: 'starts immich',
+              onPressed: () {},
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 void main() {
   setUpAll(() async {
     SharedPreferences.setMockInitialValues({});
@@ -475,6 +554,23 @@ void main() {
         width: 1280,
         height: 940,
         platform: CatalogPlatform.desktop,
+      ),
+      CatalogScene(
+        'ServiceOverviewRow · what a row can be: a plain row (only read), a '
+        'door with its chevron (one button, the whole row at least 44 tall), '
+        'a door with a figure, a door with a verb beside it (the verb is the '
+        'mark, in the ink, never the fault\'s tone) and a verb with no door',
+        (_) => const _RowKinds(),
+        width: 390,
+        height: 440,
+      ),
+      CatalogScene(
+        'Text at 200% · ServiceOverviewRow as a door and as a door with its '
+        'verb: the title wraps, the verb stays one line at its 44pt floor',
+        (_) => const _RowKinds(),
+        width: 390,
+        height: 1100,
+        textScale: catalogTextScale,
       ),
       CatalogScene(
         'Text at 200% · RadarrOverviewScreen loaded: identity, readouts and '

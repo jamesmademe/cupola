@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/widgets/service_overview.dart';
+import 'package:cupola/features/services/domain/attention_door.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+
+import '../../test_helpers/overview_shell.dart';
 
 /// The rules the four Overviews used to guard four times over, now once.
 ///
@@ -84,6 +87,359 @@ void main() {
       expect(find.bySemanticsLabel('torrent\u00A0· public'), findsNothing);
       handle.dispose();
     });
+  });
+
+  group('ServiceOverviewRow as a door', () {
+    ServiceOverviewRow row({
+      VoidCallback? onTap,
+      String? doorHint,
+      ServiceOverviewRowAction? action,
+      String detail = 'torrent · public',
+    }) => ServiceOverviewRow(
+      spoken: 'Nyaa, failing, disabled until 15:40',
+      leading: const Icon(Icons.error_outline_rounded, size: 18),
+      title: 'Nyaa',
+      detail: detail,
+      onTap: onTap,
+      doorHint: doorHint,
+      action: action,
+    );
+
+    testWidgets('a row with a door is one button: the sentence, where it '
+        'goes, and the tap', (tester) async {
+      var opened = 0;
+      await tester.pumpWidget(
+        _host(
+          row(
+            onTap: () => opened++,
+            doorHint: 'opens the Prowlarr Indexers tab',
+          ),
+        ),
+      );
+
+      expect(
+        find.semantics.byLabel('Nyaa, failing, disabled until 15:40'),
+        containsSemantics(
+          isButton: true,
+          hasTapAction: true,
+          hint: 'opens the Prowlarr Indexers tab',
+        ),
+      );
+      // The parts are silenced: the door is one stop, not three.
+      expect(find.bySemanticsLabel('Nyaa'), findsNothing);
+
+      await tester.tap(find.text('Nyaa'));
+      expect(opened, 1);
+    });
+
+    testWidgets('a row with no door is plain text, not a button', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_host(row()));
+
+      expect(
+        find.semantics.byLabel('Nyaa, failing, disabled until 15:40'),
+        containsSemantics(isButton: false, hasTapAction: false),
+      );
+      // And it draws no chevron: nothing in it opens.
+      expect(find.byIcon(Icons.chevron_right_rounded), findsNothing);
+    });
+
+    testWidgets('a door is marked by a chevron, and a row with a verb is '
+        'marked by the verb', (tester) async {
+      await tester.pumpWidget(_host(row(onTap: () {}, doorHint: 'opens it')));
+      expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
+
+      await tester.pumpWidget(
+        _host(
+          row(
+            onTap: () {},
+            doorHint: 'opens it',
+            action: ServiceOverviewRowAction(
+              label: 'Test',
+              hint: 'tests Nyaa',
+              onPressed: () {},
+            ),
+          ),
+        ),
+      );
+      expect(find.byIcon(Icons.chevron_right_rounded), findsNothing);
+    });
+
+    testWidgets('a door reaches 44 tall even when the row is one line', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _host(row(onTap: () {}, doorHint: 'opens it', detail: '')),
+      );
+
+      final target = tester.getSize(find.byType(InkWell));
+      expect(target.height, greaterThanOrEqualTo(44));
+    });
+
+    testWidgets('a door and a plain row take the same room when both have '
+        'two lines', (tester) async {
+      await tester.pumpWidget(_host(row()));
+      final plain = tester.getSize(find.byType(ServiceOverviewRow)).height;
+
+      await tester.pumpWidget(_host(row(onTap: () {}, doorHint: 'opens it')));
+      final door = tester.getSize(find.byType(ServiceOverviewRow)).height;
+
+      expect(door, plain, reason: 'the rhythm of a section must not change');
+    });
+
+    testWidgets('a verb is a real button beside the door, named by its own '
+        'label and hint', (tester) async {
+      var tested = 0;
+      var opened = 0;
+      await tester.pumpWidget(
+        _host(
+          row(
+            onTap: () => opened++,
+            doorHint: 'opens the indexer',
+            action: ServiceOverviewRowAction(
+              label: 'Test',
+              hint: 'tests Nyaa',
+              onPressed: () => tested++,
+            ),
+          ),
+        ),
+      );
+
+      // Annotated on the button's own child, so the hint lands on its node.
+      expect(
+        tester.getSemantics(find.byType(TextButton)),
+        containsSemantics(
+          label: 'Test',
+          hint: 'tests Nyaa',
+          isButton: true,
+          hasTapAction: true,
+        ),
+      );
+      // The door is still one sentence, and it is not the verb's node.
+      expect(
+        find.semantics.byLabel('Nyaa, failing, disabled until 15:40'),
+        containsSemantics(isButton: true, hint: 'opens the indexer'),
+      );
+
+      await tester.tap(find.text('Test'));
+      expect(tested, 1);
+      expect(opened, 0, reason: 'the verb does not also open the door');
+
+      await tester.tap(find.text('Nyaa'));
+      expect(opened, 1);
+      expect(tested, 1, reason: 'the door does not also run the verb');
+    });
+
+    testWidgets('a verb on a row with no door is still a button, and the row '
+        'is still one sentence', (tester) async {
+      await tester.pumpWidget(
+        _host(
+          row(
+            action: ServiceOverviewRowAction(
+              label: 'Start',
+              hint: 'starts immich',
+              onPressed: () {},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Start'), findsOneWidget);
+      expect(
+        find.semantics.byLabel('Nyaa, failing, disabled until 15:40'),
+        containsSemantics(isButton: false),
+      );
+    });
+
+    for (final platform in [TargetPlatform.macOS, TargetPlatform.iOS]) {
+      testWidgets('the verb keeps its 44pt target on ${platform.name}, where '
+          'the density would otherwise take 4 off it', (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(platform: platform),
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: row(
+                  action: ServiceOverviewRowAction(
+                    label: 'Test',
+                    hint: 'tests Nyaa',
+                    onPressed: () {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        expect(
+          tester.getSize(find.byType(TextButton)).height,
+          greaterThanOrEqualTo(44),
+        );
+      });
+    }
+
+    testWidgets('a door must say where it goes', (tester) async {
+      expect(
+        () => ServiceOverviewRow(
+          spoken: 'x',
+          leading: const SizedBox(),
+          title: 'x',
+          detail: '',
+          onTap: () {},
+        ),
+        throwsAssertionError,
+      );
+    });
+
+    testWidgets('a door and its verb fit at 3x without overflowing', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _host(
+          textScale: 3,
+          SizedBox(
+            width: 360,
+            child: row(
+              onTap: () {},
+              doorHint: 'opens the indexer',
+              action: ServiceOverviewRowAction(
+                label: 'Test',
+                hint: 'tests Nyaa',
+                onPressed: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('openAttentionDoor', () {
+    /// A host whose Overview is one button per door, so a test taps a door
+    /// the way a row does.
+    Future<OverviewShell> pumpDoors(
+      WidgetTester tester,
+      ServiceKey service,
+      Map<String, AttentionDoor> doors,
+    ) async {
+      final shell = OverviewShell(
+        service,
+        Scaffold(
+          body: Builder(
+            builder: (context) => Column(
+              children: [
+                for (final entry in doors.entries)
+                  TextButton(
+                    onPressed: () =>
+                        openAttentionDoor(context, service, entry.value),
+                    child: Text(entry.key),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpWidget(shell.app);
+      await tester.pumpAndSettle();
+      return shell;
+    }
+
+    testWidgets('a tab door switches the branch, as the tab bar does', (
+      tester,
+    ) async {
+      final shell = await pumpDoors(tester, ServiceKey.prowlarr, {
+        'tab': const AttentionDoor.tab(ServiceTab.indexers),
+      });
+      expect(shell.tab, ServiceTab.overview);
+
+      await tester.tap(find.text('tab'));
+      await tester.pumpAndSettle();
+
+      expect(shell.tab, ServiceTab.indexers);
+      expect(find.text('tab Indexers'), findsOneWidget);
+    });
+
+    testWidgets('a download door pushes that download\'s page, with its '
+        'connection and its key in the address', (tester) async {
+      final shell = await pumpDoors(tester, ServiceKey.qbittorrent, {
+        'download': const AttentionDoor.download(instanceId: 'qb', key: 'abc'),
+      });
+
+      await tester.tap(find.text('download'));
+      await tester.pumpAndSettle();
+
+      expect(shell.location, '/activity/download?i=qb&id=abc');
+    });
+
+    testWidgets('a page door pushes the page it names', (tester) async {
+      final shell = await pumpDoors(tester, ServiceKey.dockge, {
+        'page': const AttentionDoor.page(
+          location: '/stack/dockge/stacks/stack/immich',
+          hint: 'opens immich',
+        ),
+      });
+
+      await tester.tap(find.text('page'));
+      await tester.pumpAndSettle();
+
+      expect(shell.location, '/stack/dockge/stacks/stack/immich');
+    });
+
+    testWidgets('outside a router a door does nothing and does not throw', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () =>
+                  [
+                    const AttentionDoor.tab(ServiceTab.indexers),
+                    const AttentionDoor.download(instanceId: 'qb', key: 'abc'),
+                    const AttentionDoor.page(location: '/x', hint: 'opens x'),
+                  ].forEach(
+                    (door) =>
+                        openAttentionDoor(context, ServiceKey.prowlarr, door),
+                  ),
+              child: const Text('go'),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('go'));
+      expect(tester.takeException(), isNull);
+    });
+
+    test(
+      'the hint names the service and the tab, or says it is a download',
+      () {
+        expect(
+          attentionDoorHint(
+            ServiceKey.prowlarr,
+            const AttentionDoor.tab(ServiceTab.indexers),
+          ),
+          'opens the Prowlarr Indexers tab',
+        );
+        expect(
+          attentionDoorHint(
+            ServiceKey.qbittorrent,
+            const AttentionDoor.download(instanceId: 'qb', key: 'abc'),
+          ),
+          'opens this download',
+        );
+        expect(
+          attentionDoorHint(
+            ServiceKey.dockge,
+            const AttentionDoor.page(location: '/x', hint: 'opens immich'),
+          ),
+          'opens immich',
+        );
+      },
+    );
   });
 
   group('ServiceOverviewSection', () {

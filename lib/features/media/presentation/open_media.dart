@@ -37,11 +37,18 @@ extension OpenMedia on BuildContext {
 
   /// Pushes [item]'s own page (`ServiceRoutes.activityDownload`), and on a
   /// tablet beside the list as a title is.
-  Future<void> openDownload(ServiceQueueItem item) => _openBeside(
-    ServiceRoutes.activityDownload(
-      instanceId: item.instanceId,
-      key: downloadPageKey(item),
-    ),
+  Future<void> openDownload(ServiceQueueItem item) =>
+      openDownloadAt(instanceId: item.instanceId, key: downloadPageKey(item));
+
+  /// Pushes the page of the download the address `?i=[instanceId]&id=[key]`
+  /// names, for a caller that holds the two and not the queue's row: an
+  /// Overview that read a torrent or a queue record of its own service.
+  /// [key] is the client's id for the transfer (`downloadPageKey`).
+  Future<void> openDownloadAt({
+    required String instanceId,
+    required String key,
+  }) => _openBeside(
+    ServiceRoutes.activityDownload(instanceId: instanceId, key: key),
   );
 
   /// Pushes [key]'s page under the tab the user is on.

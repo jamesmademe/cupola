@@ -13,6 +13,8 @@ import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
+import 'package:cupola/features/media/presentation/open_media.dart';
+import 'package:cupola/features/services/domain/attention_door.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
@@ -61,12 +63,49 @@ Color serviceOverviewInk(ServiceKey service, ColorScheme colorScheme) =>
 /// `of` because an Overview is also legitimately built outside a shell, a
 /// widget test, a preview, where there is no branch to switch and the link
 /// simply does nothing rather than throwing.
-void _goToTab(BuildContext context, ServiceKey service, ServiceTab tab) {
+///
+/// Public because a row that leads to a sibling tab (an attention row whose
+/// faults that tab lists) switches the branch the same way the section link
+/// does.
+void goToServiceTab(BuildContext context, ServiceKey service, ServiceTab tab) {
   final tabs = tabsFor(service);
   if (tabs == null) return;
   final index = tabs.indexOf(tab);
   if (index < 0) return;
   StatefulNavigationShell.maybeOf(context)?.goBranch(index);
+}
+
+/// What a screen reader is told about where [door] leads, read after the
+/// row's own sentence: the chevron is the only visual mark of a door, and a
+/// chevron has no name.
+String attentionDoorHint(ServiceKey service, AttentionDoor door) =>
+    switch (door) {
+      AttentionTab(:final tab) => 'opens the ${service.title} ${tab.label} tab',
+      AttentionDownload() => 'opens this download',
+      AttentionPage(:final hint) => hint,
+    };
+
+/// Goes through [door] from a row of [service]'s Overview.
+///
+/// A tab by `goBranch` ([goToServiceTab]); a download or a page by the
+/// router, through `open_media.dart` where a title or a download is opened
+/// (a download's page goes beside its list on a tablet). Outside a router (a
+/// widget test, a preview) there is nowhere to go, and nothing happens
+/// rather than a throw: the same rule as the section link.
+void openAttentionDoor(
+  BuildContext context,
+  ServiceKey service,
+  AttentionDoor door,
+) {
+  switch (door) {
+    case AttentionTab(:final tab):
+      goToServiceTab(context, service, tab);
+    case AttentionDownload(:final instanceId, :final key):
+      if (GoRouter.maybeOf(context) == null) return;
+      context.openDownloadAt(instanceId: instanceId, key: key);
+    case AttentionPage(:final location):
+      GoRouter.maybeOf(context)?.push(location);
+  }
 }
 
 /// One region of a service Overview: a header, a body, and the air after it.
@@ -136,7 +175,9 @@ class ServiceOverviewSection extends StatelessWidget {
           semanticHint: tab == null
               ? null
               : 'opens the ${service.title} ${tab.label} tab',
-          onTap: tab == null ? null : () => _goToTab(context, service, tab),
+          onTap: tab == null
+              ? null
+              : () => goToServiceTab(context, service, tab),
         ),
         const SizedBox(height: AppSpacing.sm),
         if (padBody)
@@ -181,7 +222,39 @@ class _TabLink extends StatelessWidget {
 /// the sentence a screen reader hears.
 const double _trailingMaxWidth = 132;
 
+/// The floor a row that opens something reaches: the whole row is the target.
+const double _doorMinHeight = 44;
+
+/// A verb beside a row: something the app already does elsewhere, one tap
+/// from here.
+///
+/// Data rather than a widget, so a row cannot be handed a button that breaks
+/// the touch target or the spoken name: [ServiceOverviewRow] draws it.
+@immutable
+class ServiceOverviewRowAction {
+  const ServiceOverviewRowAction({
+    required this.label,
+    required this.hint,
+    required this.onPressed,
+  });
+
+  /// The verb, in the word the app already uses for it (`Test`, `Start`).
+  final String label;
+
+  /// What the verb acts on, said after the label: `tests Nyaa`. A button named
+  /// `Test` beside a list of indexers does not say which one.
+  final String hint;
+
+  final VoidCallback onPressed;
+}
+
 /// Two lines and a leading mark: the one row shape every Overview section uses.
+///
+/// A row is read-only unless it is given somewhere to go. [onTap] makes it a
+/// **door**: the place the row is about, one button for a screen reader that
+/// speaks [spoken] and says where it leads ([doorHint]). [action] puts a verb
+/// beside it, a real button of its own. A row with neither is exactly the
+/// plain row it always was.
 class ServiceOverviewRow extends StatelessWidget {
   const ServiceOverviewRow({
     super.key,
@@ -191,11 +264,33 @@ class ServiceOverviewRow extends StatelessWidget {
     required this.detail,
     this.titleColor,
     this.trailing,
-  });
+    this.onTap,
+    this.doorHint,
+    this.action,
+  }) : assert(
+         (onTap == null) == (doorHint == null),
+         'A door says where it leads: onTap and doorHint come together',
+       );
 
   /// The whole row as one sentence, with the layout's `·` turned back into
   /// commas.
   final String spoken;
+
+  /// Where the row leads, or null for a row that is only read. The whole row
+  /// is the target, at least 44 tall.
+  ///
+  /// Drawn with a chevron, as the other rows of the app that open something
+  /// are, unless the row also carries an [action]: the verb is then the mark,
+  /// as it is on a Home decision row, and the body stays tappable.
+  final VoidCallback? onTap;
+
+  /// Where [onTap] goes, said after [spoken]: `opens the Prowlarr Indexers
+  /// tab`. The chevron is the only visual mark of a door and has no name.
+  final String? doorHint;
+
+  /// A verb beside the row, or null. It is a button in its own right, outside
+  /// the row's one sentence, so a screen reader reaches both.
+  final ServiceOverviewRowAction? action;
 
   final Widget leading;
   final String title;
@@ -214,63 +309,158 @@ class ServiceOverviewRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final brightness = Theme.of(context).brightness;
+    final door = onTap;
+    final verb = action;
 
-    return Semantics(
+    final lines = Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        leading,
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: AppTheme.data(
+                  brightness,
+                ).copyWith(color: titleColor ?? colorScheme.onSurface),
+              ),
+              if (detail.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  detail,
+                  style: AppTheme.chrome(
+                    context,
+                    size: 11,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        if (trailing != null) ...[
+          const SizedBox(width: AppSpacing.sm),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: _trailingMaxWidth),
+            child: Text(
+              trailing!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.end,
+              style: AppTheme.chrome(
+                context,
+                size: 11,
+                weight: FontWeight.w600,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+
+    // Nothing in a row that is only read is interactive, so the parts are safe
+    // to silence: read separately they are three fragments of one fact.
+    if (door == null) {
+      final plain = Semantics(
+        container: true,
+        label: spoken,
+        excludeSemantics: true,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+          child: lines,
+        ),
+      );
+      return verb == null ? plain : _withAction(plain, verb);
+    }
+
+    // A door is one button: the sentence, where it leads, and the tap. The
+    // gap under the row sits inside the target, so the rows keep the rhythm
+    // of the plain ones and the target still reaches 44.
+    final opens = Semantics(
       container: true,
+      button: true,
       label: spoken,
-      // Nothing in this row is interactive, so the parts are safe to silence:
-      // read separately they are three fragments of one fact.
-      excludeSemantics: true,
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: AppSpacing.md),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            leading,
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Column(
+      hint: doorHint,
+      onTap: door,
+      child: InkWell(
+        onTap: door,
+        borderRadius: AppRadius.borderRadiusSm,
+        // The name and the tap are the node above's.
+        excludeFromSemantics: true,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: _doorMinHeight),
+          child: ExcludeSemantics(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.md),
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: AppTheme.data(
-                      brightness,
-                    ).copyWith(color: titleColor ?? colorScheme.onSurface),
-                  ),
-                  if (detail.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      detail,
-                      style: AppTheme.chrome(
-                        context,
-                        size: 11,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                  Expanded(child: lines),
+                  if (verb == null) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 18,
+                      color: colorScheme.onSurfaceVariant,
                     ),
                   ],
                 ],
               ),
             ),
-            if (trailing != null) ...[
-              const SizedBox(width: AppSpacing.sm),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: _trailingMaxWidth),
-                child: Text(
-                  trailing!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.end,
-                  style: AppTheme.chrome(
-                    context,
-                    size: 11,
-                    weight: FontWeight.w600,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            ],
-          ],
+          ),
+        ),
+      ),
+    );
+    return verb == null ? opens : _withAction(opens, verb);
+  }
+
+  /// [body] with [verb] beside it, outside the body's own semantics: the
+  /// verb is a control, and a node that silences its subtree would take it
+  /// out of the tree.
+  static Widget _withAction(Widget body, ServiceOverviewRowAction verb) => Row(
+    crossAxisAlignment: CrossAxisAlignment.center,
+    children: [
+      Expanded(child: body),
+      _RowActionButton(action: verb),
+    ],
+  );
+}
+
+/// The verb beside a row: a text button in the ink, never in the fault's tone
+/// (the cure is not painted as alarming as the disease), at the 44pt floor.
+class _RowActionButton extends StatelessWidget {
+  const _RowActionButton({required this.action});
+
+  final ServiceOverviewRowAction action;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return TextButton(
+      onPressed: action.onPressed,
+      style: TextButton.styleFrom(
+        foregroundColor: theme.colorScheme.primary,
+        minimumSize: const Size(56, _doorMinHeight),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+        // Pinned: the desktop picks compact by itself, and compact cancels
+        // `minimumSize` (44 declared, 40 measured).
+        visualDensity: VisualDensity.standard,
+      ),
+      // The hint is annotated from INSIDE the button: a `Semantics` wrapped
+      // around a button is dropped, one on its child merges into the button's
+      // own node, which is where "tests Nyaa" has to be heard.
+      child: Semantics(
+        hint: action.hint,
+        child: Text(
+          action.label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.labelLarge?.weight(FontWeight.w600),
         ),
       ),
     );
