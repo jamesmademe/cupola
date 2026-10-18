@@ -94,7 +94,7 @@ void main() {
       VoidCallback? onTap,
       String? doorHint,
       ServiceOverviewRowAction? action,
-      String detail = 'torrent · public',
+      String detail = 'torrent\u00A0· public',
     }) => ServiceOverviewRow(
       spoken: 'Nyaa, failing, disabled until 15:40',
       leading: const Icon(Icons.error_outline_rounded, size: 18),
@@ -431,15 +431,15 @@ void main() {
         MaterialApp(
           home: Builder(
             builder: (context) => TextButton(
-              onPressed: () =>
-                  [
-                    const AttentionDoor.tab(ServiceTab.indexers),
-                    const AttentionDoor.download(instanceId: 'qb', key: 'abc'),
-                    const AttentionDoor.page(location: '/x', hint: 'opens x'),
-                  ].forEach(
-                    (door) =>
-                        openAttentionDoor(context, ServiceKey.prowlarr, door),
-                  ),
+              onPressed: () {
+                for (final door in const [
+                  AttentionDoor.tab(ServiceTab.indexers),
+                  AttentionDoor.download(instanceId: 'qb', key: 'abc'),
+                  AttentionDoor.page(location: '/x', hint: 'opens x'),
+                ]) {
+                  openAttentionDoor(context, ServiceKey.prowlarr, door);
+                }
+              },
               child: const Text('go'),
             ),
           ),

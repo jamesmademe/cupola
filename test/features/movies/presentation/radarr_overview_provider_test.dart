@@ -505,7 +505,7 @@ void main() {
 
       expect(faults, hasLength(2));
       expect(faults[0].headline, '2 downloads stuck');
-      expect(faults[1].headline, 'Import failed · Lone');
+      expect(faults[1].headline, 'Import failed\u00A0· Lone');
       expect(faults[1].door, isA<AttentionDownload>());
     });
 
@@ -516,7 +516,7 @@ void main() {
       ], now: now);
 
       expect(faults, hasLength(1));
-      expect(faults.single.headline, 'Stuck · Pack');
+      expect(faults.single.headline, 'Stuck\u00A0· Pack');
     });
 
     test('a walk that stopped short counts a floor, and says so aloud', () {

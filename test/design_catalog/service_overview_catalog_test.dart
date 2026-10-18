@@ -394,9 +394,9 @@ class _RowKinds extends StatelessWidget {
           ServiceOverviewRow(
             spoken: 'Nickel Boys, only read',
             leading: glyph(Icons.sync_problem_rounded),
-            title: 'Stuck · Nickel Boys',
+            title: 'Stuck\u00A0· Nickel Boys',
             titleColor: amber,
-            detail: 'qBittorrent · Nothing is arriving',
+            detail: 'qBittorrent\u00A0· Nothing is arriving',
           ),
           ServiceOverviewRow(
             spoken: '3 indexers failing, a door',
@@ -411,7 +411,7 @@ class _RowKinds extends StatelessWidget {
             spoken: 'Nyaa, a door with a figure',
             leading: glyph(Icons.error_outline_rounded),
             title: 'Nyaa',
-            detail: 'failing · disabled until 15:40',
+            detail: 'failing\u00A0· disabled until 15:40',
             trailing: '298 queries',
             onTap: () {},
             doorHint: 'opens the Prowlarr Indexers tab',
@@ -421,7 +421,7 @@ class _RowKinds extends StatelessWidget {
             leading: glyph(Icons.error_outline_rounded),
             title: 'Nyaa',
             titleColor: amber,
-            detail: 'failing · disabled until 15:40',
+            detail: 'failing\u00A0· disabled until 15:40',
             onTap: () {},
             doorHint: 'opens Nyaa',
             action: ServiceOverviewRowAction(
@@ -448,7 +448,7 @@ class _RowKinds extends StatelessWidget {
             spoken: 'immich is stopped, a verb alone',
             leading: glyph(Icons.stop_circle_outlined),
             title: '1 stack is stopped',
-            detail: 'immich · Dockge does not say why',
+            detail: 'immich\u00A0· Dockge does not say why',
             action: ServiceOverviewRowAction(
               label: 'Start',
               hint: 'starts immich',

@@ -140,7 +140,7 @@ void main() {
       tester
           .widget<SectionHeader>(find.widgetWithText(SectionHeader, 'History'))
           .subtitle,
-      'today · 1 completed · 3 failed',
+      'today\u00A0· 1 completed\u00A0· 3 failed',
     );
 
     await tester.tap(find.text('3 downloads failed'));

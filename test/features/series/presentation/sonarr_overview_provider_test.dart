@@ -235,7 +235,7 @@ void main() {
       ], now: now);
 
       expect(items, hasLength(1));
-      expect(items.single.headline, 'Stuck · Slow Horses S4 E1–E6');
+      expect(items.single.headline, 'Stuck\u00A0· Slow Horses S4 E1–E6');
       expect(items.single.count, 1);
       expect(items.single.door, isA<AttentionDownload>());
     });

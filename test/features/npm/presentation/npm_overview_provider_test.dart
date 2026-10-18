@@ -399,7 +399,7 @@ void main() {
         certificates: [_cert(name: 'one', expiresIn: const Duration(days: -4))],
         now: now,
       );
-      expect(lone.single.headline, 'Certificate expired · one');
+      expect(lone.single.headline, 'Certificate expired\u00A0· one');
     });
 
     test('the set of expiring certificates is one errand and counts as one, '

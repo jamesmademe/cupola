@@ -83,7 +83,7 @@ void main() {
         _stalled(episode, 'Slow Horses', 'PACK', season: 4, episode: episode),
     ]);
 
-    final row = find.text('Stuck · Slow Horses S4 E1–E3');
+    final row = find.text('Stuck\u00A0· Slow Horses S4 E1–E3');
     expect(row, findsOneWidget);
     expect(
       find.semantics.byLabel(RegExp(r'^Stuck, Slow Horses S4 E1–E3, ')),

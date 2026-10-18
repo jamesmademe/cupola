@@ -75,7 +75,7 @@ void main() {
       'that listed it', (tester) async {
     final (harness, shell) = await _pump(tester);
 
-    final row = find.textContaining('Stuck · Big Buck Bunny');
+    final row = find.textContaining('Stuck\u00A0· Big Buck Bunny');
     expect(row, findsOneWidget);
     expect(
       find.semantics.byLabel(RegExp(r'^Stuck, Big Buck Bunny, ')),
@@ -112,7 +112,7 @@ void main() {
     );
 
     expect(find.text('3 downloads stuck'), findsOneWidget);
-    expect(find.textContaining('Stuck ·'), findsNothing);
+    expect(find.textContaining('Stuck\u00A0·'), findsNothing);
     expect(
       find.text('Sprite Fright, Big Buck Bunny, Tears of Steel'),
       findsOneWidget,

@@ -81,7 +81,7 @@ void main() {
   testWidgets('P1: the stuck download opens its own page', (tester) async {
     final (harness, shell) = await _pump(tester);
 
-    final row = find.textContaining('Stuck · Alvvays');
+    final row = find.textContaining('Stuck\u00A0· Alvvays');
     expect(row, findsOneWidget);
     expect(
       find.semantics.byLabel(RegExp(r'^Stuck, Alvvays, Blue Rev, ')),

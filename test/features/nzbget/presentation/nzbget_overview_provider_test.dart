@@ -518,7 +518,7 @@ void main() {
       expect(section.rows.map((row) => row.headline), [
         '3 downloads failed',
         '2 downloads with warnings',
-        'Done · success',
+        'Done\u00A0· success',
       ]);
       // Newest first, the order the day's faults sort in.
       expect(section.rows.first.detail, 'C, B, A');
