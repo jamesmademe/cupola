@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show SynchronousFuture, compute;
 
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
@@ -472,10 +473,16 @@ class TransmissionClient {
     final result = await _call('torrent-get', arguments);
     final torrents = result['torrents'];
     if (torrents is! List) return const [];
-    return torrents
-        .whereType<Map>()
-        .map((e) => TransmissionTorrent.fromJson(e.cast<String, dynamic>()))
-        .toList(growable: false);
+    final raw = [
+      for (final torrent in torrents.whereType<Map>())
+        Map<String, dynamic>.from(torrent),
+    ];
+    // A seedbox's two thousand torrents, every three seconds while the queue
+    // is on screen: read off the UI isolate past a library's worth, as
+    // qBittorrent's first answer is; a handful is not worth the hop.
+    return raw.length > _isolateParseThreshold
+        ? compute(_parseTorrents, raw)
+        : SynchronousFuture(_parseTorrents(raw));
   }
 
   static const List<String> _listFields = [
@@ -761,3 +768,11 @@ class TransmissionClient {
 
   void close({bool force = false}) => _dio.close(force: force);
 }
+
+/// How many torrents make reading them worth an isolate: the threshold
+/// qBittorrent's first answer uses.
+const int _isolateParseThreshold = 200;
+
+List<TransmissionTorrent> _parseTorrents(List<Map<String, dynamic>> raw) => [
+  for (final torrent in raw) TransmissionTorrent.fromJson(torrent),
+];

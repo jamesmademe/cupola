@@ -164,6 +164,28 @@ void main() {
       },
     );
 
+    test('a seedbox\'s worth of torrents reads the same off the UI '
+        'isolate', () async {
+      final adapter = ScriptedHttpAdapter([
+        _ok({
+          'torrents': [
+            for (var i = 0; i < 250; i++)
+              {'id': i, 'name': 'Torrent $i', 'hashString': 'h$i'},
+          ],
+        }),
+      ]);
+      final client = TransmissionClient(
+        url: 'https://nas.local:9091',
+        dio: _dio(adapter),
+      );
+
+      final torrents = await client.torrents();
+
+      expect(torrents, hasLength(250));
+      expect(torrents.first.name, 'Torrent 0');
+      expect(torrents.last.name, 'Torrent 249');
+    });
+
     test('the 409 replay goes to the same single-path endpoint', () async {
       final client = TransmissionClient(url: 'https://nas.local/tr/');
       addTearDown(client.close);
