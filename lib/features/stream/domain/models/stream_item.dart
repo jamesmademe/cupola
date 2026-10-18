@@ -202,10 +202,20 @@ class StreamItem {
   /// says of a title only a media server knows.
   final String? overview;
 
-  /// An episode's season and its number in it, as the server numbers them;
-  /// null for anything else, and for an episode the server has not numbered.
+  /// The season an episode is in, or a season's own number, as the server
+  /// numbers them (the specials are 0); null for anything else, and for one
+  /// the server has not numbered.
   final int? seasonNumber;
+
+  /// An episode's number in its season, as the server numbers it; null for
+  /// anything else, and for an episode the server has not numbered.
   final int? episodeNumber;
+
+  /// The id, on this server, of the series a season or an episode belongs
+  /// to: what the series' own page is read by. Null for anything else, and
+  /// for a season or an episode the read did not name a series for (a search
+  /// hint does not).
+  final String? seriesId;
 
   /// The picture of the item's first version, when the read asked for it.
   /// Null is "not reported": only the Media page's lookup asks.
@@ -227,6 +237,7 @@ class StreamItem {
     this.overview,
     this.seasonNumber,
     this.episodeNumber,
+    this.seriesId,
     this.backdropPath,
   });
 

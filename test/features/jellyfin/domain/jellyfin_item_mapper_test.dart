@@ -4,6 +4,8 @@ import 'package:cupola/features/jellyfin/domain/models/jellyfin_item_mapper.dart
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
 
+import '../../../test_helpers/fixtures.dart';
+
 /// The mappers, exercised on the shapes a fixture cannot conveniently hold: a
 /// field that is **absent** rather than zero, and the artwork fallback chain.
 ///
@@ -383,6 +385,76 @@ void main() {
       expect(StreamVideo.rangeWord('HLG', 'HDR'), 'HLG');
       expect(StreamVideo.rangeWord(null, 'HDR'), 'HDR');
       expect(StreamVideo.rangeWord('SDR', 'SDR'), isNull);
+    });
+  });
+
+  group('a season or an episode names its series', () {
+    // The series and season of `item_season.json`, `seasons.json` and
+    // `episodes.json`.
+    const seriesId = '0f4b8d2a6c1e39574a8b2c6d0e4f8192';
+
+    test('a season: its series and its own number', () {
+      final season = jellyfinStreamItemFromJson(
+        jsonFixtureMap('jellyfin/item_season.json'),
+      );
+
+      expect(season.kind, StreamItemKind.season);
+      expect(season.seriesId, seriesId);
+      expect(season.seasonNumber, 2);
+      expect(season.episodeNumber, isNull);
+    });
+
+    test('the specials are season 0, not nothing', () {
+      final items = jellyfinStreamItemsFromJson(
+        jsonFixtureMap('jellyfin/seasons.json')['Items'],
+      );
+
+      expect(items.first.title, 'Specials');
+      expect(items.first.seasonNumber, 0);
+      expect(items.map((item) => item.seasonNumber), [0, 1, 2]);
+      expect(items.map((item) => item.seriesId).toSet(), {seriesId});
+    });
+
+    test('an episode: its series, its season\'s number and its own', () {
+      final episodes = jellyfinStreamItemsFromJson(
+        jsonFixtureMap('jellyfin/episodes.json')['Items'],
+      );
+
+      expect(episodes.first.kind, StreamItemKind.episode);
+      expect(episodes.first.seriesId, seriesId);
+      expect(episodes.first.seasonNumber, 2);
+      expect(episodes.first.episodeNumber, 1);
+    });
+
+    test('an episode the server gave no series for names none', () {
+      final episode = jellyfinStreamItemFromJson({
+        'Id': 'e1',
+        'Name': 'Pilot',
+        'Type': 'Episode',
+        'ParentIndexNumber': 1,
+        'IndexNumber': 1,
+        'SeriesId': '',
+      });
+
+      expect(episode.seriesId, isNull);
+      expect(episode.seasonNumber, 1);
+    });
+
+    test('a movie, a series and an album belong to no series', () {
+      for (final type in ['Movie', 'Series', 'MusicAlbum', 'Audio']) {
+        final item = jellyfinStreamItemFromJson({
+          'Id': 'x',
+          'Name': 'x',
+          'Type': type,
+          // An album's parent is not a series, whatever the server numbers.
+          'SeriesId': 'not-a-series',
+          'IndexNumber': 3,
+          'ParentIndexNumber': 4,
+        });
+
+        expect(item.seriesId, isNull, reason: type);
+        expect(item.seasonNumber, isNull, reason: type);
+      }
     });
   });
 }

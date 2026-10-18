@@ -11,7 +11,8 @@
 /// The synopsis and the picture's frame (`overview`, `video`) are not kept:
 /// no row of the Home draws them and no opening reads them (the item's page
 /// reads its own). What the Media page opens a movie or a series by, the
-/// external ids, is kept.
+/// external ids, is kept, and so is what opens an episode on its series' page:
+/// the series' id on the server and the season's number.
 library;
 
 import 'package:cupola/core/last_known/stored_image.dart';
@@ -38,6 +39,7 @@ Map<String, Object?> streamItemToJson(StreamItem item) => {
     },
   'seasonNumber': ?item.seasonNumber,
   'episodeNumber': ?item.episodeNumber,
+  'seriesId': ?item.seriesId,
 };
 
 /// [json] read back; null for an item this version cannot read whole.
@@ -69,6 +71,7 @@ StreamItem? streamItemFromJson(Object? json) {
           ),
     seasonNumber: fields.whole('seasonNumber'),
     episodeNumber: fields.whole('episodeNumber'),
+    seriesId: fields.text('seriesId'),
   );
   if (title == null) return null;
   return fields.isBroken ? null : item;

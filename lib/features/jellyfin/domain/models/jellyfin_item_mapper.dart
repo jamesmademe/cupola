@@ -249,12 +249,21 @@ StreamItem jellyfinStreamItemFromJson(Map<String, dynamic> item) {
     externalIds: jellyfinExternalIds(item['ProviderIds']),
     video: _video(item['MediaStreams']),
     overview: _text(item['Overview']),
-    seasonNumber: kind == StreamItemKind.episode
-        ? jellyfinInt(item['ParentIndexNumber'])
-        : null,
+    // An episode's season is its parent's number; a season's own is its
+    // `IndexNumber`.
+    seasonNumber: switch (kind) {
+      StreamItemKind.episode => jellyfinInt(item['ParentIndexNumber']),
+      StreamItemKind.season => jellyfinInt(item['IndexNumber']),
+      _ => null,
+    },
     episodeNumber: kind == StreamItemKind.episode
         ? jellyfinInt(item['IndexNumber'])
         : null,
+    seriesId: switch (kind) {
+      StreamItemKind.episode ||
+      StreamItemKind.season => _text(item['SeriesId']),
+      _ => null,
+    },
   );
 }
 

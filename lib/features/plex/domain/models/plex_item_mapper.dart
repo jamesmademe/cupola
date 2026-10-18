@@ -103,12 +103,22 @@ StreamItem? plexItemFromJson(Map<String, dynamic> json) {
       null => null,
     },
     overview: plexString(json['summary'])?.trim(),
-    seasonNumber: kind == StreamItemKind.episode
-        ? plexInt(json['parentIndex'])
-        : null,
+    // Plex names the levels by distance, not by role: an episode's season is
+    // its parent's number (`parentIndex`) and a season's own is its `index`.
+    seasonNumber: switch (kind) {
+      StreamItemKind.episode => plexInt(json['parentIndex']),
+      StreamItemKind.season => plexInt(json['index']),
+      _ => null,
+    },
     episodeNumber: kind == StreamItemKind.episode
         ? plexInt(json['index'])
         : null,
+    // The show is an episode's grandparent and a season's parent.
+    seriesId: switch (kind) {
+      StreamItemKind.episode => plexString(json['grandparentRatingKey']),
+      StreamItemKind.season => plexString(json['parentRatingKey']),
+      _ => null,
+    },
   );
 }
 

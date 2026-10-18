@@ -337,6 +337,7 @@ void main() {
       externalIds: StreamExternalIds(tmdb: '1', tvdb: '2', imdb: 'tt3'),
       seasonNumber: 2,
       episodeNumber: 3,
+      seriesId: 'jf-cosmos',
     );
 
     Object? onDisk(Object? json) => jsonDecode(jsonEncode(json));
@@ -357,12 +358,14 @@ void main() {
       expect(back.externalIds, episode.externalIds);
       expect(back.seasonNumber, episode.seasonNumber);
       expect(back.episodeNumber, episode.episodeNumber);
+      expect(back.seriesId, episode.seriesId);
       expect(back.resumeProgress, episode.resumeProgress);
       // What an item does not carry stays what it was.
       final bare = streamItemFromJson(onDisk(streamItemToJson(_movie)))!;
       expect(bare.posterPath, isNull);
       expect(bare.backdropPath, isNull);
       expect(bare.seasonNumber, isNull);
+      expect(bare.seriesId, isNull);
       expect(bare.externalIds, _movie.externalIds);
       expect(
         streamItemFromJson(
