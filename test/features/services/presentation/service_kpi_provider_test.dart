@@ -612,5 +612,25 @@ void main() {
       expect(kpis['Status']!.value, 'Disk full');
       expect(kpis['Status']!.tone, StatusTone.warning);
     });
+
+    test(
+      'NZBGet that reached its quota says so, neutral like a pause',
+      () async {
+        final kpis = await _kpisFor(ServiceKey.nzbget, [
+          nzbgetStatusProvider.overrideWith(
+            (ref) async => NzbgetStatus.fromJson(const {
+              'DownloadPaused': true,
+              'QuotaReached': true,
+              'RemainingSizeMB': 2048,
+              'FreeDiskSpaceMB': 512000,
+            }),
+          ),
+          nzbgetQueueProvider.overrideWith((ref) async => const []),
+        ]);
+
+        expect(kpis['Status']!.value, 'Quota reached');
+        expect(kpis['Status']!.tone, isNull);
+      },
+    );
   });
 }

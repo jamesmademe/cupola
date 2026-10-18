@@ -66,6 +66,7 @@ import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
+import 'package:cupola/features/services/domain/download_client_faults.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 
 /// Queue rows the section draws before the header's count is the only place
@@ -213,7 +214,8 @@ String? sabnzbdEtaLabel(Duration? remaining) {
 /// Returns [ServiceKpi.unavailable] (an em dash) whenever SABnzbd cannot
 /// stand behind an estimate, and names which of the three reasons it is:
 ///
-///  * the queue is **paused**, so `timeleft` freezes at whatever it last was;
+///  * the queue is **paused**, so `timeleft` freezes at whatever it last was,
+///    and the note says when a full disk paused it rather than a person;
 ///  * **nothing is downloading**, so there is no rate to divide by;
 ///  * SABnzbd sent a zero or unreadable `timeleft`.
 ///
@@ -230,7 +232,9 @@ ServiceKpi sabnzbdEtaKpi(SabnzbdQueue queue) {
     label: 'ETA',
     icon: Icons.schedule_rounded,
     note: queue.paused
-        ? 'queue ${StateWord.stopped.inline}'
+        ? (sabnzbdQueueStoppedByDisk(queue)
+              ? diskFullReason.toLowerCase()
+              : 'queue ${StateWord.stopped.inline}')
         : queue.slots.isEmpty
         ? 'nothing queued'
         : 'nothing downloading',

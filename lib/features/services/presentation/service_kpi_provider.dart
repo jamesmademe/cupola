@@ -1556,11 +1556,13 @@ List<ServiceKpi> _nzbgetKpisFrom(
     _usenetStatusKpi(
       paused: status.paused,
       stoppedByDisk: nzbgetQueueStoppedByDisk(status, groups),
+      quotaReached: status.quotaReached,
     ),
   ];
 }
 
-/// A usenet client's Status figure: `Active`, `Stopped`, or `Disk full`.
+/// A usenet client's Status figure: `Active`, `Stopped`, `Quota reached` or
+/// `Disk full`.
 ///
 /// Pausing the queue is something the user did on purpose, so it is neither
 /// a fault nor a backlog: it is the client obeying. It used to be flagged
@@ -1568,20 +1570,25 @@ List<ServiceKpi> _nzbgetKpisFrom(
 /// full" (decision 15). Both clients stop on a full disk by flipping the same
 /// switch, though, and that one is a fault: amber, in the word Home's
 /// downloads use for it, never `Stopped` beside a Home that says the disk is
-/// full.
+/// full. A download quota NZBGet reached stops it too, by the user's own
+/// rule: neutral like a pause, and said for what it is, so it is not taken
+/// for a pause nobody remembers making.
 ServiceKpi _usenetStatusKpi({
   required bool paused,
   required bool stoppedByDisk,
+  bool quotaReached = false,
 }) => ServiceKpi(
   label: 'Status',
   value: stoppedByDisk
       ? diskFullReason
+      : quotaReached
+      ? 'Quota reached'
       : paused
       ? StateWord.stopped.label
       : 'Active',
   icon: stoppedByDisk
       ? Icons.storage_rounded
-      : paused
+      : paused || quotaReached
       ? Icons.pause_circle_rounded
       : Icons.play_circle_rounded,
   tone: _faultIf(stoppedByDisk),

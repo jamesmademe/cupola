@@ -163,6 +163,19 @@ void main() {
       expect(kpi.tone, isNull);
     });
 
+    test('a queue a full disk stopped says so, not that it was stopped', () {
+      final kpi = eta(
+        _queue(
+          paused: true,
+          timeLeft: '0:07:00',
+          slots: [_slot(status: 'Queued', mbLeft: 4096)],
+          diskFreeGb: 0.5,
+        ),
+      );
+      expect(kpi.isUnavailable, isTrue);
+      expect(kpi.note, 'disk full');
+    });
+
     test('an idle queue names which kind of nothing it is', () {
       expect(eta(_queue(timeLeft: '0:00:00')).note, 'nothing queued');
       expect(
@@ -619,6 +632,7 @@ SabnzbdQueue _queue({
   String timeLeft = '0:00:00',
   List<SabnzbdQueueSlot> slots = const [],
   int? reportedSlots,
+  double? diskFreeGb,
 }) => SabnzbdQueue(
   paused: paused,
   status: paused ? 'Paused' : 'Downloading',
@@ -628,6 +642,7 @@ SabnzbdQueue _queue({
   timeLeft: timeLeft,
   slots: slots,
   reportedSlots: reportedSlots,
+  downloadDiskFreeGb: diskFreeGb,
 );
 
 SabnzbdQueueSlot _slot({
