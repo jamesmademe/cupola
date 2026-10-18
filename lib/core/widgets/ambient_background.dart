@@ -86,6 +86,49 @@ class AmbientBackground extends StatelessWidget {
   }
 }
 
+/// Where the second glow sits, for depth: bottom-right, as strong as the
+/// first.
+const _secondGlow = Alignment(0.95, 0.75);
+
+/// The room's light, for a widget inside it that has to paint the room again:
+/// the fade under a bar (`AmbientScaffold`) covers content with the room
+/// itself, glow and all, where a flat colour would read as a step wherever
+/// the glow is.
+class AmbientRoom extends InheritedWidget {
+  const AmbientRoom({
+    super.key,
+    required this.scheme,
+    required this.accent,
+    required super.child,
+  });
+
+  final ColorScheme scheme;
+
+  /// The light at this frame, drifting when the accent changes.
+  final Color accent;
+
+  static AmbientRoom? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<AmbientRoom>();
+
+  /// Paints the room into [rect], laid out as it is across [room], the
+  /// room's whole box, so the patch matches the room around it.
+  void paint(Canvas canvas, Rect rect, Rect room) {
+    canvas.drawRect(rect, Paint()..color = scheme.surface);
+    for (final center in const [Alignment(-0.7, -0.9), _secondGlow]) {
+      final glow = AppGradients.ambientBackground(
+        scheme,
+        accent: accent,
+        center: center,
+      );
+      canvas.drawRect(rect, Paint()..shader = glow.createShader(room));
+    }
+  }
+
+  @override
+  bool updateShouldNotify(AmbientRoom oldWidget) =>
+      oldWidget.accent != accent || oldWidget.scheme != scheme;
+}
+
 /// The three stacked decorations, split out so the tween's builder repaints only
 /// them and the reduced-motion path renders the identical tree.
 class _Glow extends StatelessWidget {
@@ -115,10 +158,10 @@ class _Glow extends StatelessWidget {
             gradient: AppGradients.ambientBackground(
               scheme,
               accent: accent,
-              center: const Alignment(0.95, 0.75),
+              center: _secondGlow,
             ),
           ),
-          child: child,
+          child: AmbientRoom(scheme: scheme, accent: accent, child: child),
         ),
       ),
     );

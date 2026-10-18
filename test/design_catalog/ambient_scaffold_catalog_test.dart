@@ -124,6 +124,37 @@ Widget _truenasHub() => AmbientScaffold(
   ),
 );
 
+/// A page under a bar, its list scrolled part-way: what passes the bar's
+/// edge melts into the room there.
+Widget _scrolledUnderBar() => AmbientScaffold(
+  appBar: const GlassAppBar(title: Text('Settings')),
+  body: ListView(
+    controller: ScrollController(initialScrollOffset: 44),
+    padding: const EdgeInsets.all(AppSpacing.lg),
+    children: [
+      for (final (title, detail) in const [
+        ('Region', 'Italy (IT)'),
+        ('Appearance', 'System'),
+        ('Home', '12 modules'),
+        ('Notifications', 'Off'),
+        ('Background search', 'How long to wait, and how many at once'),
+        ('Hints', 'Nudges that introduce a gesture'),
+        ('Trusted certificates', 'Pinned by address, not by service'),
+      ]) ...[
+        ServiceRecordRow(
+          icon: Icons.tune_rounded,
+          tone: StatusTone.neutral,
+          title: title,
+          detail: detail,
+          trailing: '',
+          semanticLabel: '$title, $detail',
+        ),
+        const SizedBox(height: AppSpacing.sm),
+      ],
+    ],
+  ),
+);
+
 Widget _room(Color? accent, String label) => SizedBox(
   width: 170,
   height: 300,
@@ -159,6 +190,15 @@ void main() {
         'AmbientScaffold(appBar: GlassAppBar) · the TrueNAS hub at rest over '
         'the bare room',
         (_) => _phone(_truenasHub()),
+        width: 390,
+        height: 420,
+      ),
+      CatalogScene(
+        'AmbientScaffold(appBar: GlassAppBar) · a list scrolled under the '
+        'bar: what passes its edge is covered by the room itself, whole at '
+        'the edge and gone 24pt below, so it melts into the light with no '
+        'line and no step',
+        (_) => _phone(_scrolledUnderBar()),
         width: 390,
         height: 420,
       ),
