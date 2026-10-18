@@ -204,3 +204,44 @@ final plexDevicesProvider = FutureProvider<List<PlexDevice>>((ref) async {
 final plexPlaylistsProvider = FutureProvider<List<PlexPlaylist>>((ref) async {
   return ref.watch(plexClientProvider).getPlaylists();
 }, retry: noProviderRetry);
+
+/// [plexOnDeckTabProvider] for one named connection; empty is the lens.
+///
+/// A visit that has a connection in view reads that connection's on deck, as
+/// every other tab does. The lens's own id collapses onto the plain provider,
+/// so an override of either still reaches both. `retry: noProviderRetry` for
+/// the reason the plain one carries it.
+final plexOnDeckTabForProvider =
+    FutureProvider.family<List<StreamItem>, String>((ref, instanceId) async {
+      final lens = ref.watch(activeInstanceProvider(ServiceKey.plex))?.id ?? '';
+      if (instanceId.isEmpty || instanceId == lens) {
+        return ref.watch(plexOnDeckTabProvider.future);
+      }
+      return ref
+          .watch(plexClientForProvider(instanceId))
+          .getContinueWatching(count: 100);
+    }, retry: noProviderRetry);
+
+/// [plexDevicesProvider] for one named connection; empty is the lens. See
+/// [plexOnDeckTabForProvider].
+final plexDevicesForProvider = FutureProvider.family<List<PlexDevice>, String>((
+  ref,
+  instanceId,
+) async {
+  final lens = ref.watch(activeInstanceProvider(ServiceKey.plex))?.id ?? '';
+  if (instanceId.isEmpty || instanceId == lens) {
+    return ref.watch(plexDevicesProvider.future);
+  }
+  return ref.watch(plexClientForProvider(instanceId)).getDevices();
+}, retry: noProviderRetry);
+
+/// [plexPlaylistsProvider] for one named connection; empty is the lens. See
+/// [plexOnDeckTabForProvider].
+final plexPlaylistsForProvider =
+    FutureProvider.family<List<PlexPlaylist>, String>((ref, instanceId) async {
+      final lens = ref.watch(activeInstanceProvider(ServiceKey.plex))?.id ?? '';
+      if (instanceId.isEmpty || instanceId == lens) {
+        return ref.watch(plexPlaylistsProvider.future);
+      }
+      return ref.watch(plexClientForProvider(instanceId)).getPlaylists();
+    }, retry: noProviderRetry);

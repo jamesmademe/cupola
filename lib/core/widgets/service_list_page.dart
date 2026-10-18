@@ -42,6 +42,7 @@ class ServiceListPage<T> extends StatelessWidget {
     this.banner,
     this.topPadding = 0,
     this.skeletonRowHeight = 72,
+    this.instanceId,
   }) : _summary = summary;
 
   /// The same page with no summary line, for a list whose rows already carry
@@ -60,10 +61,16 @@ class ServiceListPage<T> extends StatelessWidget {
     this.banner,
     this.topPadding = 0,
     this.skeletonRowHeight = 72,
+    this.instanceId,
   }) : _summary = null;
 
   /// Whose accent the page wears and whose empty state it names.
   final ServiceKey service;
+
+  /// The connection the list was read from, when it is not the lens's: the
+  /// failure band says since when that connection stopped answering and opens
+  /// its form. Null or empty is the lens.
+  final String? instanceId;
 
   final AsyncValue<List<T>> value;
 
@@ -119,6 +126,7 @@ class ServiceListPage<T> extends StatelessWidget {
       value: value,
       serviceName: serviceName,
       silentService: service,
+      instanceId: instanceId,
       onRetry: onRetry,
       isEmpty: (items) => items.isEmpty,
       emptyBuilder: AppEmptyStatePage(

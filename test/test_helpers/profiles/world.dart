@@ -39,6 +39,9 @@ abstract final class WorldHosts {
   /// requests.
   static const seerrCabin = 'http://cabin.home.arpa:5055';
 
+  /// The cabin's Plex, likewise in no profile: two of the other media server.
+  static const plexCabin = 'http://cabin.home.arpa:32400';
+
   /// A second Lidarr beside the first, for the vinyl rips: in no profile, for
   /// a test that adds it.
   static const lidarrVinyl = 'http://nas.home.arpa:8687';
@@ -113,6 +116,7 @@ abstract final class WorldIds {
   static const transmission = 'transmission';
   static const jellyfinCabin = 'jellyfin-cabin01';
   static const seerrCabin = 'seerr-cabin001';
+  static const plexCabin = 'plex-cabin01';
   static const lidarrVinyl = 'lidarr-vinyl01';
   static const seerrFriend = 'seerr-sara001';
   static const prowlarrTower = 'prowlarr-tower1';

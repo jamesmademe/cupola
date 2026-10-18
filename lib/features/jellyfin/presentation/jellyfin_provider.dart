@@ -270,15 +270,24 @@ final jellyfinLacksAdministratorProvider = Provider<bool>(
 
 /// [jellyfinLacksAdministratorProvider], for one named connection. Same rule:
 /// false until `/Users/Me` has said the token is a non-administrator's.
-final jellyfinLacksAdministratorForProvider = Provider.family<bool, String>(
-  (ref, instanceId) =>
-      ref
+///
+/// The lens's own id, and the empty id, collapse onto the plain provider, so
+/// an override of either still reaches both.
+final jellyfinLacksAdministratorForProvider = Provider.family<bool, String>((
+  ref,
+  instanceId,
+) {
+  final lens = ref.watch(activeInstanceProvider(ServiceKey.jellyfin))?.id ?? '';
+  if (instanceId.isEmpty || instanceId == lens) {
+    return ref.watch(jellyfinLacksAdministratorProvider);
+  }
+  return ref
           .watch(jellyfinCredentialKindForProvider(instanceId))
           .asData
           ?.value
           .lacksAdministrator ??
-      false,
-);
+      false;
+});
 
 final jellyfinUsersProvider = FutureProvider<List<JellyfinUserDto>>((
   ref,
@@ -297,3 +306,54 @@ final jellyfinTasksProvider = FutureProvider<List<JellyfinScheduledTask>>((
 ) async {
   return ref.watch(jellyfinClientProvider).getScheduledTasks();
 }, retry: noProviderRetry);
+
+/// [jellyfinUsersProvider] for one named connection; empty is the lens.
+///
+/// A visit that has a connection in view reads that connection's users on
+/// every tab. The lens's own id collapses onto the plain provider, so an
+/// override of either still reaches both, and so do the pages that read the
+/// lens. `retry: noProviderRetry` for the reason the plain one carries it.
+final jellyfinUsersForProvider =
+    FutureProvider.family<List<JellyfinUserDto>, String>((
+      ref,
+      instanceId,
+    ) async {
+      final lens =
+          ref.watch(activeInstanceProvider(ServiceKey.jellyfin))?.id ?? '';
+      if (instanceId.isEmpty || instanceId == lens) {
+        return ref.watch(jellyfinUsersProvider.future);
+      }
+      return ref.watch(jellyfinClientForProvider(instanceId)).getUsers();
+    }, retry: noProviderRetry);
+
+/// [jellyfinDevicesProvider] for one named connection; empty is the lens. See
+/// [jellyfinUsersForProvider].
+final jellyfinDevicesForProvider =
+    FutureProvider.family<List<JellyfinDevice>, String>((
+      ref,
+      instanceId,
+    ) async {
+      final lens =
+          ref.watch(activeInstanceProvider(ServiceKey.jellyfin))?.id ?? '';
+      if (instanceId.isEmpty || instanceId == lens) {
+        return ref.watch(jellyfinDevicesProvider.future);
+      }
+      return ref.watch(jellyfinClientForProvider(instanceId)).getDevices();
+    }, retry: noProviderRetry);
+
+/// [jellyfinTasksProvider] for one named connection; empty is the lens. See
+/// [jellyfinUsersForProvider].
+final jellyfinTasksForProvider =
+    FutureProvider.family<List<JellyfinScheduledTask>, String>((
+      ref,
+      instanceId,
+    ) async {
+      final lens =
+          ref.watch(activeInstanceProvider(ServiceKey.jellyfin))?.id ?? '';
+      if (instanceId.isEmpty || instanceId == lens) {
+        return ref.watch(jellyfinTasksProvider.future);
+      }
+      return ref
+          .watch(jellyfinClientForProvider(instanceId))
+          .getScheduledTasks();
+    }, retry: noProviderRetry);

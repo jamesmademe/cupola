@@ -1445,6 +1445,16 @@ class PlexFake extends ServiceFake {
         return NetworkReply.json(jsonFixtureMap('plex/sessions_idle.json'));
       case '/library/sections':
         return NetworkReply.json(jsonFixtureMap('plex/library_sections.json'));
+      // Nobody has authorized a device or made a playlist: the lists the
+      // Devices and Playlists tabs read answer empty.
+      case '/devices':
+        return NetworkReply.json({
+          'MediaContainer': {'size': 0, 'Device': const <Object?>[]},
+        });
+      case '/playlists':
+        return NetworkReply.json({
+          'MediaContainer': {'size': 0, 'Metadata': const <Object?>[]},
+        });
       case '/hubs/continueWatching':
       case '/hubs/home/continueWatching':
         return NetworkReply.json({

@@ -75,13 +75,18 @@ class ServiceOfflineState extends StatelessWidget {
     this.since,
     this.onOpenSettings,
   }) : _service = null,
-       _error = null;
+       _error = null,
+       instanceId = null;
 
   /// The leaf for a read of [service] that failed with [error], in the words
   /// the failure classification has for it. See the class comment.
   ///
   /// [onOpenSettings] defaults to [service]'s own connection form: a failed
   /// read is the moment the address or the key is most likely what changed.
+  ///
+  /// [instanceId] is the connection the failed read went to, when it is not
+  /// the lens's: the host the leaf names, how long it has been silent and the
+  /// form it opens are that connection's. Null or empty is the lens.
   ServiceOfflineState.failure({
     super.key,
     required ServiceKey service,
@@ -89,6 +94,7 @@ class ServiceOfflineState extends StatelessWidget {
     required this.onRetry,
     this.since,
     this.onOpenSettings,
+    this.instanceId,
   }) : serviceName = service.title,
        _service = service,
        _error = error;
@@ -147,6 +153,10 @@ class ServiceOfflineState extends StatelessWidget {
   /// every host has a router to push with.
   final VoidCallback? onOpenSettings;
 
+  /// Set by [ServiceOfflineState.failure] only: the connection that failed,
+  /// when it is not the lens's.
+  final String? instanceId;
+
   /// Set by [ServiceOfflineState.failure] only.
   final ServiceKey? _service;
   final Object? _error;
@@ -196,23 +206,45 @@ class ServiceOfflineState extends StatelessWidget {
     // From the failure, not its reason: a web page that answered in the
     // service's place names where, as Home and the connection test do.
     final message = failureMessageOf(service, _error);
-    final remedy = FailureRemedy.forReason(service, reason, gateway: gateway);
+    final remedy = FailureRemedy.forReason(
+      service,
+      reason,
+      instanceId: instanceId,
+      gateway: gateway,
+    );
 
     return Consumer(
       builder: (context, ref, _) {
         // How long, from the connection the host below belongs to, when the
         // caller did not say: only a silence has one.
         final quiet =
-            since ?? ref.watchSilence(context, service, silent: silent);
+            since ??
+            ref.watchSilence(
+              context,
+              service,
+              silent: silent,
+              instanceId: instanceId,
+            );
         final span = quiet == null ? null : formatElapsedSpan(quiet);
-        final host = service.extractHost(
-          ref.watch(activeInstanceProvider(service))?.url,
-        );
-        // The connection's own form, the lens's: after a failed read the
+        final named = instanceId?.isNotEmpty ?? false;
+        final connection = named
+            ? ref.watch(
+                currentSettingsProvider.select(
+                  (settings) => settings.instanceById(instanceId!),
+                ),
+              )
+            : ref.watch(activeInstanceProvider(service));
+        final host = service.extractHost(connection?.url);
+        // The connection's own form, the one the failed read went to (the
+        // lens's unless a page named another): after a failed read the
         // address or the key is the likeliest thing to have changed.
         void openForm() => onOpenSettings != null
             ? onOpenSettings!()
-            : FailureRemedy.openConnectionForm(context, service);
+            : FailureRemedy.openConnectionForm(
+                context,
+                service,
+                instanceId: instanceId,
+              );
         // The remedy's own way in, which lands on the Access row for a
         // gateway in front of the service.
         void applyRemedy() =>

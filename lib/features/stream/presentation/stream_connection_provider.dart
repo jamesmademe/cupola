@@ -4,10 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
+import 'package:cupola/features/services/presentation/connection_in_view.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/stream_server_client.dart';
 import 'package:cupola/features/stream/presentation/stream_activity_provider.dart';
 
@@ -23,16 +25,75 @@ String streamInstanceFor(
   SettingsModel settings,
   ServiceKey service,
   String? requested,
+) => namedConnectionOf(settings, service, requested);
+
+/// The connection a media server page reads, for a widget's build.
+///
+/// Two inputs and an order between them, which is the page's to choose:
+///
+///  * [requested], the page's own `?i=`;
+///  * the connection the visit to [service] has in view ([ConnectionInView]:
+///    what a link opened the service on, or what the lens sheet last chose).
+///
+/// A page that is **one connection's** (a library, an item) is [pinned], the
+/// default: its own `?i=` leads, because it says whose library or item this
+/// is, and the visit decides only for a page that names none. A tab's root is
+/// not: the `?i=` it carries is the location it was opened from, which a tab
+/// restores as it was left, query included. That link was read by the visit
+/// when it arrived, so the visit leads and a connection chosen in the lens
+/// sheet since is not undone by switching back to the tab. Neither: the
+/// lens, empty.
+String streamInstanceOf(
+  WidgetRef ref,
+  ServiceKey service,
+  String? requested, {
+  bool pinned = true,
+}) => _streamInstance(
+  ref.watch(currentSettingsProvider),
+  service,
+  requested,
+  ConnectionInView.maybeOf(ref.context, service)?.instanceId,
+  pinned,
+);
+
+/// [streamInstanceOf] for an event handler or a fetch: the same answer, read
+/// once and without registering a dependency.
+String streamInstanceNow(
+  WidgetRef ref,
+  ServiceKey service,
+  String? requested, {
+  bool pinned = true,
+}) => _streamInstance(
+  ref.read(currentSettingsProvider),
+  service,
+  requested,
+  ConnectionInView.maybeOf(ref.context, service, listen: false)?.instanceId,
+  pinned,
+);
+
+String _streamInstance(
+  SettingsModel settings,
+  ServiceKey service,
+  String? requested,
+  String? inView,
+  bool pinned,
 ) {
-  final id = requested?.trim() ?? '';
-  if (id.isEmpty) return '';
-  final instance = settings.instanceById(id);
-  return instance != null && instance.service == service ? id : '';
+  final named = streamInstanceFor(settings, service, requested);
+  final visit = streamInstanceFor(settings, service, inView);
+  final order = pinned ? [named, visit] : [visit, named];
+  return order.firstWhere((id) => id.isNotEmpty, orElse: () => '');
 }
 
-/// [streamInstanceFor] for a widget.
-String streamInstanceOf(WidgetRef ref, ServiceKey service, String? requested) =>
-    streamInstanceFor(ref.watch(currentSettingsProvider), service, requested);
+/// The id of the connection [instanceId] stands for: itself, or the lens's
+/// when it is empty. For what needs a connection to name, such as the form
+/// that edits it. Empty only when the service has no connection at all.
+String streamConnectionIdOf(
+  WidgetRef ref,
+  ServiceKey service,
+  String instanceId,
+) => instanceId.isNotEmpty
+    ? instanceId
+    : ref.watch(activeInstanceProvider(service))?.id ?? '';
 
 /// A media server's client for one named connection; empty is the active one.
 ///
@@ -55,6 +116,32 @@ final streamClientForProvider =
           ? ref.watch(jellyfinClientForProvider(key.instanceId))
           : ref.watch(plexClientForProvider(key.instanceId));
     });
+
+/// The libraries of one named connection of a media server; empty is the
+/// active one.
+///
+/// The lens's own connection collapses onto [jellyfinLibrariesProvider] or
+/// [plexLibrariesProvider], so the Overview, the Libraries tab and anything an
+/// override of either reaches read one answer. Every other connection asks
+/// its own client. `retry: noProviderRetry`, like the providers it derives
+/// from: a dark server is a Retry, not a spinner held through ten attempts.
+final streamLibrariesForProvider =
+    FutureProvider.family<List<StreamLibrary>, StreamConnection>((
+      ref,
+      key,
+    ) async {
+      final lens = ref.watch(activeInstanceProvider(key.service))?.id ?? '';
+      final isJellyfin = key.service == ServiceKey.jellyfin;
+      if (key.instanceId.isEmpty || key.instanceId == lens) {
+        return isJellyfin
+            ? ref.watch(jellyfinLibrariesProvider.future)
+            : ref.watch(plexLibrariesProvider.future);
+      }
+      final StreamServerClient client = isJellyfin
+          ? ref.watch(jellyfinClientForProvider(key.instanceId))
+          : ref.watch(plexClientForProvider(key.instanceId));
+      return client.getLibraries();
+    }, retry: noProviderRetry);
 
 /// One item on one connection, and where it is looked up.
 typedef StreamItemKey = ({

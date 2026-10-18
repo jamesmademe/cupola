@@ -155,6 +155,15 @@ abstract final class WorldConnections {
     viewerId: JellyfinFake.operatorId,
   );
 
+  /// The cabin's Plex, named by the user: in no profile, for a test that adds
+  /// it beside the unnamed one at home: two of the other media server.
+  static final plexCabin = _api(
+    WorldIds.plexCabin,
+    ServiceKey.plex,
+    WorldHosts.plexCabin,
+    label: 'Cabin',
+  );
+
   /// The cabin's Seerr, named by the user: in no profile, for a test that
   /// adds it beside the unnamed one at home: two Seerr, each answering for
   /// its own requests.

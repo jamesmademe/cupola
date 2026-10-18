@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show ProviderListenable;
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_radius.dart';
@@ -13,6 +14,7 @@ import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
+import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/presentation/dashboard_retry.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
@@ -20,6 +22,7 @@ import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/service_only_at_home.dart';
 
@@ -322,19 +325,63 @@ class ServiceOverviewRowsSkeleton extends StatelessWidget {
   }
 }
 
+/// The connection an Overview is about: the one [instanceId] names, else the
+/// lens's.
+///
+/// An id that names no connection reads the lens, as every page that takes a
+/// connection does.
+ServiceInstance? _overviewConnection(
+  WidgetRef ref,
+  ServiceKey service,
+  String? instanceId,
+) {
+  final lens = ref.watch(activeInstanceProvider(service));
+  if (instanceId == null || instanceId.isEmpty) return lens;
+  return ref.watch(
+        currentSettingsProvider.select(
+          (settings) => settings.instanceById(instanceId),
+        ),
+      ) ??
+      lens;
+}
+
+/// The probe of the connection an Overview is about: [serviceSummaryProvider]
+/// for the lens, which everything that reads the lens's health shares, and the
+/// connection's own probe for another one.
+ProviderListenable<AsyncValue<ServiceSummary>> _overviewSummary(
+  WidgetRef ref,
+  ServiceKey service,
+  String? instanceId,
+) {
+  final lensId = ref.watch(activeInstanceProvider(service))?.id;
+  if (instanceId == null || instanceId.isEmpty || instanceId == lensId) {
+    return serviceSummaryProvider(service);
+  }
+  return instanceSummaryProvider((service: service, instanceId: instanceId));
+}
+
 /// Host, version, whether it is answering, and which connection you are
 /// reading.
+///
+/// [instanceId] is the connection the page reads when that is not the lens's:
+/// a visit to a media server opened on another connection. Null or empty is
+/// the lens.
 class ServiceOverviewIdentity extends ConsumerWidget {
-  const ServiceOverviewIdentity({super.key, required this.service});
+  const ServiceOverviewIdentity({
+    super.key,
+    required this.service,
+    this.instanceId,
+  });
 
   final ServiceKey service;
+  final String? instanceId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    final summary = ref.watch(serviceSummaryProvider(service));
-    final instance = ref.watch(activeInstanceProvider(service));
+    final summary = ref.watch(_overviewSummary(ref, service, instanceId));
+    final instance = _overviewConnection(ref, service, instanceId);
     final hasLens = ref.watch(hasMultipleInstancesProvider(service));
 
     // The probe reduced to the connection vocabulary, **with its reason**. A
@@ -516,6 +563,9 @@ class _LensChip extends StatelessWidget {
 ///    page that already says it once on its own ([ownSilence]: Stream's
 ///    offline state, drawn when its own reads failed).
 ///
+/// "Lens" above is the connection the page reads: [instanceId] when the page
+/// reads another (a visit to a media server opened on one), else the lens.
+///
 /// A spread rather than a wrapper, so the page's list keeps building its
 /// sections lazily; called from the page's build with its [ref].
 List<Widget> sectionsOrOneLine(
@@ -523,21 +573,27 @@ List<Widget> sectionsOrOneLine(
   ServiceKey service,
   List<Widget> sections, {
   bool ownSilence = false,
+  String? instanceId,
 }) {
   final reason = ref.watch(
-    serviceSummaryProvider(
+    _overviewSummary(
+      ref,
       service,
+      instanceId,
     ).select((summary) => summary.asData?.value.failureReason),
   );
   return switch (reason) {
     ServiceFailureReason.onlyAtHome => [
-      ServiceOverviewOnlyAtHome(service: service),
+      ServiceOverviewOnlyAtHome(service: service, instanceId: instanceId),
     ],
     ServiceFailureReason.unreachableAtBoth => [
-      ServiceOverviewUnanswered(service: service),
+      ServiceOverviewUnanswered(service: service, instanceId: instanceId),
     ],
     ServiceFailureReason.unreachable when !ownSilence => [
-      ServiceOverviewUnanswered.atItsAddress(service: service),
+      ServiceOverviewUnanswered.atItsAddress(
+        service: service,
+        instanceId: instanceId,
+      ),
     ],
     _ => sections,
   };
@@ -549,22 +605,30 @@ List<Widget> sectionsOrOneLine(
 class ServiceOverviewUnanswered extends ConsumerWidget {
   /// Neither address answered: `Radarr did not answer at home or away`, then
   /// where, one address a line; its Retry asks both.
-  const ServiceOverviewUnanswered({super.key, required this.service})
-    : _atBoth = true;
+  const ServiceOverviewUnanswered({
+    super.key,
+    required this.service,
+    this.instanceId,
+  }) : _atBoth = true;
 
   /// The one address the connection has did not answer:
   /// `Radarr did not answer at nas.home.arpa:7878.`
   const ServiceOverviewUnanswered.atItsAddress({
     super.key,
     required this.service,
+    this.instanceId,
   }) : _atBoth = false;
 
   final ServiceKey service;
+
+  /// The connection that did not answer when it is not the lens's; null or
+  /// empty is the lens.
+  final String? instanceId;
   final bool _atBoth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final instance = ref.watch(activeInstanceProvider(service));
+    final instance = _overviewConnection(ref, service, instanceId);
     final name =
         (ref.watch(hasMultipleInstancesProvider(service)) && instance != null
             ? ref.watch(connectionNameProvider(instance.id))
@@ -614,13 +678,21 @@ class ServiceOverviewUnanswered extends ConsumerWidget {
 /// The one line of an Overview whose connection is reached only at home,
 /// read away from home: see [sectionsOrOneLine].
 class ServiceOverviewOnlyAtHome extends ConsumerWidget {
-  const ServiceOverviewOnlyAtHome({super.key, required this.service});
+  const ServiceOverviewOnlyAtHome({
+    super.key,
+    required this.service,
+    this.instanceId,
+  });
 
   final ServiceKey service;
 
+  /// The connection with no address away when it is not the lens's; null or
+  /// empty is the lens.
+  final String? instanceId;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final instance = ref.watch(activeInstanceProvider(service));
+    final instance = _overviewConnection(ref, service, instanceId);
     // The connection by its name when there are two: the other Radarr may
     // well have an address away.
     final name =

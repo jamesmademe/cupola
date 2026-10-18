@@ -99,16 +99,23 @@ class FailureRemedy {
   /// is the connection a page reads unless its link named another.
   ///
   /// [access] opens it on the Access row with that choice made.
+  ///
+  /// [instanceId] opens the form of that connection instead of the lens's:
+  /// the one a page that reads another connection failed on.
   static void openConnectionForm(
     BuildContext context,
     ServiceKey service, {
     AccessKind? access,
     bool away = false,
+    String? instanceId,
   }) {
-    final lens = ProviderScope.containerOf(
-      context,
-      listen: false,
-    ).read(activeInstanceProvider(service))?.id;
+    final named = instanceId ?? '';
+    final lens = named.isNotEmpty
+        ? named
+        : ProviderScope.containerOf(
+            context,
+            listen: false,
+          ).read(activeInstanceProvider(service))?.id;
     context.push(
       ServiceRoutes.settingsForConnection(
         service,

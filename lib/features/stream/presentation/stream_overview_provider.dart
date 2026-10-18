@@ -65,6 +65,8 @@ import 'package:cupola/core/utils/date_format.dart' show formatRelativeDateTime;
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/stream_semantics.dart';
@@ -349,3 +351,25 @@ final plexOnDeckProvider = FutureProvider.autoDispose<List<StreamItem>>((
   );
   return streamOnDeckPreview(items);
 }, retry: noProviderRetry);
+
+/// [plexOnDeckProvider] for one named Plex connection; empty is the lens.
+///
+/// The lens's own id collapses onto the plain provider, so an override of
+/// either still reaches both. Another connection asks its own client, with the
+/// same cap and the same cancellation, and carries `retry: noProviderRetry`
+/// for the reason the plain one does.
+final plexOnDeckForProvider = FutureProvider.autoDispose
+    .family<List<StreamItem>, String>((ref, instanceId) async {
+      final lens = ref.watch(activeInstanceProvider(ServiceKey.plex))?.id ?? '';
+      if (instanceId.isEmpty || instanceId == lens) {
+        return ref.watch(plexOnDeckProvider.future);
+      }
+      final client = ref.watch(plexClientForProvider(instanceId));
+      final cancelToken = CancelToken();
+      ref.onDispose(cancelToken.cancel);
+      final items = await client.getContinueWatching(
+        count: streamOnDeckPreviewLimit,
+        cancelToken: cancelToken,
+      );
+      return streamOnDeckPreview(items);
+    }, retry: noProviderRetry);

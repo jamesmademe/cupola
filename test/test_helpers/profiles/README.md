@@ -140,9 +140,9 @@ test's description. Seerr's own states are `SeerrBehaviour`s
 
 `WorldConnections` also holds connections no profile configures, for a
 test that adds one with `withConnection`: World B's Readarr, NZBGet, Unraid
-and NPM, a second Jellyfin and a second Seerr at the cabin
-(`jellyfinCabin`, `seerrCabin`, both labelled `Cabin`) beside the unnamed
-ones at home, a second Lidarr (`lidarrVinyl`, labelled `Vinyl`), a second
+and NPM, a second Jellyfin, a second Plex and a second Seerr at the cabin
+(`jellyfinCabin`, `plexCabin`, `seerrCabin`, all labelled `Cabin`) beside the
+unnamed ones at home, a second Lidarr (`lidarrVinyl`, labelled `Vinyl`), a second
 Prowlarr and a second Dockge on `tower` (`prowlarrTower`, `dockgeTower`, both
 labelled `Tower`, the Dockge running the first one's stacks), and a second
 Nginx Proxy Manager on `nas` (`npmNas`, labelled `Home`). Their Home decisions

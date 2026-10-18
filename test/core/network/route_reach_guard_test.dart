@@ -312,7 +312,7 @@ const _exceptions = <String, ({int count, String reason})>{
   ),
 
   // === Shown: a host in a sentence, the connection by its address ==========
-  'lib/core/widgets/service_offline_state.dart  lookup.url': (
+  'lib/core/widgets/service_offline_state.dart  .url': (
     count: 1,
     reason: 'The host named under an offline service.',
   ),
