@@ -16,6 +16,7 @@ library;
 import 'package:flutter/foundation.dart';
 
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 
 /// The place an attention row leads. See the library doc.
@@ -137,25 +138,81 @@ String attentionCountSpoken(int count, {bool floor = false}) =>
 /// [merge] builds the folded row from the kind and its members, so each
 /// service keeps its own words and its own door. Kinds are compared by
 /// equality, so a service passes its enum.
+///
+/// [identityOf] names the thing a member is about, where two members can be
+/// about the same one: the records of a season pack are one download, and one
+/// download is one fault however many records say so. Members of a kind that
+/// share an identity count once (the first stands for them), so a kind
+/// whose members are all one thing keeps its own row.
 List<T> foldAttention<T, K>(
   List<T> items, {
   required K Function(T item) kindOf,
   required T Function(K kind, List<T> members) merge,
+  Object Function(T item)? identityOf,
 }) {
   final byKind = <K, List<T>>{};
+  final seen = <K, Set<Object>>{};
   for (final item in items) {
-    byKind.putIfAbsent(kindOf(item), () => []).add(item);
+    final kind = kindOf(item);
+    final identity = identityOf;
+    if (identity != null &&
+        !seen.putIfAbsent(kind, () => {}).add(identity(item))) {
+      continue;
+    }
+    byKind.putIfAbsent(kind, () => []).add(item);
   }
   final emitted = <K>{};
   final folded = <T>[];
   for (final item in items) {
     final kind = kindOf(item);
+    if (!emitted.add(kind)) continue;
     final members = byKind[kind]!;
-    if (members.length == 1) {
-      folded.add(item);
-    } else if (emitted.add(kind)) {
-      folded.add(merge(kind, members));
-    }
+    folded.add(members.length == 1 ? members.single : merge(kind, members));
   }
   return List.unmodifiable(folded);
+}
+
+/// A folded row's headline and its sentence, which differ only where the
+/// count is a floor (`3+` is read `at least 3`).
+typedef AttentionWords = ({String headline, String spoken});
+
+/// `3 downloads stuck`, `3+ downloads stuck`: several downloads of a service
+/// that are not moving.
+AttentionWords stuckDownloadsWords(int count, {bool floor = false}) => (
+  headline:
+      '${attentionCount(count, floor: floor)} downloads ${StateWord.stuck.inline}',
+  spoken:
+      '${attentionCountSpoken(count, floor: floor)} downloads ${StateWord.stuck.inline}',
+);
+
+/// `3 imports failed`, `3+ imports failed`: several downloads an \*arr
+/// grabbed and could not move into the library.
+AttentionWords failedImportsWords(int count, {bool floor = false}) => (
+  headline:
+      '${attentionCount(count, floor: floor)} imports ${StateWord.failed.inline}',
+  spoken:
+      '${attentionCountSpoken(count, floor: floor)} imports ${StateWord.failed.inline}',
+);
+
+/// The key the page of the download an \*arr's queue [record] is names it by
+/// (`downloadPageKey` of the row the queue builds from it): the client's id
+/// for the transfer when the record carries one, else the record's own id.
+/// Null when the record names neither, which is a download with no page.
+String? arrQueueRecordDownloadKey(Map<String, dynamic> record) {
+  final downloadId = stringOrNull(record['downloadId'])?.trim();
+  if (downloadId != null && downloadId.isNotEmpty) return downloadId;
+  final id = intOrNull(record['id']);
+  return id == null || id <= 0 ? null : '$id';
+}
+
+/// The door of the download an \*arr's queue [record] is, on the connection
+/// [instanceId] read it from; null when the record has no page to open.
+AttentionDoor? arrQueueRecordDoor(
+  Map<String, dynamic> record, {
+  required String instanceId,
+}) {
+  final key = arrQueueRecordDownloadKey(record);
+  return key == null
+      ? null
+      : AttentionDoor.download(instanceId: instanceId, key: key);
 }

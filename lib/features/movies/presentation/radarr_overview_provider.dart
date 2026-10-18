@@ -27,7 +27,11 @@ import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/movies/presentation/movies_provider.dart';
+import 'package:cupola/features/services/domain/attention_door.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// How far ahead "Coming up" looks.
 const int radarrComingUpDays = 7;
@@ -207,17 +211,22 @@ enum RadarrAttentionKind {
 
 /// One row of Needs attention: what happened, to what, and when.
 ///
-/// The per-row cross-service action the board draws ("Open in qBittorrent",
-/// "Manual import") is deliberately absent: the bridge those need does not
-/// exist in `lib/` yet, and a button that cannot do the thing it names is worse
-/// than no button.
+/// Every row leads somewhere: a download's own page for one stuck or failed
+/// download, the Queue tab for the several a folded row stands for, the
+/// Wanted tab for the backlog. What the \*arr can do about a download it
+/// cannot import (a retry) is not a call this client makes, so no row carries
+/// a verb: the page it opens does.
 @immutable
 class RadarrAttentionItem {
   const RadarrAttentionItem({
     required this.kind,
     required this.headline,
     required this.detail,
-  });
+    this.door,
+    this.subject,
+    this.count = 1,
+    String? spokenHeadline,
+  }) : _spokenHeadline = spokenHeadline;
 
   final RadarrAttentionKind kind;
 
@@ -228,14 +237,31 @@ class RadarrAttentionItem {
   /// Empty when the record carried none.
   final String detail;
 
+  /// Where the row leads, or null where the app has no place that shows it.
+  final AttentionDoor? door;
+
+  /// What the fault is about, bare (`Nickel Boys`), for a folded row to name.
+  final String? subject;
+
+  /// How many faults the row stands for: one, or the downloads a folded row
+  /// folds. The section's own count adds these, so folding never changes how
+  /// many things need attention.
+  final int count;
+
+  /// [headline] as the ear should hear it, where it differs (`at least 3`
+  /// for a floor).
+  final String? _spokenHeadline;
+
   StatusTone get tone => kind.tone;
   IconData get icon => kind.icon;
 
   /// The row as a sentence, with the dots the layout uses turned back into
   /// commas. `·` is decoration, and a screen reader either names it or drops
   /// it depending on the user's punctuation setting.
-  String get spoken =>
-      joinSpokenParts([spokenFromDotted(headline), spokenFromDotted(detail)]);
+  String get spoken => joinSpokenParts([
+    spokenFromDotted(_spokenHeadline ?? headline),
+    spokenFromDotted(detail),
+  ]);
 }
 
 /// Reads the faults out of a page of **raw** `/queue` records.
@@ -247,9 +273,19 @@ class RadarrAttentionItem {
 /// Stalled is tested before import: a transfer that is not moving has not
 /// reached the import stage at all, and Radarr marks both with the same
 /// `trackedDownloadStatus: warning`.
+///
+/// Several downloads in one of the two states are one row (`3 downloads
+/// stuck`, the titles in the detail) whose door is the Queue tab, which lists
+/// them all; one of a kind keeps its own row and opens its own page. The
+/// records of one download count once. [instanceId] is the connection the
+/// records were read from, which a download's page is addressed by, and
+/// [cutShort] says the walk stopped on a full page, so a count taken in it is
+/// a floor.
 List<RadarrAttentionItem> radarrQueueFaults(
   List<Map<String, dynamic>> records, {
   required DateTime now,
+  String instanceId = '',
+  bool cutShort = false,
 }) {
   final items = <RadarrAttentionItem>[];
   for (final record in records) {
@@ -261,6 +297,7 @@ List<RadarrAttentionItem> radarrQueueFaults(
     final age = when == null ? null : formatRelativeDateTime(when, now: now);
     final message =
         stringOrNull(record['errorMessage']) ?? arrQueueWarningMessage(record);
+    final door = arrQueueRecordDoor(record, instanceId: instanceId);
 
     if (_isStalled(record)) {
       items.add(
@@ -272,6 +309,8 @@ List<RadarrAttentionItem> radarrQueueFaults(
             message,
             age,
           ]),
+          door: door,
+          subject: title,
         ),
       );
       continue;
@@ -283,11 +322,31 @@ List<RadarrAttentionItem> radarrQueueFaults(
           kind: RadarrAttentionKind.importFailed,
           headline: 'Import failed\u00A0· $title',
           detail: joinDisplayParts([message, age]),
+          door: door,
+          subject: title,
         ),
       );
     }
   }
-  return List.unmodifiable(items);
+  return foldAttention<RadarrAttentionItem, RadarrAttentionKind>(
+    items,
+    kindOf: (item) => item.kind,
+    // The download a row is: a record counted twice is not two faults.
+    identityOf: (item) => item.door ?? item,
+    merge: (kind, members) {
+      final words = kind == RadarrAttentionKind.stalled
+          ? stuckDownloadsWords(members.length, floor: cutShort)
+          : failedImportsWords(members.length, floor: cutShort);
+      return RadarrAttentionItem(
+        kind: kind,
+        headline: words.headline,
+        spokenHeadline: words.spoken,
+        detail: attentionNames(members.map((member) => member.subject ?? '')),
+        door: const AttentionDoor.tab(ServiceTab.queue),
+        count: members.length,
+      );
+    },
+  );
 }
 
 /// The backlog row, or null when there is no backlog to report, and null too
@@ -305,6 +364,8 @@ RadarrAttentionItem? radarrBelowCutoffItem(int? count) {
     // Names the mechanism rather than an instruction: nothing is wrong, Radarr
     // is simply still looking.
     detail: 'Radarr keeps searching for an upgrade',
+    // Wanted lists what is below its cutoff beside what is missing.
+    door: const AttentionDoor.tab(ServiceTab.wanted),
   );
 }
 
@@ -385,7 +446,15 @@ final radarrNeedsAttentionProvider =
       final cutoff = await ref.watch(radarrCutoffUnmetCountProvider.future);
       final backlog = radarrBelowCutoffItem(cutoff);
       return [
-        ...radarrQueueFaults(page.recordMaps, now: DateTime.now()),
+        ...radarrQueueFaults(
+          page.recordMaps,
+          now: DateTime.now(),
+          // The connection the queue was read from: a download's page is
+          // addressed by it.
+          instanceId:
+              ref.watch(activeInstanceProvider(ServiceKey.radarr))?.id ?? '',
+          cutShort: page.cutShort,
+        ),
         ?backlog,
       ];
     });

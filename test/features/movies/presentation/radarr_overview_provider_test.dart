@@ -6,6 +6,9 @@ import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/movies/presentation/radarr_overview_provider.dart';
+import 'package:cupola/features/services/domain/attention_door.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 
 import '../../../test_helpers/fake_services.dart';
 
@@ -90,7 +93,12 @@ ProviderContainer _container(_ScriptedRadarr service) {
     // Riverpod re-runs a failed provider on an exponential backoff; a test that
     // deliberately fails one would otherwise wait out the whole sequence.
     retry: (_, _) => null,
-    overrides: [radarrServiceProvider.overrideWith((ref) => service)],
+    overrides: [
+      radarrServiceProvider.overrideWith((ref) => service),
+      // The connection the lens is on, which a download's door is addressed
+      // by: none here, so the door names no connection.
+      activeInstanceProvider.overrideWith((ref, service) => null),
+    ],
   );
   addTearDown(container.dispose);
   return container;
@@ -408,6 +416,133 @@ void main() {
     });
   });
 
+  group('radarrQueueFaults leads to where the fault is fixed', () {
+    Map<String, dynamic> stalled(
+      String title, {
+      Object? id,
+      String? downloadId,
+    }) => {
+      'id': ?id,
+      'movie': {'title': title},
+      'status': 'warning',
+      'errorMessage': 'The download is stalled with no connections',
+      'downloadId': ?downloadId,
+    };
+
+    Map<String, dynamic> importFailed(String title, {Object? id}) => {
+      'id': ?id,
+      'movie': {'title': title},
+      'trackedDownloadState': 'importFailed',
+    };
+
+    test("one stuck download opens its own page, by the client's id", () {
+      final faults = radarrQueueFaults(
+        [stalled('Nickel Boys', id: 7, downloadId: 'ABC123')],
+        now: now,
+        instanceId: 'radarr',
+      );
+
+      expect(
+        faults.single.door,
+        const AttentionDoor.download(instanceId: 'radarr', key: 'ABC123'),
+      );
+    });
+
+    test('a record with no client id is addressed by its own id, and one with '
+        'neither has no page to open', () {
+      expect(
+        radarrQueueFaults(
+          [stalled('A', id: 7)],
+          now: now,
+          instanceId: 'radarr',
+        ).single.door,
+        const AttentionDoor.download(instanceId: 'radarr', key: '7'),
+      );
+      expect(radarrQueueFaults([stalled('A')], now: now).single.door, isNull);
+    });
+
+    test('several stuck downloads are one row that opens the Queue tab', () {
+      final faults = radarrQueueFaults([
+        stalled('A', id: 1, downloadId: 'X1'),
+        stalled('B', id: 2, downloadId: 'X2'),
+        stalled('C', id: 3, downloadId: 'X3'),
+      ], now: now);
+
+      final row = faults.single;
+      expect(row.kind, RadarrAttentionKind.stalled);
+      expect(row.headline, '3 downloads stuck');
+      expect(row.detail, 'A, B, C');
+      expect(row.count, 3);
+      expect(row.door, const AttentionDoor.tab(ServiceTab.queue));
+      expect(row.tone, StatusTone.warning);
+      expect(row.spoken, '3 downloads stuck, A, B, C');
+    });
+
+    test('each kind folds on its own, in the place of its first', () {
+      final faults = radarrQueueFaults([
+        stalled('A', id: 1, downloadId: 'X1'),
+        importFailed('One', id: 9),
+        stalled('B', id: 2, downloadId: 'X2'),
+        importFailed('Two', id: 10),
+      ], now: now);
+
+      expect(faults.map((fault) => fault.headline), [
+        '2 downloads stuck',
+        '2 imports failed',
+      ]);
+      expect(
+        faults.map((fault) => fault.door),
+        everyElement(const AttentionDoor.tab(ServiceTab.queue)),
+      );
+    });
+
+    test('one of a kind keeps its row beside a folded one', () {
+      final faults = radarrQueueFaults([
+        stalled('A', id: 1, downloadId: 'X1'),
+        stalled('B', id: 2, downloadId: 'X2'),
+        importFailed('Lone', id: 9),
+      ], now: now);
+
+      expect(faults, hasLength(2));
+      expect(faults[0].headline, '2 downloads stuck');
+      expect(faults[1].headline, 'Import failed · Lone');
+      expect(faults[1].door, isA<AttentionDownload>());
+    });
+
+    test('the records of one download are one fault, not two', () {
+      final faults = radarrQueueFaults([
+        stalled('Pack', id: 1, downloadId: 'SAME'),
+        stalled('Pack', id: 2, downloadId: 'SAME'),
+      ], now: now);
+
+      expect(faults, hasLength(1));
+      expect(faults.single.headline, 'Stuck · Pack');
+    });
+
+    test('a walk that stopped short counts a floor, and says so aloud', () {
+      final faults = radarrQueueFaults(
+        [
+          stalled('A', id: 1, downloadId: 'X1'),
+          stalled('B', id: 2, downloadId: 'X2'),
+        ],
+        now: now,
+        cutShort: true,
+      );
+
+      expect(faults.single.headline, '2+ downloads stuck');
+      expect(faults.single.spoken, 'at least 2 downloads stuck, A, B');
+    });
+
+    test('more than three names are counted, not listed', () {
+      final faults = radarrQueueFaults([
+        for (var i = 1; i <= 5; i++) stalled('T$i', id: i, downloadId: 'X$i'),
+      ], now: now);
+
+      expect(faults.single.headline, '5 downloads stuck');
+      expect(faults.single.detail, 'T1, T2, T3 and 2 more');
+    });
+  });
+
   group('radarrBelowCutoffItem', () {
     test('is backlog, and backlog is neutral', () {
       final item = radarrBelowCutoffItem(34)!;
@@ -415,6 +550,8 @@ void main() {
       expect(item.kind, RadarrAttentionKind.belowCutoff);
       expect(item.tone, StatusTone.neutral);
       expect(item.headline, '34 movies below your quality cutoff');
+      // Wanted lists what is below its cutoff beside what is missing.
+      expect(item.door, const AttentionDoor.tab(ServiceTab.wanted));
     });
 
     test('no backlog, no row', () {
