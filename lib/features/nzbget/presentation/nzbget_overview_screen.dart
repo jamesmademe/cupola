@@ -201,6 +201,8 @@ class _HistoryRow extends StatelessWidget {
       surface: colorScheme.surfaceContainerLow,
     );
 
+    final door = entry.door;
+
     return ServiceOverviewRow(
       spoken: entry.spoken,
       leading: Container(
@@ -216,6 +218,14 @@ class _HistoryRow extends StatelessWidget {
       // reason this section leads with them.
       titleColor: entry.outcome.isFault ? tone : null,
       detail: entry.detail,
+      // A fault leads to the History tab, which lists it; a job that finished
+      // as asked, or was removed on purpose, is only read.
+      onTap: door == null
+          ? null
+          : () => openAttentionDoor(context, ServiceKey.nzbget, door),
+      doorHint: door == null
+          ? null
+          : attentionDoorHint(ServiceKey.nzbget, door),
     );
   }
 }

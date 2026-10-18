@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_overview_provider.dart';
+import 'package:cupola/features/services/domain/attention_door.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
 
 /// Every rule on the NZBGet Overview is a top-level pure function taking an
 /// explicit `now`, so each boundary is exercised here without a clock, a
@@ -459,6 +461,78 @@ void main() {
         expect(section.rows.first.tone, StatusTone.warning);
       },
     );
+
+    test('a fault leads to the History tab, a job that finished as asked leads '
+        'nowhere', () {
+      final section = nzbgetHistoryToday([
+        _item(
+          name: 'Andor',
+          at: DateTime(2026, 9, 16, 12),
+          status: 'SUCCESS/ALL',
+        ),
+        _item(
+          name: 'Sugar',
+          at: DateTime(2026, 9, 16, 9),
+          status: 'FAILURE/PAR',
+        ),
+        _item(
+          name: 'Dupe',
+          at: DateTime(2026, 9, 16, 10),
+          status: 'DELETED/DUPE',
+        ),
+      ], now: now);
+
+      final byName = {for (final row in section.rows) row.name: row};
+      expect(
+        byName['Sugar']!.door,
+        const AttentionDoor.tab(ServiceTab.history),
+      );
+      expect(byName['Andor']!.door, isNull);
+      // Removed on purpose is not damage, and is not a door.
+      expect(byName['Dupe']!.door, isNull);
+    });
+
+    test('the failures of a day are one row, the warnings another, and the '
+        'finished jobs follow', () {
+      final section = nzbgetHistoryToday([
+        _item(
+          name: 'Done',
+          at: DateTime(2026, 9, 16, 13),
+          status: 'SUCCESS/ALL',
+        ),
+        _item(name: 'A', at: DateTime(2026, 9, 16, 9), status: 'FAILURE/PAR'),
+        _item(name: 'B', at: DateTime(2026, 9, 16, 10), status: 'FAILURE/PAR'),
+        _item(name: 'C', at: DateTime(2026, 9, 16, 11), status: 'FAILURE/PAR'),
+        _item(
+          name: 'W1',
+          at: DateTime(2026, 9, 16, 8),
+          status: 'WARNING/DAMAGED',
+        ),
+        _item(
+          name: 'W2',
+          at: DateTime(2026, 9, 16, 7),
+          status: 'WARNING/HEALTH',
+        ),
+      ], now: now);
+
+      expect(section.rows.map((row) => row.headline), [
+        '3 downloads failed',
+        '2 downloads with warnings',
+        'Done · success',
+      ]);
+      // Newest first, the order the day's faults sort in.
+      expect(section.rows.first.detail, 'C, B, A');
+      expect(section.rows.first.count, 3);
+      expect(section.rows.first.spoken, '3 downloads failed, C, B, A');
+      expect(
+        section.rows.first.door,
+        const AttentionDoor.tab(ServiceTab.history),
+      );
+      expect(section.rows.first.tone, StatusTone.warning);
+      // The header counts the jobs, not the rows.
+      expect(section.failed, 3);
+      expect(section.warned, 2);
+    });
 
     test('a day with nothing on it says nothing rather than zeroes', () {
       final section = nzbgetHistoryToday(const [], now: now);

@@ -47,6 +47,8 @@ import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
+import 'package:cupola/features/services/domain/attention_door.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 
 /// Rows the Queue section draws before the header's counts are the only place
@@ -484,6 +486,13 @@ String? _historyReason(NzbgetHistoryOutcome outcome, String reason) {
 }
 
 /// One history row: the job, how it ended, and when.
+///
+/// A fault (failed, or finished with a warning) leads to the History tab,
+/// which lists it: NZBGet's history has no page of its own for a job in this
+/// app, and the retry NZBGet offers on a failed record is the `History*`
+/// command family the client never sends, so no row carries a verb. Several
+/// faults of one outcome are one row ([summary]), `3 downloads failed`, the
+/// names in the detail.
 @immutable
 class NzbgetHistoryEntry {
   const NzbgetHistoryEntry({
@@ -491,24 +500,39 @@ class NzbgetHistoryEntry {
     required this.outcome,
     required this.detail,
     required this.time,
+    this.door,
+    this.summary,
+    this.count = 1,
   });
 
   final String name;
   final NzbgetHistoryOutcome outcome;
 
   /// The reason, the category and how long ago, as far as the record carried
-  /// them.
+  /// them. For a folded row, the names it stands for.
   final String detail;
 
   final DateTime time;
 
+  /// Where the row leads: the History tab for a fault, null for a job that
+  /// finished as asked or was removed on purpose.
+  final AttentionDoor? door;
+
+  /// What a folded row says in place of one job's name and outcome
+  /// (`3 downloads failed`), or null for a row about one job.
+  final String? summary;
+
+  /// How many jobs the row stands for.
+  final int count;
+
   StatusTone get tone => outcome.tone;
 
-  /// `Sugar.S02E01 · failed`.
-  String get headline => '$name\u00A0· ${outcome.label}';
+  /// `Sugar.S02E01 · failed`, or the folded row's count.
+  String get headline => summary ?? '$name\u00A0· ${outcome.label}';
 
-  String get spoken =>
-      joinSpokenParts([name, outcome.label, spokenFromDotted(detail)]);
+  String get spoken => summary != null
+      ? joinSpokenParts([summary!, spokenFromDotted(detail)])
+      : joinSpokenParts([name, outcome.label, spokenFromDotted(detail)]);
 }
 
 /// The History region: its rows and the counts its header states.
@@ -521,7 +545,8 @@ class NzbgetHistorySection {
     required this.warned,
   });
 
-  /// At most [nzbgetHistoryTodayLimit] rows, faults first.
+  /// At most [nzbgetHistoryTodayLimit] rows, faults first, the faults of one
+  /// outcome folded into one row.
   final List<NzbgetHistoryEntry> rows;
 
   final int completed;
@@ -552,7 +577,9 @@ class NzbgetHistorySection {
 /// how a list ordered by time stops being ordered by time.
 ///
 /// Faults first is the mobile board's own instruction ("History failed first").
-/// Within each group, newest first.
+/// Within each group, newest first. The faults of one outcome are one row (`3
+/// downloads failed`) however many there are: they are counted in the header
+/// either way, and the preview is three rows.
 NzbgetHistorySection nzbgetHistoryToday(
   List<NzbgetHistoryItem> items, {
   required DateTime now,
@@ -596,6 +623,9 @@ NzbgetHistorySection nzbgetHistoryToday(
           formatRelativeDateTime(time, now: now),
         ]),
         time: time,
+        door: outcome.isFault
+            ? const AttentionDoor.tab(ServiceTab.history)
+            : null,
       ),
     );
   }
@@ -609,8 +639,32 @@ NzbgetHistorySection nzbgetHistoryToday(
     return byFault != 0 ? byFault : b.time.compareTo(a.time);
   });
 
+  // The faults first, the several of one outcome as one row; then the clock.
+  final faults = foldAttention<NzbgetHistoryEntry, NzbgetHistoryOutcome>(
+    [
+      for (final entry in entries)
+        if (entry.outcome.isFault) entry,
+    ],
+    kindOf: (entry) => entry.outcome,
+    merge: (outcome, members) => NzbgetHistoryEntry(
+      name: '${members.length} downloads',
+      outcome: outcome,
+      summary: outcome == NzbgetHistoryOutcome.failed
+          ? '${members.length} downloads ${StateWord.failed.inline}'
+          : '${members.length} downloads with warnings',
+      detail: attentionNames(members.map((member) => member.name)),
+      time: members.first.time,
+      door: const AttentionDoor.tab(ServiceTab.history),
+      count: members.length,
+    ),
+  );
+  final rest = [
+    for (final entry in entries)
+      if (!entry.outcome.isFault) entry,
+  ];
+
   return NzbgetHistorySection(
-    rows: List.unmodifiable(entries.take(limit)),
+    rows: List.unmodifiable([...faults, ...rest].take(limit)),
     completed: completed,
     failed: failed,
     warned: warned,
