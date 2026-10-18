@@ -324,6 +324,148 @@ class _StackHeader extends StatelessWidget {
   }
 }
 
+/// `4 of 5 clean · Bazarr degraded · 1 not set up`.
+///
+/// *Clean* is the honest word and it is not "online": a service that answers
+/// while its indexers fail is up and not clean, and a header that counted it
+/// as fine would contradict the amber figure on the card two rows below, or
+/// the fault Needs you holds on it ([faultedServices]).
+///
+/// Watching these providers here costs no extra fetch: every cell in the band
+/// already watches the same ones.
+///
+/// A provider rather than the band's own watches: the band rebuilt with every
+/// read of every one of its services, and every cell under it with the band,
+/// each time a summary or a figure moved. A provider of a string notifies only
+/// when the line changes, so the band and its cells sit still.
+final domainHealthLineProvider = Provider.autoDispose.family<String?, ServiceDomain>((
+  ref,
+  domain,
+) {
+  final settings = ref.watch(currentSettingsProvider);
+  final faulted = faultedServices(
+    ref.watch(dashboardDecisionsProvider).decisions,
+  );
+  var configured = 0;
+  var clean = 0;
+  var notSetUp = 0;
+  var onlyAtHome = 0;
+  final qualifiers = <String>[];
+
+  for (final service in domain.services) {
+    if (!settings.hasServiceConnection(service)) {
+      notSetUp++;
+      continue;
+    }
+    // Only a Seerr account that signed out: counted apart, as the stack's
+    // own header counts it, neither among the services that answered nor
+    // among those to set up.
+    if (!settings.isServiceConfigured(service)) {
+      // A secret this device would not hand over is a fault Needs you
+      // holds, named as one; a Seerr account that signed out is not.
+      qualifiers.add(
+        settings.unreadConnectionOf(service) != null
+            ? '${service.title} needs a look'
+            : '${service.title} signed out',
+      );
+      continue;
+    }
+    configured++;
+
+    final folded = ref.watch(foldedServiceHealthProvider(service));
+    final summary = ref.watch(serviceSummaryProvider(service));
+    final reachability = serviceReachabilityOf(summary);
+
+    // The lens resting on a signed-out connection beside a working one:
+    // the person's step, not a fault to look at.
+    if (_failureOf(summary) == ServiceFailureReason.sessionEnded) {
+      qualifiers.add('${service.title} signed out');
+      continue;
+    }
+
+    // A connection reached that never replied is no answer either.
+    final silent = folded.offline + folded.stuck;
+    if (folded.total > 1 && silent > 0 && silent < folded.total) {
+      qualifiers.add('${service.title} degraded');
+      continue;
+    }
+    if (reachability == ServiceReachability.offline) {
+      qualifiers.add('${service.title} did not answer');
+      continue;
+    }
+    // A refusal or a fault: it answered, so it is not "did not answer", and
+    // it is not clean either. The cell below, or Needs you, names which
+    // fault.
+    if (reachability == ServiceReachability.fault ||
+        folded.faulted > 0 ||
+        faulted.contains(service)) {
+      qualifiers.add('${service.title} needs a look');
+      continue;
+    }
+    if (reachability == ServiceReachability.onlyAtHome) {
+      // Not asked, away from home: a setup, never a verdict, out of the
+      // count `clean` is said against, and counted once after the rest,
+      // as the header counts it: five names said nothing a figure didn't.
+      configured--;
+      onlyAtHome++;
+      continue;
+    }
+    if (reachability == ServiceReachability.checking) {
+      // Not a fault and not clean: nothing has failed, we simply do not know
+      // yet. Counted out of `clean` so the line cannot claim a service is fine
+      // before it has answered, and named without a verdict.
+      qualifiers.add('${service.title} checking');
+      continue;
+    }
+
+    // The same provider the cell paints from, so the line and the card
+    // cannot disagree about a folded service.
+    final signalState = folded.total > 1
+        ? ref.watch(foldedServiceSignalPairProvider(service))
+        : ref.watch(serviceSignalPairProvider(service));
+    // Clean is a claim about the figures, and a card still waiting for them,
+    // or showing a dash because they failed, has not made one. Counting either
+    // as clean put "3 of 3 clean" over a Dockge card that never resolved.
+    if (signalState.hasError && !signalState.isLoading) {
+      qualifiers.add('${service.title} $servicesFiguresUnavailableLabel');
+      continue;
+    }
+    if (!signalState.hasValue) {
+      qualifiers.add('${service.title} checking');
+      continue;
+    }
+    final signal = signalState.value;
+    final flagged =
+        signal != null &&
+        (signal.primary.tone == StatusTone.warning ||
+            signal.secondary?.tone == StatusTone.warning);
+    if (flagged) {
+      qualifiers.add('${service.title} needs a look');
+    } else {
+      clean++;
+    }
+  }
+
+  if (configured == 0) {
+    // A band whose only connection signed out still says so, and one away
+    // from home whose every service works only there.
+    return qualifiers.isEmpty && onlyAtHome == 0
+        ? null
+        : [
+            ...qualifiers,
+            if (onlyAtHome > 0) '$onlyAtHome ${StateWord.onlyAtHome.inline}',
+            if (notSetUp > 0) '$notSetUp not set up',
+          ].join(dotSeparator);
+  }
+  return serviceDomainHealthLine(
+    clean: clean,
+    total: configured,
+    qualifiers: qualifiers,
+    onlyAtHome: onlyAtHome,
+    notSetUp: notSetUp,
+  );
+});
+
 /// One domain of the stack: an engraved header over its cards.
 class _DomainBand extends ConsumerWidget {
   const _DomainBand({
@@ -344,7 +486,9 @@ class _DomainBand extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final health = role == ServiceMatrixRole.readout ? _health(ref) : null;
+    final health = role == ServiceMatrixRole.readout
+        ? ref.watch(domainHealthLineProvider(domain))
+        : null;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -363,141 +507,6 @@ class _DomainBand extends ConsumerWidget {
         ),
         _ServiceMatrixBand(subjects: subjects, role: role),
       ],
-    );
-  }
-
-  /// `4 of 5 clean · Bazarr degraded · 1 not set up`.
-  ///
-  /// *Clean* is the honest word and it is not "online": a service that answers
-  /// while its indexers fail is up and not clean, and a header that counted it
-  /// as fine would contradict the amber figure on the card two rows below, or
-  /// the fault Needs you holds on it ([faultedServices]).
-  ///
-  /// Watching these providers here costs no extra fetch: every cell in the band
-  /// already watches the same ones.
-  String? _health(WidgetRef ref) {
-    final settings = ref.watch(currentSettingsProvider);
-    final faulted = faultedServices(
-      ref.watch(dashboardDecisionsProvider).decisions,
-    );
-    var configured = 0;
-    var clean = 0;
-    var notSetUp = 0;
-    var onlyAtHome = 0;
-    final qualifiers = <String>[];
-
-    for (final subject in subjects) {
-      final service = subject.service;
-      if (!settings.hasServiceConnection(service)) {
-        notSetUp++;
-        continue;
-      }
-      // Only a Seerr account that signed out: counted apart, as the stack's
-      // own header counts it, neither among the services that answered nor
-      // among those to set up.
-      if (!settings.isServiceConfigured(service)) {
-        // A secret this device would not hand over is a fault Needs you
-        // holds, named as one; a Seerr account that signed out is not.
-        qualifiers.add(
-          settings.unreadConnectionOf(service) != null
-              ? '${service.title} needs a look'
-              : '${service.title} signed out',
-        );
-        continue;
-      }
-      configured++;
-
-      final folded = ref.watch(foldedServiceHealthProvider(service));
-      final summary = ref.watch(serviceSummaryProvider(service));
-      final reachability = serviceReachabilityOf(summary);
-
-      // The lens resting on a signed-out connection beside a working one:
-      // the person's step, not a fault to look at.
-      if (_failureOf(summary) == ServiceFailureReason.sessionEnded) {
-        qualifiers.add('${service.title} signed out');
-        continue;
-      }
-
-      // A connection reached that never replied is no answer either.
-      final silent = folded.offline + folded.stuck;
-      if (folded.total > 1 && silent > 0 && silent < folded.total) {
-        qualifiers.add('${service.title} degraded');
-        continue;
-      }
-      if (reachability == ServiceReachability.offline) {
-        qualifiers.add('${service.title} did not answer');
-        continue;
-      }
-      // A refusal or a fault: it answered, so it is not "did not answer", and
-      // it is not clean either. The cell below, or Needs you, names which
-      // fault.
-      if (reachability == ServiceReachability.fault ||
-          folded.faulted > 0 ||
-          faulted.contains(service)) {
-        qualifiers.add('${service.title} needs a look');
-        continue;
-      }
-      if (reachability == ServiceReachability.onlyAtHome) {
-        // Not asked, away from home: a setup, never a verdict, out of the
-        // count `clean` is said against, and counted once after the rest,
-        // as the header counts it: five names said nothing a figure didn't.
-        configured--;
-        onlyAtHome++;
-        continue;
-      }
-      if (reachability == ServiceReachability.checking) {
-        // Not a fault and not clean: nothing has failed, we simply do not know
-        // yet. Counted out of `clean` so the line cannot claim a service is fine
-        // before it has answered, and named without a verdict.
-        qualifiers.add('${service.title} checking');
-        continue;
-      }
-
-      // The same provider the cell paints from, so the line and the card
-      // cannot disagree about a folded service.
-      final signalState = folded.total > 1
-          ? ref.watch(foldedServiceSignalPairProvider(service))
-          : ref.watch(serviceSignalPairProvider(service));
-      // Clean is a claim about the figures, and a card still waiting for them,
-      // or showing a dash because they failed, has not made one. Counting either
-      // as clean put "3 of 3 clean" over a Dockge card that never resolved.
-      if (signalState.hasError && !signalState.isLoading) {
-        qualifiers.add('${service.title} $servicesFiguresUnavailableLabel');
-        continue;
-      }
-      if (!signalState.hasValue) {
-        qualifiers.add('${service.title} checking');
-        continue;
-      }
-      final signal = signalState.value;
-      final flagged =
-          signal != null &&
-          (signal.primary.tone == StatusTone.warning ||
-              signal.secondary?.tone == StatusTone.warning);
-      if (flagged) {
-        qualifiers.add('${service.title} needs a look');
-      } else {
-        clean++;
-      }
-    }
-
-    if (configured == 0) {
-      // A band whose only connection signed out still says so, and one away
-      // from home whose every service works only there.
-      return qualifiers.isEmpty && onlyAtHome == 0
-          ? null
-          : [
-              ...qualifiers,
-              if (onlyAtHome > 0) '$onlyAtHome ${StateWord.onlyAtHome.inline}',
-              if (notSetUp > 0) '$notSetUp not set up',
-            ].join(dotSeparator);
-    }
-    return serviceDomainHealthLine(
-      clean: clean,
-      total: configured,
-      qualifiers: qualifiers,
-      onlyAtHome: onlyAtHome,
-      notSetUp: notSetUp,
     );
   }
 
@@ -581,9 +590,18 @@ Iterable<InstanceRef> pickerSubjectsOf(
 ///
 /// Public for the reason [pickerSubjectsOf] is: whatever speaks about the
 /// floor's cells has to read their state the way the cells do.
+///
+/// A probe being read again keeps the verdict of the last one: Riverpod draws
+/// a reload as `AsyncLoading` carrying the previous answer, and reading only
+/// `AsyncData` turned every poll into a flash of *checking* on the cell's pip
+/// and on its band's line, and rebuilt the band twice for it.
 ServiceReachability serviceReachabilityOf(AsyncValue<ServiceSummary> summary) =>
     switch (summary) {
-      AsyncData(:final value) => switch (value.status) {
+      AsyncValue(:final error?) =>
+        failureDidNotAnswer(classifyConnectionFailure(error))
+            ? ServiceReachability.offline
+            : ServiceReachability.fault,
+      AsyncValue(:final value?) => switch (value.status) {
         ServiceSummaryStatus.online => ServiceReachability.online,
         ServiceSummaryStatus.fault => ServiceReachability.fault,
         ServiceSummaryStatus.offline => ServiceReachability.offline,
@@ -593,18 +611,15 @@ ServiceReachability serviceReachabilityOf(AsyncValue<ServiceSummary> summary) =>
         // build. Until then it says nothing about the server.
         ServiceSummaryStatus.notSetUp => ServiceReachability.checking,
       },
-      AsyncError(:final error) =>
-        failureDidNotAnswer(classifyConnectionFailure(error))
-            ? ServiceReachability.offline
-            : ServiceReachability.fault,
       _ => ServiceReachability.checking,
     };
 
-/// Why the probe behind [summary] failed, when it did.
+/// Why the probe behind [summary] failed, when it did. A reload keeps the
+/// last probe's reason, as [serviceReachabilityOf] keeps its verdict.
 ServiceFailureReason? _failureOf(AsyncValue<ServiceSummary> summary) =>
     switch (summary) {
-      AsyncData(:final value) => value.failureReason,
-      AsyncError(:final error) => classifyConnectionFailure(error),
+      AsyncValue(:final error?) => classifyConnectionFailure(error),
+      AsyncValue(:final value?) => value.failureReason,
       _ => null,
     };
 
