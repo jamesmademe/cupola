@@ -1379,14 +1379,6 @@ void main() {
       );
       await tester.tap(find.widgetWithText(FilledButton, 'Add to Sonarr'));
       await _answer(tester);
-      // ignore: avoid_print
-      print(
-        tester
-            .widgetList<Text>(find.byType(Text))
-            .map((t) => t.data ?? t.textSpan?.toPlainText())
-            .join(' | '),
-      );
-
       expect(find.text('All episodes'), findsOneWidget);
       expect(find.text('Every episode, aired and to come'), findsOneWidget);
       expect(find.text('Standard'), findsOneWidget);

@@ -74,7 +74,7 @@ void main() {
 
   test('nothing after dispose', () async {
     var closed = 0;
-    final idle = IdleClose(after: after, onIdle: () => closed++)
+    IdleClose(after: after, onIdle: () => closed++)
       ..settle()
       ..dispose();
 
