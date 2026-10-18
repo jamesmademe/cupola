@@ -15,11 +15,16 @@ The first release of Cupola. Everything before it was published as Seekarr (up t
   needs you, as modules you keep, order or leave out.
 - **Discover:** trending, a calendar, every way in (genres, networks, studios,
   people, decades), one search across Seerr, the *arrs, Jellyfin and Plex, and one
-  page per title to decide and act.
+  page per title to decide and act, with its scores (Seerr fills the ones no *arr
+  holds). A season or an episode opened from Jellyfin or Plex lands on its series.
 - **Activity:** *Needs you* says what went wrong in plain words and leads with the
   way out; downloads from all four clients sit in one list that keeps itself up to
-  date.
-- **Stack:** every service in its own room, with its own tabs.
+  date, and says so when a client's figures stop updating rather than showing old
+  speeds. Transmission takes a `.torrent` file from the device.
+- **Stack:** every service in its own room, with its own tabs. An Overview's
+  *Needs attention* rows open where the problem is fixed, and the same fault on
+  several items is one row. Readarr's library is a wall of author portraits, as
+  Lidarr's is of artists.
 - **For the household:** a member signs in to Seerr with their own account and gets
   Home, Discover and their requests, without the operator's controls.
 - **Widgets and notifications** on iOS and Android, worked out on the phone itself:
@@ -28,7 +33,8 @@ The first release of Cupola. Everything before it was published as Seekarr (up t
   and Cupola uses whichever answers.
 - **A new phone in one code:** *Set up another device* copies every connection over
   your home network, encrypted. *Invite someone* hands a household member the way to
-  your Seerr, never its API key.
+  your Seerr, never its API key. Invite and page links (`cupola://`) open the app on
+  the Mac as well as on the phone, even when it was closed.
 - **Self-signed certificates and gateways:** trust on first use with pinning per
   host; Cloudflare Access service tokens, proxy passwords and custom headers.
 - Light and dark themes, large text, VoiceOver and TalkBack, phone first and then
