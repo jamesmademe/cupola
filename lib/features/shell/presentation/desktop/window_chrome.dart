@@ -18,6 +18,8 @@ import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/activity/data/activity_answered.dart';
 import 'package:cupola/features/activity/domain/activity_readout.dart'
     show activityAnswerLine;
+import 'package:cupola/features/services/domain/service_tab.dart'
+    show isServiceTabRoot;
 import 'package:cupola/features/services/domain/source_coverage.dart'
     show coverageFailureSentence;
 import 'package:cupola/features/services/presentation/services_provider.dart'
@@ -178,6 +180,16 @@ class WindowChrome extends ConsumerWidget {
       orElse: () => ServiceKey.seerr,
     );
     if (service.routeParam != crumbSegments[1]) return null;
+    // A media server's tab names the connection it reads in its own header,
+    // which reads what the visit has in view. This strip only has the
+    // location, which at a tab's root carries the link the tab was opened
+    // from or none, and so would name the lens, or a connection chosen since
+    // in the lens sheet: a second, wrong, reading beside the right one. A page
+    // pushed from a tab is one connection's, and its location says which.
+    if (service.domain == ServiceDomain.stream &&
+        isServiceTabRoot(service, location.path)) {
+      return null;
+    }
     // The connection the page reads: a detail page opened with `?i=` reads
     // that one, whatever the lens is on.
     final instanceId = locationInstanceId(ref, service, location);

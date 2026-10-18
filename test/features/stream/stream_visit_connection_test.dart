@@ -50,12 +50,14 @@ final _twoPlex = Profiles.p1
 const _jellyfin = ServiceKey.jellyfin;
 const _plex = ServiceKey.plex;
 
-/// The whole app, on [profile]'s household, with its own router.
+/// The whole app, on [profile]'s household, with its own router: a phone's
+/// screen unless [size] says otherwise.
 Future<(ProfileHarness, GoRouter, ProviderContainer)> _app(
   WidgetTester tester,
-  ConfigProfile profile,
-) async {
-  tester.view.physicalSize = const Size(390, 3000);
+  ConfigProfile profile, {
+  Size size = const Size(390, 3000),
+}) async {
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   final harness = await ProfileHarness.start(profile, now: _now);
@@ -470,6 +472,77 @@ void main() {
 
       await _close(tester, harness, container);
     });
+  });
+
+  group('in a desktop window', () {
+    testWidgets(
+      'the header names the connection in view, on every tab',
+      (tester) async {
+        final (harness, router, container) = await _app(
+          tester,
+          _twoJellyfin,
+          size: const Size(1440, 900),
+        );
+        router.go(
+          ServiceRoutes.streamActivity(
+            _jellyfin,
+            instanceId: WorldIds.jellyfinCabin,
+          ),
+        );
+        await _answer(tester);
+        expect(_badge(tester), 'Cabin');
+
+        _forget(harness);
+        await _openTab(tester, ServiceTab.users);
+        expect(_badge(tester), 'Cabin');
+        expect(_reached(harness, WorldIds.jellyfinCabin), contains('/Users'));
+        expect(_reached(harness, WorldIds.jellyfin), isNot(contains('/Users')));
+        expect(_lensOf(container, _jellyfin), WorldIds.jellyfin);
+
+        await _chooseInLensSheet(tester, 'Jellyfin 1');
+        expect(_badge(tester), 'Jellyfin 1');
+
+        await _close(tester, harness, container);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+    );
+
+    testWidgets(
+      'the strip above does not name a second connection at a tab, and names '
+      'the one a pushed page is on',
+      (tester) async {
+        final (harness, router, container) = await _app(
+          tester,
+          _twoJellyfin,
+          size: const Size(1440, 900),
+        );
+        router.go(
+          ServiceRoutes.streamActivity(
+            _jellyfin,
+            instanceId: WorldIds.jellyfinCabin,
+          ),
+        );
+        await _answer(tester);
+        await _openTab(tester, ServiceTab.users);
+        // The location at a tab's root says the lens, or a link already read:
+        // the header's badge is the one reading.
+        expect(find.textContaining('Lens: '), findsNothing);
+        expect(_badge(tester), 'Cabin');
+
+        // A page pushed from a tab is one connection's, and says which.
+        router.go(
+          ServiceRoutes.jellyfinItem(
+            'jf-spring',
+            instanceId: WorldIds.jellyfinCabin,
+          ),
+        );
+        await _answer(tester);
+        expect(find.text('Lens: Cabin'), findsOneWidget);
+
+        await _close(tester, harness, container);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+    );
   });
 
   group('Plex', () {
