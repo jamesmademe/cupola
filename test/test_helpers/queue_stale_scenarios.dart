@@ -257,7 +257,7 @@ class QueueStaleScene {
       .join(' | ');
 
   /// A row that gave up its time left for the age of its figures.
-  Finder get rowsSayAge => find.textContaining('as of ');
+  Finder get rowsSayAge => find.textContaining(RegExp('as of |not updating'));
 
   /// How many times the queue was asked for, hung requests included.
   int get queueReads => harness.network.requests.where(c.isQueueRead).length;

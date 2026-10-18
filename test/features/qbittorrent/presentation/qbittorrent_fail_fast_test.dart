@@ -305,7 +305,7 @@ void main() {
       expect(find.byType(FaultBand), findsOneWidget);
       expect(find.text('Ubuntu.ISO'), findsOneWidget);
       expect(find.textContaining('7\u00A0min'), findsNothing);
-      expect(find.text('as of just now'), findsOneWidget);
+      expect(find.text('not updating'), findsOneWidget);
 
       // And the age moves with the minutes, not with the three-second poll.
       now = now.add(const Duration(minutes: 6));

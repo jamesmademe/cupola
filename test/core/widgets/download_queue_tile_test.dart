@@ -330,6 +330,30 @@ void main() {
       expect(find.text('as of 4\u00A0min ago'), findsOneWidget);
     });
 
+    testWidgets('under a minute it says it is not updating, never "just '
+        'now", and its rates go', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: DownloadQueueTile(
+              title: 'Dune.2021.2160p',
+              subtitle: '12\u00A0min left',
+              progress: 0.63,
+              percentage: 63,
+              accent: AppColors.sabnzbd,
+              metrics: [DownloadQueueMetric(label: '12.1\u00A0MB/s')],
+              sampleAge: Duration(seconds: 20),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('not updating'), findsOneWidget);
+      expect(find.textContaining('just now'), findsNothing);
+      expect(find.text('12.1\u00A0MB/s'), findsNothing);
+      expect(find.bySemanticsLabel(RegExp('MB/s')), findsNothing);
+    });
+
     testWidgets('the bar keeps its position and loses its colour', (
       tester,
     ) async {

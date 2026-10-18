@@ -318,7 +318,9 @@ class DownloadQueueTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  if (metrics.isNotEmpty) ...[
+                  // Rates stop being true with the sample they came from: a
+                  // stale row draws none rather than a speed that looks live.
+                  if (metrics.isNotEmpty && sampleAge == null) ...[
                     const SizedBox(height: AppSpacing.xs),
                     ExcludeSemantics(
                       child: Row(
@@ -353,8 +355,18 @@ class DownloadQueueTile extends StatelessWidget {
     final age = sampleAge;
     return [
       ?subtitleLead,
-      age == null ? subtitle : 'as of ${formatDurationAge(age)}',
+      age == null ? subtitle : _ageWords(age),
     ].where((part) => part.isNotEmpty).join(dotSeparator);
+  }
+
+  /// The age a stale row says instead of its figures. Under a minute the
+  /// app's age reads "just now", which beside a band saying the figures
+  /// stopped updating would say the opposite: the row says it too.
+  static String _ageWords(Duration age) {
+    final spoken = formatDurationAge(age);
+    return spoken == formatDurationAge(Duration.zero)
+        ? 'not updating'
+        : 'as of $spoken';
   }
 
   /// The row as one sentence, in the order a person would say it.
@@ -370,7 +382,8 @@ class DownloadQueueTile extends StatelessWidget {
     ?statusLabel,
     percentage == null ? 'progress unavailable' : spokenPercent(percentage!),
     _subtitleLine,
-    for (final metric in metrics) metric.spoken ?? metric.label,
+    if (sampleAge == null)
+      for (final metric in metrics) metric.spoken ?? metric.label,
   ].join(', ');
 }
 
