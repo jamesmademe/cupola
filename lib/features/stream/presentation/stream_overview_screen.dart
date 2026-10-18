@@ -12,6 +12,7 @@ import 'package:cupola/features/media/presentation/open_media.dart';
 import 'package:cupola/features/plex/domain/models/plex_models.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
+import 'package:cupola/core/models/service_kpi.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -19,6 +20,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/stream_server_client.dart';
+import 'package:cupola/features/stream/presentation/stream_activity_provider.dart';
+import 'package:cupola/features/stream/presentation/stream_connection_provider.dart';
 import 'package:cupola/features/stream/presentation/stream_overview_provider.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_now_playing_section.dart';
 
@@ -57,11 +60,18 @@ import 'package:cupola/features/stream/presentation/widgets/stream_now_playing_s
 /// Sections load and fail independently. A server answering `/Sessions` but not
 /// its library list still draws the rest, and the one that could not load says
 /// so in its own slot rather than taking the page with it.
+///
+/// **One connection per page.** The page reads the connection the visit has in
+/// view (`streamInstanceOf`: what a link opened the service on, else the lens),
+/// and every region below reads it, the identity line and the figures
+/// included: a page whose header names one connection and whose figures come
+/// from another is the one thing it must not be.
 class StreamOverviewScreen extends ConsumerWidget {
   const StreamOverviewScreen({
     super.key,
     required this.service,
     this.topPadding = _hostedTopPadding,
+    this.instanceId,
   });
 
   /// The room the two glass bands above this page occupy.
@@ -76,6 +86,12 @@ class StreamOverviewScreen extends ConsumerWidget {
 
   /// Height of the chrome the host draws above this page.
   final double topPadding;
+
+  /// The `?i=` of the location the page was built for. A tab's root reads
+  /// the connection the visit has in view first (`streamInstanceOf`, not
+  /// pinned) and this where the visit has none; null, or one that names no
+  /// connection of [service], reads the lens.
+  final String? instanceId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -104,7 +120,16 @@ class StreamOverviewScreen extends ConsumerWidget {
       accent: service.accent,
       body: SafeArea(
         child: configured
-            ? _OverviewBody(service: service, topPadding: topPadding)
+            ? _OverviewBody(
+                service: service,
+                topPadding: topPadding,
+                instanceId: streamInstanceOf(
+                  ref,
+                  service,
+                  instanceId,
+                  pinned: false,
+                ),
+              )
             // `.forService`, never the generic form: this is a service
             // dashboard, so the door goes to this server's own connection form
             // rather than to the settings index.
@@ -115,12 +140,34 @@ class StreamOverviewScreen extends ConsumerWidget {
 }
 
 class _OverviewBody extends ConsumerWidget {
-  const _OverviewBody({required this.service, required this.topPadding});
+  const _OverviewBody({
+    required this.service,
+    required this.topPadding,
+    required this.instanceId,
+  });
 
   final ServiceKey service;
   final double topPadding;
 
+  /// The connection every region reads; empty is the lens.
+  final String instanceId;
+
   bool get _isPlex => service == ServiceKey.plex;
+
+  /// The figures of the connection the page reads: the lens's own fold when it
+  /// is the lens, and that connection's when it is another.
+  ///
+  /// `serviceKpiForProvider` is null only for a connection that cannot be read
+  /// on its own, which neither media server is; read as no figures, which the
+  /// peek draws as dashes, never as zeros.
+  AsyncValue<List<ServiceKpi>> _kpisOf(WidgetRef ref) {
+    if (instanceId.isEmpty) return ref.watch(serviceKpiProvider(service));
+    return ref
+        .watch(
+          serviceKpiForProvider((service: service, instanceId: instanceId)),
+        )
+        .whenData((kpis) => kpis ?? const <ServiceKpi>[]);
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -128,20 +175,26 @@ class _OverviewBody extends ConsumerWidget {
     // shared widget that takes the value, because *it* must not decide which
     // server it is talking to and must not be the thing that first reaches a
     // provider on an unconfigured service.
-    final sessions = _isPlex
-        ? ref.watch(plexSessionsProvider)
-        : ref.watch(jellyfinSessionsProvider);
-    final libraries = _isPlex
-        ? ref.watch(plexLibrariesProvider)
-        : ref.watch(jellyfinLibrariesProvider);
+    final connection = (service: service, instanceId: instanceId);
+    final sessions = ref.watch(streamSessionsForProvider(connection));
+    final libraries = ref.watch(streamLibrariesForProvider(connection));
 
     void refresh() {
       invalidateServiceReadout(ref, service);
+      // The connection's own reads, then the lens's: the lens's collapse onto
+      // the plain providers, which hold the answer the others re-read.
+      ref.invalidate(
+        serviceKpiForProvider((service: service, instanceId: instanceId)),
+      );
+      ref.invalidate(streamSessionsForProvider(connection));
+      ref.invalidate(streamLibrariesForProvider(connection));
       if (_isPlex) {
         ref.invalidate(plexSessionsProvider);
         ref.invalidate(plexLibrariesProvider);
         ref.invalidate(plexOnDeckProvider);
+        ref.invalidate(plexOnDeckForProvider(instanceId));
         ref.invalidate(plexCapabilitiesProvider);
+        ref.invalidate(plexCapabilitiesForProvider(instanceId));
       } else {
         ref.invalidate(jellyfinSessionsProvider);
         ref.invalidate(jellyfinLibrariesProvider);
@@ -174,31 +227,42 @@ class _OverviewBody extends ConsumerWidget {
         ),
         children: [
           if (topPadding > 0) SizedBox(height: topPadding),
-          ServiceOverviewIdentity(service: service),
-          ...sectionsOrOneLine(ref, service, ownSilence: true, [
-            ServiceKpiPeek(
-              kpis: ref.watch(serviceKpiProvider(service)),
-              service: service,
-            ),
-            if (serverDark)
-              ServiceOfflineState.failure(
-                service: service,
-                error: sessions.error!,
-                onRetry: refresh,
-              )
-            else ...[
-              // Who is watching, first and on both servers: it is the one fact
-              // only a media server holds, and the only region on this page
-              // that is about people rather than about files.
-              StreamNowPlayingSection(service: service, sessions: sessions),
-              if (!_isPlex && ref.watch(jellyfinLacksAdministratorProvider))
-                const JellyfinOwnPlaybackNote(),
-              const SizedBox(height: AppSpacing.lg),
-              if (_isPlex) const _OnDeckSection(),
-              _LibrariesSection(service: service),
-              if (_isPlex) const _ServerSection(),
+          ServiceOverviewIdentity(service: service, instanceId: instanceId),
+          ...sectionsOrOneLine(
+            ref,
+            service,
+            ownSilence: true,
+            instanceId: instanceId,
+            [
+              ServiceKpiPeek(kpis: _kpisOf(ref), service: service),
+              if (serverDark)
+                ServiceOfflineState.failure(
+                  service: service,
+                  instanceId: instanceId,
+                  error: sessions.error!,
+                  onRetry: refresh,
+                )
+              else ...[
+                // Who is watching, first and on both servers: it is the one fact
+                // only a media server holds, and the only region on this page
+                // that is about people rather than about files.
+                StreamNowPlayingSection(
+                  service: service,
+                  instanceId: instanceId,
+                  sessions: sessions,
+                ),
+                if (!_isPlex &&
+                    ref.watch(
+                      jellyfinLacksAdministratorForProvider(instanceId),
+                    ))
+                  const JellyfinOwnPlaybackNote(),
+                const SizedBox(height: AppSpacing.lg),
+                if (_isPlex) _OnDeckSection(instanceId: instanceId),
+                _LibrariesSection(service: service, instanceId: instanceId),
+                if (_isPlex) _ServerSection(instanceId: instanceId),
+              ],
             ],
-          ]),
+          ),
         ],
       ),
     );
@@ -227,11 +291,14 @@ class _OverviewBody extends ConsumerWidget {
 /// household member beside a poster would invent a perspective the server never
 /// offered.
 class _OnDeckSection extends ConsumerWidget {
-  const _OnDeckSection();
+  const _OnDeckSection({required this.instanceId});
+
+  /// The Plex connection the rail reads; empty is the lens.
+  final String instanceId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final items = ref.watch(plexOnDeckProvider);
+    final items = ref.watch(plexOnDeckForProvider(instanceId));
 
     return ServiceOverviewSection.bleed(
       service: ServiceKey.plex,
@@ -240,9 +307,13 @@ class _OnDeckSection extends ConsumerWidget {
       child: AsyncValueWidget<List<StreamItem>>.bleedSection(
         value: items,
         service: ServiceKey.plex,
+        instanceId: instanceId,
         consequence: 'what is on deck is not shown',
         loadingLabel: 'Loading what is on deck',
-        onRetry: () => ref.invalidate(plexOnDeckProvider),
+        onRetry: () {
+          ref.invalidate(plexOnDeckForProvider(instanceId));
+          ref.invalidate(plexOnDeckProvider);
+        },
         skeleton: AppSkeleton.posterRow(height: 138),
         isEmpty: (list) => list.isEmpty,
         emptyBuilder: const Padding(
@@ -252,20 +323,26 @@ class _OnDeckSection extends ConsumerWidget {
             label: 'Nothing part-watched',
           ),
         ),
-        data: (list) => _OnDeckRail(items: list),
+        data: (list) => _OnDeckRail(items: list, instanceId: instanceId),
       ),
     );
   }
 }
 
 class _OnDeckRail extends ConsumerWidget {
-  const _OnDeckRail({required this.items});
+  const _OnDeckRail({required this.items, required this.instanceId});
 
   final List<StreamItem> items;
+  final String instanceId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final client = ref.watch(plexServerProvider);
+    final client = ref.watch(
+      streamClientForProvider((
+        service: ServiceKey.plex,
+        instanceId: instanceId,
+      )),
+    );
 
     return SizedBox(
       // 138pt poster, the gap, and two caption lines, grown by the reading
@@ -286,6 +363,7 @@ class _OnDeckRail extends ConsumerWidget {
               const SizedBox(width: AppSpacing.carouselGap),
           itemBuilder: (context, index) => _OnDeckTile(
             item: items[index],
+            instanceId: instanceId,
             index: index,
             poster: items[index].posterPath == null
                 ? null
@@ -317,11 +395,15 @@ class _OnDeckRail extends ConsumerWidget {
 class _OnDeckTile extends StatelessWidget {
   const _OnDeckTile({
     required this.item,
+    required this.instanceId,
     required this.index,
     required this.poster,
   });
 
   final StreamItem item;
+
+  /// The connection the rail was read from, which the title opens on.
+  final String instanceId;
 
   /// Position on the rail, included in the Hero tag; see the class comment.
   final int index;
@@ -337,7 +419,11 @@ class _OnDeckTile extends StatelessWidget {
     return SizedBox(
       width: 96,
       child: PressableScale(
-        onTap: () => context.openStreamItem(ServiceKey.plex, item),
+        onTap: () => context.openStreamItem(
+          ServiceKey.plex,
+          item,
+          instanceId: instanceId,
+        ),
         // A poster is an image with no name of its own; the tile announces the
         // title and its state as one button rather than as two fragments.
         semanticLabel: item.title,
@@ -402,9 +488,12 @@ class _OnDeckTile extends StatelessWidget {
 /// throw now, so the failure lands in the region's own slot with a Retry and an
 /// empty list is only ever the server's answer.
 class _LibrariesSection extends ConsumerWidget {
-  const _LibrariesSection({required this.service});
+  const _LibrariesSection({required this.service, required this.instanceId});
 
   final ServiceKey service;
+
+  /// The connection whose shelf this is; empty is the lens.
+  final String instanceId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -412,7 +501,7 @@ class _LibrariesSection extends ConsumerWidget {
     // member's token is refused it: the Libraries tab says so calmly, and so
     // does this region, rather than drawing the refusal as a fault.
     if (service == ServiceKey.jellyfin &&
-        ref.watch(jellyfinLacksAdministratorProvider)) {
+        ref.watch(jellyfinLacksAdministratorForProvider(instanceId))) {
       return ServiceOverviewSection(
         service: service,
         title: 'Libraries',
@@ -424,9 +513,9 @@ class _LibrariesSection extends ConsumerWidget {
         ),
       );
     }
-    final libraries = service == ServiceKey.jellyfin
-        ? ref.watch(jellyfinLibrariesProvider)
-        : ref.watch(plexLibrariesProvider);
+    final libraries = ref.watch(
+      streamLibrariesForProvider((service: service, instanceId: instanceId)),
+    );
     // One `now` for the whole region, so two rows built microseconds apart
     // cannot disagree about which side of a boundary they are on.
     final now = DateTime.now();
@@ -444,13 +533,22 @@ class _LibrariesSection extends ConsumerWidget {
       child: AsyncValueWidget<List<StreamLibrary>>.section(
         value: libraries,
         service: service,
+        instanceId: instanceId,
         consequence: 'its libraries are not shown',
         loadingLabel: 'Loading the libraries',
-        onRetry: () => ref.invalidate(
-          service == ServiceKey.jellyfin
-              ? jellyfinLibrariesProvider
-              : plexLibrariesProvider,
-        ),
+        onRetry: () {
+          ref.invalidate(
+            streamLibrariesForProvider((
+              service: service,
+              instanceId: instanceId,
+            )),
+          );
+          ref.invalidate(
+            service == ServiceKey.jellyfin
+                ? jellyfinLibrariesProvider
+                : plexLibrariesProvider,
+          );
+        },
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
         isEmpty: (list) => list.isEmpty,
         // Only a server that answered reaches this: a dark one is the error
@@ -514,11 +612,14 @@ class _ShelfRow extends StatelessWidget {
 /// uses: this region has no subject, so the figure is the content and the label
 /// is the chrome.
 class _ServerSection extends ConsumerWidget {
-  const _ServerSection();
+  const _ServerSection({required this.instanceId});
+
+  /// The Plex connection that describes itself; empty is the lens.
+  final String instanceId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final capabilities = ref.watch(plexCapabilitiesProvider);
+    final capabilities = ref.watch(plexCapabilitiesForProvider(instanceId));
 
     return ServiceOverviewSection(
       service: ServiceKey.plex,
@@ -532,9 +633,13 @@ class _ServerSection extends ConsumerWidget {
       child: AsyncValueWidget<PlexServerCapabilities>.section(
         value: capabilities,
         service: ServiceKey.plex,
+        instanceId: instanceId,
         consequence: 'what the server says about itself is not shown',
         loadingLabel: 'Loading what the server says about itself',
-        onRetry: () => ref.invalidate(plexCapabilitiesProvider),
+        onRetry: () {
+          ref.invalidate(plexCapabilitiesForProvider(instanceId));
+          ref.invalidate(plexCapabilitiesProvider);
+        },
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
         data: (value) => _ServerRows(capabilities: value),
       ),

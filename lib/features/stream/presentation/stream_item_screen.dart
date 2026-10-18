@@ -37,8 +37,8 @@ class StreamItemScreen extends ConsumerWidget {
   final String itemId;
 
   /// The connection the item is on (`?i=`): null, or one that is not a
-  /// connection of [service], reads the active one, which is what a link with
-  /// no connection means.
+  /// connection of [service], reads the one the visit has in view, and then
+  /// the active one, which is what a link with no connection means.
   final String? instanceId;
 
   @override

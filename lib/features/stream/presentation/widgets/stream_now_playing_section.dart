@@ -102,6 +102,7 @@ class StreamNowPlayingSection extends ConsumerWidget {
             child: AsyncValueWidget<List<StreamSession>>(
               value: value,
               serviceName: service.title,
+              instanceId: instanceId,
               onRetry: () => refreshStreamSessions(ref, service, instanceId),
               isEmpty: (list) => list.isEmpty,
               emptyBuilder: const _IdleRoom(),

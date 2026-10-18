@@ -47,7 +47,8 @@ class StreamLibraryScreen extends ConsumerStatefulWidget {
   final ServiceKey service;
 
   /// The connection the library is on (`?i=`): null, or one that is not a
-  /// connection of [service], reads the active one.
+  /// connection of [service], reads the one the visit has in view, and then
+  /// the active one.
   final String? instanceId;
   final String libraryId;
 
@@ -217,14 +218,11 @@ class _StreamLibraryScreenState extends ConsumerState<StreamLibraryScreen> {
   /// could walk itself end to end inside a single fetch.
   static const int _maxPagesPerFetch = 5;
 
-  /// The connection this browse reads: the one `?i=` names, else the active
-  /// one. Read where a fetch starts, so a connection removed meanwhile reads
-  /// as the active one.
-  String get _connection => streamInstanceFor(
-    ref.read(currentSettingsProvider),
-    widget.service,
-    widget.instanceId,
-  );
+  /// The connection this browse reads: the one `?i=` names, else the one the
+  /// visit has in view, else the active one. Read where a fetch starts, so a
+  /// connection removed meanwhile reads as the active one.
+  String get _connection =>
+      streamInstanceNow(ref, widget.service, widget.instanceId);
 
   StreamServerClient get _client => ref.read(
     streamClientForProvider((service: widget.service, instanceId: _connection)),

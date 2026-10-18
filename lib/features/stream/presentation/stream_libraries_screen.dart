@@ -15,6 +15,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/stream_semantics.dart';
+import 'package:cupola/features/stream/presentation/stream_connection_provider.dart';
 import 'package:cupola/features/stream/presentation/stream_overview_provider.dart';
 
 /// The Libraries tab of a media server: the rooms on the box, as destinations.
@@ -43,17 +44,27 @@ import 'package:cupola/features/stream/presentation/stream_overview_provider.dar
 /// `StreamServerClient.getLibraryItemCount` yet, so the card says what the one
 /// `getLibraries` response actually contains. A fabricated zero is the one thing
 /// it must not say.
+///
+/// **One connection per page**: the one the visit has in view
+/// (`streamInstanceOf`), else the lens. Every room opens on it.
 class StreamLibrariesScreen extends ConsumerWidget {
   const StreamLibrariesScreen({
     super.key,
     required this.service,
     this.showAppBar = true,
     this.topPadding = 0,
+    this.instanceId,
   });
 
   final ServiceKey service;
   final bool showAppBar;
   final double topPadding;
+
+  /// The `?i=` of the location the page was built for. A tab's root reads
+  /// the connection the visit has in view first (`streamInstanceOf`, not
+  /// pinned) and this where the visit has none; null, or one that names no
+  /// connection of [service], reads the lens.
+  final String? instanceId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -72,7 +83,16 @@ class StreamLibrariesScreen extends ConsumerWidget {
       // than `topPadding` says.
       body: SafeArea(
         child: settings.isServiceConfigured(service)
-            ? _LibrariesBody(service: service, topPadding: topPadding)
+            ? _LibrariesBody(
+                service: service,
+                topPadding: topPadding,
+                instanceId: streamInstanceOf(
+                  ref,
+                  service,
+                  instanceId,
+                  pinned: false,
+                ),
+              )
             : NotConfiguredPlaceholder.forService(service),
       ),
     );
@@ -81,10 +101,17 @@ class StreamLibrariesScreen extends ConsumerWidget {
 
 /// The list itself, built only once the service is configured.
 class _LibrariesBody extends ConsumerWidget {
-  const _LibrariesBody({required this.service, required this.topPadding});
+  const _LibrariesBody({
+    required this.service,
+    required this.topPadding,
+    required this.instanceId,
+  });
 
   final ServiceKey service;
   final double topPadding;
+
+  /// The connection whose rooms these are; empty is the lens.
+  final String instanceId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -92,41 +119,41 @@ class _LibrariesBody extends ConsumerWidget {
     // token is refused it, and an empty list would read as a server with no
     // libraries.
     if (service == ServiceKey.jellyfin &&
-        ref.watch(jellyfinLacksAdministratorProvider)) {
+        ref.watch(jellyfinLacksAdministratorForProvider(instanceId))) {
       return JellyfinAdminPlaceholder(
         what: 'libraries',
         topPadding: topPadding,
-        connectionId:
-            ref.watch(activeInstanceProvider(ServiceKey.jellyfin))?.id ?? '',
+        connectionId: streamConnectionIdOf(ref, service, instanceId),
       );
     }
-    final librariesAsync = service == ServiceKey.jellyfin
-        ? ref.watch(jellyfinLibrariesProvider)
-        : ref.watch(plexLibrariesProvider);
+    final key = (service: service, instanceId: instanceId);
+    final librariesAsync = ref.watch(streamLibrariesForProvider(key));
+    // The lens's collapse onto the plain provider, which holds the answer the
+    // family re-reads, so a Retry asks both.
+    void reload() {
+      ref.invalidate(streamLibrariesForProvider(key));
+      ref.invalidate(
+        service == ServiceKey.jellyfin
+            ? jellyfinLibrariesProvider
+            : plexLibrariesProvider,
+      );
+    }
+
     // The tab is this one read, so a cold failure is the server's leaf.
     if (librariesAsync.hasError && !librariesAsync.hasValue) {
       return Padding(
         padding: EdgeInsets.only(top: topPadding),
         child: ServiceOfflineState.failure(
           service: service,
+          instanceId: instanceId,
           error: librariesAsync.error!,
-          onRetry: () => ref.invalidate(
-            service == ServiceKey.jellyfin
-                ? jellyfinLibrariesProvider
-                : plexLibrariesProvider,
-          ),
+          onRetry: reload,
         ),
       );
     }
 
     return RefreshIndicator(
-      onRefresh: () async {
-        if (service == ServiceKey.jellyfin) {
-          ref.invalidate(jellyfinLibrariesProvider);
-        } else {
-          ref.invalidate(plexLibrariesProvider);
-        }
-      },
+      onRefresh: () async => reload(),
       child: ListView(
         padding: EdgeInsets.fromLTRB(
           0,
@@ -138,7 +165,12 @@ class _LibrariesBody extends ConsumerWidget {
         ),
         children: [
           const SizedBox(height: AppSpacing.sm),
-          _LibrariesSection(service: service, libraries: librariesAsync),
+          _LibrariesSection(
+            service: service,
+            instanceId: instanceId,
+            libraries: librariesAsync,
+            onRetry: reload,
+          ),
         ],
       ),
     );
@@ -155,10 +187,17 @@ class _LibrariesBody extends ConsumerWidget {
 /// this draws. The count itself is still unbuilt; see the class comment on
 /// [StreamLibrariesScreen].
 class _LibrariesSection extends ConsumerWidget {
-  const _LibrariesSection({required this.service, required this.libraries});
+  const _LibrariesSection({
+    required this.service,
+    required this.instanceId,
+    required this.libraries,
+    required this.onRetry,
+  });
 
   final ServiceKey service;
+  final String instanceId;
   final AsyncValue<List<StreamLibrary>> libraries;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -183,13 +222,8 @@ class _LibrariesSection extends ConsumerWidget {
           child: AsyncValueWidget<List<StreamLibrary>>(
             value: libraries,
             serviceName: service.title,
-            onRetry: () {
-              if (service == ServiceKey.jellyfin) {
-                ref.invalidate(jellyfinLibrariesProvider);
-              } else {
-                ref.invalidate(plexLibrariesProvider);
-              }
-            },
+            instanceId: instanceId,
+            onRetry: onRetry,
             isEmpty: (list) => list.isEmpty,
             emptyBuilder: const AppEmptyState.compact(
               icon: Icons.video_library_outlined,
@@ -202,7 +236,11 @@ class _LibrariesSection extends ConsumerWidget {
                 for (final library in list)
                   Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                    child: _LibraryRow(service: service, library: library),
+                    child: _LibraryRow(
+                      service: service,
+                      instanceId: instanceId,
+                      library: library,
+                    ),
                   ),
               ],
             ),
@@ -230,17 +268,33 @@ class _LibrariesSection extends ConsumerWidget {
 /// global title list is what keeps the Stream browse from reading as a second copy
 /// of Radarr's library; see `StreamLibraryLens` and the idle-month test.
 class _LibraryRow extends StatelessWidget {
-  const _LibraryRow({required this.service, required this.library});
+  const _LibraryRow({
+    required this.service,
+    required this.instanceId,
+    required this.library,
+  });
 
   final ServiceKey service;
+
+  /// The connection the room is on, which its browse opens on (`?i=`); empty
+  /// is the lens, and then the location carries none.
+  final String instanceId;
   final StreamLibrary library;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final route = service == ServiceKey.jellyfin
-        ? ServiceRoutes.jellyfinLibrary(library.id, title: library.name)
-        : ServiceRoutes.plexLibrary(library.id, title: library.name);
+        ? ServiceRoutes.jellyfinLibrary(
+            library.id,
+            title: library.name,
+            instanceId: instanceId,
+          )
+        : ServiceRoutes.plexLibrary(
+            library.id,
+            title: library.name,
+            instanceId: instanceId,
+          );
 
     return AppCard.filled(
       // A library row is a full-width card with plenty of surface, so the ink

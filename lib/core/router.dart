@@ -6,6 +6,7 @@ import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/widgets/service_tab_bar.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_bar_action.dart';
+import 'package:cupola/features/services/presentation/connection_in_view.dart';
 import 'package:cupola/features/services/presentation/service_tab_scaffold.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
@@ -2528,13 +2529,27 @@ RouteBase _streamRoutes(ServiceKey service) {
         // `pageBuilder`, not `builder`: without it the shell's page takes the
         // platform default transition, and the push from the Dashboard into a
         // service would stop matching every other service in the app.
+        //
+        // **The scope is the visit.** It is mounted here, above the band, the
+        // tab bar and every branch, because the shell page lives exactly as
+        // long as one stay in the service: popped or replaced, it takes the
+        // connection the visit was reading with it, and nothing is left in a
+        // global store for the next one. It sees the full location on every
+        // navigation inside the service (`?i=` of a deep link or a row that
+        // names a connection) and remembers the last valid one, so a tab
+        // reached through the bar, whose own location carries none, keeps
+        // reading it. See [ConnectionInViewScope].
         pageBuilder: (context, state, navigationShell) =>
             RouteUtils.cupertinoPage(
               key: state.pageKey,
-              child: ServiceHomeScreen(
+              child: ConnectionInViewScope(
                 service: service,
-                showAppBar: isServiceTabRoot(service, state.uri.path),
-                child: navigationShell,
+                location: state.uri,
+                child: ServiceHomeScreen(
+                  service: service,
+                  showAppBar: isServiceTabRoot(service, state.uri.path),
+                  child: navigationShell,
+                ),
               ),
             ),
         branches: [
@@ -2588,6 +2603,7 @@ GoRoute _streamBranchRoot(ServiceKey service, ServiceTab tab) {
           service: service,
           showAppBar: false,
           topPadding: _serviceTabTopPadding,
+          instanceId: state.uri.queryParameters['i'],
         ),
       ),
       routes: [
@@ -2633,6 +2649,7 @@ GoRoute _streamBranchRoot(ServiceKey service, ServiceTab tab) {
         child: StreamOverviewScreen(
           service: service,
           topPadding: _serviceTabTopPadding,
+          instanceId: state.uri.queryParameters['i'],
         ),
       ),
     ),
@@ -2662,7 +2679,13 @@ GoRoute _streamBranchRoot(ServiceKey service, ServiceTab tab) {
 GoRoute _streamCapabilityRoute(ServiceKey service, ServiceTab tab) {
   // Resolved once here, with no connection, so a pair with no screen throws
   // while the router is built; the page builder resolves it again with the
-  // connection the location names (`?i=`).
+  // `?i=` of the location.
+  //
+  // That `?i=` is a hint and not the answer: a tab's root reads the connection
+  // the visit has in view (`ConnectionInViewScope`), which took the same
+  // `?i=` when the location arrived. The location a branch restores is the
+  // one it was left at, query included, so a root that led with its own would
+  // undo a connection the lens sheet chose since.
   _streamCapabilityScreen(service, tab);
   return _titledTab(
     tab.segment,
@@ -2684,31 +2707,37 @@ Widget _streamCapabilityScreen(
   String? instanceId,
 }) {
   return switch ((service, tab)) {
-    (ServiceKey.jellyfin, ServiceTab.users) => const JellyfinUsersScreen(
+    (ServiceKey.jellyfin, ServiceTab.users) => JellyfinUsersScreen(
       topPadding: _serviceTabTopPadding,
+      instanceId: instanceId,
     ),
-    (ServiceKey.jellyfin, ServiceTab.devices) => const JellyfinDevicesScreen(
+    (ServiceKey.jellyfin, ServiceTab.devices) => JellyfinDevicesScreen(
       topPadding: _serviceTabTopPadding,
+      instanceId: instanceId,
     ),
-    (ServiceKey.jellyfin, ServiceTab.tasks) => const JellyfinTasksScreen(
+    (ServiceKey.jellyfin, ServiceTab.tasks) => JellyfinTasksScreen(
       topPadding: _serviceTabTopPadding,
+      instanceId: instanceId,
     ),
     (ServiceKey.jellyfin, ServiceTab.activity) => JellyfinActivityScreen(
       topPadding: _serviceTabTopPadding,
       instanceId: instanceId,
     ),
-    (ServiceKey.plex, ServiceTab.onDeck) => const PlexOnDeckScreen(
+    (ServiceKey.plex, ServiceTab.onDeck) => PlexOnDeckScreen(
       topPadding: _serviceTabTopPadding,
+      instanceId: instanceId,
     ),
     (ServiceKey.plex, ServiceTab.activities) => PlexActivitiesScreen(
       topPadding: _serviceTabTopPadding,
       instanceId: instanceId,
     ),
-    (ServiceKey.plex, ServiceTab.devices) => const PlexDevicesScreen(
+    (ServiceKey.plex, ServiceTab.devices) => PlexDevicesScreen(
       topPadding: _serviceTabTopPadding,
+      instanceId: instanceId,
     ),
-    (ServiceKey.plex, ServiceTab.playlists) => const PlexPlaylistsScreen(
+    (ServiceKey.plex, ServiceTab.playlists) => PlexPlaylistsScreen(
       topPadding: _serviceTabTopPadding,
+      instanceId: instanceId,
     ),
     _ => throw UnsupportedError(
       'ServiceTab.${tab.name} is not a stream capability tab for '

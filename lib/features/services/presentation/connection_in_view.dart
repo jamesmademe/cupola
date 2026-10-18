@@ -5,15 +5,15 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
-/// The connection a link names (`?i=`): [requested] when it is a connection of
-/// [service], and empty otherwise.
+/// The connection a link names (`?i=`): [requested] when it is a configured
+/// connection of [service], and empty otherwise.
 ///
 /// Empty is the service's active connection (the lens): an old link, a deep
 /// link, a page opened from somewhere that does not know a connection. A value
 /// that names no connection of [service] (removed since the link was made, or
-/// another service's, or blank) is empty too, so a stale link opens on the
-/// active connection rather than on an error about a connection that no longer
-/// exists.
+/// another service's, or blank), or one with no address yet, is empty too, so
+/// a stale link opens on the active connection rather than on an error about
+/// a connection that no longer exists or cannot be asked.
 String namedConnectionOf(
   SettingsModel settings,
   ServiceKey service,
@@ -22,7 +22,11 @@ String namedConnectionOf(
   final id = requested?.trim() ?? '';
   if (id.isEmpty) return '';
   final instance = settings.instanceById(id);
-  return instance != null && instance.service == service ? id : '';
+  return instance != null &&
+          instance.service == service &&
+          instance.isConfigured
+      ? id
+      : '';
 }
 
 /// The connection one visit to a service reads, and the way to change it.

@@ -25,15 +25,29 @@ import 'package:cupola/features/stream/presentation/stream_overview_provider.dar
 import 'package:cupola/features/stream/presentation/widgets/stream_now_playing_section.dart';
 
 /// The token owner's part-watched titles from Plex's continue-watching hub.
+///
+/// [instanceId] is the `?i=` of the location the tab was built for. A tab's
+/// root reads the connection the visit has in view first (`streamInstanceOf`,
+/// not pinned) and this where the visit has none; null reads the lens. The same
+/// on every tab below.
 class PlexOnDeckScreen extends ConsumerWidget {
-  const PlexOnDeckScreen({super.key, this.topPadding = 0});
+  const PlexOnDeckScreen({super.key, this.topPadding = 0, this.instanceId});
 
   final double topPadding;
+  final String? instanceId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (!_isConfigured(ref)) return _notConfigured();
-    return _PlexOnDeckBody(topPadding: topPadding);
+    return _PlexOnDeckBody(
+      topPadding: topPadding,
+      instanceId: streamInstanceOf(
+        ref,
+        ServiceKey.plex,
+        instanceId,
+        pinned: false,
+      ),
+    );
   }
 }
 
@@ -56,28 +70,44 @@ class PlexActivitiesScreen extends ConsumerWidget {
     if (!_isConfigured(ref)) return _notConfigured();
     return _PlexActivitiesBody(
       topPadding: topPadding,
-      instanceId: streamInstanceOf(ref, ServiceKey.plex, instanceId),
+      instanceId: streamInstanceOf(
+        ref,
+        ServiceKey.plex,
+        instanceId,
+        pinned: false,
+      ),
     );
   }
 }
 
 class PlexDevicesScreen extends ConsumerWidget {
-  const PlexDevicesScreen({super.key, this.topPadding = 0});
+  const PlexDevicesScreen({super.key, this.topPadding = 0, this.instanceId});
 
   final double topPadding;
+  final String? instanceId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (!_isConfigured(ref)) return _notConfigured();
+    final connection = streamInstanceOf(
+      ref,
+      ServiceKey.plex,
+      instanceId,
+      pinned: false,
+    );
     return ServiceListPage<PlexDevice>(
       service: ServiceKey.plex,
+      instanceId: connection,
       topPadding: topPadding,
-      value: ref.watch(plexDevicesProvider),
+      value: ref.watch(plexDevicesForProvider(connection)),
       serviceName: 'Plex devices',
       emptyIcon: Icons.devices_other_rounded,
       emptyTitle: 'No devices',
       emptyMessage: 'Plex returned no authorized devices.',
-      onRetry: () => ref.invalidate(plexDevicesProvider),
+      onRetry: () {
+        ref.invalidate(plexDevicesForProvider(connection));
+        ref.invalidate(plexDevicesProvider);
+      },
       summary: (devices) => countLabel(devices.length, 'device'),
       rowBuilder: (device) => _DeviceRow(device: device),
     );
@@ -85,22 +115,33 @@ class PlexDevicesScreen extends ConsumerWidget {
 }
 
 class PlexPlaylistsScreen extends ConsumerWidget {
-  const PlexPlaylistsScreen({super.key, this.topPadding = 0});
+  const PlexPlaylistsScreen({super.key, this.topPadding = 0, this.instanceId});
 
   final double topPadding;
+  final String? instanceId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (!_isConfigured(ref)) return _notConfigured();
+    final connection = streamInstanceOf(
+      ref,
+      ServiceKey.plex,
+      instanceId,
+      pinned: false,
+    );
     return ServiceListPage<PlexPlaylist>(
       service: ServiceKey.plex,
+      instanceId: connection,
       topPadding: topPadding,
-      value: ref.watch(plexPlaylistsProvider),
+      value: ref.watch(plexPlaylistsForProvider(connection)),
       serviceName: 'Plex playlists',
       emptyIcon: Icons.playlist_play_rounded,
       emptyTitle: 'No playlists',
       emptyMessage: 'Create a Plex playlist to see it here.',
-      onRetry: () => ref.invalidate(plexPlaylistsProvider),
+      onRetry: () {
+        ref.invalidate(plexPlaylistsForProvider(connection));
+        ref.invalidate(plexPlaylistsProvider);
+      },
       summary: (playlists) => countLabel(playlists.length, 'playlist'),
       rowBuilder: (playlist) => _PlaylistRow(playlist: playlist),
     );
@@ -113,13 +154,21 @@ bool _isConfigured(WidgetRef ref) =>
 Widget _notConfigured() => NotConfiguredPlaceholder.forService(ServiceKey.plex);
 
 class _PlexOnDeckBody extends ConsumerWidget {
-  const _PlexOnDeckBody({required this.topPadding});
+  const _PlexOnDeckBody({required this.topPadding, required this.instanceId});
 
   final double topPadding;
 
+  /// The connection whose deck this is; empty is the lens.
+  final String instanceId;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final items = ref.watch(plexOnDeckTabProvider);
+    final items = ref.watch(plexOnDeckTabForProvider(instanceId));
+    void reload() {
+      ref.invalidate(plexOnDeckTabForProvider(instanceId));
+      ref.invalidate(plexOnDeckTabProvider);
+    }
+
     // The host's two bands and the status bar the upper one consumes: this
     // page has no `SafeArea` and no app bar to take the inset off first.
     final top = topPadding + MediaQuery.paddingOf(context).top;
@@ -131,8 +180,9 @@ class _PlexOnDeckBody extends ConsumerWidget {
           padding: EdgeInsets.only(top: top),
           child: ServiceOfflineState.failure(
             service: ServiceKey.plex,
+            instanceId: instanceId,
             error: items.error!,
-            onRetry: () => ref.invalidate(plexOnDeckTabProvider),
+            onRetry: reload,
           ),
         ),
       );
@@ -144,8 +194,9 @@ class _PlexOnDeckBody extends ConsumerWidget {
         child: AsyncValueWidget<List<StreamItem>>(
           value: items,
           serviceName: 'Plex on deck',
+          instanceId: instanceId,
           loadingLabel: 'Loading what is on deck',
-          onRetry: () => ref.invalidate(plexOnDeckTabProvider),
+          onRetry: reload,
           isEmpty: (list) => list.isEmpty,
           emptyBuilder: AppEmptyStatePage(
             emptyState: AppEmptyState(
@@ -156,7 +207,11 @@ class _PlexOnDeckBody extends ConsumerWidget {
             ),
           ),
           skeleton: AppSkeleton.posterGrid(count: 9),
-          data: (list) => _OnDeckGrid(items: list),
+          data: (list) => _OnDeckGrid(
+            items: list,
+            instanceId: instanceId,
+            onReload: reload,
+          ),
         ),
       ),
     );
@@ -202,6 +257,7 @@ class _PlexActivitiesBody extends ConsumerWidget {
           padding: EdgeInsets.only(top: top),
           child: ServiceOfflineState.failure(
             service: ServiceKey.plex,
+            instanceId: instanceId,
             error: sessions.error!,
             onRetry: () =>
                 refreshStreamSessions(ref, ServiceKey.plex, instanceId),
@@ -236,15 +292,26 @@ class _PlexActivitiesBody extends ConsumerWidget {
 }
 
 class _OnDeckGrid extends ConsumerWidget {
-  const _OnDeckGrid({required this.items});
+  const _OnDeckGrid({
+    required this.items,
+    required this.instanceId,
+    required this.onReload,
+  });
 
   final List<StreamItem> items;
+  final String instanceId;
+  final VoidCallback onReload;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final client = ref.watch(plexServerProvider);
+    final client = ref.watch(
+      streamClientForProvider((
+        service: ServiceKey.plex,
+        instanceId: instanceId,
+      )),
+    );
     return RefreshIndicator(
-      onRefresh: () async => ref.invalidate(plexOnDeckTabProvider),
+      onRefresh: () async => onReload(),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final columns = MediaGrid.columnsFor(
@@ -278,6 +345,7 @@ class _OnDeckGrid extends ConsumerWidget {
                 wrapCount: columns * 4,
                 child: _OnDeckTile(
                   item: items[index],
+                  instanceId: instanceId,
                   index: index,
                   poster: items[index].posterPath == null
                       ? null
@@ -295,11 +363,15 @@ class _OnDeckGrid extends ConsumerWidget {
 class _OnDeckTile extends StatelessWidget {
   const _OnDeckTile({
     required this.item,
+    required this.instanceId,
     required this.index,
     required this.poster,
   });
 
   final StreamItem item;
+
+  /// The connection the deck was read from, which the title opens on.
+  final String instanceId;
   final int index;
   final StreamImageSource? poster;
 
@@ -308,7 +380,8 @@ class _OnDeckTile extends StatelessWidget {
     final theme = Theme.of(context);
     final caption = streamOnDeckCaption(item);
     return PressableScale(
-      onTap: () => context.openStreamItem(ServiceKey.plex, item),
+      onTap: () =>
+          context.openStreamItem(ServiceKey.plex, item, instanceId: instanceId),
       semanticLabel: item.title,
       semanticValue: caption.isEmpty ? null : spokenFromDotted(caption),
       semanticHint: 'Open this title',

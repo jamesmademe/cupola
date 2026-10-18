@@ -8,6 +8,7 @@ import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/services/presentation/connection_in_view.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -17,6 +18,13 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The lens: which connection this screen is looking through, and the way to
 /// change it.
+///
+/// **It names the connection in view, not always the lens.** A visit to a
+/// media server opened on one of its connections (a row on Home, a library
+/// tile) reads that connection on every tab without moving the lens, and the
+/// header says which: [ConnectionInView]. Choosing a connection in the sheet
+/// puts it in view for the rest of the visit as well as moving the lens, as it
+/// always did. Outside such a visit it is the lens, as before.
 ///
 /// **Renders nothing at all while the service has one connection**, which is
 /// the whole of the "you do not pay for the fold until you need it" rule. On
@@ -40,12 +48,26 @@ class InstanceLensBadge extends ConsumerWidget {
   /// The pill's own tint of the accent.
   static const double _pillAlpha = 0.15;
 
+  /// The connection the pill names: the one in view when the visit has one,
+  /// else the lens.
+  ServiceInstance? _shown(WidgetRef ref, ConnectionInView? view) {
+    final inView = view?.instanceId ?? '';
+    if (inView.isNotEmpty) {
+      final instance = ref.watch(
+        currentSettingsProvider.select((s) => s.instanceById(inView)),
+      );
+      if (instance != null) return instance;
+    }
+    return ref.watch(activeInstanceProvider(service));
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (!ref.watch(hasMultipleInstancesProvider(service))) {
       return const SizedBox.shrink();
     }
-    final active = ref.watch(activeInstanceProvider(service));
+    final view = ConnectionInView.maybeOf(context, service);
+    final active = _shown(ref, view);
     if (active == null) return const SizedBox.shrink();
 
     // The app's one rule for naming a connection: a connection the user never
@@ -67,10 +89,10 @@ class InstanceLensBadge extends ConsumerWidget {
       enabled: true,
       label: 'Lens: $label',
       hint: 'changes which ${service.title} this screen reads',
-      onTap: () => _showLensSheet(context, ref, service),
+      onTap: () => _showLensSheet(context, ref, service, view),
       child: ExcludeSemantics(
         child: InkWell(
-          onTap: () => _showLensSheet(context, ref, service),
+          onTap: () => _showLensSheet(context, ref, service, view),
           borderRadius: AppRadius.borderRadiusPill,
           child: ConstrainedBox(
             // The pill is 24pt so it sits inside a 22pt title without pushing the
@@ -115,6 +137,7 @@ Future<void> _showLensSheet(
   BuildContext context,
   WidgetRef ref,
   ServiceKey service,
+  ConnectionInView? view,
 ) {
   // Configured only. The sheet is the one control that *persists* a lens, so a
   // row here for a connection with no address is an offer to point the whole
@@ -130,7 +153,11 @@ Future<void> _showLensSheet(
         in ref.read(currentSettingsProvider).instancesOf(service))
       if (instance.isConfigured || instance.isSignedOut) instance,
   ];
-  final activeId = ref.read(activeInstanceProvider(service))?.id;
+  final lensId = ref.read(activeInstanceProvider(service))?.id;
+  // The one ticked is the one the screen reads: the connection in view when
+  // the visit has one, else the lens.
+  final inView = view?.instanceId ?? '';
+  final shownId = inView.isNotEmpty ? inView : lensId;
 
   return AppBottomSheet.show<void>(
     context: context,
@@ -142,7 +169,9 @@ Future<void> _showLensSheet(
     builder: (sheetContext) => _LensOptions(
       service: service,
       instances: instances,
-      activeId: activeId,
+      shownId: shownId,
+      lensId: lensId,
+      view: view,
     ),
   );
 }
@@ -151,12 +180,23 @@ class _LensOptions extends ConsumerWidget {
   const _LensOptions({
     required this.service,
     required this.instances,
-    required this.activeId,
+    required this.shownId,
+    required this.lensId,
+    required this.view,
   });
 
   final ServiceKey service;
   final List<ServiceInstance> instances;
-  final String? activeId;
+
+  /// The connection the screen reads now: the ticked row.
+  final String? shownId;
+
+  /// The connection the lens rests on.
+  final String? lensId;
+
+  /// The visit the sheet was opened from, when there is one: it is told the
+  /// choice, so the rest of the visit reads it.
+  final ConnectionInView? view;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -198,7 +238,7 @@ class _LensOptions extends ConsumerWidget {
           : host,
       subtitleColor: reachability.needsAttention ? tone : null,
       accentColor: service.accent,
-      trailing: instance.id == activeId
+      trailing: instance.id == shownId
           ? Icon(
               Icons.check_rounded,
               color: ServiceTheme.onTint(
@@ -208,12 +248,15 @@ class _LensOptions extends ConsumerWidget {
               ),
             )
           : null,
-      semanticHint: instance.id == activeId
+      semanticHint: instance.id == shownId
           ? 'currently being read'
           : 'reads ${service.title} through this connection instead',
       onTap: () async {
         Navigator.of(context).pop();
-        if (instance.id == activeId) return;
+        // The choice is the visit's first, then the lens's: a connection in
+        // view that is not the lens is chosen again to make it the lens too.
+        view?.show(instance.id);
+        if (instance.id == lensId) return;
         await ref
             .read(activeInstancesProvider.notifier)
             .select(service, instance.id);
