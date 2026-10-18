@@ -56,7 +56,71 @@ class MainFlutterWindow: NSWindow {
       with: flutterViewController.engine.binaryMessenger
     )
 
+    LinkHandoffChannel.register(
+      with: flutterViewController.engine.binaryMessenger,
+      window: self
+    )
+
     super.awakeFromNib()
+  }
+}
+
+/// Holds a `cupola://` link until the router is listening, then hands it over.
+///
+/// iOS routes a link by itself (`FlutterDeepLinkingEnabled`); the macOS embedder
+/// does not, so the runner pushes it on `flutter/navigation`, the channel the
+/// framework's router listens to. A push sent before the router has subscribed
+/// is dropped without a word, and a closed Cupola opened by a link receives it
+/// while Dart is still starting, which can mean waiting on a Keychain prompt.
+/// So every link waits here until Dart says `routerReady` after its first
+/// frame: `LinkHandoff` in `lib/core/platform/link_handoff.dart`. A fixed delay
+/// used to stand in for that signal, and lost the link on any slower start.
+enum LinkHandoffChannel {
+  private static var navigation: FlutterMethodChannel?
+  private static weak var window: NSWindow?
+  private static var routerReady = false
+  private static var pending: [String] = []
+
+  static func register(with messenger: FlutterBinaryMessenger, window: NSWindow) {
+    navigation = FlutterMethodChannel(
+      name: "flutter/navigation",
+      binaryMessenger: messenger,
+      codec: FlutterJSONMethodCodec.sharedInstance()
+    )
+    self.window = window
+
+    let channel = FlutterMethodChannel(
+      name: "com.matthwlabs.cupola/links",
+      binaryMessenger: messenger
+    )
+    channel.setMethodCallHandler { call, result in
+      guard call.method == "routerReady" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      routerReady = true
+      let held = pending
+      pending = []
+      for location in held { push(location) }
+      result(nil)
+    }
+  }
+
+  /// A link clicked on the Mac: handed over now, or held until Dart is ready.
+  /// Only ever called on the main thread, like the channel's handler, which is
+  /// what lets `routerReady` and `pending` go unguarded.
+  static func open(_ url: URL) {
+    let location = url.absoluteString
+    if routerReady {
+      push(location)
+    } else {
+      pending.append(location)
+    }
+  }
+
+  private static func push(_ location: String) {
+    navigation?.invokeMethod("pushRouteInformation", arguments: ["location": location])
+    window?.makeKeyAndOrderFront(nil)
   }
 }
 

@@ -15,6 +15,7 @@ import 'package:cupola/core/last_known/last_known_store.dart';
 import 'package:cupola/core/network/network_change.dart';
 import 'package:cupola/core/network/network_registries.dart';
 import 'package:cupola/core/platform/desktop_window.dart';
+import 'package:cupola/core/platform/link_handoff.dart';
 import 'package:cupola/core/router.dart';
 import 'package:cupola/core/startup/startup_overrides.dart';
 import 'package:cupola/core/theme.dart';
@@ -80,6 +81,7 @@ Future<void> _start() async {
   switch (outcome) {
     case StartupReady(value: final overrides):
       runApp(ProviderScope(overrides: overrides, child: const CupolaApp()));
+      LinkHandoff.routerReadyWhenDrawn();
     case StartupFailed(:final failure):
       runApp(
         StartupFailureApp(
