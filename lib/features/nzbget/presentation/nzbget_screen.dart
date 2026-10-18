@@ -138,7 +138,10 @@ class _NzbgetDashboard extends ConsumerWidget {
                   onRefresh: () => _invalidateAll(ref),
                 ),
               ServiceKpiPeek(
-                kpis: ref.watch(serviceKpiProvider(ServiceKey.nzbget)),
+                kpis: queueRailOf(
+                  ref.watch(serviceKpiProvider(ServiceKey.nzbget)),
+                  stale: staleAge != null,
+                ),
                 service: ServiceKey.nzbget,
               ),
               const SizedBox(height: AppSpacing.sm),

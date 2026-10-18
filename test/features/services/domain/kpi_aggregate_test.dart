@@ -257,4 +257,31 @@ void main() {
       expect(folded!.single.note, 'client not answering');
     });
   });
+
+  group('a rail whose sample stopped', () {
+    test('reads a dash for each rate, noted not updating', () {
+      final rail = withRatesNotUpdating([
+        kpi('Download', '22.4\u00A0MB/\u2060s', tone: StatusTone.info),
+        kpi('Upload', '0\u00A0B/\u2060s'),
+      ]);
+
+      for (final figure in rail) {
+        expect(figure.isUnavailable, isTrue, reason: figure.label);
+        expect(figure.note, 'not updating');
+        expect(figure.tone, isNull, reason: 'a stopped rate is not activity');
+      }
+      expect(rail.map((figure) => figure.label), ['Download', 'Upload']);
+    });
+
+    test('keeps every figure that is not a rate', () {
+      final figures = [
+        kpi('Active', '23'),
+        kpi('Queue', '50+'),
+        kpi('Stuck', '1', tone: StatusTone.warning),
+        kpi('Ratio', '2.40'),
+      ];
+
+      expect(withRatesNotUpdating(figures), figures);
+    });
+  });
 }

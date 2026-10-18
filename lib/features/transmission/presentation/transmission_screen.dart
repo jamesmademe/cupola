@@ -165,7 +165,10 @@ class _TransmissionDashboard extends ConsumerWidget {
                   onRefresh: () => _invalidateAll(ref),
                 ),
               ServiceKpiPeek(
-                kpis: ref.watch(serviceKpiProvider(ServiceKey.transmission)),
+                kpis: queueRailOf(
+                  ref.watch(serviceKpiProvider(ServiceKey.transmission)),
+                  stale: staleAge != null,
+                ),
                 service: ServiceKey.transmission,
               ),
               const SizedBox(height: AppSpacing.sm),

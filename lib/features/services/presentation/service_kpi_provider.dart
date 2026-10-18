@@ -60,6 +60,19 @@ import 'package:cupola/features/unraid/domain/models/unraid_models.dart';
 import 'package:cupola/features/unraid/domain/unraid_alerts.dart';
 import 'package:cupola/features/unraid/presentation/unraid_provider.dart';
 
+/// A download client's Queue tab rail: [serviceKpiProvider] as read, with its
+/// rates `—` while the page's stale band is up ([withRatesNotUpdating]).
+///
+/// Not `whenData`: a stale page's rail is reloading behind a read that does
+/// not come back, and `whenData` drops a reload's previous figures, which
+/// put the rail back to its skeleton.
+AsyncValue<List<ServiceKpi>> queueRailOf(
+  AsyncValue<List<ServiceKpi>> kpis, {
+  required bool stale,
+}) => stale && kpis.hasValue && !kpis.hasError
+    ? AsyncData(withRatesNotUpdating(kpis.requireValue))
+    : kpis;
+
 /// KPIs shown in the [ServiceKpiPeek] at the top of each service page.
 ///
 /// Derives metrics from the library providers the pages already load, so it

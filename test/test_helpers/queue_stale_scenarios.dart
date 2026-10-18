@@ -5,6 +5,8 @@ import 'package:cupola/core/lifecycle/poll_clock.dart';
 import 'package:cupola/core/status/read_age.dart';
 import 'package:cupola/core/status/read_clock.dart';
 import 'package:cupola/core/widgets/fault_band.dart';
+import 'package:cupola/core/widgets/reel_line.dart';
+import 'package:cupola/core/widgets/service_kpi_peek.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import 'profiles/profiles.dart';
@@ -113,6 +115,33 @@ void defineQueueStaleScenarios(QueueStaleCase c) {
       );
       expect(find.text('Refresh'), findsOneWidget);
       expect(scene.rowsSayAge, findsWidgets, reason: 'rows trade time left');
+
+      await scene.finish();
+    });
+
+    testWidgets("its rail's rates read a dash and say they are not "
+        'updating, and its counts keep their figure', (tester) async {
+      final scene = await open(tester, c.profile);
+      expect(scene.railRates, findsWidgets, reason: 'healthy: live rates');
+      expect(scene.railNotUpdating, findsNothing);
+
+      scene.hung = true;
+      await scene.elapse(const Duration(seconds: 4));
+      final lastRead = scene.readClock.at(readKey)!;
+      await scene.elapseTo(lastRead.add(const Duration(seconds: 15)));
+
+      expect(find.textContaining('These figures'), findsOneWidget);
+      expect(
+        scene.railRates,
+        findsNothing,
+        reason: 'a stopped rate is not drawn',
+      );
+      expect(scene.railNotUpdating, findsWidgets);
+      expect(
+        scene.railCounts,
+        findsWidgets,
+        reason: 'counts keep their figure',
+      );
 
       await scene.finish();
     });
@@ -256,8 +285,32 @@ class QueueStaleScene {
       .map((band) => band.message)
       .join(' | ');
 
-  /// A row that gave up its time left for the age of its figures.
-  Finder get rowsSayAge => find.textContaining(RegExp('as of |not updating'));
+  /// A row that gave up its time left for the age of its figures: not the
+  /// rail above the rows, whose stopped rates say `not updating` too.
+  Finder get rowsSayAge => find.byElementPredicate(
+    (element) =>
+        _ageWords.hasMatch(_wordsOf(element.widget) ?? '') &&
+        element.findAncestorWidgetOfExactType<ServiceKpiPeek>() == null,
+  );
+
+  Finder _inRail(Finder matching) =>
+      find.descendant(of: find.byType(ServiceKpiPeek), matching: matching);
+
+  /// A rate drawn on the rail (`22.4 MB/s`, `0 B/s`): a figure rolls in a
+  /// [ReelLine], so it is matched on the line rather than on its glyphs.
+  Finder get railRates => _railFigures(RegExp('/\u2060?s\$'));
+
+  /// A rail figure's note saying its sample stopped.
+  Finder get railNotUpdating => _inRail(find.text('not updating'));
+
+  /// A count drawn on the rail.
+  Finder get railCounts => _railFigures(RegExp(r'^\d+\+?$'));
+
+  Finder _railFigures(RegExp figure) => _inRail(
+    find.byWidgetPredicate(
+      (widget) => widget is ReelLine && figure.hasMatch(widget.text),
+    ),
+  );
 
   /// How many times the queue was asked for, hung requests included.
   int get queueReads => harness.network.requests.where(c.isQueueRead).length;
@@ -288,3 +341,12 @@ class QueueStaleScene {
     await elapse(const Duration(seconds: 20));
   }
 }
+
+final RegExp _ageWords = RegExp('as of |not updating');
+
+String? _wordsOf(Widget widget) => switch (widget) {
+  Text(:final data?) => data,
+  Text(:final textSpan?) => textSpan.toPlainText(),
+  RichText(:final text) => text.toPlainText(),
+  _ => null,
+};

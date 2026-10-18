@@ -141,7 +141,10 @@ class _SabnzbdDashboard extends ConsumerWidget {
                   onRefresh: () => _invalidateAll(ref),
                 ),
               ServiceKpiPeek(
-                kpis: ref.watch(serviceKpiProvider(ServiceKey.sabnzbd)),
+                kpis: queueRailOf(
+                  ref.watch(serviceKpiProvider(ServiceKey.sabnzbd)),
+                  stale: staleAge != null,
+                ),
                 service: ServiceKey.sabnzbd,
               ),
               const SizedBox(height: AppSpacing.sm),

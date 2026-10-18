@@ -217,6 +217,24 @@ String? _sharedNote(List<ServiceKpi> terms) {
 /// space, the binary ladder, the `/s` suffix) rather than to anything more
 /// forgiving: a loose parser here would quietly start adding up strings that
 /// only look like rates.
+/// A queue page's rail while its read has stopped coming back
+/// (`FaultBand.stale`).
+///
+/// A rate is the one figure a stopped sample makes false: 22.4 MB/s read a
+/// minute ago is not what the client pulls now, and the rows under the band
+/// already draw none. It reads `—`, noted `not updating` as the rows are. A
+/// count keeps its figure: a sample a few seconds old still tells it.
+List<ServiceKpi> withRatesNotUpdating(List<ServiceKpi> kpis) => [
+  for (final kpi in kpis)
+    _bytesPerSecond(kpi.value) == null
+        ? kpi
+        : ServiceKpi.unavailable(
+            label: kpi.label,
+            icon: kpi.icon,
+            note: 'not updating',
+          ),
+];
+
 double? _bytesPerSecond(String value) {
   final match = _rate.firstMatch(value);
   if (match == null) return null;
