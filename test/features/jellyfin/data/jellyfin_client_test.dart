@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/features/jellyfin/data/jellyfin_client.dart';
 import 'package:cupola/features/jellyfin/domain/models/jellyfin_models.dart';
+import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/models/stream_library_page.dart';
@@ -1013,6 +1014,148 @@ void main() {
       expect(item!.title, 'Arrival');
       expect(adapter.callCount, 1);
       expect(adapter.lastUri!.queryParameters.containsKey('userId'), isFalse);
+    });
+  });
+
+  group('getSeriesKey', () {
+    Map<String, dynamic> row(
+      String id, {
+      String type = 'Series',
+      Map<String, String>? providerIds,
+    }) => {'Id': id, 'Name': 'x', 'Type': type, 'ProviderIds': ?providerIds};
+
+    Map<String, dynamic> answer(List<Map<String, dynamic>> rows) => {
+      'Items': rows,
+      'TotalRecordCount': rows.length,
+    };
+
+    test('reads the series in one request for its ids, and names its '
+        'page by TMDB\'s', () async {
+      final adapter = _ConversationAdapter(
+        response: answer([
+          row(_seriesId, providerIds: {'Tmdb': '95396', 'Tvdb': '371980'}),
+        ]),
+      );
+
+      final key = await _client(adapter).getSeriesKey(_seriesId);
+
+      expect(key, const MediaKey.tv(95396));
+      expect(adapter.uris, hasLength(1));
+      expect(adapter.lastUri!.path, '/Items');
+      final query = adapter.lastUri!.queryParameters;
+      expect(query['ids'], _seriesId);
+      // Only the ids: no artwork and no synopsis for a read that opens a page.
+      expect(query['fields'], 'ProviderIds');
+      expect(query['userId'], _viewerId);
+    });
+
+    test('TVDB\'s when the server holds no TMDB id', () async {
+      final adapter = CapturingHttpAdapter(
+        response: answer([
+          row(_seriesId, providerIds: {'Tvdb': '371980', 'Imdb': 'tt11280740'}),
+        ]),
+      );
+
+      expect(
+        await _client(adapter).getSeriesKey(_seriesId),
+        const MediaKey.tvdb(371980),
+      );
+    });
+
+    test('no ids, no page', () async {
+      final adapter = CapturingHttpAdapter(
+        response: answer([row(_seriesId), row(_seriesId, providerIds: {})]),
+      );
+
+      expect(await _client(adapter).getSeriesKey(_seriesId), isNull);
+      adapter.response = answer([
+        row(_seriesId, providerIds: {'Imdb': 'tt11280740'}),
+      ]);
+      expect(await _client(adapter).getSeriesKey(_seriesId), isNull);
+    });
+
+    test('reads without a viewer, which only costs the watch state it '
+        'does not use', () async {
+      final adapter = CapturingHttpAdapter(
+        response: answer([
+          row(_seriesId, providerIds: {'Tmdb': '95396'}),
+        ]),
+      );
+
+      final key = await _client(adapter, userId: '').getSeriesKey(_seriesId);
+
+      expect(key, const MediaKey.tv(95396));
+      expect(adapter.lastUri!.queryParameters.containsKey('userId'), isFalse);
+    });
+
+    test('a server that ignored the id names the page of the series it '
+        'asked for, or none', () async {
+      // The start of the whole library, as a server that does not filter by
+      // `ids` answers: another series first, then the one asked for.
+      final library = answer([
+        row('aaaa0000bbbb1111cccc2222dddd3333', providerIds: {'Tmdb': '1'}),
+        row(_seriesId, providerIds: {'Tmdb': '95396'}),
+      ]);
+      final adapter = CapturingHttpAdapter(response: library);
+      expect(
+        await _client(adapter).getSeriesKey(_seriesId),
+        const MediaKey.tv(95396),
+      );
+
+      adapter.response = answer([
+        row('aaaa0000bbbb1111cccc2222dddd3333', providerIds: {'Tmdb': '1'}),
+      ]);
+      expect(await _client(adapter).getSeriesKey(_seriesId), isNull);
+    });
+
+    test(
+      'the same id spelled with dashes or in capitals is the series',
+      () async {
+        final adapter = CapturingHttpAdapter(
+          response: answer([
+            row(
+              '0F4B8D2A-6C1E-3957-4A8B-2C6D0E4F8192',
+              providerIds: {'Tmdb': '95396'},
+            ),
+          ]),
+        );
+
+        expect(
+          await _client(adapter).getSeriesKey(_seriesId),
+          const MediaKey.tv(95396),
+        );
+      },
+    );
+
+    test('anything but a series names no page', () async {
+      final adapter = CapturingHttpAdapter(
+        response: answer([
+          row(_seriesId, type: 'Season', providerIds: {'Tmdb': '95396'}),
+        ]),
+      );
+
+      expect(await _client(adapter).getSeriesKey(_seriesId), isNull);
+    });
+
+    test('a server that did not answer names none, and says nothing', () async {
+      final adapter = CapturingHttpAdapter(response: const {}, statusCode: 500);
+
+      expect(await _client(adapter).getSeriesKey(_seriesId), isNull);
+    });
+
+    test('a request ended before it was answered names none', () async {
+      final adapter = CapturingHttpAdapter(
+        response: answer([
+          row(_seriesId, providerIds: {'Tmdb': '95396'}),
+        ]),
+      );
+      final token = CancelToken()..cancel();
+
+      expect(
+        await _client(adapter).getSeriesKey(_seriesId, cancelToken: token),
+        isNull,
+      );
+      expect(adapter.callCount, 0);
     });
   });
 

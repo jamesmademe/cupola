@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
+import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -89,6 +90,12 @@ class _ScriptedServer implements StreamServerClient {
   Future<StreamItem?> getItem(
     String itemId, {
     String? viewerId,
+    CancelToken? cancelToken,
+  }) async => null;
+
+  @override
+  Future<MediaKey?> getSeriesKey(
+    String seriesId, {
     CancelToken? cancelToken,
   }) async => null;
 

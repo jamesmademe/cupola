@@ -25,6 +25,7 @@ library;
 
 import 'package:dio/dio.dart' show CancelToken;
 
+import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/models/stream_library_page.dart';
@@ -179,6 +180,22 @@ abstract interface class StreamServerClient {
     String? viewerId,
     CancelToken? cancelToken,
   });
+
+  /// The page the series [seriesId] has, by the ids this server holds for it:
+  /// what a season or an episode (`StreamItem.seriesId`) opens when it opens
+  /// its series. One read of the series' own item, asking for its external
+  /// ids (Jellyfin's `ProviderIds`, Plex's `Guid[]`), and the key is
+  /// `MediaKey.ofStreamItem` of what came back: TMDB's id, else TVDB's.
+  ///
+  /// **The answer is checked, never taken on trust**: only the item that is
+  /// [seriesId], and a series, names a page. A server that ignored the id and
+  /// answered with the start of its library names none.
+  ///
+  /// Null when the server holds no id for the series, said something else, or
+  /// did not answer: it fills the one slot of a tap that has the server's own
+  /// page to fall back on, so no failure is told apart and none is thrown.
+  /// Never retried: [cancelToken] ends it.
+  Future<MediaKey?> getSeriesKey(String seriesId, {CancelToken? cancelToken});
 
   /// The children of a series, season or album.
   ///

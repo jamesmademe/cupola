@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/utils/url_utils.dart';
+import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/plex/domain/models/plex_item_mapper.dart';
 import 'package:cupola/features/plex/domain/models/plex_models.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
@@ -807,6 +808,34 @@ class PlexClient implements StreamServerClient {
       final first = metadata.whereType<Map>().firstOrNull;
       if (first == null) return null;
       return plexItemFromJson(first.cast<String, dynamic>());
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<MediaKey?> getSeriesKey(
+    String seriesId, {
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      final container = await _container(
+        '/library/metadata/${_pathSegment(seriesId)}',
+        // `Guid[]` is only sent when asked for. The same two flags as
+        // [getItem]: no stat of the files, no agent refresh.
+        queryParameters: {'includeGuids': 1, 'checkFiles': 0, 'skipRefresh': 1},
+        cancelToken: cancelToken,
+      );
+      final metadata = container['Metadata'];
+      final first = metadata is List
+          ? metadata.whereType<Map>().firstOrNull
+          : null;
+      if (first == null) return null;
+      final series = plexItemFromJson(first.cast<String, dynamic>());
+      // Only the series itself names its page.
+      return series == null || series.id != seriesId.trim()
+          ? null
+          : MediaKey.ofStreamItem(series);
     } catch (_) {
       return null;
     }

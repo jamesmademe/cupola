@@ -14,6 +14,7 @@ import 'package:cupola/features/settings/domain/probe_identity.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/jellyfin/domain/models/jellyfin_item_mapper.dart';
 import 'package:cupola/features/jellyfin/domain/models/jellyfin_models.dart';
+import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/models/stream_library_page.dart';
@@ -684,6 +685,36 @@ class JellyfinClient implements StreamServerClient {
       return null;
     }
   }
+
+  @override
+  Future<MediaKey?> getSeriesKey(
+    String seriesId, {
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      final items = await _fetchItems('/Items', {
+        'ids': seriesId,
+        // The ids are all this read is for: no artwork, no synopsis.
+        'fields': 'ProviderIds',
+        'userId': ?_resolveViewerId(null),
+      }, cancelToken: cancelToken);
+      // A server that ignored `ids` answers with the start of its library:
+      // only the series itself names its page.
+      final series = items.where(
+        (item) =>
+            _sameId(item.id, seriesId) && item.kind == StreamItemKind.series,
+      );
+      return series.isEmpty ? null : MediaKey.ofStreamItem(series.first);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Whether two spellings name one item: Jellyfin writes an id with or
+  /// without dashes, in either case.
+  static bool _sameId(String a, String b) =>
+      a.replaceAll('-', '').toLowerCase() ==
+      b.replaceAll('-', '').toLowerCase();
 
   @override
   Future<StreamItem?> findByExternalId({

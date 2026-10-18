@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/plex/data/plex_client.dart';
 import 'package:cupola/features/plex/domain/models/plex_item_mapper.dart';
 import 'package:cupola/features/plex/domain/models/plex_models.dart';
@@ -1709,6 +1710,118 @@ void main() {
       );
     });
   });
+  group('getSeriesKey', () {
+    Map<String, dynamic> container(Map<String, dynamic> show) => {
+      'MediaContainer': {
+        'size': 1,
+        'Metadata': [show],
+      },
+    };
+
+    Map<String, dynamic> show(
+      String ratingKey, {
+      String type = 'show',
+      List<String> guids = const [],
+    }) => {
+      'ratingKey': ratingKey,
+      'key': '/library/metadata/$ratingKey',
+      'title': 'Severance',
+      'type': type,
+      if (guids.isNotEmpty)
+        'Guid': [
+          for (final id in guids) {'id': id},
+        ],
+    };
+
+    test('reads the show\'s own item with its guids, and names its page by '
+        'TMDB\'s', () async {
+      final adapter = CapturingHttpAdapter(
+        response: container(
+          show(
+            '41000',
+            guids: ['imdb://tt11280740', 'tmdb://95396', 'tvdb://371980'],
+          ),
+        ),
+      );
+
+      final key = await _client(adapter).getSeriesKey('41000');
+
+      expect(key, const MediaKey.tv(95396));
+      expect(adapter.callCount, 1);
+      expect(adapter.lastUri!.path, '/library/metadata/41000');
+      final query = adapter.lastUri!.queryParameters;
+      // `Guid[]` only arrives when asked for; and the two flags that keep the
+      // server from touching the files.
+      expect(query['includeGuids'], '1');
+      expect(query['checkFiles'], '0');
+      expect(query['skipRefresh'], '1');
+    });
+
+    test('TVDB\'s when the server holds no TMDB id', () async {
+      final adapter = CapturingHttpAdapter(
+        response: container(show('41000', guids: ['tvdb://371980'])),
+      );
+
+      expect(
+        await _client(adapter).getSeriesKey('41000'),
+        const MediaKey.tvdb(371980),
+      );
+    });
+
+    test('a show on a legacy agent is named by the agent\'s id', () async {
+      final adapter = CapturingHttpAdapter(
+        response: container({
+          ...show('41000'),
+          'guid': 'com.plexapp.agents.thetvdb://371980?lang=en',
+        }),
+      );
+
+      expect(
+        await _client(adapter).getSeriesKey('41000'),
+        const MediaKey.tvdb(371980),
+      );
+    });
+
+    test('no ids, no page', () async {
+      final adapter = CapturingHttpAdapter(
+        response: container(show('41000', guids: ['plex://show/5d9c08'])),
+      );
+
+      expect(await _client(adapter).getSeriesKey('41000'), isNull);
+    });
+
+    test('anything but the show asked for names no page', () async {
+      final adapter = CapturingHttpAdapter(
+        response: container(show('41000', guids: ['tmdb://95396'])),
+      );
+      // Another item answered, and a season in the show's place.
+      expect(await _client(adapter).getSeriesKey('41999'), isNull);
+      adapter.response = container(
+        show('41000', type: 'season', guids: ['tmdb://95396']),
+      );
+      expect(await _client(adapter).getSeriesKey('41000'), isNull);
+    });
+
+    test('a server that did not answer names none, and says nothing', () async {
+      final adapter = CapturingHttpAdapter(response: const {}, statusCode: 500);
+
+      expect(await _client(adapter).getSeriesKey('41000'), isNull);
+    });
+
+    test('a request ended before it was answered names none', () async {
+      final adapter = CapturingHttpAdapter(
+        response: container(show('41000', guids: ['tmdb://95396'])),
+      );
+      final token = CancelToken()..cancel();
+
+      expect(
+        await _client(adapter).getSeriesKey('41000', cancelToken: token),
+        isNull,
+      );
+      expect(adapter.callCount, 0);
+    });
+  });
+
   group('findByExternalId', () {
     Map<String, dynamic> row(
       String ratingKey,
