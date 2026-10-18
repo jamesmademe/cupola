@@ -522,6 +522,42 @@ void main() {
       expect(requests.single.media?.posterPath, '/hydrated.jpg');
     });
 
+    test('a title not dated yet is still named, and named once', () async {
+      Map<String, dynamic> page() => {
+        'results': [
+          {
+            'id': 8,
+            'status': 1,
+            'createdAt': '2024-01-02T00:00:00.000Z',
+            'type': 'movie',
+            'is4k': false,
+            'requestedBy': {'id': 1, 'displayName': 'Matt'},
+            'media': {
+              'id': 102,
+              'tmdbId': 222,
+              'status': 2,
+              'mediaType': 'movie',
+              'title': 'Unknown Media',
+            },
+          },
+        ],
+      };
+      client.getResponseQueue.addAll([
+        page(),
+        {'title': 'Untitled Sequel', 'releaseDate': '', 'posterPath': '/u.jpg'},
+        page(),
+      ]);
+
+      final first = await service.getRequests();
+      final second = await service.getRequests();
+
+      expect(first.single.media?.title, 'Untitled Sequel');
+      expect(first.single.media?.year, isNull);
+      expect(second.single.media?.title, 'Untitled Sequel');
+      // Kept from the first read: the second asked for the page alone.
+      expect(client.getCallCount, 3);
+    });
+
     // Deliberately the opposite of what this asserted before. Swallowing the
     // failure into `[]` made "this Seerr is unreachable" and "this Seerr has no
     // requests" the same answer, and /activity now shows several Seerrs at once.

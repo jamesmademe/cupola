@@ -623,11 +623,12 @@ class SeerrService {
       final movie = media.mediaType == 'movie';
       if (!movie && media.mediaType != 'tv') return request;
       final details = movie ? await getMovie(tmdbId) : await getTv(tmdbId);
+      // A title not dated yet has an empty date: it still has its name.
+      final date =
+          details[movie ? 'releaseDate' : 'firstAirDate']?.toString() ?? '';
       final entry = _mediaCache[key] = (
         title: details[movie ? 'title' : 'name']?.toString(),
-        year: details[movie ? 'releaseDate' : 'firstAirDate']
-            ?.toString()
-            .substring(0, 4),
+        year: date.length >= 4 ? date.substring(0, 4) : null,
         posterPath:
             details['posterPath']?.toString() ??
             details['poster_path']?.toString(),
