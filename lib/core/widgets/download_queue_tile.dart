@@ -126,7 +126,8 @@ class DownloadQueueTile extends StatelessWidget {
   /// for. See `FaultBand.stale`, which carries the same condition for the page.
   ///
   /// The four client queue pages pass it while they show their last read under
-  /// a fault band, measured from when that read came back (`ReadClock`).
+  /// a fault band or under the stale band they raise when no read has come
+  /// back for a while, measured from when that read came back (`ReadClock`).
   final Duration? sampleAge;
 
   /// Whether this row is part of a multi-select.

@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/status/read_age.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/fault_band.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -125,6 +126,16 @@ void main() {
           detail: 'TrueNAS live metrics have not returned.',
           onRefresh: () {},
         ),
+      ),
+      CatalogScene(
+        '.stale(age: 6 min) · a download client\'s queue: the same band, '
+        'with the sentence the queue pages add',
+        (_) => FaultBand.stale(
+          age: const Duration(minutes: 6),
+          detail: queueStaleDetail(ServiceKey.sabnzbd),
+          onRefresh: () {},
+        ),
+        width: 390,
       ),
       CatalogScene(
         '.stale(age: just now) · the clock-tick edge case still reads as a '

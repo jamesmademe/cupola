@@ -107,12 +107,21 @@ class _TransmissionDashboard extends ConsumerWidget {
       );
     }
     final torrentsAsync = lastReadUnderBand(watched, banded: failed != null);
-    // How old the rows are, only while they are the last list read under the
-    // band: their figures stopped moving when the daemon stopped answering.
-    final sampleAge = ref.watchQueueReadAge(
+    // With no fault band, a read that stopped coming back says so
+    // (`FaultBand.stale`); a fault band, which says why, wins.
+    final staleAge = ref.watchQueueStaleAge(
       context,
       ServiceKey.transmission,
       underBand: failed != null,
+      hasQueue: watched.hasValue,
+    );
+    // How old the rows are, only while they are the last read under a band:
+    // their figures stopped moving when the daemon stopped answering, or when
+    // its read stopped coming back.
+    final sampleAge = ref.watchQueueReadAge(
+      context,
+      ServiceKey.transmission,
+      underBand: failed != null || staleAge != null,
     );
 
     // Split once, through the same `when` the rows draw with, so a header never
@@ -148,6 +157,12 @@ class _TransmissionDashboard extends ConsumerWidget {
                   summary: failed,
                   since: silentFor,
                   onRetry: () => _invalidateAll(ref),
+                )
+              else if (staleAge != null)
+                FaultBand.stale(
+                  age: staleAge,
+                  detail: queueStaleDetail(ServiceKey.transmission),
+                  onRefresh: () => _invalidateAll(ref),
                 ),
               ServiceKpiPeek(
                 kpis: ref.watch(serviceKpiProvider(ServiceKey.transmission)),

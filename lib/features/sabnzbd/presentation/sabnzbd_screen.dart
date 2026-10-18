@@ -91,12 +91,21 @@ class _SabnzbdDashboard extends ConsumerWidget {
       );
     }
     final queueAsync = lastReadUnderBand(watched, banded: failed != null);
-    // How old the rows are, only while they are the last queue read under the
-    // band: their figures stopped moving when SABnzbd stopped answering.
-    final sampleAge = ref.watchQueueReadAge(
+    // With no fault band, a queue read that stopped coming back says so
+    // (`FaultBand.stale`); a fault band, which says why, wins.
+    final staleAge = ref.watchQueueStaleAge(
       context,
       ServiceKey.sabnzbd,
       underBand: failed != null,
+      hasQueue: watched.hasValue,
+    );
+    // How old the rows are, only while they are the last queue read under a
+    // band: their figures stopped moving when SABnzbd stopped answering, or
+    // when its queue stopped coming back.
+    final sampleAge = ref.watchQueueReadAge(
+      context,
+      ServiceKey.sabnzbd,
+      underBand: failed != null || staleAge != null,
     );
 
     // Through the same `when` the rows draw with, so the header never counts
@@ -124,6 +133,12 @@ class _SabnzbdDashboard extends ConsumerWidget {
                   summary: failed,
                   since: silentFor,
                   onRetry: () => _invalidateAll(ref),
+                )
+              else if (staleAge != null)
+                FaultBand.stale(
+                  age: staleAge,
+                  detail: queueStaleDetail(ServiceKey.sabnzbd),
+                  onRefresh: () => _invalidateAll(ref),
                 ),
               ServiceKpiPeek(
                 kpis: ref.watch(serviceKpiProvider(ServiceKey.sabnzbd)),

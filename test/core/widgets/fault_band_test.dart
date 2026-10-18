@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/sample_age.dart';
 import 'package:cupola/core/widgets/fault_band.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -335,6 +336,73 @@ void main() {
       expect(find.textContaining('last render'), findsOneWidget);
       expect(find.textContaining('a write will fail'), findsOneWidget);
       expect(find.text('Open Radarr'), findsOneWidget);
+    });
+  });
+
+  group('the stale sentence reads at every age the formatter returns', () {
+    // `formatDurationAge` buckets to `just now`, `N min ago` and `N h ago`;
+    // the lead must be a sentence for each of them, and never "are 6 min ago".
+    String say(Duration age) => FaultBand.stale(
+      age: age,
+      detail: 'SABnzbd\'s queue has not returned.',
+      onRefresh: () {},
+    ).message;
+
+    test('under a minute, nothing is dated', () {
+      for (final age in const [
+        Duration.zero,
+        Duration(seconds: 15),
+        Duration(seconds: 59),
+        Duration(seconds: -5),
+      ]) {
+        expect(
+          say(age),
+          'These figures have stopped updating. '
+          'SABnzbd\'s queue has not returned.',
+          reason: '$age',
+        );
+      }
+    });
+
+    test('from a minute, the age follows "from"', () {
+      expect(
+        say(const Duration(minutes: 1)),
+        'These figures are from 1\u00A0min ago. '
+        'SABnzbd\'s queue has not returned.',
+      );
+      expect(
+        say(const Duration(minutes: 6, seconds: 40)),
+        'These figures are from 6\u00A0min ago. '
+        'SABnzbd\'s queue has not returned.',
+      );
+      expect(
+        say(const Duration(minutes: 59)),
+        'These figures are from 59\u00A0min ago. '
+        'SABnzbd\'s queue has not returned.',
+      );
+    });
+
+    test('from an hour, in hours, which never roll up into days', () {
+      expect(
+        say(const Duration(minutes: 60)),
+        'These figures are from 1\u00A0h ago. '
+        'SABnzbd\'s queue has not returned.',
+      );
+      expect(
+        say(const Duration(hours: 40)),
+        'These figures are from 40\u00A0h ago. '
+        'SABnzbd\'s queue has not returned.',
+      );
+    });
+
+    test('none of them is the sentence it used to be', () {
+      for (final age in const [
+        Duration(minutes: 6),
+        Duration(minutes: 59),
+        Duration(hours: 2),
+      ]) {
+        expect(say(age), isNot(contains('are ${formatDurationAge(age)}')));
+      }
     });
   });
 
