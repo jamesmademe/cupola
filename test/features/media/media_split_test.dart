@@ -408,6 +408,35 @@ void main() {
     await _close(tester, harness, container);
   });
 
+  testWidgets('a season of a series opens beside the list, on that season, '
+      'and another season of it takes the pane\'s place', (tester) async {
+    final (harness, router, container) = await _app(tester);
+    router.go(ServiceRoutes.radarrLibrary);
+    await _answer(tester);
+    final series = MediaKey.tv(WorldTitles.cosmosLaundromat.tmdbId);
+    final list = tester.element(find.text('Monitored'));
+
+    /// The seasons the pane's page was asked for.
+    List<int?> asked() => tester
+        .widgetList<MediaPage>(find.byType(MediaPage).hitTestable())
+        .map((page) => page.season)
+        .toList();
+
+    list.openMedia(series, season: 1);
+    await _answer(tester);
+    expect(router.state.uri.queryParameters['season'], '1');
+    expect(asked(), [1]);
+
+    // The same series on another season is another page: drawn afresh on its
+    // own season, not the pane's page left where it was.
+    list.openMedia(series, season: 2);
+    await _answer(tester);
+    expect(router.state.uri.queryParameters['season'], '2');
+    expect(asked(), [2]);
+
+    await _close(tester, harness, container);
+  });
+
   testWidgets('upright, a title takes the page as on a phone, and turning '
       'the tablet keeps it', (tester) async {
     final (harness, router, container) = await _app(tester, size: _upright);

@@ -866,6 +866,7 @@ CatalogScene _scene(
   Audience audience = Audience.operator,
   double textScale = 1,
   MediaKey key = _key,
+  int? season,
   bool paned = false,
 }) => CatalogScene(
   caption,
@@ -873,9 +874,9 @@ CatalogScene _scene(
       ? MediaPane(
           canGoBack: false,
           onBack: () {},
-          child: MediaPage(mediaKey: key),
+          child: MediaPage(mediaKey: key, season: season),
         )
-      : MediaPage(mediaKey: key),
+      : MediaPage(mediaKey: key, season: season),
   width: width,
   height: height,
   textScale: textScale,
@@ -971,6 +972,15 @@ void main() {
         _series(),
         height: 2200,
         key: const MediaKey.tv(358332),
+      ),
+      _scene(
+        'Series on a season · a season or an episode of a media server '
+        'opened the page: the episodes open on that season, the first, not '
+        'on the one Play continues',
+        _series(),
+        height: 2200,
+        key: const MediaKey.tv(358332),
+        season: 1,
       ),
       _scene('Waiting · nobody has said who the title is yet', [
         MediaConnectionRow<MediaRadarrCopy>(

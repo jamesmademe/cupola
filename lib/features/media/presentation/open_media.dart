@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart' show CancelToken;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +14,8 @@ import 'package:cupola/features/services/presentation/services_provider.dart'
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
+import 'package:cupola/features/stream/presentation/stream_connection_provider.dart'
+    show streamClientForProvider;
 
 /// Opening a title's page from the page the user is on: under that page's
 /// tab, so the poster flies and the tab keeps it (`ServiceRoutes.media`).
@@ -45,6 +48,7 @@ extension OpenMedia on BuildContext {
   Future<void> openMedia(
     MediaKey key, {
     String? focus,
+    int? season,
     String? heroTag,
     String? posterUrl,
   }) => _openBeside(
@@ -52,6 +56,7 @@ extension OpenMedia on BuildContext {
       key,
       from: _here,
       focus: focus,
+      season: season,
       heroTag: heroTag,
       posterUrl: posterUrl,
     ),
@@ -88,29 +93,57 @@ extension OpenMedia on BuildContext {
 
   /// Opens an item a media server listed: a movie or a series on its own
   /// page, with the copy of the connection that listed it leading (the
-  /// service's lens); anything else on the server's own page.
+  /// service's lens); a season or an episode on its series' page, on that
+  /// season; anything else on the server's own page.
   ///
   /// [instanceId] is the connection that listed the item: it leads in place of
   /// the lens, and rides the server's page as `?i=`, so opening a row from one
   /// connection never moves the lens.
+  ///
+  /// A season or an episode names its series by the server's own id
+  /// (`StreamItem.seriesId`), and the page is keyed by the ids the server
+  /// holds for it, so the tap reads them first: one read of the series
+  /// through the connection's own client (`StreamServerClient.getSeriesKey`).
+  /// While it is out the tap shows what any press shows, and nothing else: no
+  /// page in between. A series the server holds no ids for, a read that failed
+  /// or ran out ([_seriesLookupLimit]), and an item that names no series (an
+  /// album, a track, an episode the server filed under none) open the server's
+  /// own page as they always did: the tap never ends nowhere, and never says
+  /// that a lookup it did for itself failed.
   Future<void> openStreamItem(
     ServiceKey service,
     StreamItem item, {
     String instanceId = '',
-  }) => switch (MediaKey.ofStreamItem(item)) {
-    final key? => openMedia(
-      key,
-      focus: instanceId.isNotEmpty
-          ? instanceId
-          : ProviderScope.containerOf(
-              this,
-              listen: false,
-            ).read(activeInstanceProvider(service))?.id,
-    ),
-    null => push(
+  }) async {
+    final container = ProviderScope.containerOf(this, listen: false);
+    final focus = instanceId.isNotEmpty
+        ? instanceId
+        : container.read(activeInstanceProvider(service))?.id;
+    if (MediaKey.ofStreamItem(item) case final key?) {
+      return openMedia(key, focus: focus);
+    }
+    if (item.seriesId case final seriesId?
+        when item.kind == StreamItemKind.season ||
+            item.kind == StreamItemKind.episode) {
+      final asked = '${service.name}/$instanceId/${item.id}';
+      // A second tap while the first is out would open the page twice.
+      if (!_askedSeries.add(asked)) return;
+      final MediaKey? series;
+      try {
+        series = await _seriesKeyOf(container, service, instanceId, seriesId);
+      } finally {
+        _askedSeries.remove(asked);
+      }
+      // The tile went away while the read was out: nobody is left to open it.
+      if (!mounted) return;
+      if (series != null) {
+        return openMedia(series, focus: focus, season: item.seasonNumber);
+      }
+    }
+    await push(
       ServiceRoutes.streamItem(service, item.id, instanceId: instanceId),
-    ),
-  };
+    );
+  }
 
   /// Pushes a person's page under the tab the user is on, as a title opened
   /// here would be (`ServiceRoutes.person`), and on a tablet beside the list
@@ -137,5 +170,42 @@ extension OpenMedia on BuildContext {
     return MediaSplit.pageOf(Uri.parse(mounted)) == null
         ? push(mounted, extra: extra)
         : _openBeside(mounted, extra: extra);
+  }
+}
+
+/// How long a tap waits for the series' ids before it opens the server's own
+/// page instead: a server that is slow to say is not worth a tap that does
+/// nothing.
+const _seriesLookupLimit = Duration(seconds: 4);
+
+/// The seasons and episodes whose series is being read: a tap on one of them
+/// is not taken twice.
+final _askedSeries = <String>{};
+
+/// The page key of the series [seriesId] on the connection [instanceId] of
+/// [service] (empty: the lens), or null for any reason it cannot be had: the
+/// connection is gone, the server did not answer in [_seriesLookupLimit] or
+/// holds no id for the series.
+Future<MediaKey?> _seriesKeyOf(
+  ProviderContainer container,
+  ServiceKey service,
+  String instanceId,
+  String seriesId,
+) async {
+  final read = CancelToken();
+  try {
+    // Through the connection's own client, so its address, access and pin
+    // follow the route it is reached by.
+    final client = container.read(
+      streamClientForProvider((service: service, instanceId: instanceId)),
+    );
+    return await client
+        .getSeriesKey(seriesId, cancelToken: read)
+        .timeout(_seriesLookupLimit);
+  } catch (_) {
+    return null;
+  } finally {
+    // Whatever ended the wait, a read still out is not wanted.
+    read.cancel();
   }
 }

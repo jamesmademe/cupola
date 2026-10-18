@@ -22,7 +22,6 @@ import 'package:cupola/features/home/domain/home_module.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_frame.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_parts.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
-import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/presentation/open_media.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
@@ -405,18 +404,7 @@ class _WhoAreYou extends ConsumerWidget {
 }
 
 /// A row's page: a movie's or a series' Media page with the connection it is
-/// on leading, else the item's own page on its server.
-Future<void> openResume(BuildContext context, ResumeRow row) async {
-  final key = MediaKey.ofStreamItem(row.item);
-  if (key != null) {
-    await context.openMedia(key, focus: row.instanceId);
-    return;
-  }
-  await context.pushMounted(
-    ServiceRoutes.streamItem(
-      row.service,
-      row.item.id,
-      instanceId: row.instanceId,
-    ),
-  );
-}
+/// on leading, an episode's on its series' page at its season, else the
+/// item's own page on its server (`OpenMedia.openStreamItem`).
+Future<void> openResume(BuildContext context, ResumeRow row) =>
+    context.openStreamItem(row.service, row.item, instanceId: row.instanceId);
