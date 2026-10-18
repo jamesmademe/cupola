@@ -287,7 +287,9 @@ class _NeedsAttentionSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final items = ref.watch(sonarrNeedsAttentionProvider);
-    final count = items.asData?.value.length;
+    // The faults the rows stand for, not the rows: a folded row of three
+    // downloads is three.
+    final count = items.asData?.value.fold(0, (sum, item) => sum + item.count);
     // A queue walk that stopped short: see the Radarr home's twin.
     final floor =
         ref.watch(sonarrQueueRecordsProvider).value?.cutShort ?? false;
@@ -298,7 +300,7 @@ class _NeedsAttentionSection extends ConsumerWidget {
       subtitle: count == null ? '—' : (floor ? Lexicon.floor(count) : '$count'),
       // No link: every row here belongs to a different tab: a stalled download
       // to Queue, a backlog to Wanted, and a single destination would have to
-      // lie about the rest.
+      // lie about the rest. Each row is its own door instead.
       child: AsyncValueWidget<List<SonarrAttentionItem>>.section(
         value: items,
         service: ServiceKey.sonarr,
@@ -343,12 +345,20 @@ class _AttentionRow extends StatelessWidget {
       surface: colorScheme.surfaceContainerLow,
     );
 
+    final door = item.door;
+
     return ServiceOverviewRow(
       spoken: item.spoken,
       leading: Icon(item.icon, size: 18, color: tone),
       title: item.headline,
       titleColor: tone,
       detail: item.detail,
+      onTap: door == null
+          ? null
+          : () => openAttentionDoor(context, ServiceKey.sonarr, door),
+      doorHint: door == null
+          ? null
+          : attentionDoorHint(ServiceKey.sonarr, door),
     );
   }
 }

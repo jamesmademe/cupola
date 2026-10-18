@@ -6,6 +6,9 @@ import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/series/presentation/sonarr_overview_provider.dart';
+import 'package:cupola/features/services/domain/attention_door.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
 
 import '../../../test_helpers/fake_services.dart';
 
@@ -186,6 +189,89 @@ void main() {
       expect(SonarrAttentionKind.importFailed.tone, StatusTone.warning);
       expect(SonarrAttentionKind.missing.tone, StatusTone.neutral);
       expect(SonarrAttentionKind.belowCutoff.tone, StatusTone.neutral);
+    });
+  });
+
+  group('queue faults lead to where the fault is fixed', () {
+    Map<String, dynamic> stalled(
+      String series, {
+      required int id,
+      required String downloadId,
+      int season = 1,
+      int episode = 1,
+    }) => {
+      'id': id,
+      'series': {'title': series},
+      'episode': {'seasonNumber': season, 'episodeNumber': episode},
+      'status': 'warning',
+      'errorMessage': 'The download is stalled with no connections',
+      'downloadId': downloadId,
+    };
+
+    test('one stuck download opens its own page', () {
+      final items = sonarrQueueFaults(
+        [stalled('Andor', id: 4, downloadId: 'ABC')],
+        now: now,
+        instanceId: 'sonarr',
+      );
+
+      expect(
+        items.single.door,
+        const AttentionDoor.download(instanceId: 'sonarr', key: 'ABC'),
+      );
+    });
+
+    test('a season pack is one download, named as a pack', () {
+      // Six records of one torrent: six rows before, one fault now.
+      final items = sonarrQueueFaults([
+        for (var episode = 1; episode <= 6; episode++)
+          stalled(
+            'Slow Horses',
+            id: episode,
+            downloadId: 'PACK',
+            season: 4,
+            episode: episode,
+          ),
+      ], now: now);
+
+      expect(items, hasLength(1));
+      expect(items.single.headline, 'Stuck · Slow Horses S4 E1–E6');
+      expect(items.single.count, 1);
+      expect(items.single.door, isA<AttentionDownload>());
+    });
+
+    test('several stuck downloads are one row that opens the Queue tab', () {
+      final items = sonarrQueueFaults(
+        [
+          stalled('Andor', id: 1, downloadId: 'A'),
+          stalled('Severance', id: 2, downloadId: 'B'),
+          stalled('Slow Horses', id: 3, downloadId: 'C'),
+        ],
+        now: now,
+        cutShort: true,
+      );
+
+      final row = items.single;
+      expect(row.headline, '3+ downloads stuck');
+      expect(
+        row.spoken,
+        'at least 3 downloads stuck, Andor S1 E1, '
+        'Severance S1 E1, Slow Horses S1 E1',
+      );
+      expect(row.count, 3);
+      expect(row.door, const AttentionDoor.tab(ServiceTab.queue));
+    });
+
+    test('the backlog opens Wanted, which lists what is missing and what is '
+        'below its cutoff', () {
+      expect(
+        sonarrMissingEpisodesItem(12)!.door,
+        const AttentionDoor.tab(ServiceTab.wanted),
+      );
+      expect(
+        sonarrBelowCutoffItem(3)!.door,
+        const AttentionDoor.tab(ServiceTab.wanted),
+      );
     });
   });
 
@@ -519,7 +605,12 @@ ProviderContainer _container(SonarrService service) {
     // Riverpod re-runs a failed provider on an exponential backoff; a test that
     // deliberately fails one would otherwise wait out the whole sequence.
     retry: (_, _) => null,
-    overrides: [sonarrServiceProvider.overrideWith((ref) => service)],
+    overrides: [
+      sonarrServiceProvider.overrideWith((ref) => service),
+      // The connection the lens is on, which a download's door is addressed
+      // by: none here, so the door names no connection.
+      activeInstanceProvider.overrideWith((ref, service) => null),
+    ],
   );
   addTearDown(container.dispose);
   return container;

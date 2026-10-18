@@ -37,7 +37,11 @@ import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/series/presentation/series_provider.dart';
+import 'package:cupola/features/services/domain/attention_door.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// How far ahead the week window looks.
 const int sonarrAiringDays = 7;
@@ -242,19 +246,24 @@ enum SonarrAttentionKind {
 
 /// One row of Needs attention: what happened, to what, and when.
 ///
-/// The per-row cross-service action the board draws ("Manual import", "Search
-/// all") is deliberately absent. Manual import needs a bridge into the download
-/// client that does not exist in `lib/` yet, and "Search all missing" would
-/// have to walk every page of `wanted/missing` to collect the episode ids the
-/// only search command this client has takes. A button that cannot do the thing
-/// it names is worse than no button.
+/// Every row leads somewhere: a download's own page for one stuck or failed
+/// download, the Queue tab for the several a folded row stands for, the
+/// Wanted tab for the backlog. What Sonarr can do about a download it cannot
+/// import is not a call this client makes ("Manual import" needs a bridge into
+/// the download client, and "Search all missing" would have to walk every page
+/// of `wanted/missing` for the episode ids the only search command here
+/// takes), so no row carries a verb: the page it opens does.
 @immutable
 class SonarrAttentionItem {
   const SonarrAttentionItem({
     required this.kind,
     required this.headline,
     required this.detail,
-  });
+    this.door,
+    this.subject,
+    this.count = 1,
+    String? spokenHeadline,
+  }) : _spokenHeadline = spokenHeadline;
 
   final SonarrAttentionKind kind;
 
@@ -265,14 +274,32 @@ class SonarrAttentionItem {
   /// Empty when the record carried none.
   final String detail;
 
+  /// Where the row leads, or null where the app has no place that shows it.
+  final AttentionDoor? door;
+
+  /// What the fault is about, bare (`Slow Horses S4`), for a folded row to
+  /// name.
+  final String? subject;
+
+  /// How many faults the row stands for: one, or the downloads a folded row
+  /// folds. The section's own count adds these, so folding never changes how
+  /// many things need attention.
+  final int count;
+
+  /// [headline] as the ear should hear it, where it differs (`at least 3`
+  /// for a floor).
+  final String? _spokenHeadline;
+
   StatusTone get tone => kind.tone;
   IconData get icon => kind.icon;
 
   /// The row as a sentence, with the dots the layout uses turned back into
   /// commas: `·` is decoration, and a screen reader either names it or drops
   /// it depending on the user's punctuation setting.
-  String get spoken =>
-      joinSpokenParts([spokenFromDotted(headline), spokenFromDotted(detail)]);
+  String get spoken => joinSpokenParts([
+    spokenFromDotted(_spokenHeadline ?? headline),
+    spokenFromDotted(detail),
+  ]);
 }
 
 /// The slot a queue or history record is about: `S2 E5`, or `S4` for a season
@@ -315,44 +342,131 @@ String sonarrRecordSubject(Map<String, dynamic> record) {
 /// Stalled is tested before import: a transfer that is not moving has not
 /// reached the import stage at all, and Sonarr marks both with the same
 /// `trackedDownloadStatus: warning`.
+///
+/// A season pack is one torrent and one record per episode, and one download is
+/// one fault: its records are read together, and the row names the pack
+/// (`Slow Horses S4 E1–E6`) rather than the first episode it happens to list.
+///
+/// Several downloads in one of the two states are one row (`3 downloads
+/// stuck`, the series in the detail) whose door is the Queue tab, which lists
+/// them all; one of a kind keeps its own row and opens its own page.
+/// [instanceId] is the connection the records were read from, which a
+/// download's page is addressed by, and [cutShort] says the walk stopped on a
+/// full page, so a count taken in it is a floor.
 List<SonarrAttentionItem> sonarrQueueFaults(
   List<Map<String, dynamic>> records, {
   required DateTime now,
+  String instanceId = '',
+  bool cutShort = false,
 }) {
   final items = <SonarrAttentionItem>[];
-  for (final record in records) {
-    final subject = sonarrRecordSubject(record);
+  for (final download in _byDownload(records)) {
+    // The download's fault is its worst record's: a stall before an import
+    // (a transfer that is not moving has not reached the import stage).
+    final stalled = download.where(_isStalled).firstOrNull;
+    final record = stalled ?? download.where(_isImportFault).firstOrNull;
+    if (record == null) continue;
+
+    final subject = download.length == 1
+        ? sonarrRecordSubject(record)
+        : _packSubject(download) ?? sonarrRecordSubject(record);
     final when = _parseLocal(stringOrNull(record['added']));
     final age = when == null ? null : formatRelativeDateTime(when, now: now);
     final message =
         stringOrNull(record['errorMessage']) ?? arrQueueWarningMessage(record);
+    final door = arrQueueRecordDoor(record, instanceId: instanceId);
 
-    if (_isStalled(record)) {
-      items.add(
-        SonarrAttentionItem(
-          kind: SonarrAttentionKind.stalled,
-          headline: '${StateWord.stuck.label}\u00A0· $subject',
-          detail: joinDisplayParts([
-            stringOrNull(record['downloadClient']),
-            message,
-            age,
-          ]),
-        ),
+    items.add(
+      stalled != null
+          ? SonarrAttentionItem(
+              kind: SonarrAttentionKind.stalled,
+              headline: '${StateWord.stuck.label}\u00A0· $subject',
+              detail: joinDisplayParts([
+                stringOrNull(record['downloadClient']),
+                message,
+                age,
+              ]),
+              door: door,
+              subject: subject,
+            )
+          : SonarrAttentionItem(
+              kind: SonarrAttentionKind.importFailed,
+              headline: 'Import failed\u00A0· $subject',
+              detail: joinDisplayParts([message, age]),
+              door: door,
+              subject: subject,
+            ),
+    );
+  }
+  return foldAttention<SonarrAttentionItem, SonarrAttentionKind>(
+    items,
+    kindOf: (item) => item.kind,
+    merge: (kind, members) {
+      final words = kind == SonarrAttentionKind.stalled
+          ? stuckDownloadsWords(members.length, floor: cutShort)
+          : failedImportsWords(members.length, floor: cutShort);
+      return SonarrAttentionItem(
+        kind: kind,
+        headline: words.headline,
+        spokenHeadline: words.spoken,
+        detail: attentionNames(members.map((member) => member.subject ?? '')),
+        door: const AttentionDoor.tab(ServiceTab.queue),
+        count: members.length,
       );
+    },
+  );
+}
+
+/// The records of [records] one download at a time, in the order the queue
+/// lists them: a season pack is one torrent and a record per episode, all
+/// carrying the one `downloadId`. A record with no client id is its own
+/// download.
+List<List<Map<String, dynamic>>> _byDownload(
+  List<Map<String, dynamic>> records,
+) {
+  final downloads = <List<Map<String, dynamic>>>[];
+  final byKey = <String, List<Map<String, dynamic>>>{};
+  for (final record in records) {
+    final key = stringOrNull(record['downloadId'])?.trim().toLowerCase();
+    if (key == null || key.isEmpty) {
+      downloads.add([record]);
       continue;
     }
-
-    if (_isImportFault(record)) {
-      items.add(
-        SonarrAttentionItem(
-          kind: SonarrAttentionKind.importFailed,
-          headline: 'Import failed\u00A0· $subject',
-          detail: joinDisplayParts([message, age]),
-        ),
-      );
+    final existing = byKey[key];
+    if (existing != null) {
+      existing.add(record);
+    } else {
+      final download = [record];
+      byKey[key] = download;
+      downloads.add(download);
     }
   }
-  return List.unmodifiable(items);
+  return downloads;
+}
+
+/// A pack in a sentence: the series and the episodes its records name,
+/// `Slow Horses S4 E1–E6`. Null when the records name no series or no
+/// episode.
+String? _packSubject(List<Map<String, dynamic>> records) {
+  final series = arrSeriesTitle(records.first);
+  final bySeason = <int, List<int>>{};
+  for (final record in records) {
+    final episode = mapOrNull(record['episode']);
+    final season = intOrNull(
+      episode?['seasonNumber'] ?? record['seasonNumber'],
+    );
+    final number = intOrNull(
+      episode?['episodeNumber'] ?? record['episodeNumber'],
+    );
+    if (season == null || number == null) continue;
+    bySeason.putIfAbsent(season, () => []).add(number);
+  }
+  final runs = episodeRunsLine({
+    for (final season in bySeason.keys.toList()..sort())
+      season: bySeason[season]!.toSet().toList()..sort(),
+  });
+  if (series == null || runs == null) return null;
+  return '$series $runs';
 }
 
 /// The missing-episodes backlog row, or null when there is nothing to report,
@@ -377,6 +491,7 @@ SonarrAttentionItem? sonarrMissingEpisodesItem(int? total, {int? seriesCount}) {
         : seriesCount == 1
         ? 'in 1 series'
         : 'across $seriesCount series',
+    door: const AttentionDoor.tab(ServiceTab.wanted),
   );
 }
 
@@ -390,6 +505,8 @@ SonarrAttentionItem? sonarrBelowCutoffItem(int? total) {
         ? '1 episode below your quality cutoff'
         : '$total episodes below your quality cutoff',
     detail: 'Sonarr keeps searching for an upgrade',
+    // Wanted lists what is below its cutoff beside what is missing.
+    door: const AttentionDoor.tab(ServiceTab.wanted),
   );
 }
 
@@ -505,7 +622,15 @@ final sonarrNeedsAttentionProvider =
       final page = await ref.watch(sonarrQueueRecordsProvider.future);
       final backlog = await ref.watch(sonarrBacklogProvider.future);
       return [
-        ...sonarrQueueFaults(page.recordMaps, now: DateTime.now()),
+        ...sonarrQueueFaults(
+          page.recordMaps,
+          now: DateTime.now(),
+          // The connection the queue was read from: a download's page is
+          // addressed by it.
+          instanceId:
+              ref.watch(activeInstanceProvider(ServiceKey.sonarr))?.id ?? '',
+          cutShort: page.cutShort,
+        ),
         ...backlog,
       ];
     });
