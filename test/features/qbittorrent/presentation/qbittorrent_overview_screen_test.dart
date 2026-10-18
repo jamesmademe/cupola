@@ -130,17 +130,19 @@ void main() {
       ],
     );
 
-    // Nine faults, four rows. The header is the only place the other five are
-    // reported, so it prints the census, not the length of the sample below
-    // it, which would tell a user with nine broken torrents they had four.
+    // Nine faults, three rows: the seven stalled torrents are one row. The
+    // header prints the census, the torrents the rows stand for, not the
+    // length of the sample below it, which would tell a user with nine broken
+    // torrents they had three.
     final header = tester.widget<SectionHeader>(
       find.widgetWithText(SectionHeader, 'Needs attention'),
     );
     expect(header.subtitle, '9');
-    // Four rows, in the worst-first order the fault kinds declare.
+    // Three rows, in the worst-first order the fault kinds declare.
     expect(find.textContaining('Errored\u00A0· '), findsOneWidget);
     expect(find.textContaining('Missing files\u00A0· '), findsOneWidget);
-    expect(find.textContaining('Stuck\u00A0· '), findsNWidgets(2));
+    expect(find.text('7 downloads stuck'), findsOneWidget);
+    expect(find.textContaining('Stuck\u00A0· '), findsNothing);
   });
 
   testWidgets('a paused torrent is backlog: it is counted, never flagged', (

@@ -5,6 +5,7 @@ import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/qbittorrent/presentation/qbittorrent_actions.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_overview_provider.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
@@ -200,13 +201,21 @@ class _NeedsAttentionSection extends ConsumerWidget {
   }
 }
 
-class _AttentionRow extends StatelessWidget {
+/// A row of Needs attention: a fault, and the way to where it is fixed.
+///
+/// One torrent opens its own page; the several a folded row stands for open
+/// the Queue tab, which lists them all. One stalled torrent can be asked for
+/// peers again from here, through the action the torrent's page and Needs you
+/// already run: an errored torrent or one with missing files has no one-tap
+/// remedy (the fix is a disk, or a recheck the page offers), and a torrent
+/// somebody stopped is not here at all.
+class _AttentionRow extends ConsumerWidget {
   const _AttentionRow({required this.item});
 
   final QbittorrentAttentionItem item;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     // Through the tone rule, never a raw `AppColors.warning`: the walk resolves
     // amber against the surface this row actually lands on, which on the light
@@ -216,6 +225,8 @@ class _AttentionRow extends StatelessWidget {
       item.tone,
       surface: colorScheme.surfaceContainerLow,
     );
+    final door = item.door;
+    final hash = item.hash;
 
     return ServiceOverviewRow(
       spoken: item.spoken,
@@ -223,6 +234,25 @@ class _AttentionRow extends StatelessWidget {
       title: item.headline,
       titleColor: tone,
       detail: item.detail,
+      onTap: door == null
+          ? null
+          : () => openAttentionDoor(context, ServiceKey.qbittorrent, door),
+      doorHint: door == null
+          ? null
+          : attentionDoorHint(ServiceKey.qbittorrent, door),
+      action: hash != null && item.kind == QbittorrentFaultKind.stalled
+          ? ServiceOverviewRowAction(
+              label: 'Look for peers again',
+              hint: 'asks the trackers again for ${item.subject}',
+              onPressed: () => runTorrentAction(
+                context,
+                ref,
+                action: (service) => service.reannounce([hash]),
+                successMessage: 'Asked the trackers for more peers',
+                failureMessage: 'Could not look for peers again',
+              ),
+            )
+          : null,
     );
   }
 }

@@ -4,6 +4,8 @@ import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
 import 'package:cupola/features/qbittorrent/domain/models/transfer_info.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_overview_provider.dart';
+import 'package:cupola/features/services/domain/attention_door.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
 
 /// The window rules, the sentinels and the tone rule, as pure functions.
 ///
@@ -185,7 +187,7 @@ void main() {
       ]);
     });
 
-    test('within a kind the one wrong for longest comes first', () {
+    test('within a kind the one wrong for longest is named first', () {
       final rows = qbittorrentFaultRows([
         _torrent(
           name: 'recent',
@@ -203,10 +205,10 @@ void main() {
         ),
       ], now: now);
 
-      expect(rows.map((r) => r.headline), [
-        'Stuck\u00A0· ancient',
-        'Stuck\u00A0· recent',
-      ]);
+      // Two of a kind are one row, and its names keep the order: the one
+      // wrong for longest first.
+      expect(rows.single.headline, '2 downloads stuck');
+      expect(rows.single.detail, 'ancient, recent');
     });
 
     test('the row speaks one sentence, with the dots turned into commas', () {
@@ -231,11 +233,81 @@ void main() {
       expect(rows.single.spoken, isNot(contains('·')));
     });
 
-    test('the cap holds, so a broken server cannot print forty rows', () {
+    test('a broken server cannot print forty rows: a state is one row', () {
       final rows = qbittorrentFaultRows([
         for (var i = 0; i < 20; i++) _torrent(name: 'x$i', state: 'error'),
       ], now: now);
-      expect(rows, hasLength(qbittorrentAttentionLimit));
+
+      expect(rows, hasLength(1));
+      expect(rows.single.headline, '20 torrents errored');
+      expect(rows.single.detail, 'x0, x1, x10 and 17 more');
+      expect(rows.single.count, 20);
+    });
+
+    test('the cap on rows still holds, worst kind first', () {
+      final rows = qbittorrentFaultRows(
+        [
+          _torrent(name: 's', state: 'stalledDL'),
+          _torrent(name: 'e', state: 'error'),
+          _torrent(name: 'm', state: 'missingFiles'),
+        ],
+        now: now,
+        limit: 2,
+      );
+
+      expect(rows.map((row) => row.kind), [
+        QbittorrentFaultKind.errored,
+        QbittorrentFaultKind.missingFiles,
+      ]);
+    });
+  });
+
+  group('qbittorrentFaultRows leads to where the fault is fixed', () {
+    test('one torrent opens its own page, by its hash, on the connection that '
+        'listed it', () {
+      final rows = qbittorrentFaultRows(
+        [_torrent(name: 'a', state: 'stalledDL', hash: 'abc123')],
+        now: now,
+        instanceId: 'qbittorrent',
+      );
+
+      expect(
+        rows.single.door,
+        const AttentionDoor.download(instanceId: 'qbittorrent', key: 'abc123'),
+      );
+      expect(rows.single.hash, 'abc123');
+    });
+
+    test('several of a state are one row that opens the Queue tab, about no '
+        'one torrent', () {
+      final rows = qbittorrentFaultRows([
+        _torrent(name: 'a', state: 'error', hash: '1'),
+        _torrent(name: 'b', state: 'error', hash: '2'),
+        _torrent(name: 'c', state: 'missingFiles', hash: '3'),
+        _torrent(name: 'd', state: 'missingFiles', hash: '4'),
+      ], now: now);
+
+      expect(rows.map((row) => row.headline), [
+        '2 torrents errored',
+        '2 torrents missing files',
+      ]);
+      expect(
+        rows.map((row) => row.door),
+        everyElement(const AttentionDoor.tab(ServiceTab.queue)),
+      );
+      expect(rows.map((row) => row.hash), everyElement(isNull));
+      expect(rows.first.tone, StatusTone.warning);
+    });
+
+    test('stuck torrents are said as the downloads they are', () {
+      final rows = qbittorrentFaultRows([
+        _torrent(name: 'a', state: 'stalledDL'),
+        _torrent(name: 'b', state: 'stalledDL'),
+        _torrent(name: 'c', state: 'stalledDL'),
+      ], now: now);
+
+      expect(rows.single.headline, '3 downloads stuck');
+      expect(rows.single.spoken, '3 downloads stuck, a, b, c');
     });
   });
 
@@ -583,6 +655,7 @@ void main() {
 /// healthy so each test states only the field it is about.
 Torrent _torrent({
   String name = 'torrent',
+  String? hash,
   String state = 'downloading',
   double progress = 0.5,
   int size = 1024,
@@ -595,7 +668,7 @@ Torrent _torrent({
   int lastActivity = 0,
 }) {
   return Torrent(
-    hash: name,
+    hash: hash ?? name,
     name: name,
     size: size,
     progress: progress,

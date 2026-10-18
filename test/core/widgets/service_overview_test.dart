@@ -292,6 +292,42 @@ void main() {
       );
     });
 
+    testWidgets('a long verb is capped under half the row, so the words keep '
+        'the larger part, and the whole label is still its name', (
+      tester,
+    ) async {
+      for (final scale in [1.0, 3.0]) {
+        await tester.pumpWidget(
+          _host(
+            textScale: scale,
+            SizedBox(
+              width: 360,
+              child: row(
+                onTap: () {},
+                doorHint: 'opens the download',
+                action: ServiceOverviewRowAction(
+                  label: 'Look for peers again',
+                  hint: 'asks the trackers again for Nyaa',
+                  onPressed: () {},
+                ),
+              ),
+            ),
+          ),
+        );
+
+        expect(tester.takeException(), isNull, reason: 'at $scale');
+        expect(
+          tester.getSize(find.byType(TextButton)).width,
+          lessThanOrEqualTo(360 * 0.45),
+          reason: 'at $scale',
+        );
+        expect(
+          tester.getSemantics(find.byType(TextButton)),
+          containsSemantics(label: 'Look for peers again', isButton: true),
+        );
+      }
+    });
+
     testWidgets('a door and its verb fit at 3x without overflowing', (
       tester,
     ) async {

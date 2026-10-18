@@ -225,6 +225,10 @@ const double _trailingMaxWidth = 132;
 /// The floor a row that opens something reaches: the whole row is the target.
 const double _doorMinHeight = 44;
 
+/// The widest a verb beside a row may be, as a share of the row: past it the
+/// label ellipsises and the text keeps the larger part.
+const double _actionMaxFraction = 0.45;
+
 /// A verb beside a row: something the app already does elsewhere, one tap
 /// from here.
 ///
@@ -421,13 +425,25 @@ class ServiceOverviewRow extends StatelessWidget {
   /// [body] with [verb] beside it, outside the body's own semantics: the
   /// verb is a control, and a node that silences its subtree would take it
   /// out of the tree.
-  static Widget _withAction(Widget body, ServiceOverviewRowAction verb) => Row(
-    crossAxisAlignment: CrossAxisAlignment.center,
-    children: [
-      Expanded(child: body),
-      _RowActionButton(action: verb),
-    ],
-  );
+  static Widget _withAction(Widget body, ServiceOverviewRowAction verb) =>
+      LayoutBuilder(
+        builder: (context, constraints) => Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(child: body),
+            // Capped, as the trailing figure is: at an accessibility reading
+            // size a long verb beside an `Expanded` body is a right-edge
+            // overflow, and a row that throws is worse than a verb that
+            // ellipsises. The whole label is in the button's name.
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: constraints.maxWidth * _actionMaxFraction,
+              ),
+              child: _RowActionButton(action: verb),
+            ),
+          ],
+        ),
+      );
 }
 
 /// The verb beside a row: a text button in the ink, never in the fault's tone

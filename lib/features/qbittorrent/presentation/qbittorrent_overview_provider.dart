@@ -50,7 +50,11 @@ import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
 import 'package:cupola/features/qbittorrent/domain/models/transfer_info.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
+import 'package:cupola/features/services/domain/attention_door.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Fault rows the Needs attention section draws before the count in its header
 /// is the only place the rest are reported.
@@ -112,12 +116,21 @@ enum QbittorrentFaultKind {
 }
 
 /// One row of Needs attention: what broke, on what, and the evidence.
+///
+/// Every row leads somewhere: the torrent's own page for one torrent, the
+/// Queue tab for the several a folded row stands for. A single stalled
+/// torrent carries the one remedy the app already runs for it, asking the
+/// trackers for peers again ([hash] is what that is sent to).
 @immutable
 class QbittorrentAttentionItem {
   const QbittorrentAttentionItem({
     required this.kind,
     required this.headline,
     required this.detail,
+    this.door,
+    this.subject,
+    this.hash,
+    this.count = 1,
   });
 
   final QbittorrentFaultKind kind;
@@ -128,6 +141,20 @@ class QbittorrentAttentionItem {
   /// The evidence: how far it got, how long it has been idle, how many seeds
   /// it can see. Empty when the record carried none of them.
   final String detail;
+
+  /// Where the row leads: the torrent's page, or the Queue tab for a folded
+  /// row.
+  final AttentionDoor? door;
+
+  /// The torrent's name, bare, for a folded row to name.
+  final String? subject;
+
+  /// The one torrent the row is about, or null for a folded row.
+  final String? hash;
+
+  /// How many torrents the row stands for: one, or the torrents a folded row
+  /// folds.
+  final int count;
 
   StatusTone get tone => kind.tone;
   IconData get icon => kind.icon;
@@ -196,11 +223,18 @@ QbittorrentFaultKind? qbittorrentFaultKindOf(Torrent torrent) {
   return null;
 }
 
-/// The faults in the torrent list, worst-evidence first, capped at [limit].
+/// The faults in the torrent list, worst first: a row for one torrent in a
+/// state, one row for the several in it (`3 downloads stuck`, their names in
+/// the detail, oldest first), capped at [limit] rows.
 ///
 /// Ordered errored → missing files → stalled, and within a kind by how long the
 /// thing has been wrong: a torrent that died an hour ago has had longer to
-/// matter than one that died during this poll.
+/// matter than one that died during this poll. A folded row is about no one
+/// torrent, so its door is the Queue tab, which lists them all; a single one
+/// opens its own page, on [instanceId], the connection the list was read from.
+/// There are three states, so there are never more than three rows and the
+/// cap no longer cuts anything at its default: the header's census says how
+/// many torrents they stand for.
 ///
 /// A deliberately stopped torrent never appears here at any position: see
 /// [QbittorrentFaultKind].
@@ -208,6 +242,7 @@ List<QbittorrentAttentionItem> qbittorrentFaultRows(
   List<Torrent> torrents, {
   required DateTime now,
   int limit = qbittorrentAttentionLimit,
+  String instanceId = '',
 }) {
   final faults = <(QbittorrentFaultKind, Torrent)>[];
   for (final torrent in torrents) {
@@ -226,45 +261,77 @@ List<QbittorrentAttentionItem> qbittorrentFaultRows(
     return bySeen != 0 ? bySeen : a.$2.name.compareTo(b.$2.name);
   });
 
-  return List.unmodifiable(
-    faults.take(limit).map((entry) {
-      final (kind, torrent) = entry;
-      final idle = qbittorrentIdleLabel(torrent.lastActivity, now: now);
-      return QbittorrentAttentionItem(
-        kind: kind,
-        headline: switch (kind) {
-          QbittorrentFaultKind.stalled =>
-            '${StateWord.stuck.label}\u00A0· ${torrent.name}',
-          QbittorrentFaultKind.missingFiles =>
-            'Missing files\u00A0· ${torrent.name}',
-          QbittorrentFaultKind.errored => 'Errored\u00A0· ${torrent.name}',
-        },
-        detail: switch (kind) {
-          // A stalled transfer's evidence is how far it got, how long it has
-          // been still, and whether anyone is left to talk to.
-          QbittorrentFaultKind.stalled => joinDisplayParts([
-            qbittorrentPercentLabel(torrent.progress),
-            idle == null ? null : 'idle $idle',
-            torrent.seeders > 0
-                ? '${torrent.seeders} ${torrent.seeders == 1 ? 'seed' : 'seeds'}'
-                // Zero seeds is the *reason* it is stalled and a genuinely
-                // fetched figure, so it is stated rather than dropped.
-                : 'no seeds',
-          ]),
-          // For the other two the transfer is beside the point: what the user
-          // needs is which torrent and where its data was meant to be.
-          QbittorrentFaultKind.missingFiles => joinDisplayParts([
-            'qBittorrent cannot find the files',
-            torrent.category.isEmpty ? null : torrent.category,
-          ]),
-          QbittorrentFaultKind.errored => joinDisplayParts([
-            qbittorrentPercentLabel(torrent.progress),
-            torrent.category.isEmpty ? null : torrent.category,
-            idle == null ? null : 'idle $idle',
-          ]),
-        },
-      );
-    }),
+  final items = <QbittorrentAttentionItem>[
+    for (final (kind, torrent) in faults)
+      _faultItem(kind, torrent, now: now, instanceId: instanceId),
+  ];
+  final folded = foldAttention<QbittorrentAttentionItem, QbittorrentFaultKind>(
+    items,
+    kindOf: (item) => item.kind,
+    merge: (kind, members) => QbittorrentAttentionItem(
+      kind: kind,
+      headline: switch (kind) {
+        QbittorrentFaultKind.stalled => stuckDownloadsWords(
+          members.length,
+        ).headline,
+        QbittorrentFaultKind.missingFiles =>
+          '${members.length} torrents missing files',
+        QbittorrentFaultKind.errored => '${members.length} torrents errored',
+      },
+      detail: attentionNames(members.map((member) => member.subject ?? '')),
+      door: const AttentionDoor.tab(ServiceTab.queue),
+      count: members.length,
+    ),
+  );
+  return List.unmodifiable(folded.take(limit));
+}
+
+/// One torrent in [kind], as its own row.
+QbittorrentAttentionItem _faultItem(
+  QbittorrentFaultKind kind,
+  Torrent torrent, {
+  required DateTime now,
+  required String instanceId,
+}) {
+  final idle = qbittorrentIdleLabel(torrent.lastActivity, now: now);
+  return QbittorrentAttentionItem(
+    kind: kind,
+    headline: switch (kind) {
+      QbittorrentFaultKind.stalled =>
+        '${StateWord.stuck.label}\u00A0· ${torrent.name}',
+      QbittorrentFaultKind.missingFiles =>
+        'Missing files\u00A0· ${torrent.name}',
+      QbittorrentFaultKind.errored => 'Errored\u00A0· ${torrent.name}',
+    },
+    detail: switch (kind) {
+      // A stalled transfer's evidence is how far it got, how long it has
+      // been still, and whether anyone is left to talk to.
+      QbittorrentFaultKind.stalled => joinDisplayParts([
+        qbittorrentPercentLabel(torrent.progress),
+        idle == null ? null : 'idle $idle',
+        torrent.seeders > 0
+            ? '${torrent.seeders} ${torrent.seeders == 1 ? 'seed' : 'seeds'}'
+            // Zero seeds is the *reason* it is stalled and a genuinely
+            // fetched figure, so it is stated rather than dropped.
+            : 'no seeds',
+      ]),
+      // For the other two the transfer is beside the point: what the user
+      // needs is which torrent and where its data was meant to be.
+      QbittorrentFaultKind.missingFiles => joinDisplayParts([
+        'qBittorrent cannot find the files',
+        torrent.category.isEmpty ? null : torrent.category,
+      ]),
+      QbittorrentFaultKind.errored => joinDisplayParts([
+        qbittorrentPercentLabel(torrent.progress),
+        torrent.category.isEmpty ? null : torrent.category,
+        idle == null ? null : 'idle $idle',
+      ]),
+    },
+    door: torrent.hash.isEmpty
+        ? null
+        : AttentionDoor.download(instanceId: instanceId, key: torrent.hash),
+    subject: torrent.name,
+    hash: torrent.hash.isEmpty ? null : torrent.hash,
   );
 }
 
@@ -662,7 +729,14 @@ List<QbittorrentSessionFact> qbittorrentSessionFacts(TransferInfo info) {
 final qbittorrentOverviewAttentionProvider =
     FutureProvider.autoDispose<List<QbittorrentAttentionItem>>((ref) async {
       final torrents = await ref.watch(allTorrentsProvider.future);
-      return qbittorrentFaultRows(torrents, now: DateTime.now());
+      return qbittorrentFaultRows(
+        torrents,
+        now: DateTime.now(),
+        // The connection the list was read from: a torrent's page is
+        // addressed by it.
+        instanceId:
+            ref.watch(activeInstanceProvider(ServiceKey.qbittorrent))?.id ?? '',
+      );
     }, retry: noProviderRetry);
 
 /// The Queue preview.
