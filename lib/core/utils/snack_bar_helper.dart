@@ -132,6 +132,11 @@ class SnackBarHelper {
   /// has to read a sentence they did not expect. Everything else takes the
   /// default; a snackbar that lingers is one the user has to dismiss.
   ///
+  /// [onRetry] puts `Retry` on the toast, sends the same request again, and is
+  /// drawn only where the classified cause can clear ([failureRetryHelps]): a
+  /// key the service refused is refused again, and a Retry that cannot help
+  /// is a promise the app cannot keep.
+  ///
   /// ## The tone is on the glyph
   ///
   /// The brand book's Presence Rule: a fault is a quiet line, and its tone
@@ -150,9 +155,12 @@ class SnackBarHelper {
     Object? detail,
     Object? cause,
     Duration? duration,
+    VoidCallback? onRetry,
   }) {
     final theme = Theme.of(context);
     final reason = classifyConnectionFailure(cause ?? detail);
+    final messenger = ScaffoldMessenger.of(context);
+    final retry = onRetry != null && failureRetryHelps(reason) ? onRetry : null;
     // Walked against the plate it sits on, which is dark in both rooms: the
     // day room's red and amber are drawn for paper and would sink into it.
     final glyph = statusToneColor(
@@ -162,9 +170,18 @@ class SnackBarHelper {
           theme.snackBarTheme.backgroundColor ??
           theme.colorScheme.inverseSurface,
     );
-    ScaffoldMessenger.of(context).showSnackBar(
+    messenger.showSnackBar(
       SnackBar(
         duration: duration ?? const Duration(seconds: 4),
+        action: retry == null
+            ? null
+            : SnackBarAction(
+                label: 'Retry',
+                onPressed: () {
+                  messenger.hideCurrentSnackBar();
+                  retry();
+                },
+              ),
         content: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

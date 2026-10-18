@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
@@ -19,6 +20,14 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// completed without throwing, so callers can chain follow-up work (popping a
 /// detail screen after a delete) only on success.
 ///
+/// A failure that the same request can get past carries `Retry`, which runs
+/// [action] again with the same follow-up: not a refusal of the request as
+/// made (a 4xx other than a timeout or too many requests), which the service
+/// would answer the same way. The outcome is said even when the page that
+/// asked has gone: the app's own navigator says it instead, and `Retry` runs
+/// from there. That is why the follow-up goes through the provider container
+/// [context] reads rather than through [ref], which dies with its widget.
+///
 /// With a [capability], a permission refusal is not reported as a failure: it
 /// marks that connection read-only and raises the refusal toast instead; see
 /// [reportCapabilityRefusal].
@@ -30,27 +39,86 @@ Future<bool> runServiceAction(
   required String failureMessage,
   List<ProviderOrFamily> invalidate = const [],
   CapabilityTarget? capability,
+}) => _run(
+  context,
+  ProviderScope.containerOf(context, listen: false),
+  action: action,
+  successMessage: successMessage,
+  failureMessage: failureMessage,
+  invalidate: invalidate,
+  capability: capability,
+);
+
+Future<bool> _run(
+  BuildContext context,
+  ProviderContainer container, {
+  required Future<void> Function() action,
+  required String? successMessage,
+  required String failureMessage,
+  required List<ProviderOrFamily> invalidate,
+  required CapabilityTarget? capability,
 }) async {
+  // The app's own navigator outlives every page: where the outcome is said
+  // once the page that asked has gone, and where a Retry runs from.
+  final host = Navigator.maybeOf(context, rootNavigator: true)?.context;
+  void say(void Function(BuildContext at) show) {
+    if (context.mounted) {
+      show(context);
+    } else if (host != null && host.mounted) {
+      show(host);
+    }
+  }
+
   try {
     await action();
     for (final provider in invalidate) {
-      ref.invalidate(provider);
+      container.invalidate(provider);
     }
-    if (successMessage != null && context.mounted) {
-      SnackBarHelper.success(context, successMessage);
+    if (successMessage != null) {
+      say((at) => SnackBarHelper.success(at, successMessage));
     }
     return true;
   } catch (e) {
-    if (capability != null && markCapabilityRefusal(ref, capability, e)) {
-      if (context.mounted) showCapabilityRefusal(context, capability);
+    if (capability != null && isPermissionRefusal(e)) {
+      container
+          .read(capabilityScopeProvider.notifier)
+          .markReadOnly(capability.connectionId);
+      say((at) => showCapabilityRefusal(at, capability));
       return false;
     }
-    if (context.mounted) {
-      SnackBarHelper.error(context, failureMessage, detail: e);
-    }
+    say(
+      (at) => SnackBarHelper.error(
+        at,
+        failureMessage,
+        detail: e,
+        onRetry: host == null || _refusedAsMade(e)
+            ? null
+            : () => _run(
+                host,
+                container,
+                action: action,
+                successMessage: successMessage,
+                failureMessage: failureMessage,
+                invalidate: invalidate,
+                capability: capability,
+              ),
+      ),
+    );
     return false;
   }
 }
+
+/// Whether the service turned down this request as it was made: a 4xx other
+/// than a timeout (408) or too many requests (429), both of which pass.
+/// Sending it again gets the same answer.
+bool _refusedAsMade(Object error) => switch (error) {
+  DioException(response: Response(:final statusCode?)) =>
+    statusCode >= 400 &&
+        statusCode < 500 &&
+        statusCode != 408 &&
+        statusCode != 429,
+  _ => false,
+};
 
 /// Handles [error] if it is a permission refusal: marks the connection in
 /// [capability] read-only and raises the refusal toast, whose one action is

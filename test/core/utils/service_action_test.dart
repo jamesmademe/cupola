@@ -30,10 +30,13 @@ DioException _status(int code) {
 }
 
 /// Pumps a button that runs [error] through [runServiceAction], under a
-/// router so the fix action has somewhere to land.
+/// router so the fix action has somewhere to land. With [action], the button
+/// runs that instead.
 Future<(ProviderContainer, GoRouter)> _pump(
   WidgetTester tester, {
-  required Object error,
+  Object? error,
+  Future<void> Function()? action,
+  String? successMessage,
   CapabilityTarget? capability,
 }) async {
   final container = ProviderContainer(
@@ -53,7 +56,8 @@ Future<(ProviderContainer, GoRouter)> _pump(
               onPressed: () => runServiceAction(
                 context,
                 ref,
-                action: () async => throw error,
+                action: action ?? () async => throw error!,
+                successMessage: successMessage,
                 failureMessage: 'Could not start the VM',
                 capability: capability,
               ),
@@ -115,6 +119,64 @@ void main() {
     expect(container.read(capabilityScopeProvider), isEmpty);
     expect(find.textContaining('Could not start the VM'), findsOneWidget);
     expect(find.widgetWithText(SnackBarAction, 'Update the key'), findsNothing);
+    // The same key is refused again: no Retry.
+    expect(find.widgetWithText(SnackBarAction, 'Retry'), findsNothing);
+  });
+
+  group('Retry', () {
+    /// A write that fails with [first] once, then goes through.
+    Future<void> Function() failingOnce(Object first, List<int> calls) =>
+        () async {
+          calls.add(calls.length);
+          if (calls.length == 1) throw first;
+        };
+
+    testWidgets('a server that failed is asked again, and says so', (
+      tester,
+    ) async {
+      final calls = <int>[];
+      await _pump(
+        tester,
+        action: failingOnce(_status(503), calls),
+        successMessage: 'VM started',
+      );
+      expect(find.textContaining('Could not start the VM'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(SnackBarAction, 'Retry'));
+      await tester.pumpAndSettle();
+
+      expect(calls, hasLength(2));
+      expect(find.text('VM started'), findsOneWidget);
+    });
+
+    testWidgets('it still runs once the page that asked has gone', (
+      tester,
+    ) async {
+      final calls = <int>[];
+      final (_, router) = await _pump(
+        tester,
+        action: failingOnce(_status(503), calls),
+        successMessage: 'VM started',
+      );
+
+      router.go('/settings/service/unraid');
+      await tester.pumpAndSettle();
+      expect(find.text('Start'), findsNothing);
+
+      await tester.tap(find.widgetWithText(SnackBarAction, 'Retry'));
+      await tester.pumpAndSettle();
+
+      expect(calls, hasLength(2));
+      expect(find.text('VM started'), findsOneWidget);
+    });
+
+    testWidgets('a request the service turned down as made is not sent '
+        'again', (tester) async {
+      await _pump(tester, error: _status(400));
+
+      expect(find.textContaining('Could not start the VM'), findsOneWidget);
+      expect(find.widgetWithText(SnackBarAction, 'Retry'), findsNothing);
+    });
   });
 
   testWidgets('without a capability a 403 is an ordinary failure', (
