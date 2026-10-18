@@ -77,6 +77,17 @@ class NetworkReply {
     this.headers = const {},
   });
 
+  /// A server that took the request and never answers: the connection stays
+  /// open and nothing comes back, until the client's own receive deadline
+  /// gives up (fifteen seconds of fake time on a client built through
+  /// `guardedDio`). Return it from a route to hang one request path; `null`
+  /// from the same route lets the world answer again.
+  const NetworkReply.hang()
+    : status = 0,
+      body = '',
+      contentType = '',
+      headers = const {};
+
   /// [body] encoded as JSON.
   factory NetworkReply.json(Object? body, {int status = 200}) =>
       NetworkReply(status, body: jsonEncode(body));
@@ -110,6 +121,9 @@ class NetworkReply {
   final String body;
   final String contentType;
   final Map<String, List<String>> headers;
+
+  /// Whether this is [NetworkReply.hang].
+  bool get hangs => status == 0;
 
   /// A copy with [more] headers, each value added after any already there:
   /// two `set-cookie` lines stay two.
@@ -570,7 +584,9 @@ class ProfileNetwork {
 
   // === Answering ===========================================================
 
-  _FakeResponse _respond(_FakeRequest raw) {
+  /// The answer to [raw], or null for a request that is taken and never
+  /// answered ([NetworkReply.hang]).
+  _FakeResponse? _respond(_FakeRequest raw) {
     final server = serverAt(raw.uri);
     final request = NetworkRequest(
       method: raw.method,
@@ -625,7 +641,8 @@ class ProfileNetwork {
           : path.allMatches(request.path).isNotEmpty;
       if (!matches) continue;
       final reply = route(request);
-      if (reply != null) return send(reply);
+      if (reply == null) continue;
+      return reply.hangs ? null : send(reply);
     }
 
     final answer = fake.answer(request, context);
@@ -828,7 +845,12 @@ class _FakeRequest implements HttpClientRequest {
     if (_done.isCompleted) return _done.future;
     final latency = _network.serverAt(uri)?.latency ?? Duration.zero;
     if (latency > Duration.zero) await Future<void>.delayed(latency);
-    if (!_done.isCompleted) _done.complete(_network._respond(this));
+    if (!_done.isCompleted) {
+      final response = _network._respond(this);
+      // Null is a request nobody ever answers: `done` stays pending, and the
+      // client's own receive deadline is what ends it.
+      if (response != null) _done.complete(response);
+    }
     return _done.future;
   }
 

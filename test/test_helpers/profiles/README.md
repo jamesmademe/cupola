@@ -86,6 +86,16 @@ A test can answer ahead of the world with
 or `onRpc` for TrueNAS. Anything no route answers is served `404` and
 recorded in `network.unanswered`.
 
+A route that returns `const NetworkReply.hang()` takes the request and never
+answers it: the connection stays open and the client's own receive deadline
+ends it (fifteen seconds of fake time on a client built through
+`guardedDio`). A route that returns `null` falls through to the world, so
+`(request) => hung && isQueueRead(request) ? const NetworkReply.hang() : null`
+holds back one request path while the connection's probe keeps answering. The
+request is recorded in `network.requests` like any other. End such a test by
+letting the deadline pass after `harness.unmount`, or its timer is still
+pending (`test/test_helpers/queue_stale_scenarios.dart` does).
+
 ## Behaviours
 
 Each behaviour is sent in the service's own wire shape, so the app's own
