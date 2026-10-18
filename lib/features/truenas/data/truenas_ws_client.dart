@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:cupola/core/capability/permission_refusal.dart';
 import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/network/idle_close.dart';
 import 'package:cupola/core/network/upgrade_gateway.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/url_utils.dart';
@@ -236,11 +237,25 @@ class TrueNasWsClient {
   /// timeout uses to decide whether the connection is worth keeping.
   DateTime? _lastMessageAt;
 
+  /// How long the socket stays open with nothing asked of it ([IdleClose]).
+  /// Every read here is a call, none a subscription, so a socket with no
+  /// call in flight is closed after this.
+  final Duration idleTimeout;
+  late final IdleClose _idle = IdleClose(
+    after: idleTimeout,
+    onIdle: () {
+      final socket = _socket;
+      if (socket == null || _closed) return;
+      _dropConnection(socket, const TrueNasException('Closed while idle'));
+    },
+  );
+
   TrueNasWsClient({
     required this.baseUrl,
     required this.apiKey,
     this.certFingerprint,
     this.callTimeout = const Duration(seconds: 15),
+    this.idleTimeout = const Duration(seconds: 60),
     this.accessHeaders = const {},
     this.onlyAtHome,
   });
@@ -464,7 +479,14 @@ class TrueNasWsClient {
     }
     final id = _nextId++;
     final completer = Completer<dynamic>();
+    _idle.begin();
     _pending[id] = completer;
+    unawaited(
+      completer.future.then<void>(
+        (_) => _idle.end(),
+        onError: (Object _) => _idle.end(),
+      ),
+    );
     socket.add(
       jsonEncode({
         'jsonrpc': '2.0',
@@ -571,6 +593,7 @@ class TrueNasWsClient {
 
   Future<void> close() async {
     _closed = true;
+    _idle.dispose();
     _failAll(const TrueNasClientClosed());
     _authed = false;
     final socket = _socket;

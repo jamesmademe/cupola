@@ -163,6 +163,7 @@ class _LoopbackClient extends TrueNasWsClient {
     required super.baseUrl,
     super.apiKey = 'key',
     super.callTimeout,
+    super.idleTimeout,
   });
 
   @override
@@ -212,6 +213,23 @@ void main() {
     server.silentMethods.clear();
     expect(await client.call('pool.query'), 'ok');
     expect(server.upgrades, 2);
+  });
+
+  test('a socket with nothing asked of it is closed, and the next call '
+      'opens a new one', () async {
+    final client = _LoopbackClient(
+      baseUrl: server.url,
+      idleTimeout: const Duration(milliseconds: 200),
+    );
+    addTearDown(client.close);
+
+    expect(await client.call('pool.query'), 'ok');
+    expect(await client.call('system.info'), 'ok');
+    expect(server.upgrades, 1, reason: 'calls in a row share one socket');
+
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    expect(await client.call('pool.query'), 'ok');
+    expect(server.upgrades, 2, reason: 'the idle socket was closed');
   });
 
   test('in-flight calls fail when the connection is dropped', () async {

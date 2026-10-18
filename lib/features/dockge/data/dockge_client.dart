@@ -7,6 +7,7 @@ import 'package:web_socket/web_socket.dart' as ws;
 
 import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/network/idle_close.dart';
 import 'package:cupola/core/network/upgrade_gateway.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/url_utils.dart';
@@ -111,12 +112,40 @@ class DockgeClient {
   List<DockgeStack> _latestStacks = const [];
   Map<String, DockgeAgent> _latestAgents = const {};
 
-  final StreamController<List<DockgeStack>> _stackListController =
-      StreamController<List<DockgeStack>>.broadcast();
-  final StreamController<DockgeTerminalOutput> _terminalController =
-      StreamController<DockgeTerminalOutput>.broadcast();
-  final StreamController<List<DockgeAgent>> _agentListController =
-      StreamController<List<DockgeAgent>>.broadcast();
+  late final StreamController<List<DockgeStack>> _stackListController =
+      StreamController<List<DockgeStack>>.broadcast(
+        onListen: _idle.hold,
+        onCancel: _idle.settle,
+      );
+  late final StreamController<DockgeTerminalOutput> _terminalController =
+      StreamController<DockgeTerminalOutput>.broadcast(
+        onListen: _idle.hold,
+        onCancel: _idle.settle,
+      );
+  late final StreamController<List<DockgeAgent>> _agentListController =
+      StreamController<List<DockgeAgent>>.broadcast(
+        onListen: _idle.hold,
+        onCancel: _idle.settle,
+      );
+
+  /// How long the socket stays open with nothing asked of it and nobody
+  /// listening to what it pushes ([IdleClose]): leaving Dockge's pages lets
+  /// the socket go a minute later, and the next page opens a new one.
+  final Duration idleTimeout;
+  late final IdleClose _idle = IdleClose(
+    after: idleTimeout,
+    quiet: () =>
+        !_stackListController.hasListener &&
+        !_terminalController.hasListener &&
+        !_agentListController.hasListener,
+    onIdle: () {
+      if (_closed) return;
+      final socket = _socket;
+      _socket = null;
+      _authed = false;
+      socket?.dispose();
+    },
+  );
 
   DockgeClient({
     required this.baseUrl,
@@ -125,6 +154,7 @@ class DockgeClient {
     this.certFingerprint,
     this.accessHeaders = const {},
     this.onlyAtHome,
+    this.idleTimeout = const Duration(seconds: 60),
   });
 
   /// The most recent parsed stack list (empty until the first push).
@@ -256,6 +286,8 @@ class DockgeClient {
     _connect()
         .then((_) {
           if (!completer.isCompleted) completer.complete();
+          // Opened for a probe and nothing after it: closed once idle.
+          _idle.settle();
         })
         .catchError((Object e) {
           if (!completer.isCompleted) completer.completeError(e);
@@ -560,6 +592,19 @@ class DockgeClient {
     List<dynamic> args = const [],
     Duration timeout = const Duration(seconds: 30),
   }) async {
+    _idle.begin();
+    try {
+      return await _sendAgent(event, args: args, timeout: timeout);
+    } finally {
+      _idle.end();
+    }
+  }
+
+  Future<Map<String, dynamic>> _sendAgent(
+    String event, {
+    required List<dynamic> args,
+    required Duration timeout,
+  }) async {
     await ensureConnected();
     final socket = _socket;
     if (socket == null) throw const DockgeException('No open connection');
@@ -719,6 +764,7 @@ class DockgeClient {
 
   Future<void> close() async {
     _closed = true;
+    _idle.dispose();
     _authed = false;
     // Fail any in-flight connect so `ensureConnected` callers don't hang.
     final connecting = _connecting;
