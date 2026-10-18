@@ -685,16 +685,21 @@ class ServiceRoutes {
 
   /// The page of [key], opened from the page at [from]. [focus] is the
   /// connection it was opened from (`?i=`, above): that copy leads when it
-  /// needs something. [heroTag] lets the poster fly, and [posterUrl] stands
-  /// in for it until the page has read who the title is.
+  /// needs something. [season] is the season of a series the episodes open
+  /// on (`?season=`; 0 is the specials): a season or an episode opened from a
+  /// media server lands on its own, and a link without it opens where the
+  /// page would on its own. [heroTag] lets the poster fly, and [posterUrl]
+  /// stands in for it until the page has read who the title is.
   static String media(
     MediaKey key, {
     required String from,
     String? focus,
+    int? season,
     String? heroTag,
     String? posterUrl,
   }) => _withQuery('${mediaMountFor(from)}${key.location}', {
     'i': focus,
+    'season': season == null || season < 0 ? null : '$season',
     'heroTag': heroTag,
     'posterUrl': posterUrl,
   });
@@ -705,15 +710,25 @@ class ServiceRoutes {
   static String mediaRoot(
     MediaKey key, {
     String? focus,
+    int? season,
     String? heroTag,
     String? posterUrl,
   }) => media(
     key,
     from: '',
     focus: focus,
+    season: season,
     heroTag: heroTag,
     posterUrl: posterUrl,
   );
+
+  /// The season a title's location asks its episodes to open on
+  /// (`?season=`, [media]): a whole number from 0, else null. A link that
+  /// names no season, or one that is not a number, asks for none.
+  static int? mediaSeasonOf(Uri location) {
+    final season = int.tryParse(location.queryParameters['season'] ?? '');
+    return season == null || season < 0 ? null : season;
+  }
 
   /// A person's page, opened from the page at [from]: hung under the same
   /// mount a title opened there would be, so a cast member tapped on a title

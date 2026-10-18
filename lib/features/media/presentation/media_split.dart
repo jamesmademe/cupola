@@ -11,11 +11,13 @@ import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/presentation/media_page.dart';
 
 /// The title a pane shows: who it is, the connection it was opened from, the
-/// poster that stands in until the page reads its own, and the tile it was
-/// opened from (its hero tag), which the list rings.
+/// season its episodes open on when it was opened from one, the poster that
+/// stands in until the page reads its own, and the tile it was opened from
+/// (its hero tag), which the list rings.
 typedef MediaPaneTarget = ({
   MediaKey key,
   String? focus,
+  int? season,
   String? posterUrl,
   String? heroTag,
 });
@@ -53,13 +55,16 @@ final class MediaPaneTitle extends MediaPanePage {
   @override
   Object get selected => target.key;
 
+  // The season is part of which page this is: another season of the series
+  // the pane shows is drawn fresh, on its own season.
   @override
-  Object get identity => (target.key, target.focus);
+  Object get identity => (target.key, target.focus, target.season);
 
   @override
   Widget build() => MediaPage(
     mediaKey: target.key,
     focus: target.focus,
+    season: target.season,
     posterUrl: target.posterUrl,
   );
 }
@@ -170,6 +175,7 @@ abstract final class MediaSplit {
     return (
       key: key,
       focus: uri.queryParameters['i'],
+      season: ServiceRoutes.mediaSeasonOf(uri),
       posterUrl: uri.queryParameters['posterUrl'],
       heroTag: uri.queryParameters['heroTag'],
     );

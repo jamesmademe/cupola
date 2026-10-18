@@ -166,6 +166,46 @@ void main() {
       );
     });
 
+    test('reads the season a series opens on, and tells one season of it '
+        'from another', () {
+      final second = MediaSplit.targetOf(
+        Uri.parse('/stack/plex/libraries/media/tv/1399?i=plex&season=2'),
+      )!;
+      expect(second.season, 2);
+      expect(
+        MediaSplit.targetOf(Uri.parse('/search/media/tv/1399'))?.season,
+        isNull,
+      );
+      // The same series on another season is another page: the pane draws
+      // it fresh, on its own season.
+      final page = MediaSplit.pageOf;
+      expect(
+        page(
+          Uri.parse('/stack/plex/libraries/media/tv/1399?season=2'),
+        )!.identity,
+        isNot(
+          page(
+            Uri.parse('/stack/plex/libraries/media/tv/1399?season=3'),
+          )!.identity,
+        ),
+      );
+      expect(
+        page(
+          Uri.parse('/stack/plex/libraries/media/tv/1399?season=2'),
+        )!.identity,
+        page(
+          Uri.parse('/stack/plex/libraries/media/tv/1399?season=2'),
+        )!.identity,
+      );
+      // It is still the same title, to the list that rings it.
+      expect(
+        page(
+          Uri.parse('/stack/plex/libraries/media/tv/1399?season=2'),
+        )!.selected,
+        MediaKey.tv(1399),
+      );
+    });
+
     test('reads a person and a collection under a mount, with their query', () {
       final person = MediaSplit.pageOf(
         Uri.parse(

@@ -106,12 +106,18 @@ class MediaPage extends ConsumerStatefulWidget {
     super.key,
     required this.mediaKey,
     this.focus,
+    this.season,
     this.heroTag,
     this.posterUrl,
   });
 
   final MediaKey mediaKey;
   final String? focus;
+
+  /// The season of a series the episodes open on, when the page was opened
+  /// from a season or an episode (`?season=`; 0 is the specials). A season
+  /// the series does not have asks for nothing.
+  final int? season;
 
   /// The tag of the tile the page was opened from: its poster flies here.
   final String? heroTag;
@@ -1140,9 +1146,15 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     return MediaRoom(light: light, child: page);
   }
 
-  /// The season the episodes open on: the one Play would continue, else the
-  /// latest with an episode that has aired, else the first.
+  /// The season the episodes open on: the one the page was asked for (a
+  /// season or an episode opened it) when the series has it, else the one
+  /// Play would continue, else the latest with an episode that has aired,
+  /// else the first.
   int _initialSeason(MediaLead lead, List<MediaSeason> seasons) {
+    final asked = widget.season;
+    if (asked != null && seasons.any((season) => season.number == asked)) {
+      return asked;
+    }
     if (lead case MediaLeadPlay(
       episode: StreamItem(:final seasonNumber?),
     ) when seasons.any((season) => season.number == seasonNumber)) {

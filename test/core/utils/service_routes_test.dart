@@ -833,6 +833,49 @@ void main() {
           '&posterUrl=https%3A%2F%2Fimage.tmdb.org%2Ft%2Fp%2Fw300%2Fa+b.jpg',
         );
       });
+
+      test('on a season of a series, when it names one', () {
+        const series = MediaKey.tv(1399);
+        expect(
+          ServiceRoutes.media(
+            series,
+            from: ServiceRoutes.jellyfinLibraries,
+            focus: 'jellyfin',
+            season: 2,
+          ),
+          '/stack/jellyfin/libraries/media/tv/1399?i=jellyfin&season=2',
+        );
+        expect(
+          ServiceRoutes.mediaRoot(series, focus: 'plex', season: 0),
+          '/media/tv/1399?i=plex&season=0',
+          reason: 'the specials are season 0, and a season all the same',
+        );
+        // No season, or one nobody numbers that way: the link of old.
+        expect(
+          ServiceRoutes.media(series, from: ServiceRoutes.jellyfinLibraries),
+          '/stack/jellyfin/libraries/media/tv/1399',
+        );
+        expect(
+          ServiceRoutes.media(
+            series,
+            from: ServiceRoutes.jellyfinLibraries,
+            season: -1,
+          ),
+          '/stack/jellyfin/libraries/media/tv/1399',
+        );
+      });
+
+      test('the season a location asks for is a whole number from 0', () {
+        int? asked(String location) =>
+            ServiceRoutes.mediaSeasonOf(Uri.parse(location));
+        expect(asked('/media/tv/1399?season=3'), 3);
+        expect(asked('/media/tv/1399?i=plex&season=0'), 0);
+        expect(asked('/media/tv/1399'), isNull);
+        expect(asked('/media/tv/1399?season='), isNull);
+        expect(asked('/media/tv/1399?season=two'), isNull);
+        expect(asked('/media/tv/1399?season=-1'), isNull);
+        expect(asked('/media/tv/1399?season=1.5'), isNull);
+      });
     });
   });
 }

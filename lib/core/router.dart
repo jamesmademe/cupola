@@ -265,6 +265,7 @@ List<GoRoute> _mediaRoutes({String prefix = ''}) => [
                   byTvdb: byTvdb,
                 )!,
                 focus: state.uri.queryParameters['i'],
+                season: ServiceRoutes.mediaSeasonOf(state.uri),
                 heroTag: state.uri.queryParameters['heroTag'],
                 // go_router has already decoded it; decoding again would break a
                 // poster URL with a literal `%` in it.

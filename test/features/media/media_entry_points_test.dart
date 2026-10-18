@@ -14,6 +14,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/media/domain/media_key.dart';
 import 'package:cupola/features/media/presentation/media_page.dart';
+import 'package:cupola/features/media/presentation/media_series_sections.dart';
 
 import '../../test_helpers/profiles/profiles.dart';
 
@@ -172,6 +173,66 @@ void main() {
     expect(find.text('Episodes'), findsWidgets);
 
     await _close(tester, harness, container);
+  });
+
+  group('a link that names a season of a series', () {
+    final series = WorldTitles.cosmosLaundromat;
+    final at = '${ServiceRoutes.sonarrLibrary}/media/tv/${series.tmdbId}';
+
+    /// The season the episodes open on, once the page has drawn them.
+    Future<int> opensOn(
+      WidgetTester tester,
+      GoRouter router,
+      String link,
+    ) async {
+      router.go(link);
+      await _answer(tester);
+      await tester.scrollUntilVisible(
+        find.text('Episodes'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      return tester
+          .widget<MediaEpisodes>(find.byType(MediaEpisodes))
+          .initialSeason;
+    }
+
+    testWidgets('opens on that season, from the location alone', (
+      tester,
+    ) async {
+      final (harness, router, container) = await _app(tester, Profiles.p1);
+
+      // Play would continue the second: the link asks for the first.
+      expect(await opensOn(tester, router, '$at?season=1'), 1);
+      expect(_shown(tester).single.season, 1);
+      expect(find.text('Episode 10'), findsOneWidget);
+      expect(find.text('The Second Cycle'), findsNothing);
+
+      await _close(tester, harness, container);
+    });
+
+    testWidgets('a link without one opens where the page always did', (
+      tester,
+    ) async {
+      final (harness, router, container) = await _app(tester, Profiles.p1);
+
+      expect(await opensOn(tester, router, at), 2);
+      expect(_shown(tester).single.season, isNull);
+      expect(find.text('The Second Cycle'), findsOneWidget);
+
+      await _close(tester, harness, container);
+    });
+
+    testWidgets('a season the series does not have falls back to what the '
+        'page would open on', (tester) async {
+      final (harness, router, container) = await _app(tester, Profiles.p1);
+
+      for (final link in ['$at?season=9', '$at?season=0', '$at?season=x']) {
+        expect(await opensOn(tester, router, link), 2, reason: link);
+      }
+
+      await _close(tester, harness, container);
+    });
   });
 
   group("a link that names a series by Sonarr's own id", () {
