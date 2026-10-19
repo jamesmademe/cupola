@@ -14,7 +14,7 @@ Rendered from `lib/features/stream/presentation/widgets/stream_session_slab.dart
 
 ## Freshness
 
-The figure in the room's head (*1 stream*), this slab and the room's light read **one** answer: the sessions provider of the connection in view. While the Overview (or the Activity tab) is the page on screen, it is read again every 15 s (`streamSessionsPollProvider`, gated on `PageActivity`), so the three move together without a pull.
+The figure in the room's head (*1 stream*), this slab and the room's light read **one** answer: the sessions provider of the connection in view. While the Overview (or the Activity tab) is the page on screen, it is read again every 15 s (`streamSessionsPollProvider`, gated on `PageActivity`), so the three move together without a pull; and at once on opening when the answer in the cache is one the page did not just read (the Home's, of any age). Stack runs the same poll for every media server connection while it is on screen, so a row's *2 streaming* is never older than that.
 
 ## Semantics
 

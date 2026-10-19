@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/lifecycle/refresh_on_return.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
@@ -22,6 +23,7 @@ import 'package:cupola/features/shell/domain/settings_return.dart';
 import 'package:cupola/features/shell/domain/stack_health.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/stream/presentation/stream_activity_provider.dart';
 
 /// The Stack tab: every service, its light, and the way into its room.
 ///
@@ -55,6 +57,24 @@ class StackScreen extends ConsumerWidget {
     });
 
     final settings = ref.watch(currentSettingsProvider);
+    // The one live figure on this page is what plays, and it sits in the
+    // media servers' sessions cache, which lives as long as the app: the Home
+    // may have filled it a while ago. Each connection's sessions poll runs
+    // here as in its room, reading again at once over an answer this page did
+    // not just read and every 15 s after, so a row never says `0 streaming`
+    // over a playback that has started. The two-minute return refresh below
+    // stays for everything else.
+    for (final service in ServiceDomain.stream.services) {
+      for (final instance in settings.configuredInstancesOf(service)) {
+        ref.watchWhileLive(
+          context,
+          streamSessionsPollProvider((
+            service: service,
+            instanceId: instance.id,
+          )),
+        );
+      }
+    }
     // A Seerr account that signed out is a connection somebody set up: the
     // stack is not empty, it has a step to take.
     final allUnconfigured = ServiceKey.values.every(
