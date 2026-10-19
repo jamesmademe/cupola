@@ -22,7 +22,6 @@ import 'package:cupola/features/dockge/data/dockge_client.dart';
 import 'package:cupola/features/jellyfin/data/jellyfin_client.dart';
 import 'package:cupola/features/plex/data/plex_client.dart';
 import 'package:cupola/features/dockge/data/dockge_service.dart';
-import 'package:cupola/features/nzbget/data/nzbget_client.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
@@ -77,7 +76,6 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/domain/unread_secret.dart';
 import 'package:cupola/features/npm/data/npm_client.dart';
-import 'package:cupola/features/transmission/data/transmission_client.dart';
 import 'package:cupola/features/transmission/presentation/transmission_provider.dart';
 import 'package:cupola/features/truenas/data/truenas_service.dart';
 import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
@@ -570,7 +568,8 @@ Future<String?> _loadVersion(
   // offline. The branches below build a throwaway client from `instance`,
   // which is what makes a per-connection probe per-connection; these two now
   // do the same, and close it either way like the rest. (qBittorrent, above,
-  // reads its connection's own client, which is per connection too.)
+  // and the three download clients below read their connection's own client,
+  // which is per connection too.)
   if (service == ServiceKey.truenas) {
     final client = TrueNasWsClient(
       baseUrl: reach.url,
@@ -601,18 +600,18 @@ Future<String?> _loadVersion(
   }
 
   if (service == ServiceKey.sabnzbd) {
-    final client = SabnzbdClient(
-      url: reach.url,
-      apiKey: instance.credential,
-      certFingerprint: reach.pin,
-      accessHeaders: reach.access.headers(),
-    );
+    // The connection's own client, as qBittorrent's probe reads: the Queue
+    // page asks this every three seconds, and a client built for each ask was
+    // a new `Dio` and a new TLS handshake each time. Its address, access and
+    // pin are the route's, from `watchTransport`, so a route that moves
+    // rebuilds the client and this probe with it. Not this probe's to close.
+    final client = ref.watch(sabnzbdClientForProvider(instance.id));
     // Keyed, not `mode=version`: that one needs no key, and a probe that
     // cannot see a wrong key paints it as answering. Two hops, hence the room.
     return _versionOrNull(
       client.checkKeyAndVersion,
       timeout: const Duration(seconds: 6),
-      close: client.close,
+      close: () {},
     );
   }
 
@@ -649,34 +648,27 @@ Future<String?> _loadVersion(
   }
 
   if (service == ServiceKey.nzbget) {
-    final client = NzbgetClient(
-      url: reach.url,
-      username: instance.username.isEmpty ? null : instance.username,
-      password: instance.credential.isEmpty ? null : instance.credential,
-      certFingerprint: reach.pin,
-      accessHeaders: reach.access.headers(),
-    );
+    // The connection's own client, for the reason SABnzbd's is.
+    final client = ref.watch(nzbgetClientForProvider(instance.id));
     return _versionOrNull(
       client.version,
       timeout: const Duration(seconds: 5),
-      close: client.close,
+      close: () {},
     );
   }
 
   if (service == ServiceKey.transmission) {
-    final client = TransmissionClient(
-      url: reach.url,
-      username: instance.username.isEmpty ? null : instance.username,
-      password: instance.credential.isEmpty ? null : instance.credential,
-      certFingerprint: reach.pin,
-      accessHeaders: reach.access.headers(),
-    );
+    // The connection's own client, for the reason SABnzbd's is, and for one
+    // more: it keeps the session id the 409 handshake taught it, and a 401
+    // it was refused with, so a wrong password is asked once and not on every
+    // tick of the page's poll (the daemon's anti-brute-force counts them).
+    final client = ref.watch(transmissionClientForProvider(instance.id));
     // Two hops on a cold client: the 409 handshake, then the real call, so
     // this gets the same headroom as qBittorrent's login-then-version pair.
     return _versionOrNull(
       client.version,
       timeout: const Duration(seconds: 8),
-      close: client.close,
+      close: () {},
     );
   }
 
