@@ -1,4 +1,5 @@
 import 'dart:isolate';
+import 'dart:math' as math;
 
 import 'package:dio/dio.dart';
 
@@ -67,6 +68,12 @@ class ArrServiceConfig {
 /// search path and typically answers with under twenty rows.
 const int arrIsolateMapThreshold = 200;
 
+/// How many pages of one walk are asked at once (see `_fetchAllPages`).
+///
+/// Three, and not more: a page with its embeds is a heavy query on the
+/// server's side, and the walk is a read the user did not ask for by name.
+const int _pageWalkLanes = 3;
+
 /// Maps a decoded list, moving to an isolate once the page is big enough to be
 /// worth the port.
 ///
@@ -84,6 +91,41 @@ Future<List<T>> _mapArrItems<T>(
   return Isolate.run(
     () => data.map((item) => fromJson(item as Map<String, dynamic>)).toList(),
   );
+}
+
+/// Pages [from] to [to], at most [_pageWalkLanes] requests in flight, answered
+/// in page order whichever finished first.
+///
+/// A page that fails fails the read, as it does in the sequential walk: the
+/// error surfaces at once, no lane starts another request after it, and the
+/// ones still in flight are answered into nothing (`Future.wait` listens to
+/// every lane, so a second failure is not left unhandled).
+Future<List<ArrRecordPage>> _fetchPageRange(
+  Future<ArrRecordPage> Function(int page) fetchPage,
+  int from,
+  int to,
+) async {
+  if (to < from) return const [];
+  final pages = List<ArrRecordPage?>.filled(to - from + 1, null);
+  var nextPage = from;
+  var failed = false;
+
+  Future<void> lane() async {
+    while (!failed && nextPage <= to) {
+      final page = nextPage++;
+      try {
+        pages[page - from] = await fetchPage(page);
+      } catch (_) {
+        failed = true;
+        rethrow;
+      }
+    }
+  }
+
+  await Future.wait([
+    for (var i = 0; i < math.min(_pageWalkLanes, pages.length); i++) lane(),
+  ], eagerError: true);
+  return [for (final page in pages) page!];
 }
 
 /// One page of an \*arr paged endpoint: the rows, and how many rows there are.
@@ -335,16 +377,20 @@ mixin ArrActivityMixin {
   /// allows itself with the count still naming more, and a full page from a
   /// server that sends no count. A caller counting the rows stated either one
   /// as the whole set; [ArrRecordPage.cutShort] now says which it was.
+  ///
+  /// The first page goes alone, because only its envelope says how many pages
+  /// there are. The rest are then asked [_pageWalkLanes] at a time, never all
+  /// at once: each one is a query the server runs against its whole backlog,
+  /// and a small NAS answers three together sooner than fifty in a heap.
+  /// Whatever the batch did not settle (a count that grew under the walk) goes
+  /// on one page at a time, as before.
   Future<ArrRecordPage> _fetchAllPages(
     String endpoint, {
     Map<String, dynamic> extraParams = const {},
     int pageSize = 250,
     int maxPages = 50,
   }) async {
-    final records = <dynamic>[];
-    int? total;
-
-    for (var page = 1; page <= maxPages; page++) {
+    Future<ArrRecordPage> fetchPage(int page) async {
       final response = await client.get(
         '/api/${config.apiVersion}/$endpoint',
         queryParameters: {'page': page, 'pageSize': pageSize, ...extraParams},
@@ -354,7 +400,19 @@ mixin ArrActivityMixin {
       // second copy of the parse that used to live here, one of which had
       // already drifted, coercing an unreadable total into `records.length`
       // where the other coerced it into a page-sized guess.
-      final envelope = ArrRecordPage.fromEnvelope(response.data);
+      return ArrRecordPage.fromEnvelope(response.data);
+    }
+
+    final records = <dynamic>[];
+    int? total;
+    // Pages 2 to however many the first one promised, in page order.
+    var batch = const <ArrRecordPage>[];
+
+    for (var page = 1; page <= maxPages; page++) {
+      final settled = page - 2;
+      final envelope = page > 1 && settled < batch.length
+          ? batch[settled]
+          : await fetchPage(page);
       records.addAll(envelope.records);
       total = envelope.total;
 
@@ -379,6 +437,17 @@ mixin ArrActivityMixin {
 
       if (records.length >= total) {
         return ArrRecordPage(records: records, total: total);
+      }
+
+      if (page == 1) {
+        // Counted by what the server actually sent, not by the size asked for:
+        // one that caps the page lower than requested still has its offsets
+        // laid out by the cap.
+        final last = math.min(
+          maxPages,
+          (total / envelope.records.length).ceil(),
+        );
+        batch = await _fetchPageRange(fetchPage, 2, last);
       }
     }
 
