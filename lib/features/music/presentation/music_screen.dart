@@ -27,9 +27,14 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// an empty set is "Lidarr had nothing to say" as much as "nothing is below
 /// cutoff". A Lidarr that is not answering at all never gets here: the library
 /// provider fails first and the wall goes under a fault band.
+///
+/// Only the ids are read, so the walk does not ask Lidarr to embed the artist
+/// in every album.
 final lidarrCutoffUnmetArtistIdsProvider = FutureProvider.autoDispose<Set<int>>(
   (ref) async {
-    final records = await ref.watch(lidarrServiceProvider).getAllCutoff();
+    final records = await ref
+        .watch(lidarrServiceProvider)
+        .getAllCutoff(queryParameters: const {'includeArtist': false});
     return {
       for (final record in records.whereType<Map>())
         if (record['artistId'] case final int id) id,

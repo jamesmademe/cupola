@@ -31,9 +31,20 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// route is absent on some builds), so an empty set is "Sonarr had nothing to
 /// say" as much as "nothing is below cutoff". A Sonarr that is not answering at
 /// all never gets here: the library provider fails first.
+///
+/// Only the ids are read, so the walk asks for neither embed: with the series
+/// and the episode file inside every episode, each page was the whole show
+/// repeated per row, fifty times over on a long backlog.
 final sonarrCutoffUnmetSeriesIdsProvider = FutureProvider.autoDispose<Set<int>>(
   (ref) async {
-    final records = await ref.watch(sonarrServiceProvider).getAllCutoff();
+    final records = await ref
+        .watch(sonarrServiceProvider)
+        .getAllCutoff(
+          queryParameters: const {
+            'includeSeries': false,
+            'includeEpisodeFile': false,
+          },
+        );
     return {
       for (final record in records.whereType<Map>())
         if (record['seriesId'] case final int id) id,
