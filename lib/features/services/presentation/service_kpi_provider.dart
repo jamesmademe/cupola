@@ -181,7 +181,12 @@ List<ProviderOrFamily> serviceKpiSources(ServiceKey service) =>
       ],
       ServiceKey.qbittorrent => [allTorrentsProvider],
       ServiceKey.seerr => [requestsProvider],
-      ServiceKey.bazarr => [bazarrBadgesProvider],
+      // Both halves of [_bazarrKpis]: the provider statuses live as long as
+      // the app, so a failure left in them outlasts every pull that skips them.
+      ServiceKey.bazarr => [
+        bazarrBadgesProvider,
+        bazarrProviderStatusesProvider,
+      ],
       ServiceKey.truenas => [truenasDashboardProvider],
       ServiceKey.dockge => [dockgeStackListProvider],
       ServiceKey.prowlarr => [

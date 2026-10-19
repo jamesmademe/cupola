@@ -14,7 +14,6 @@ import 'package:cupola/features/dockge/presentation/dockge_actions.dart';
 import 'package:cupola/features/dockge/presentation/dockge_agent_lens_button.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
-import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -69,8 +68,7 @@ class _DockgeDashboard extends ConsumerWidget {
     return RefreshIndicator(
       onRefresh: () async {
         ref.invalidate(dockgeStackListProvider);
-        ref.invalidate(serviceKpiProvider(ServiceKey.dockge));
-        ref.invalidate(serviceSummaryProvider(ServiceKey.dockge));
+        invalidateServiceReadout(ref, ServiceKey.dockge);
         await Future<void>.delayed(AppAnimation.durationMd);
       },
       child: ListView(

@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -385,6 +388,47 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('a pull asks the server again when it did not answer', (
+    tester,
+  ) async {
+    probeCalls = 0;
+    await _pump(
+      tester,
+      stacks: [_stack('media')],
+      probe: (call) async => call == 1
+          ? ServiceSummary.failed(
+              ServiceKey.dockge,
+              host: 'dockge.lan:5001',
+              error: DioException(
+                requestOptions: RequestOptions(),
+                type: DioExceptionType.connectionTimeout,
+              ),
+            )
+          : const ServiceSummary(
+              service: ServiceKey.dockge,
+              status: ServiceSummaryStatus.online,
+              host: 'dockge.lan:5001',
+              version: '1.5.0',
+            ),
+    );
+
+    // The one red line stands in for the sections.
+    expect(find.byType(ServiceOverviewUnanswered), findsOneWidget);
+    expect(find.text('Stacks'), findsNothing);
+
+    // Through the indicator's own state: what is under test is the list the
+    // callback invalidates, not the gesture.
+    unawaited(
+      tester.state<RefreshIndicatorState>(find.byType(RefreshIndicator)).show(),
+    );
+    await tester.pumpAndSettle();
+
+    // The pull reached the probe, not only the wrapper that reads its cache.
+    expect(probeCalls, 2);
+    expect(find.byType(ServiceOverviewUnanswered), findsNothing);
+    expect(find.text('Stacks'), findsOneWidget);
+  });
+
   testWidgets('a Dockge that was never set up gets its own door', (
     tester,
   ) async {
@@ -404,6 +448,8 @@ void main() {
 
 // ─── Harness ────────────────────────────────────────────────────────────────
 
+int probeCalls = 0;
+
 Future<void> _pump(
   WidgetTester tester, {
   List<DockgeStack> stacks = const [],
@@ -412,6 +458,7 @@ Future<void> _pump(
   bool online = true,
   bool configured = true,
   double textScaleFactor = 1.0,
+  Future<ServiceSummary> Function(int call)? probe,
 }) async {
   await tester.binding.setSurfaceSize(const Size(420, 2600));
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -443,16 +490,24 @@ Future<void> _pump(
               : Stream.value(stacks),
         ),
         dockgeAgentsProvider.overrideWith((ref) => Stream.value(agents)),
-        serviceSummaryProvider.overrideWith(
-          (ref, service) async => ServiceSummary(
-            service: service,
-            status: online
-                ? ServiceSummaryStatus.online
-                : ServiceSummaryStatus.offline,
-            host: 'dockge.lan:5001',
-            version: online ? '1.5.0' : null,
+        // With a [probe], the connection's own probe is what answers and the
+        // lens wrapper keeps delegating to it, which is production's shape: a
+        // pull that does not reach the probe is a pull that never asked.
+        if (probe != null)
+          instanceSummaryProvider.overrideWith(
+            (ref, key) => probe(++probeCalls),
+          )
+        else
+          serviceSummaryProvider.overrideWith(
+            (ref, service) async => ServiceSummary(
+              service: service,
+              status: online
+                  ? ServiceSummaryStatus.online
+                  : ServiceSummaryStatus.offline,
+              host: 'dockge.lan:5001',
+              version: online ? '1.5.0' : null,
+            ),
           ),
-        ),
         // The readout rail is not what these tests are about, and it reads the
         // stack list through a provider of its own.
         serviceKpiProvider.overrideWith(
