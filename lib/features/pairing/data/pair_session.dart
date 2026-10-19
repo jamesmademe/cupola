@@ -247,7 +247,11 @@ enum PairReceiveFailure {
   unreadable,
 
   /// A later Cupola sent it.
-  newer;
+  newer,
+
+  /// Everything arrived, and this device would not write it down: a full
+  /// disk, a Keychain that did not answer.
+  notSaved;
 
   static PairReceiveFailure of(PairFetchFailure failure) => switch (failure) {
     PairFetchFailure.unreachable => unreachable,
@@ -291,9 +295,12 @@ final class PairReceiveFailed extends PairReceiveState {
 
   final bool invite;
 
-  /// Whether fetching again can still succeed: the same code, while it is
-  /// open, from a device that did not answer.
-  bool get retryHelps => failure == PairReceiveFailure.unreachable;
+  /// Whether trying again can still succeed: the same code, while it is
+  /// open, from a device that did not answer; or what arrived, written again
+  /// (not an invite, which is gone once it was read).
+  bool get retryHelps =>
+      failure == PairReceiveFailure.unreachable ||
+      (failure == PairReceiveFailure.notSaved && !invite);
 }
 
 /// Writing [plan].
@@ -420,7 +427,16 @@ class PairReceiveNotifier extends Notifier<PairReceiveState> {
     }
     final updated = !identical(next, settings);
     if (updated) {
-      await ref.read(settingsProvider.notifier).updateSettings(next);
+      try {
+        await ref.read(settingsProvider.notifier).updateSettings(next);
+      } catch (_) {
+        if (!ref.mounted || generation != _generation) return;
+        state = const PairReceiveFailed(
+          PairReceiveFailure.notSaved,
+          invite: true,
+        );
+        return;
+      }
       if (!ref.mounted || generation != _generation) return;
     }
     state = PairReceiveInvited(here: filled, updated: updated);
@@ -436,7 +452,18 @@ class PairReceiveNotifier extends Notifier<PairReceiveState> {
   /// Fetches the same link again, while it is held.
   Future<void> retry() async {
     final link = _link;
-    if (link != null) await receive(link);
+    if (link != null) {
+      await receive(link);
+      return;
+    }
+    // What arrived could not be written: it is still held, and the way back
+    // is the preview with its Add.
+    final package = _package;
+    if (package != null && state is PairReceiveFailed) {
+      state = PairReceivePreview(
+        PairPlan.of(package, ref.read(currentSettingsProvider)),
+      );
+    }
   }
 
   /// Back to waiting for a link, forgetting the one held.
@@ -455,11 +482,25 @@ class PairReceiveNotifier extends Notifier<PairReceiveState> {
     final current = ref.read(currentSettingsProvider);
     final plan = PairPlan.of(package, current);
     state = PairReceiveAdding(plan);
-    await ref
-        .read(settingsProvider.notifier)
-        .updateSettings(plan.applyTo(current));
-    await ref.read(settingsServiceProvider).saveOnboardingComplete();
-    ref.read(onboardingCompletedProvider.notifier).state = true;
+    // The container, not [ref], for what happens after the writes: the person
+    // may have left the screen meanwhile, and what was written is theirs
+    // either way.
+    final container = ref.container;
+    try {
+      await container
+          .read(settingsProvider.notifier)
+          .updateSettings(plan.applyTo(current));
+      await container.read(settingsServiceProvider).saveOnboardingComplete();
+      container.read(onboardingCompletedProvider.notifier).state = true;
+    } catch (_) {
+      // Held, with its package, for [retry]: leaving the state on `adding`
+      // kept the button busy and Start again disabled for good.
+      if (ref.mounted) {
+        state = const PairReceiveFailed(PairReceiveFailure.notSaved);
+      }
+      return;
+    }
+    if (!ref.mounted) return;
     _package = null;
     state = PairReceiveAdded(plan);
   }

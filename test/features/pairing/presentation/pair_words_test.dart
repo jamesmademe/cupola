@@ -299,6 +299,12 @@ void main() {
             'Copy it again, or make a new code on the other device.',
             true,
           ),
+          PairReceiveFailure.notSaved: (
+            StatusTone.warning,
+            'Cupola could not save these services',
+            'Retry, and restart Cupola if it keeps failing.',
+            false,
+          ),
         },
       );
     });
@@ -312,9 +318,11 @@ void main() {
           f == PairReceiveFailure.unreachable,
           reason: f.name,
         );
+        // Except the amber fault whose remedy is Retry, which takes the fill:
+        // Start again would throw away what arrived.
         expect(
           notice.fillsStartAgain,
-          notice.tone == StatusTone.warning,
+          notice.tone == StatusTone.warning && f != PairReceiveFailure.notSaved,
           reason: f.name,
         );
       }

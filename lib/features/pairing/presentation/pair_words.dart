@@ -191,6 +191,12 @@ extension PairReceiveFailureWords on PairReceiveFailure {
       sentence: 'Copy it again, or make a new code on the other device.',
       fillsStartAgain: true,
     ),
+    PairReceiveFailure.notSaved => const PairNotice(
+      tone: StatusTone.warning,
+      headline: 'Cupola could not save these services',
+      sentence: 'Retry, and restart Cupola if it keeps failing.',
+      fillsStartAgain: false,
+    ),
   };
 }
 
@@ -222,6 +228,12 @@ extension PairInviteFailureWords on PairReceiveFailure {
       tone: StatusTone.warning,
       headline: 'This came from a newer Cupola',
       sentence: 'Update Cupola on this device, then ask for a new code.',
+      fillsStartAgain: false,
+    ),
+    PairReceiveFailure.notSaved => const PairNotice(
+      tone: StatusTone.warning,
+      headline: 'Cupola could not save the invite',
+      sentence: 'Ask for a new code, and restart Cupola if it keeps failing.',
       fillsStartAgain: false,
     ),
     PairReceiveFailure.notWhole => notice,

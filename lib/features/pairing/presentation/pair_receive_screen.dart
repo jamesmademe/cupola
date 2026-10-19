@@ -267,6 +267,10 @@ class _PairReceiveScreenState extends ConsumerState<PairReceiveScreen> {
         ? state.failure.inviteNotice
         : state.failure.notice;
     final notifier = ref.read(pairReceiveProvider.notifier);
+    // What arrived and could not be written: an amber fault whose remedy is
+    // Retry, so Retry takes the fill (Start again would throw the code away).
+    final retryFills =
+        state.retryHelps && state.failure == PairReceiveFailure.notSaved;
     return [
       NoticeLine(
         tone: notice.tone,
@@ -274,7 +278,12 @@ class _PairReceiveScreenState extends ConsumerState<PairReceiveScreen> {
         sentence: notice.sentence,
         actions: [
           if (state.retryHelps)
-            noticeAction(context, Lexicon.retry, notifier.retry),
+            noticeAction(
+              context,
+              Lexicon.retry,
+              notifier.retry,
+              fill: retryFills ? notice.tone : null,
+            ),
           // An invite's remedy is a new code from the person who showed it:
           // nothing here starts again.
           if (!state.invite)

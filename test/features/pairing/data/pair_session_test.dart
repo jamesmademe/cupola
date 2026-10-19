@@ -42,10 +42,23 @@ final _onLoopback = PairNetwork(
   findAddress: () async => InternetAddress.loopbackIPv4,
 );
 
+/// Settings whose disk refuses a write while [failing] is set: a full disk, a
+/// Keychain that would not answer.
+class _SettingsOnADisk extends SettingsNotifier {
+  static bool failing = false;
+
+  @override
+  Future<void> updateSettings(SettingsModel newSettings) async {
+    if (failing) throw StateError('the write was refused');
+    await super.updateSettings(newSettings);
+  }
+}
+
 Future<ProviderContainer> _device({
   SettingsModel settings = const SettingsModel(),
   PairNetwork? network,
 }) async {
+  _SettingsOnADisk.failing = false;
   final scope = await settingsScope();
   final container = ProviderContainer(
     overrides: [
@@ -54,6 +67,7 @@ Future<ProviderContainer> _device({
       initialSettingsProvider.overrideWith((ref) => settings),
       initialOnboardingCompletedProvider.overrideWith((ref) => false),
       pairNetworkProvider.overrideWithValue(network ?? _onLoopback),
+      settingsProvider.overrideWith(_SettingsOnADisk.new),
     ],
   );
   addTearDown(container.dispose);
@@ -169,6 +183,43 @@ void main() {
         expect(receiver.read(onboardingCompletedProvider), isTrue);
       },
     );
+
+    test('a write the device refuses is said, and can be tried again', () async {
+      // `adding` held the screen's button busy and "Start again" disabled, and
+      // the refused write left it there: the only way out was to leave the
+      // screen and ask the other device for a new code.
+      final sender = await _device(settings: _sender);
+      sender.listen(pairOfferProvider, (_, _) {});
+      await sender.read(pairOfferProvider.notifier).start(from: PairDevice.mac);
+      final link = (sender.read(pairOfferProvider) as PairOfferOpen).link;
+
+      final receiver = await _device();
+      receiver.listen(pairReceiveProvider, (_, _) {});
+      final notifier = receiver.read(pairReceiveProvider.notifier);
+      await notifier.receive(link);
+      expect(receiver.read(pairReceiveProvider), isA<PairReceivePreview>());
+
+      _SettingsOnADisk.failing = true;
+      await notifier.add();
+
+      final failed = receiver.read(pairReceiveProvider);
+      expect(
+        failed,
+        isA<PairReceiveFailed>()
+            .having((s) => s.failure, 'failure', PairReceiveFailure.notSaved)
+            .having((s) => s.retryHelps, 'retryHelps', isTrue),
+      );
+      expect(receiver.read(onboardingCompletedProvider), isFalse);
+      expect(receiver.read(currentSettingsProvider).instances, isEmpty);
+
+      // The code was used and is gone, so trying again is the preview again.
+      _SettingsOnADisk.failing = false;
+      await notifier.retry();
+      expect(receiver.read(pairReceiveProvider), isA<PairReceivePreview>());
+      await notifier.add();
+      expect(receiver.read(pairReceiveProvider), isA<PairReceiveAdded>());
+      expect(receiver.read(onboardingCompletedProvider), isTrue);
+    });
 
     test('says a link that did not arrive whole is not', () async {
       final receiver = await _device();
@@ -290,6 +341,36 @@ void main() {
         expect(sender.read(inviteOfferProvider), isA<PairOfferSent>());
       },
     );
+
+    test('a refused write does not leave the invite fetching', () async {
+      final (_, link) = await code();
+      final receiver = await _device(
+        settings: const SettingsModel(
+          instances: [
+            ServiceInstance(
+              id: 'mine',
+              service: ServiceKey.seerr,
+              url: 'http://192.168.1.10:5055',
+              account: SeerrAccountSignIn(
+                kind: SeerrAccountKind.local,
+                login: 'anna@example.com',
+                userId: 4,
+              ),
+            ),
+          ],
+        ),
+      );
+      _SettingsOnADisk.failing = true;
+      receiver.listen(pairReceiveProvider, (_, _) {});
+      await receiver.read(pairReceiveProvider.notifier).receive(link);
+
+      expect(
+        receiver.read(pairReceiveProvider),
+        isA<PairReceiveFailed>()
+            .having((s) => s.failure, 'failure', PairReceiveFailure.notSaved)
+            .having((s) => s.invite, 'invite', isTrue),
+      );
+    });
 
     test(
       'with a Seerr here at its address, fills what it lacks, and its pin',
