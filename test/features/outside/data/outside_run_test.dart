@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -171,6 +172,33 @@ void main() {
       );
     },
   );
+
+  test('a picture that never arrives does not hold the snapshot back', () async {
+    // A server that accepts the connection and then says nothing: the cache
+    // manager has no deadline, so the run used to wait on it for as long as the
+    // socket lived, with the frames it had already read unwritten.
+    final patient = OutsideShelf(
+      folder,
+      pictureTimeout: const Duration(milliseconds: 200),
+    );
+    final run = OutsideRun(
+      shelf: patient,
+      clock: () => now,
+      fetch: (_) => Completer<List<int>?>().future,
+    );
+
+    await run
+        .run(await operator(), speak: false, enabled: const {}, probe: false)
+        .timeout(const Duration(seconds: 5));
+
+    final widgets = snapshot()['widgets']! as Map;
+    expect(widgets.keys, unorderedEquals(['comingUp', 'downloads']));
+    expect(
+      patient.pictures.listSync(),
+      isEmpty,
+      reason: 'the widget draws without the poster',
+    );
+  });
 
   test('a widget whose read did not answer keeps the frames it had', () async {
     await runner().run(

@@ -2,6 +2,7 @@
 /// widgets draw, the pictures it names, and what the notifications have said.
 library;
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -20,14 +21,24 @@ String outsidePictureName(String url) =>
 /// wide, and a widget's memory is small (about 30 MB on iOS).
 const outsidePictureMaxBytes = 1536 * 1024;
 
+/// How long one picture may take to arrive. The cache manager behind
+/// `fetchOutsidePicture` has no deadline of its own, and a server that accepts
+/// the connection and goes quiet would otherwise hold the whole run: the
+/// snapshot waits behind its pictures, and the keeper starts no other run while
+/// one is going.
+const outsidePictureTimeout = Duration(seconds: 8);
+
 /// What a run writes: the snapshot in the file's shape, with the widgets a
 /// run did not read kept as they were, and the pictures it names.
 typedef OutsidePlan = ({Map<String, Object?> json, Set<String> pictures});
 
 class OutsideShelf {
-  OutsideShelf(this.folder);
+  OutsideShelf(this.folder, {this.pictureTimeout = outsidePictureTimeout});
 
   final Directory folder;
+
+  /// How long [keepPictures] waits for one picture.
+  final Duration pictureTimeout;
 
   File get _snapshot => File('${folder.path}/outside.json');
   File get _said => File('${folder.path}/outside_said.json');
@@ -68,8 +79,10 @@ class OutsideShelf {
       _writeAtomically(_snapshot, jsonEncode(plan.json));
 
   /// Fetches the pictures [plan] names that are not on disk yet and removes
-  /// the ones it no longer names. A picture that cannot be fetched is a
-  /// widget without it, never a failed run.
+  /// the ones it no longer names. A picture that cannot be fetched, or does not
+  /// arrive within [pictureTimeout], is a widget without it, never a failed
+  /// run. A download that timed out goes on and fills the cache, so the next run
+  /// finds the picture ready.
   Future<void> keepPictures(
     OutsidePlan plan,
     Map<String, ImageSource> sources,
@@ -83,7 +96,7 @@ class OutsideShelf {
             final file = File('${pictures.path}/$name');
             if (await file.exists()) return;
             try {
-              final bytes = await fetch(source);
+              final bytes = await fetch(source).timeout(pictureTimeout);
               if (bytes == null || bytes.length > outsidePictureMaxBytes) {
                 return;
               }
