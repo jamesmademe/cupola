@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/features/import/domain/manual_import_models.dart';
@@ -212,6 +214,16 @@ ManualImportIdentity manualImportIdentityFor(
 
 /// `S2 E1`, or `S2 E1–E2` for a multi-episode file.
 String? _episodeCode(List<Map<String, dynamic>> episodes) {
+  final run = _episodeRun(episodes);
+  if (run == null) return null;
+  return formatEpisodeRange(run.season, run.numbers);
+}
+
+/// The season and episode numbers a file's code is spelled from: the first
+/// season that has both numbers, and every episode number that has both.
+({int season, List<int> numbers})? _episodeRun(
+  List<Map<String, dynamic>> episodes,
+) {
   final numbers = <int>[];
   int? season;
   for (final episode in episodes) {
@@ -222,8 +234,78 @@ String? _episodeCode(List<Map<String, dynamic>> episodes) {
     numbers.add(episodeNumber);
   }
   if (season == null) return null;
-  return formatEpisodeRange(season, numbers);
+  return (season: season, numbers: numbers);
 }
+
+/// Where two files of one group sit relative to each other: broadcast order for
+/// episodes, album then track number for songs, the year for movies.
+///
+/// Numeric on purpose. The [ManualImportIdentity.code] is spelled for the eye
+/// and has no zero padding, so sorting it as text puts `S1 E10` before `S1 E2`
+/// and `S10 E1` before `S2 E1`. A file with no place sorts first, as an empty
+/// code always did; ties fall back to the name.
+int compareManualImportOrder(
+  ServiceKey service,
+  ManualImportItem a,
+  ManualImportItem b,
+) {
+  final byPlace = switch (service) {
+    ServiceKey.sonarr => _compareEpisodes(a.episodes, b.episodes),
+    ServiceKey.lidarr => _compareTracks(a, b),
+    ServiceKey.radarr => _compareNumbers(
+      intOrNull(a.movie?['year']),
+      intOrNull(b.movie?['year']),
+    ),
+    _ => 0,
+  };
+  return byPlace != 0 ? byPlace : a.name.compareTo(b.name);
+}
+
+/// Nulls first, then ascending.
+int _compareNumbers(int? a, int? b) {
+  if (a == null || b == null) {
+    return a == b
+        ? 0
+        : a == null
+        ? -1
+        : 1;
+  }
+  return a.compareTo(b);
+}
+
+int _compareEpisodes(
+  List<Map<String, dynamic>> a,
+  List<Map<String, dynamic>> b,
+) {
+  final runA = _episodeRun(a);
+  final runB = _episodeRun(b);
+  final bySeason = _compareNumbers(runA?.season, runB?.season);
+  if (bySeason != 0) return bySeason;
+  return _compareNumbers(
+    runA?.numbers.reduce(math.min),
+    runB?.numbers.reduce(math.min),
+  );
+}
+
+int _compareTracks(ManualImportItem a, ManualImportItem b) {
+  final byAlbum = (stringOrNull(a.album?['title']) ?? '')
+      .toLowerCase()
+      .compareTo((stringOrNull(b.album?['title']) ?? '').toLowerCase());
+  if (byAlbum != 0) return byAlbum;
+  return _compareNumbers(
+    _firstTrackNumber(a.tracks),
+    _firstTrackNumber(b.tracks),
+  );
+}
+
+int? _firstTrackNumber(List<Map<String, dynamic>> tracks) => tracks
+    .map(
+      (track) =>
+          intOrNull(track['trackNumber']) ??
+          intOrNull(track['absoluteTrackNumber']),
+    )
+    .whereType<int>()
+    .firstOrNull;
 
 String? _episodeTitles(List<Map<String, dynamic>> episodes) {
   final titles = episodes

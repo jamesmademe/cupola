@@ -169,6 +169,36 @@ FakeApiClient _scanClientWithImported() {
   return client;
 }
 
+/// A pack that crosses the one-digit line in both numbers: episodes 1, 2, 9 and
+/// 10 of season 1, then season 2 and season 10. Handed over shuffled, because the
+/// order on screen is the screen's to decide, not the scan's.
+FakeApiClient _scanClientAcrossTens() {
+  final client = FakeApiClient();
+  client.getResponseQueue.addAll([
+    [
+      {'id': 1, 'path': '/downloads', 'accessible': true},
+    ],
+    {'parent': null, 'directories': <dynamic>[], 'files': <dynamic>[]},
+    [
+      for (final (season, episode) in [
+        (1, 10),
+        (10, 1),
+        (1, 2),
+        (2, 1),
+        (1, 9),
+      ])
+        _episode(
+          name: 'Boruto.S${season}E$episode.1080p.WEB-DL.mkv',
+          series: 'Boruto',
+          season: season,
+          episode: episode,
+          episodeTitle: 'Episode $season.$episode',
+        ),
+    ],
+  ]);
+  return client;
+}
+
 /// The review screen inside a router, so the Import button can reach Track.
 Future<void> _pumpRoutedReview(
   WidgetTester tester, {
@@ -734,6 +764,24 @@ void main() {
 
       expect(client.postCallCount, 1);
       expect(find.text('Track page'), findsOneWidget);
+    });
+  });
+
+  group('a group lists its episodes in broadcast order', () {
+    testWidgets('by season and episode number, not by the text of the code', (
+      tester,
+    ) async {
+      await _pumpReview(tester, client: _scanClientAcrossTens());
+
+      double top(String code) => tester.getTopLeft(find.text(code)).dy;
+      final order = ['S1 E2', 'S1 E9', 'S1 E10', 'S2 E1', 'S10 E1'];
+      for (var i = 1; i < order.length; i++) {
+        expect(
+          top(order[i - 1]),
+          lessThan(top(order[i])),
+          reason: '${order[i - 1]} must sit above ${order[i]}',
+        );
+      }
     });
   });
 }

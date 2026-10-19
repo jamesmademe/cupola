@@ -662,12 +662,7 @@ class _ManualImportReviewScreenState
     final titles = groups.keys.toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     for (final title in titles) {
-      groups[title]!.sort((a, b) {
-        final aCode = manualImportIdentityFor(service, a).code ?? '';
-        final bCode = manualImportIdentityFor(service, b).code ?? '';
-        final byCode = aCode.compareTo(bCode);
-        return byCode != 0 ? byCode : a.name.compareTo(b.name);
-      });
+      groups[title]!.sort((a, b) => compareManualImportOrder(service, a, b));
     }
 
     final total = ready.length + imported.length;

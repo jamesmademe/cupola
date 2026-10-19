@@ -198,6 +198,94 @@ void main() {
     });
   });
 
+  group('compareManualImportOrder', () {
+    ManualImportItem episode(int season, int number, {String name = 'x'}) =>
+        _item({
+          'name': name,
+          'episodes': [
+            {'id': 1, 'seasonNumber': season, 'episodeNumber': number},
+          ],
+        });
+
+    List<ManualImportItem> sorted(
+      ServiceKey service,
+      List<ManualImportItem> items,
+    ) => [...items]..sort((a, b) => compareManualImportOrder(service, a, b));
+
+    test('sonarr orders by season then episode, as numbers', () {
+      final order = sorted(ServiceKey.sonarr, [
+        episode(1, 10),
+        episode(10, 1),
+        episode(1, 2),
+        episode(2, 1),
+        episode(1, 1),
+      ]);
+      expect(
+        order.map(
+          (item) => manualImportIdentityFor(ServiceKey.sonarr, item).code,
+        ),
+        ['S1 E1', 'S1 E2', 'S1 E10', 'S2 E1', 'S10 E1'],
+      );
+    });
+
+    test('a multi-episode file sits at its first episode', () {
+      final run = _item({
+        'name': 'run',
+        'episodes': [
+          {'id': 1, 'seasonNumber': 1, 'episodeNumber': 9},
+          {'id': 2, 'seasonNumber': 1, 'episodeNumber': 10},
+        ],
+      });
+      final order = sorted(ServiceKey.sonarr, [
+        episode(1, 11),
+        run,
+        episode(1, 2),
+      ]);
+      expect(order[1], same(run));
+    });
+
+    test('a file with no episode sorts first, ties fall back to the name', () {
+      final none = _item({'name': 'zzz'});
+      final b = episode(1, 1, name: 'b');
+      final a = episode(1, 1, name: 'a');
+      expect(sorted(ServiceKey.sonarr, [b, none, a]), [none, a, b]);
+    });
+
+    test('lidarr orders by album, then by track number as a number', () {
+      ManualImportItem track(String album, int number) => _item({
+        'album': {'id': 1, 'title': album},
+        'tracks': [
+          {'id': 1, 'trackNumber': number},
+        ],
+      });
+      final order = sorted(ServiceKey.lidarr, [
+        track('Meteora', 10),
+        track('Hybrid Theory', 2),
+        track('Meteora', 2),
+        track('Hybrid Theory', 10),
+      ]);
+      expect(
+        order.map(
+          (item) => (item.album!['title'], item.tracks.first['trackNumber']),
+        ),
+        [
+          ('Hybrid Theory', 2),
+          ('Hybrid Theory', 10),
+          ('Meteora', 2),
+          ('Meteora', 10),
+        ],
+      );
+    });
+
+    test('radarr orders by year', () {
+      ManualImportItem movie(int year) => _item({
+        'movie': {'id': 1, 'title': 'Dune', 'year': year},
+      });
+      final order = sorted(ServiceKey.radarr, [movie(2021), movie(1984)]);
+      expect(order.map((item) => item.movie!['year']), [1984, 2021]);
+    });
+  });
+
   group('the identity is matched data, never parsed data', () {
     test('the episode code comes from the matched episode, not the file', () {
       // The \*arr payload carries both: a top-level `seasonNumber` parsed out of
