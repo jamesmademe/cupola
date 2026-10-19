@@ -5,20 +5,10 @@ import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/ambient_background.dart';
 
-/// The glow's current colour, read off the decoration the widget actually
-/// paints rather than off anything it was handed.
-Color _paintedAccent(WidgetTester tester) {
-  final boxes = tester
-      .widgetList<DecoratedBox>(find.byType(DecoratedBox))
-      .where((box) => (box.decoration as BoxDecoration).gradient != null)
-      .toList(growable: false);
-  final gradient =
-      (boxes.first.decoration as BoxDecoration).gradient as RadialGradient;
-  // The accent is the first stop, painted at the theme's wash alpha (0.16 dark,
-  // 0.10 light). Forced back to opaque so the assertions can name the accent
-  // itself rather than restating the wash.
-  return gradient.colors.first.withValues(alpha: 1.0);
-}
+/// The lamp's current colour, read off the room the widget actually hands
+/// its children (and paints) rather than off anything it was handed.
+Color _paintedAccent(WidgetTester tester) =>
+    tester.widget<AmbientRoom>(find.byType(AmbientRoom)).accent;
 
 Future<void> _pump(
   WidgetTester tester, {

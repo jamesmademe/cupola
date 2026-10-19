@@ -111,6 +111,7 @@ class HomeScreen extends ConsumerWidget {
         // The room takes its light from the slide in front, drifting as the
         // title's own page does.
         accent: allUnconfigured ? null : ref.watch(featuredRoomLightProvider),
+        art: allUnconfigured ? null : ref.watch(featuredRoomProvider)?.art,
         accentDuration: AppAnimation.light,
         body: allUnconfigured
             ? NothingSetUpView(

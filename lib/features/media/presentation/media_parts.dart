@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
-import 'package:cupola/core/app_gradients.dart';
+import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/room_art.dart';
 import 'package:cupola/core/title_light.dart';
+import 'package:cupola/core/widgets/ambient_background.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart' show StatusBarScrim;
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
@@ -16,9 +18,18 @@ import 'package:cupola/features/media/presentation/media_split.dart';
 /// it, and beside a list the light coming up from the list's side rather
 /// than starting at an edge.
 class MediaRoom extends StatelessWidget {
-  const MediaRoom({super.key, required this.light, required this.child});
+  const MediaRoom({
+    super.key,
+    required this.light,
+    this.art,
+    required this.child,
+  });
 
   final TitleLight? light;
+
+  /// The picture of [light]: the artwork itself, laid over the top of the
+  /// room once it is read.
+  final RoomArt? art;
 
   /// The page.
   final Widget child;
@@ -29,10 +40,6 @@ class MediaRoom extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final room = CupolaRoom.of(context);
-    final scheme = Theme.of(context).colorScheme;
-    final ambient = BoxDecoration(
-      gradient: AppGradients.ambientBackground(scheme, accent: light?.light),
-    );
     final framed = Stack(
       children: [
         child,
@@ -42,7 +49,12 @@ class MediaRoom extends StatelessWidget {
     return Scaffold(
       backgroundColor: room.ground,
       body: MediaPane.maybeOf(context) == null
-          ? DecoratedBox(decoration: ambient, child: framed)
+          ? AmbientBackground(
+              accent: light?.light,
+              art: art,
+              accentDuration: AppAnimation.light,
+              child: framed,
+            )
           : Stack(
               fit: StackFit.expand,
               children: [
@@ -52,7 +64,12 @@ class MediaRoom extends StatelessWidget {
                     colors: const [Color(0x00000000), Color(0xFF000000)],
                     stops: [0, (paneLightRise / bounds.width).clamp(0, 1)],
                   ).createShader(bounds),
-                  child: DecoratedBox(decoration: ambient),
+                  child: AmbientBackground(
+                    accent: light?.light,
+                    art: art,
+                    accentDuration: AppAnimation.light,
+                    child: const SizedBox.expand(),
+                  ),
                 ),
                 framed,
               ],

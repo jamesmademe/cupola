@@ -10,6 +10,8 @@ import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/media/presentation/media_parts.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/nothing_set_up.dart';
@@ -147,7 +149,6 @@ class _StackHeadlineState extends ConsumerState<_StackHeadline> {
   @override
   Widget build(BuildContext context) {
     final room = CupolaRoom.of(context);
-    final colorScheme = Theme.of(context).colorScheme;
     final health = ref.watch(stackHealthProvider);
     final sentence = health.sentenceAt(DateTime.now());
 
@@ -155,7 +156,7 @@ class _StackHeadlineState extends ConsumerState<_StackHeadline> {
       padding: EdgeInsets.fromLTRB(
         AppSpacing.gutter,
         MediaQuery.paddingOf(context).top + AppSpacing.sm,
-        AppSpacing.xs,
+        AppSpacing.gutter,
         AppSpacing.sm,
       ),
       child: Column(
@@ -172,13 +173,17 @@ class _StackHeadlineState extends ConsumerState<_StackHeadline> {
                   ),
                 ),
               ),
-              IconButton(
-                tooltip: 'Settings',
-                icon: Icon(Icons.settings_outlined, color: room.ink),
-                onPressed: () => openSettings(context, ref),
+              Tooltip(
+                message: 'Settings',
+                child: MediaPlate(
+                  label: 'Settings',
+                  icon: Icons.settings_outlined,
+                  onTap: () => openSettings(context, ref),
+                ),
               ),
             ],
           ),
+          const SizedBox(height: AppSpacing.xs),
           Padding(
             padding: const EdgeInsets.only(right: AppSpacing.md),
             child: Semantics(
@@ -189,13 +194,69 @@ class _StackHeadlineState extends ConsumerState<_StackHeadline> {
                 // Neutral, always: no permanent green. A stack that is entirely
                 // healthy says so in words and spends no colour on it; the tone
                 // this page has to spare belongs to the one card that is not.
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
+                style: AppType.body.copyWith(color: room.inkSecondary),
               ),
             ),
           ),
+          const SizedBox(height: AppSpacing.md),
+          _HealthStrip(health: health),
         ],
+      ),
+    );
+  }
+}
+
+/// The fleet at a glance: one segment a service, lit by how it stands,
+/// in the order the sentence above counts them: answering, at fault, signed
+/// out, silent, still asked, and the ones nobody set up as empty outlines.
+/// The sentence is what a screen reader hears; the strip says nothing more.
+class _HealthStrip extends StatelessWidget {
+  const _HealthStrip({required this.health});
+
+  final StackHealth health;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    Color tone(StatusTone tone) => statusToneColor(scheme, tone);
+    final clean = (health.answering - health.faulted - health.degraded).clamp(
+      0,
+      health.configured,
+    );
+    final segments = <Color?>[
+      for (var i = 0; i < clean; i++) tone(StatusTone.success),
+      // A fault, a disagreement and a silence that timed out are all amber:
+      // the host is there.
+      for (var i = 0; i < health.faulted + health.degraded + health.stuck; i++)
+        tone(StatusTone.warning),
+      for (var i = 0; i < health.signedOut; i++) tone(StatusTone.info),
+      for (var i = 0; i < health.unreachable; i++) tone(StatusTone.error),
+      for (var i = 0; i < health.checking + health.onlyAtHome; i++)
+        room.fillStrong,
+      for (var i = 0; i < health.notSetUp; i++) null,
+    ];
+    if (segments.isEmpty) return const SizedBox.shrink();
+    return ExcludeSemantics(
+      child: SizedBox(
+        height: 6,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final (index, color) in segments.indexed) ...[
+              if (index > 0) const SizedBox(width: 4),
+              Expanded(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: color?.withValues(alpha: 0.8),
+                    borderRadius: BorderRadius.circular(3),
+                    border: color == null ? Border.all(color: room.edge) : null,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

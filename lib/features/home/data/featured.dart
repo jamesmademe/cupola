@@ -11,6 +11,7 @@ import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/title_light.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/features/discover/presentation/library_calendar_provider.dart';
+import 'package:cupola/features/home/domain/coming_up.dart';
 import 'package:cupola/features/home/data/home_last_known.dart';
 import 'package:cupola/features/home/data/home_layout_provider.dart';
 import 'package:cupola/features/home/data/last_known/featured_last_known.dart';
@@ -230,28 +231,64 @@ final featuredLightProvider = Provider.autoDispose.family<TitleLight?, String>((
 /// The light a Home is lit by: on the operator's, the slide of Featured in
 /// front; on the requester's, the title Ready to watch leads with; else the
 /// lamp.
-final featuredRoomLightProvider = Provider.autoDispose<Color?>((ref) {
+final featuredRoomLightProvider = Provider.autoDispose<Color?>(
+  (ref) => ref.watch(featuredRoomProvider)?.light,
+);
+
+/// The whole light of a Home ([featuredRoomLightProvider]): its colours and,
+/// once the slide in front has been read, its picture.
+final featuredRoomProvider = Provider.autoDispose<TitleLight?>((ref) {
+  final url = ref.watch(featuredRoomSourceProvider);
+  if (url != null) return ref.watch(featuredLightProvider(url));
+  // With nothing featured, the next thing out lights the room, as it lights
+  // Coming up: a Home is never left to the lamp while a title leads it.
+  final next = ref.watch(homeComingUpSourceProvider);
+  return next == null ? null : ref.watch(titleLightProvider(next)).value;
+});
+
+/// The artwork that lights a Home, or null for the lamp; see
+/// [featuredRoomLightProvider].
+final featuredRoomSourceProvider = Provider.autoDispose<String?>((ref) {
   final shown = ref.watch(homeLayoutProvider).shown;
   if (ref.watch(shellAudienceProvider) == Audience.requester) {
     if (!shown.contains(HomeModule.readyToWatch)) return null;
     // The title Ready to watch draws: her answer's, or until it comes the
     // one it drew last, so the room keeps its light.
-    final lead = ref.watch(readyLeadProvider);
-    if (lead == null) return null;
-    final url = lead.art.url;
-    return ref.watch(featuredLightProvider(url))?.light;
+    return ref.watch(readyLeadProvider)?.art.url;
   }
-  if (!shown.contains(HomeModule.featured)) return null;
-  // The drawn slides at a cold start, so the room is lit by the slide in
-  // front from the first frame and does not change when the live ones come.
-  final slides =
-      ref.watch(featuredProvider).value ??
-      ref.watch(homeLastKnownProvider(featuredLastKnown))?.value
-          as List<FeaturedSlide>?;
-  if (slides == null || slides.isEmpty) return null;
-  final index = ref.watch(featuredViewProvider.select((view) => view.index));
-  final url = slides[index.clamp(0, slides.length - 1)].art.url;
-  return ref.watch(featuredLightProvider(url))?.light;
+  if (shown.contains(HomeModule.featured)) {
+    // The drawn slides at a cold start, so the room is lit by the slide in
+    // front from the first frame and does not change when the live ones come.
+    final slides =
+        ref.watch(featuredProvider).value ??
+        ref.watch(homeLastKnownProvider(featuredLastKnown))?.value
+            as List<FeaturedSlide>?;
+    if (slides != null && slides.isNotEmpty) {
+      final index = ref.watch(
+        featuredViewProvider.select((view) => view.index),
+      );
+      return slides[index.clamp(0, slides.length - 1)].art.url;
+    }
+  }
+  return null;
+});
+
+/// With nothing featured, the artwork of the next thing out, as Coming up
+/// draws it (a public picture only); null for the lamp.
+final homeComingUpSourceProvider = Provider.autoDispose<String?>((ref) {
+  if (ref.watch(shellAudienceProvider) == Audience.requester) return null;
+  if (!ref.watch(homeLayoutProvider).shown.contains(HomeModule.comingUp) ||
+      !ref.watch(hasLibraryCalendarProvider)) {
+    return null;
+  }
+  final events = ref.watch(libraryCalendarProvider).value?.events;
+  if (events == null) return null;
+  return [
+    for (final event in comingUpOf(events, ref.watch(calendarClockProvider)()))
+      if (event.poster case final poster?
+          when poster.headers == null && poster.url.isNotEmpty)
+        poster.url,
+  ].firstOrNull;
 });
 
 /// Whether Featured moves on by itself: always in the app; off where a page

@@ -4,7 +4,9 @@ import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/room_art.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/ambient_background.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/fault_band.dart';
@@ -42,6 +44,7 @@ class HomeModuleFrame extends StatelessWidget {
     this.subtitle,
     this.action,
     this.semanticLabel,
+    this.light,
   }) : _state = _FrameState.ready,
        coverage = null,
        onRetry = null,
@@ -60,6 +63,7 @@ class HomeModuleFrame extends StatelessWidget {
   }) : child = skeleton,
        _state = _FrameState.loading,
        subtitle = null,
+       light = null,
        action = null,
        semanticLabel = null,
        coverage = null,
@@ -82,6 +86,7 @@ class HomeModuleFrame extends StatelessWidget {
     this.child,
   }) : _state = _FrameState.silent,
        subtitle = null,
+       light = null,
        action = null,
        semanticLabel = null,
        service = null,
@@ -101,6 +106,7 @@ class HomeModuleFrame extends StatelessWidget {
     required VoidCallback this.onSetUp,
   }) : _state = _FrameState.needsService,
        child = null,
+       light = null,
        subtitle = null,
        action = null,
        semanticLabel = null,
@@ -124,6 +130,10 @@ class HomeModuleFrame extends StatelessWidget {
   /// What the heading says to a screen reader, when the name and the line
   /// under it are not the whole sentence.
   final String? semanticLabel;
+
+  /// The picture of the light of the module's first title: the slab glows
+  /// with it. Null for an unlit slab.
+  final RoomArt? light;
 
   final SourceCoverage? coverage;
   final VoidCallback? onRetry;
@@ -195,14 +205,23 @@ class HomeModuleFrame extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppRadius.slab),
             border: Border.all(color: room.hair),
           ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.slabY,
-              AppSpacing.lg,
-              AppSpacing.xs,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.slab),
+            child: Stack(
+              children: [
+                if (light != null)
+                  Positioned.fill(child: SlabLight(art: light)),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.slabY,
+                    AppSpacing.lg,
+                    AppSpacing.xs,
+                  ),
+                  child: body,
+                ),
+              ],
             ),
-            child: body,
           ),
         ),
       ),

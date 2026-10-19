@@ -1,12 +1,14 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/title_light.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/discover/domain/collection_shelf.dart';
@@ -16,7 +18,7 @@ import 'package:cupola/features/media/presentation/shelf_page.dart';
 /// its movies with where each stands, and the count of each kind. On the
 /// collection's page under its still; in the atrium, the invitation to
 /// complete it.
-class CollectionTally extends StatelessWidget {
+class CollectionTally extends ConsumerWidget {
   /// The collection's own page: the headline is how much is on the server.
   const CollectionTally({super.key, required this.shelf})
     : name = null,
@@ -54,10 +56,26 @@ class CollectionTally extends StatelessWidget {
   static const double besideFrom = 2 * stripMeasure + AppSpacing.xl;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final room = CupolaRoom.of(context);
     final scheme = Theme.of(context).colorScheme;
     final total = shelf.parts.length;
+    // The invitation glows with its first movie's light, read from the
+    // cover the strip draws.
+    final lead = name == null
+        ? null
+        : [
+            for (final part in shelf.parts)
+              if (ImageUtils.buildTmdbPosterUrl(
+                    part.media.posterPath,
+                    size: 'w92',
+                  )
+                  case final url when url.isNotEmpty)
+                url,
+          ].firstOrNull;
+    final light = lead == null
+        ? null
+        : ref.watch(titleLightProvider(lead)).value?.art;
     final held = shelf.count(CollectionPartStand.onServer);
     final onTheWay = shelf.count(CollectionPartStand.onTheWay);
     final waiting = shelf.count(CollectionPartStand.waiting);
@@ -143,55 +161,61 @@ class CollectionTally extends StatelessWidget {
                 ),
             ],
           );
+    // The phone's slab: the words, the strip under them, the legend under
+    // that. Where the words keep at least the strip's own measure beside it,
+    // the strip goes beside them instead, at the end of the slab.
+    final content = LayoutBuilder(
+      builder: (context, box) {
+        if (box.maxWidth >= besideFrom) {
+          return Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ...heading,
+                    if (legendLine != null) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      legendLine,
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xl),
+              SizedBox(
+                width: _Strip.widthOf(shelf.parts.length),
+                child: _Strip(shelf: shelf),
+              ),
+            ],
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ...heading,
+            const SizedBox(height: AppSpacing.md),
+            _Strip(shelf: shelf),
+            if (legendLine != null) ...[
+              const SizedBox(height: AppSpacing.md),
+              legendLine,
+            ],
+          ],
+        );
+      },
+    );
     final slab = Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: room.fillQuiet,
         borderRadius: BorderRadius.circular(AppRadius.door),
         border: Border.all(color: room.hair),
       ),
-      // The phone's slab: the words, the strip under them, the legend under
-      // that. Where the words keep at least the strip's own measure beside
-      // it, the strip goes beside them instead, at the end of the slab.
-      child: LayoutBuilder(
-        builder: (context, box) {
-          if (box.maxWidth >= besideFrom) {
-            return Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ...heading,
-                      if (legendLine != null) ...[
-                        const SizedBox(height: AppSpacing.md),
-                        legendLine,
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.xl),
-                SizedBox(
-                  width: _Strip.widthOf(shelf.parts.length),
-                  child: _Strip(shelf: shelf),
-                ),
-              ],
-            );
-          }
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ...heading,
-              const SizedBox(height: AppSpacing.md),
-              _Strip(shelf: shelf),
-              if (legendLine != null) ...[
-                const SizedBox(height: AppSpacing.md),
-                legendLine,
-              ],
-            ],
-          );
-        },
+      child: Stack(
+        children: [
+          if (light != null) Positioned.fill(child: SlabLight(art: light)),
+          Padding(padding: const EdgeInsets.all(AppSpacing.lg), child: content),
+        ],
       ),
     );
     final tap = onTap;

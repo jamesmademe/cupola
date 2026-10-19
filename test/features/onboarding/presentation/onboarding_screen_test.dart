@@ -606,22 +606,16 @@ void main() {
       // accent now, so the constructor argument is null on the beats that want
       // the brand glow, and asserting on it would be asserting on the plumbing
       // rather than on the rule.
-      Color roomAccent() {
-        final decorated = tester
-            .widgetList<DecoratedBox>(
-              find.descendant(
-                of: find.byType(AmbientBackground),
-                matching: find.byType(DecoratedBox),
-              ),
-            )
-            .firstWhere(
-              (box) => (box.decoration as BoxDecoration).gradient != null,
-            );
-        final gradient =
-            (decorated.decoration as BoxDecoration).gradient as RadialGradient;
-        // The accent is the first stop, painted at the theme's wash alpha.
-        return gradient.colors.first.withValues(alpha: 1.0);
-      }
+      Color roomAccent() => tester
+          .widget<AmbientRoom>(
+            find
+                .descendant(
+                  of: find.byType(AmbientBackground),
+                  matching: find.byType(AmbientRoom),
+                )
+                .first,
+          )
+          .accent;
 
       // The Welcome is the lamp.
       expect(roomAccent(), brand);

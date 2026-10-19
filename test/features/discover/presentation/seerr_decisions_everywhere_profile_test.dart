@@ -25,6 +25,8 @@ void main() {
   }) async {
     final button = find.byTooltip(tooltip);
     await tester.ensureVisible(button);
+    // The scroll lands on the next frame: tap where the button is then.
+    await tester.pump();
     await tester.tap(button);
     await harness.settle(tester);
     await tester.tap(find.widgetWithText(FilledButton, confirm));

@@ -116,7 +116,7 @@ class _OverviewBody extends ConsumerWidget {
           if (topPadding > 0) SizedBox(height: topPadding),
           const ServiceOverviewIdentity(service: ServiceKey.sabnzbd),
           ...sectionsOrOneLine(ref, ServiceKey.sabnzbd, [
-            ServiceKpiPeek(
+            ServiceKpiPeek.room(
               // Built from the queue this page already watches, so the rail and
               // the rows below it are the same poll. `whenData` keeps the
               // loading and error arms intact: the rail shimmers and then

@@ -99,7 +99,8 @@ void main() {
     final headers = tester
         .widgetList<SectionHeader>(find.byType(SectionHeader))
         .toList();
-    expect(headers[0].subtitle, '0');
+    // No fault, and a count of none is not drawn under the heading.
+    expect(headers[0].subtitle, isNull);
     expect(
       headers[1].subtitle,
       '3\u00A0· 2 of 3 enabled checked from this device',
@@ -117,7 +118,8 @@ void main() {
     final attention = tester.widget<SectionHeader>(
       find.widgetWithText(SectionHeader, 'Needs attention'),
     );
-    expect(attention.subtitle, '0');
+    // No fault, and a count of none is not drawn under the heading.
+    expect(attention.subtitle, isNull);
     expect(find.textContaining('not reachable from this device'), findsWidgets);
   });
 
@@ -138,7 +140,8 @@ void main() {
     final attention = tester.widget<SectionHeader>(
       find.widgetWithText(SectionHeader, 'Needs attention'),
     );
-    expect(attention.subtitle, '0');
+    // No fault, and a count of none is not drawn under the heading.
+    expect(attention.subtitle, isNull);
     expect(find.textContaining('nginx refused'), findsNothing);
     // Still drawn on the host list, in the ordinary ink, with the word for it.
     expect(find.textContaining('disabled'), findsOneWidget);

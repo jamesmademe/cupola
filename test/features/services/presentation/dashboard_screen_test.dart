@@ -833,15 +833,19 @@ void main() {
       expect(prefs.getInt('services_more_services_dismissed_at'), isNull);
     });
 
-    testWidgets('an answering service has no pip; a dark one does', (
+    testWidgets('an answering service is never red; a dark one is', (
       tester,
     ) async {
       await _pumpPage(tester, _Page.stack);
+      final scheme = Theme.of(tester.element(find.text('Radarr'))).colorScheme;
+      final red = statusToneColor(scheme, StatusTone.error);
 
-      // Radarr answers and is proved by its figure.
-      expect(_pipsIn(tester, 'service-matrix-cell-radarr'), 0);
+      // Every row states how it stands with a dot. Radarr answers and is
+      // proved by its figure: its dot is not the alarm.
+      expect(_pipsIn(tester, 'service-matrix-cell-radarr'), 1);
+      expect(_pipColour(tester, 'service-matrix-cell-radarr'), isNot(red));
       // Lidarr does not answer, and says so twice: the mark and the word.
-      expect(_pipsIn(tester, 'service-matrix-cell-lidarr'), 1);
+      expect(_pipColour(tester, 'service-matrix-cell-lidarr'), red);
       expect(find.text('Did not answer'), findsOneWidget);
     });
 
@@ -895,24 +899,35 @@ void main() {
       await _pumpPage(tester, _Page.stack, router: router);
       final cell = find.byKey(const ValueKey('service-matrix-cell-readarr'));
       await tester.ensureVisible(cell);
+      // The scroll lands on the next frame: tap where the row is then.
+      await tester.pump();
       await tester.tap(cell);
       await tester.pumpAndSettle();
 
       expect(opened?.path, ServiceRoutes.setUp(ServiceKey.readarr));
     });
 
-    testWidgets('the region header counts the whole registry', (tester) async {
+    testWidgets('the list is the whole registry', (tester) async {
       await _pumpPage(tester, _Page.stack);
 
-      // The matrix's own header: the app bar above it says Stack too.
+      // The inventory of everything the app can talk to: a row for every
+      // service, set up or not. The page's own line counts what is not
+      // (`2 not set up`), so the list has no header of its own to say Stack
+      // a second time.
+      for (final service in ServiceKey.values) {
+        expect(
+          find.byKey(ValueKey('service-matrix-cell-${service.routeParam}')),
+          findsOneWidget,
+          reason: '${service.title} has a row',
+        );
+      }
       expect(
         find.descendant(
           of: find.byType(ServiceMatrix),
           matching: find.text('Stack'),
         ),
-        findsOneWidget,
+        findsNothing,
       );
-      expect(find.text('· ${ServiceKey.values.length}'), findsOneWidget);
     });
 
     testWidgets('a card is one labelled button, not four fragments', (
@@ -1562,6 +1577,8 @@ int _pipsIn(WidgetTester tester, String cellKey) => find
     .evaluate()
     .length;
 
+/// The colour of a row's dot: its fill, or for a ring (the neutral, a state
+/// with nothing lit), its outline.
 Color _pipColour(WidgetTester tester, String cellKey) {
   final pip = tester.widget<Container>(
     find
@@ -1571,7 +1588,8 @@ Color _pipColour(WidgetTester tester, String cellKey) {
         )
         .first,
   );
-  return ((pip.decoration! as BoxDecoration).color)!;
+  final decoration = pip.decoration! as BoxDecoration;
+  return decoration.color ?? (decoration.border! as Border).top.color;
 }
 
 bool _isPip(Widget widget) =>

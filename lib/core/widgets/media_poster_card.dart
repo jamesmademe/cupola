@@ -6,6 +6,7 @@ import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/network/pinned_image_cache.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/artwork_decode.dart';
+import 'package:cupola/core/widgets/poster_glow.dart';
 
 /// A reusable poster card for media detail screens.
 ///
@@ -59,6 +60,14 @@ class MediaPosterCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasImage = imageUrl != null && imageUrl!.isNotEmpty;
+    // A public picture glows with its own light once drawn; a picture behind
+    // a key, or none, with the lamp.
+    if (!hasImage || imageHeaders != null) return _poster(context, null, null);
+    return PosterGlow(url: imageUrl, builder: _poster);
+  }
+
+  Widget _poster(BuildContext context, Color? light, VoidCallback? drawn) {
     final colorScheme = Theme.of(context).colorScheme;
     final hasImage = imageUrl != null && imageUrl!.isNotEmpty;
     final effectiveBorderRadius = borderRadius ?? AppRadius.borderRadiusMd;
@@ -91,6 +100,12 @@ class MediaPosterCard extends StatelessWidget {
               memCacheWidth: decode.width,
               memCacheHeight: decode.height,
               fit: BoxFit.cover,
+              imageBuilder: drawn == null
+                  ? null
+                  : (context, provider) {
+                      drawn();
+                      return Image(image: provider, fit: BoxFit.cover);
+                    },
               // No cross-fade: keeps the Hero flight crisp when the poster is
               // already cached from the source grid/carousel.
               fadeInDuration: Duration.zero,
@@ -132,7 +147,7 @@ class MediaPosterCard extends StatelessWidget {
     // until the light is derived), as ContentCard does, so the shared-element
     // flight does not "pop" a different shadow mid-transition. It cast the
     // older `level2` shadow ink.
-    final heroChild = content(AppElevation.poster(colorScheme));
+    final heroChild = content(AppElevation.poster(colorScheme, light: light));
 
     return Hero(
       tag: heroTag,
@@ -150,7 +165,7 @@ class MediaPosterCard extends StatelessWidget {
               return Material(
                 type: MaterialType.transparency,
                 child: content(
-                  AppElevation.poster(colorScheme),
+                  AppElevation.poster(colorScheme, light: light),
                   decodeBox: fromBox,
                 ),
               );
@@ -165,7 +180,7 @@ class MediaPosterCard extends StatelessWidget {
                 final lift = 1 - (2 * animation.value - 1).abs();
                 final scheme = Theme.of(flightContext).colorScheme;
                 final shadow = BoxShadow.lerpList(
-                  AppElevation.poster(scheme),
+                  AppElevation.poster(scheme, light: light),
                   AppElevation.level3(scheme),
                   Curves.easeOut.transform(lift),
                 )!;

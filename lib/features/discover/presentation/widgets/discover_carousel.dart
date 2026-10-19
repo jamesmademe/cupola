@@ -171,7 +171,7 @@ class DiscoverCarousel extends StatelessWidget {
   Widget _tile(BuildContext context, MediaPreview item, int index) {
     return StaggeredEntrance(
       index: index,
-      child: CatalogPoster(
+      child: CatalogPoster.lit(
         item: item,
         heroTag: 'discover_${sectionId}_${item.id}',
         width: _posterWidth,

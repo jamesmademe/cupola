@@ -120,7 +120,7 @@ class _OverviewBody extends ConsumerWidget {
             // The board's fifth and sixth tiles (Disk free, and "no limit"
             // under Speed) are not drawn: the free space speaks through Status,
             // which says `Disk full` when the disk stopped the queue.
-            ServiceKpiPeek(
+            ServiceKpiPeek.room(
               kpis: ref.watch(serviceKpiProvider(ServiceKey.nzbget)),
               service: ServiceKey.nzbget,
             ),

@@ -5,22 +5,20 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_elevation.dart';
-import 'package:cupola/core/app_gradients.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/network/pinned_image_cache.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/room_art.dart';
 import 'package:cupola/core/title_light.dart';
 import 'package:cupola/core/widgets/artwork_decode.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
-import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/media_poster_card.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/media/presentation/media_parts.dart';
-import 'package:cupola/features/media/presentation/media_split.dart';
 
 /// A picture on a shelf page, and what its request carries: an arr's own
 /// artwork needs its key.
@@ -52,6 +50,7 @@ class ShelfPage extends StatelessWidget {
     this.role,
     this.tally,
     this.light,
+    this.art,
     this.heroTag,
     this.onArtDrawn,
     this.moreLabel,
@@ -70,6 +69,7 @@ class ShelfPage extends StatelessWidget {
     required this.slivers,
     required this.banner,
     this.light,
+    this.art,
     this.heroTag,
     this.onArtDrawn,
     this.onRefresh,
@@ -107,6 +107,9 @@ class ShelfPage extends StatelessWidget {
 
   final TitleLight? light;
 
+  /// The picture of [light], laid over the top of the room once read.
+  final RoomArt? art;
+
   /// The tag of the tile the page was opened from: its picture flies to the
   /// disc.
   final String? heroTag;
@@ -124,8 +127,6 @@ class ShelfPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final room = CupolaRoom.of(context);
-    final scheme = Theme.of(context).colorScheme;
     final top = MediaQuery.paddingOf(context).top;
     final page = LayoutBuilder(
       builder: (context, box) {
@@ -207,42 +208,11 @@ class ShelfPage extends StatelessWidget {
         );
       },
     );
-    final ambient = BoxDecoration(
-      gradient: AppGradients.ambientBackground(scheme, accent: light?.light),
-    );
-    // The clock stays legible over whatever scrolls under it.
-    final framed = Stack(
-      children: [
-        page,
-        const Positioned(top: 0, left: 0, right: 0, child: StatusBarScrim()),
-      ],
-    );
-    return Scaffold(
-      backgroundColor: room.ground,
-      body: MediaPane.maybeOf(context) == null
-          ? DecoratedBox(decoration: ambient, child: framed)
-          // In a tablet's pane the room's light comes up from the list's
-          // side rather than starting at an edge, as a title's does.
-          : Stack(
-              fit: StackFit.expand,
-              children: [
-                ShaderMask(
-                  blendMode: BlendMode.dstIn,
-                  shaderCallback: (bounds) => LinearGradient(
-                    colors: const [Color(0x00000000), Color(0xFF000000)],
-                    stops: [0, (_paneLightRise / bounds.width).clamp(0, 1)],
-                  ).createShader(bounds),
-                  child: DecoratedBox(decoration: ambient),
-                ),
-                framed,
-              ],
-            ),
-    );
+    // The room a title's page stands in, so a shelf and a title read as one
+    // kind of page: lit by the shelf's picture, the clock legible over what
+    // scrolls under it, and in a tablet's pane coming up from the list's side.
+    return MediaRoom(light: light, art: art, child: page);
   }
-
-  /// How far into a pane the room's light takes to come up: a title's
-  /// distance (`MediaPage`), so the two read as one pane.
-  static const double _paneLightRise = 110;
 }
 
 /// The person: a 92 disc with their photo, or their initials on the room's

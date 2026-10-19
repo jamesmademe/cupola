@@ -111,7 +111,7 @@ class _OverviewBody extends ConsumerWidget {
           if (topPadding > 0) SizedBox(height: topPadding),
           const ServiceOverviewIdentity(service: ServiceKey.transmission),
           ...sectionsOrOneLine(ref, ServiceKey.transmission, [
-            ServiceKpiPeek(
+            ServiceKpiPeek.room(
               kpis: ref.watch(serviceKpiProvider(ServiceKey.transmission)),
               service: ServiceKey.transmission,
             ),

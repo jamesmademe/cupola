@@ -4,6 +4,7 @@ import 'package:flutter/rendering.dart';
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/room_art.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/ambient_background.dart';
 import 'package:cupola/core/widgets/desktop_content_well.dart';
@@ -33,6 +34,9 @@ class AmbientScaffold extends StatelessWidget {
   final PreferredSizeWidget? appBar;
   final Widget body;
   final Color? accent;
+
+  /// The picture of the room's light; see [AmbientBackground.art].
+  final RoomArt? art;
 
   /// See [AmbientBackground.accentDuration].
   final Duration accentDuration;
@@ -64,6 +68,7 @@ class AmbientScaffold extends StatelessWidget {
     required this.body,
     this.appBar,
     this.accent,
+    this.art,
     this.accentDuration = AppAnimation.durationMd,
     this.floatingActionButton,
     this.bottomNavigationBar,
@@ -78,6 +83,7 @@ class AmbientScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     return AmbientBackground(
       accent: accent,
+      art: art,
       accentDuration: accentDuration,
       // The bars stay full-bleed; a `GlassAppBar` reads the well from here to
       // line its title and actions up with the body.
@@ -237,7 +243,7 @@ class _RenderFade extends RenderBox {
 
   AmbientRoom? _room;
   set room(AmbientRoom? value) {
-    if (value?.accent == _room?.accent && value?.scheme == _room?.scheme) {
+    if (value != null && _room != null && !value.updateShouldNotify(_room!)) {
       _room = value;
       return;
     }

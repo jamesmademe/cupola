@@ -234,7 +234,7 @@ class _OverviewBody extends ConsumerWidget {
             ownSilence: true,
             instanceId: instanceId,
             [
-              ServiceKpiPeek(kpis: _kpisOf(ref), service: service),
+              ServiceKpiPeek.room(kpis: _kpisOf(ref), service: service),
               if (serverDark)
                 ServiceOfflineState.failure(
                   service: service,

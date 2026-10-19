@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/ambient_background.dart';
 import 'package:cupola/core/widgets/desktop_content_well.dart';
 
 /// A near-transparent app-bar surface that lets the page's ambient gradient
@@ -24,24 +26,23 @@ class GlassSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isDark = colorScheme.brightness == Brightness.dark;
-    final scrim = colorScheme.surface;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            scrim.withValues(alpha: isDark ? 0.55 : 0.6),
-            scrim.withValues(alpha: isDark ? 0.28 : 0.32),
-            scrim.withValues(alpha: 0),
-          ],
-          stops: const [0.0, 0.55, 1.0],
-        ),
-      ),
-      child: child,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // The room painted again under the bar, not its flat ground: at rest the
+    // glass cannot be seen and a lit room keeps its light up to the top edge.
+    final veil = _ScrimPaint(
+      alphas: isDark ? const [0.55, 0.28, 0] : const [0.6, 0.32, 0],
+      stops: const [0, 0.55, 1],
+      room: AmbientRoom.maybeOf(context),
+      roomBox: context.getElementForInheritedWidgetOfExactType<AmbientRoom>(),
+      ground: CupolaRoom.of(context).ground,
+    );
+    if (child == null) return IgnorePointer(child: veil);
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        Positioned.fill(child: IgnorePointer(child: veil)),
+        child!,
+      ],
     );
   }
 }
@@ -59,27 +60,158 @@ class StatusBarScrim extends StatelessWidget {
   Widget build(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top;
     if (top <= 0) return const SizedBox.shrink();
-    final ground = CupolaRoom.of(context).ground;
-    final height = top + AppSpacing.lg;
     return IgnorePointer(
       child: SizedBox(
-        height: height,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                ground.withValues(alpha: 0.92),
-                ground.withValues(alpha: 0.72),
-                ground.withValues(alpha: 0),
-              ],
-              stops: [0, top / height, 1],
-            ),
-          ),
+        height: top + AppSpacing.lg,
+        child: _ScrimPaint(
+          alphas: const [0.92, 0.72, 0],
+          inset: top,
+          room: AmbientRoom.maybeOf(context),
+          roomBox: context
+              .getElementForInheritedWidgetOfExactType<AmbientRoom>(),
+          ground: CupolaRoom.of(context).ground,
         ),
       ),
     );
+  }
+}
+
+/// The scrim itself: the room painted again over what passes under the clock,
+/// light and all, so at rest it cannot be seen and a lit room keeps its light
+/// up to the top edge. Outside an [AmbientBackground] it is the flat ground.
+class _ScrimPaint extends LeafRenderObjectWidget {
+  const _ScrimPaint({
+    required this.alphas,
+    this.stops,
+    this.inset,
+    required this.room,
+    required this.roomBox,
+    required this.ground,
+  });
+
+  /// How much of the room is painted at each stop, top to bottom.
+  final List<double> alphas;
+
+  /// Where the stops are, or null for the scrim under the clock: whole to
+  /// [inset], then gone a little below it.
+  final List<double>? stops;
+  final double? inset;
+  final AmbientRoom? room;
+  final BuildContext? roomBox;
+  final Color ground;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderScrim(alphas, stops, inset, room, roomBox, ground);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderScrim renderObject) {
+    renderObject
+      ..alphas = alphas
+      ..stops = stops
+      ..inset = inset
+      ..room = room
+      ..roomBox = roomBox
+      ..ground = ground;
+  }
+}
+
+class _RenderScrim extends RenderBox {
+  _RenderScrim(
+    this._alphas,
+    this._stops,
+    this._inset,
+    this._room,
+    this._roomBox,
+    this._ground,
+  );
+
+  List<double> _alphas;
+  set alphas(List<double> value) {
+    if (listEquals(value, _alphas)) return;
+    _alphas = value;
+    markNeedsPaint();
+  }
+
+  List<double>? _stops;
+  set stops(List<double>? value) {
+    if (listEquals(value, _stops)) return;
+    _stops = value;
+    markNeedsPaint();
+  }
+
+  double? _inset;
+  set inset(double? value) {
+    if (value == _inset) return;
+    _inset = value;
+    markNeedsPaint();
+  }
+
+  AmbientRoom? _room;
+  set room(AmbientRoom? value) {
+    final same = value != null && _room != null
+        ? !value.updateShouldNotify(_room!)
+        : identical(value, _room);
+    _room = value;
+    if (!same) markNeedsPaint();
+  }
+
+  BuildContext? _roomBox;
+  set roomBox(BuildContext? value) {
+    if (identical(value, _roomBox)) return;
+    _roomBox = value;
+    markNeedsPaint();
+  }
+
+  Color _ground;
+  set ground(Color value) {
+    if (value == _ground) return;
+    _ground = value;
+    markNeedsPaint();
+  }
+
+  // Its own layer: what scrolls under it repaints the page, not the scrim.
+  @override
+  bool get isRepaintBoundary => true;
+
+  @override
+  bool get sizedByParent => true;
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) => constraints.biggest;
+
+  @override
+  bool hitTestSelf(Offset position) => false;
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    final rect = offset & size;
+    final canvas = context.canvas;
+    final room = _room;
+    final roomBox = _roomBox?.findRenderObject();
+    canvas.saveLayer(rect, Paint());
+    if (room != null &&
+        roomBox is RenderBox &&
+        roomBox.attached &&
+        roomBox.hasSize) {
+      final at =
+          roomBox.localToGlobal(Offset.zero) - localToGlobal(Offset.zero);
+      room.paint(canvas, rect, offset + at & roomBox.size);
+    } else {
+      canvas.drawRect(rect, Paint()..color = _ground);
+    }
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..blendMode = BlendMode.dstIn
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [for (final alpha in _alphas) Color.fromRGBO(0, 0, 0, alpha)],
+          stops: _stops ?? [0, (_inset ?? 0) / size.height, 1],
+        ).createShader(rect),
+    );
+    canvas.restore();
   }
 }
 
@@ -130,17 +262,24 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
-  Widget _bar({required bool glass}) => AppBar(
-    backgroundColor: Colors.transparent,
-    elevation: 0,
-    scrolledUnderElevation: 0,
-    title: title,
-    leading: leading,
-    actions: actions,
-    centerTitle: centerTitle,
-    bottom: bottom,
-    toolbarHeight: toolbarHeight,
-    automaticallyImplyLeading: automaticallyImplyLeading,
-    flexibleSpace: glass ? const GlassSurface() : null,
+  Widget _bar({required bool glass}) => Builder(
+    builder: (context) => AppBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      // A pushed room's title in the room's face, as a service room names
+      // itself in its band.
+      titleTextStyle: AppType.feature.copyWith(
+        color: CupolaRoom.of(context).ink,
+      ),
+      title: title,
+      leading: leading,
+      actions: actions,
+      centerTitle: centerTitle,
+      bottom: bottom,
+      toolbarHeight: toolbarHeight,
+      automaticallyImplyLeading: automaticallyImplyLeading,
+      flexibleSpace: glass ? const GlassSurface() : null,
+    ),
   );
 }

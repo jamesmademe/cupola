@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/room_art.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/ambient_background.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 
 /// One section of Activity: its name over a slab of rows.
@@ -21,7 +23,12 @@ class ActivitySection extends StatelessWidget {
     this.openHint,
     this.semanticLabel,
     this.slabPadding = const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+    this.light,
   });
+
+  /// The picture of the light of the section's first title: its slab glows
+  /// with it. Null for an unlit slab.
+  final RoomArt? light;
 
   /// The section's name: `Downloads`, `Finished today`.
   final String title;
@@ -123,7 +130,11 @@ class ActivitySection extends StatelessWidget {
         heading,
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
-          child: ActivitySlab(padding: slabPadding, children: children),
+          child: ActivitySlab(
+            padding: slabPadding,
+            light: light,
+            children: children,
+          ),
         ),
       ],
     );
@@ -136,10 +147,14 @@ class ActivitySlab extends StatelessWidget {
     super.key,
     required this.children,
     this.padding = const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+    this.light,
   });
 
   final List<Widget> children;
   final EdgeInsets padding;
+
+  /// See [ActivitySection.light].
+  final RoomArt? light;
 
   @override
   Widget build(BuildContext context) {
@@ -152,12 +167,17 @@ class ActivitySlab extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: AppRadius.borderRadiusSlab,
-        child: Padding(
-          padding: padding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: children,
-          ),
+        child: Stack(
+          children: [
+            if (light != null) Positioned.fill(child: SlabLight(art: light)),
+            Padding(
+              padding: padding,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: children,
+              ),
+            ),
+          ],
         ),
       ),
     );

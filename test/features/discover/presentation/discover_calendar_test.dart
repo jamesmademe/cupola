@@ -4,7 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/ambient_background.dart';
 import 'package:cupola/core/title_light.dart';
 
 import 'package:cupola/features/discover/presentation/calendar_page.dart';
@@ -310,23 +312,15 @@ void main() {
       );
       await harness.settle(tester);
 
-      final glow = find.byWidgetPredicate((widget) {
-        if (widget is! DecoratedBox) return false;
-        final decoration = widget.decoration;
-        return decoration is BoxDecoration &&
-            decoration.gradient is RadialGradient &&
-            (decoration.gradient! as RadialGradient).center ==
-                const Alignment(0.6, -1);
-      });
-      expect(glow, findsOneWidget);
-      // The window's, not the well's.
-      expect(tester.getSize(glow).width, 1600);
-      // Its radius never passes the box's height, the shorter side.
-      final gradient =
-          (tester.widget<DecoratedBox>(glow).decoration as BoxDecoration)
-                  .gradient!
-              as RadialGradient;
-      expect(gradient.radius, lessThanOrEqualTo(1));
+      // The room is lit by the release's light, across the window and not
+      // the well.
+      final room = find.byType(AmbientRoom);
+      expect(room, findsOneWidget);
+      await tester.pumpAndSettle(AppAnimation.light);
+      expect(tester.widget<AmbientRoom>(room).accent, const Color(0xFFD9A35B));
+      expect(tester.getSize(room).width, 1600);
+      // The lamp hangs at the top and is gone well before the window's foot.
+      expect(LampMetrics.centreTop + LampMetrics.radius, lessThan(1000 / 2));
       await harness.unmount(tester);
     } finally {
       debugDefaultTargetPlatformOverride = null;

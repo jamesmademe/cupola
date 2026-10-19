@@ -1359,8 +1359,9 @@ abstract final class DesignTokensDark {
   /// backdrop blur.
   static const double opacityGlassSurface = 0.95;
 
-  /// Centre of the ambient wash behind headers and the onboarding canvas.
-  static const double opacityAmbientGlow = 0.16;
+  /// Centre of the lamp: the light hung at the top of a room no title leads,
+  /// and of a lit room until its picture comes up.
+  static const double opacityAmbientGlow = 0.42;
 
   // elevation.level-1
   /// Level-1 contact: flat in the dark room.
@@ -1625,8 +1626,9 @@ abstract final class DesignTokensLight {
   /// backdrop blur.
   static const double opacityGlassSurface = 0.95;
 
-  /// Centre of the ambient wash behind headers and the onboarding canvas.
-  static const double opacityAmbientGlow = 0.1;
+  /// Centre of the lamp: the light hung at the top of a room no title leads,
+  /// and of a lit room until its picture comes up.
+  static const double opacityAmbientGlow = 0.14;
 
   // elevation.level-1
   /// Level-1 contact: the soft lift of a slab on paper.

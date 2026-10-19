@@ -805,8 +805,8 @@ void main() {
           // boundary at the top of the band, so a fix that only moved the step
           // 16pt up the screen would pass on the first pair and fail here.
           final rows = <int>[
-            edge - AppSpacing.lg.round(), // art group → band
-            edge - AppSpacing.lg.round() + 1,
+            edge - mediaDetailSeamBand.round(), // art group → band
+            edge - mediaDetailSeamBand.round() + 1,
             edge, // band → body
             edge + 1,
           ];

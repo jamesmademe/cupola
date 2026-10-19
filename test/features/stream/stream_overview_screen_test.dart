@@ -175,7 +175,9 @@ void main() {
     final header = tester.widget<SectionHeader>(
       find.widgetWithText(SectionHeader, 'Libraries'),
     );
-    expect(header.subtitle, '0 libraries');
+    // The empty note says it in words; a count of nothing over it would say
+    // it twice (the Overview draws no `0` under a heading).
+    expect(header.subtitle, isNull);
     expect(find.text('No libraries on this server'), findsOneWidget);
     expect(find.text('The server did not answer'), findsNothing);
   });
@@ -190,7 +192,9 @@ void main() {
     final header = tester.widget<SectionHeader>(
       find.widgetWithText(SectionHeader, 'Libraries'),
     );
-    expect(header.subtitle, '0 libraries');
+    // The empty note says it in words; a count of nothing over it would say
+    // it twice (the Overview draws no `0` under a heading).
+    expect(header.subtitle, isNull);
     expect(find.text('No libraries on this server'), findsOneWidget);
   });
 

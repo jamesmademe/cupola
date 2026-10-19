@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
 import 'package:cupola/core/app_breakpoints.dart';
-import 'package:cupola/core/app_gradients.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
@@ -13,6 +12,7 @@ import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/dot_separator.dart';
+import 'package:cupola/core/widgets/ambient_background.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
@@ -135,7 +135,6 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
   @override
   Widget build(BuildContext context) {
     final room = CupolaRoom.of(context);
-    final scheme = Theme.of(context).colorScheme;
     // Before the pager asks for its first page: with no Seerr that page can
     // only fail, under a Retry that asks nobody.
     if (!watchSeerrConfigured(ref)) {
@@ -155,10 +154,7 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
     final top = MediaQuery.paddingOf(context).top;
     return Scaffold(
       backgroundColor: room.ground,
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: AppGradients.ambientBackground(scheme),
-        ),
+      body: AmbientBackground(
         child: Stack(
           children: [
             LayoutBuilder(

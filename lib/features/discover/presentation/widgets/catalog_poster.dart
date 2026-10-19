@@ -32,7 +32,19 @@ class CatalogPoster extends ConsumerWidget {
     required this.width,
     this.mediaType,
     this.meta,
-  });
+  }) : _lit = false;
+
+  /// A rail's tile: its poster glows with its own light ([ContentCard.lit]).
+  const CatalogPoster.lit({
+    super.key,
+    required this.item,
+    required this.heroTag,
+    required this.width,
+    this.mediaType,
+    this.meta,
+  }) : _lit = true;
+
+  final bool _lit;
 
   final MediaPreview item;
   final String heroTag;
@@ -105,7 +117,7 @@ class CatalogPoster extends ConsumerWidget {
               child: Hero(
                 tag: heroTag,
                 transitionOnUserGestures: MediaPosterCard.flightOnUserGestures,
-                child: ContentCard(
+                child: (_lit ? ContentCard.lit : ContentCard.new)(
                   imageUrl: imageUrl,
                   paneTag: heroTag,
                   badge: status == null

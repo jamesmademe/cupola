@@ -87,7 +87,7 @@ class _HubGrid extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.only(top: top),
         children: [
-          ServiceKpiPeek(
+          ServiceKpiPeek.room(
             kpis: ref.watch(serviceKpiProvider(ServiceKey.truenas)),
             service: ServiceKey.truenas,
           ),

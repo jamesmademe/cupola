@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/title_light.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/discover/presentation/calendar_page.dart'
     show openCalendarEvent;
@@ -146,12 +147,25 @@ class HomeComingUpModule extends ConsumerWidget {
       );
     }
 
+    // The slab glows with its first title's light, read from a public
+    // picture only: a picture behind a key is not read for a light.
+    final lead = [
+      for (final event in shown)
+        if (event.poster case final poster?
+            when poster.headers == null && poster.url.isNotEmpty)
+          poster.url,
+    ].firstOrNull;
+    final light = lead == null
+        ? null
+        : ref.watch(titleLightProvider(lead)).value?.art;
+
     return LastKnownMark(
       asOf: known,
       checking: true,
       child: HomeModuleFrame(
         title: _title,
         action: action,
+        light: light,
         semanticLabel: joinSpokenParts([
           _title,
           if (rows.isEmpty) comingUpCalmLine(now),

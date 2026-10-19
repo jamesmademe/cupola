@@ -1,16 +1,16 @@
 # ServiceKpiPeek
 
-A horizontal rail of instrument readouts under a service's app bar: glyph, figure, word.
+A service room's readout under its status line: one hero figure, then a rail of tiles, each a figure over its word.
 
 Rendered from `lib/core/widgets/service_kpi_peek.dart` by `test/design_catalog/service_kpi_peek_catalog_test.dart`, with figures shaped like the ones `lib/features/services/presentation/service_kpi_provider.dart` builds.
 
 ## Values
 
-- **Rail**: 78 tall at the default reading size, grown by the text share (34pt) of that height up to the 1.6× clamp (`TextScaleMetrics.boxHeight`), and painted under the same clamped scaler so the text never outgrows its box. Padding `AppSpacing.lg` / `AppSpacing.xs` / `AppSpacing.lg` / `AppSpacing.md` (overridable with `padding`), cards `AppSpacing.sm` apart, scrolling horizontally.
-- **Card**: at least 92 wide and growing with its figure, `surfaceContainer`, 1px `outlineVariant`, `AppRadius.borderRadiusMd`, `AppElevation.level1`, padding `AppSpacing.md` × `AppSpacing.sm`, content centred vertically.
-- **Figure row**: a 14pt glyph, `AppSpacing.xs`, then the figure in `titleMedium` at 600, tabular, 1.1 leading, in `onSurface`. The figure rolls on change (`ReelLine`, `ReelMotion.figure`).
-- **Glyph colour**: the primary ink; the service's accent is the lamp, which `ServiceTheme.onTint` resolves to ink against `surfaceContainer`; a figure with a tone takes `statusToneColor(tone, surface: surfaceContainer)` instead, and an unanswered one `onSurfaceVariant`.
-- **Label**: 3pt below, the micro role (`AppTheme.chrome`, 11 / 600 / 14, the role's own tracking), in sentence case (*Movies*, *Radarr · Did not answer*), `onSurfaceVariant`, one line, ellipsised. A `note`, when there is one, takes the label's place.
+- **Hero** (the room's one readout: `412 movies`): the figure a download client leads with is its download rate, every other service's its first figure. The figure in `figure-hero` (Bricolage 44, tabular) in the ink, an em dash in the secondary ink; beside it on its foot what it counts in the section role (Bricolage 21) in the secondary ink, a noun in lower case (*movies*, *download*); padding `space-lg` sides, `space-sm` top, `space-md` bottom; one node, the figure's sentence. The rest of the figures are the rail.
+- **Rail**: 94 tall at the default reading size, grown by the text share (41pt) of that height up to the 1.6× clamp (`TextScaleMetrics.boxHeight`), and painted under the same clamped scaler so the text never outgrows its box. Padding `AppSpacing.lg` / `AppSpacing.xs` / `AppSpacing.lg` / `AppSpacing.md` (overridable with `padding`), cards `AppSpacing.sm` apart, scrolling horizontally.
+- **Tile**: at least 104 wide and growing with its figure, `room.slab`, 1px `line-hair`, `radius-door` (20), padding 16 sides, 14 top, 12 bottom, content centred vertically, no shadow.
+- **Figure**: the `figure` role (Bricolage 24, tabular) in the ink; an em dash in the secondary ink. It rolls on change (`ReelLine`, `ReelMotion.figure`).
+- **Label**: 5pt below, the meta role (13) in the secondary ink, sentence case (*Monitored*, *Radarr · Did not answer*), one line, ellipsised; a figure with a tone draws a 7pt dot of it before the label (`statusToneColor`), as a legend does. A `note`, when there is one, takes the label's place.
 
 ## Tones
 
@@ -18,7 +18,7 @@ The rule is the app's tone rule. A backlog figure (Missing, Waiting for approval
 
 ## States
 
-- **Loading**: four skeleton cards, 100 wide with no shadow: a 44 × 16 and a 64 × 9 shimmer line, 6 apart. Only the first load: when a poll asks a source again, the rail keeps its last figures until the new ones arrive (`skipLoadingOnReload`), so it neither blinks every tick nor goes blank while a client that stopped answering times out.
+- **Loading**: four skeleton tiles, 104 wide: a 44 × 22 and a 64 × 11 shimmer line, 8 apart. Only the first load: when a poll asks a source again, the rail keeps its last figures until the new ones arrive (`skipLoadingOnReload`), so it neither blinks every tick nor goes blank while a client that stopped answering times out.
 - **Unavailable figure** (`ServiceKpi.unavailable`): the figure is an em dash in `onSurfaceVariant`, the glyph goes `onSurfaceVariant`, and the note replaces the label: the service and the classified reason, *Radarr · Did not answer*, *Radarr · Refused the key*. The rail keeps the same cards, so a reader sees which figure is missing. Never `0`. A download client's Queue tab under the stale band (`FaultBand.stale`) draws its rates this way, noted *not updating*: `↓ —` · *not updating*.
 - **Narrower token**: a media server's token that may read only part of what the rail counts. The figures it cannot read are unavailable cards with the reason on the first of them: `owner only` (a shared account's Plex, refused who is watching), `admin only` (a household member's Jellyfin, refused the library list). A figure it reads only in part counts and says whose it is in place of its label: `1` · `yours only` (that member's own playback). Never the server's total.
 - **Source failed**: one unavailable card replaces the rail: glyph `remove_rounded`, label *Figures*, note the classified reason (`failureLabel`): *Did not answer* only when nothing answered, *Refused the key*, *Timed out*, *Did not complete* otherwise.

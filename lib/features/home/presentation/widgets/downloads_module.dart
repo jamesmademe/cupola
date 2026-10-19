@@ -10,6 +10,7 @@ import 'package:cupola/features/activity/domain/download_page.dart'
     show downloadPageKey;
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/title_light.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
@@ -149,6 +150,14 @@ class HomeDownloadsModule extends ConsumerWidget {
       coverage: coverage,
     );
     final room = CupolaRoom.of(context);
+    // The slab glows with its first download's light.
+    final lead = [
+      for (final item in rows)
+        if ((item.posterUrl ?? '').isNotEmpty) item.posterUrl!,
+    ].firstOrNull;
+    final light = lead == null
+        ? null
+        : ref.watch(titleLightProvider(lead)).value?.art;
 
     return LastKnownMark(
       asOf: null,
@@ -156,6 +165,7 @@ class HomeDownloadsModule extends ConsumerWidget {
       child: HomeModuleFrame(
         title: _title,
         subtitle: subtitle,
+        light: light,
         semanticLabel: joinSpokenParts([
           _title,
           spokenDownloadsSubtitle(subtitle),

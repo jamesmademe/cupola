@@ -87,6 +87,7 @@ import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/service_mark_tile.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
@@ -246,80 +247,7 @@ class ServiceMatrix extends ConsumerWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (readout)
-          _StackHeader(
-            registrySize: ServiceKey.values.length,
-            notSetUp: ServiceKey.values.length - configured.length,
-          ),
-        ...bands,
-      ],
-    );
-  }
-}
-
-/// `STACK · 16 · + 1 more to set up`.
-///
-/// The count is the whole registry rather than the configured subset, which is
-/// the point of the region: it is the inventory of everything this app can talk
-/// to, and the trailing clause says how many of them are still dark. Not a
-/// control (the cells are), so it publishes one silent header node.
-class _StackHeader extends StatelessWidget {
-  const _StackHeader({required this.registrySize, required this.notSetUp});
-
-  final int registrySize;
-  final int notSetUp;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final dim =
-        theme.extension<CupolaThemeColors>()?.dimText ??
-        colorScheme.onSurfaceVariant;
-
-    return Semantics(
-      container: true,
-      header: true,
-      label: 'Stack',
-      value: servicesStackHeaderValue(
-        registrySize: registrySize,
-        notSetUp: notSetUp,
-      ),
-      excludeSemantics: true,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.md,
-          AppSpacing.lg,
-          AppSpacing.xs,
-        ),
-        child: Row(
-          children: [
-            Text(
-              'Stack',
-              style: AppTheme.chrome(context, color: colorScheme.onSurface),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Text(
-              '· $registrySize',
-              style: AppTheme.chrome(context, color: dim),
-            ),
-            const Spacer(),
-            if (notSetUp > 0)
-              Flexible(
-                child: Text(
-                  notSetUp == 1
-                      ? '+ 1 more to set up'
-                      : '+ $notSetUp more to set up',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(color: dim),
-                ),
-              ),
-          ],
-        ),
-      ),
+      children: [...bands],
     );
   }
 }
@@ -503,7 +431,9 @@ class _DomainBand extends ConsumerWidget {
             if (health != null) spokenFromDotted(health),
           ]),
           excludeSemantics: true,
-          child: _engravedHeader(context, health: health),
+          child: role == ServiceMatrixRole.readout
+              ? _roomHeading(context, health: health)
+              : _engravedHeader(context, health: health),
         ),
         _ServiceMatrixBand(subjects: subjects, role: role),
       ],
@@ -513,6 +443,40 @@ class _DomainBand extends ConsumerWidget {
   /// The engraved label: see "The header is engraved on the panel" in the
   /// library doc. No container: an eyebrow kicker with the service count and the
   /// band's health line. Grouping is carried by the asymmetric gaps alone.
+  /// The readout's heading: the group's name in the room's section face,
+  /// how it stands under it.
+  Widget _roomHeading(BuildContext context, {required String? health}) {
+    final room = CupolaRoom.of(context);
+    final parts = health == null ? const <String>[] : splitParts(health);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.xl,
+        AppSpacing.lg,
+        AppSpacing.sm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(domain.label, style: AppType.section.copyWith(color: room.ink)),
+          if (parts.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Wrap(
+              spacing: AppSpacing.xs,
+              children: [
+                for (final (index, part) in parts.indexed)
+                  Text(
+                    index < parts.length - 1 ? '$part\u00A0·' : part,
+                    style: AppType.meta.copyWith(color: room.inkTertiary),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _engravedHeader(BuildContext context, {required String? health}) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -647,6 +611,36 @@ class _ServiceMatrixBand extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The readout is a list: one slab per group, a row per service.
+    if (role == ServiceMatrixRole.readout) {
+      final room = CupolaRoom.of(context);
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        child: Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: room.fillQuiet,
+            borderRadius: BorderRadius.circular(AppRadius.group),
+            border: Border.all(color: room.fillControl),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final (index, subject) in subjects.indexed) ...[
+                if (index > 0)
+                  Divider(height: 1, thickness: 1, color: room.hair),
+                ServiceMatrixCell(
+                  key: ValueKey(subject),
+                  service: subject.service,
+                  instanceId: subject.instanceId,
+                  role: role,
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
     // The box grows by the clamped scale, so the text has to be laid out at the
     // same clamp or the two disagree: `boxHeight` stops growing at 1.6x by
     // design ("compact chrome ellipsises rather than clipping"), but a `Text`
@@ -739,7 +733,10 @@ class ServiceMatrixCell extends ConsumerWidget {
     // than dark, and it carries no pip: nothing has been asked, so there is
     // nothing to report.
     if (!configured && instanceId == null) {
-      return _NotSetUpCell(service: service);
+      return _NotSetUpCell(
+        service: service,
+        asRow: role == ServiceMatrixRole.readout,
+      );
     }
 
     final summary = instanceId == null
@@ -862,14 +859,72 @@ class ServiceMatrixCell extends ConsumerWidget {
 /// silently omits what you have not connected cannot be read as an inventory,
 /// and the one action it needs is one tap away.
 class _NotSetUpCell extends StatelessWidget {
-  const _NotSetUpCell({required this.service});
+  const _NotSetUpCell({required this.service, this.asRow = false});
 
   final ServiceKey service;
+
+  /// A row of the readout's list rather than a card of the picker's grid.
+  final bool asRow;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+
+    if (asRow) {
+      final room = CupolaRoom.of(context);
+      return AppCard.surfaceOutlined(
+        key: ValueKey('service-matrix-cell-${service.routeParam}'),
+        onTap: () => context.push(ServiceRoutes.setUp(service)),
+        pressFeedback: AppCardPressFeedback.scale,
+        semanticLabel: service.title,
+        semanticValue: servicesNotSetUpCellLabel,
+        excludeChildSemantics: true,
+        backgroundColor: Colors.transparent,
+        borderColor: Colors.transparent,
+        borderRadius: BorderRadius.zero,
+        padding: _rowPadding,
+        child: Row(
+          children: [
+            Opacity(opacity: 0.5, child: ServiceMarkTile(icon: service.icon)),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    Lexicon.setUp(service.title),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppType.row.copyWith(color: room.inkSecondary),
+                  ),
+                  Text(
+                    servicesNotSetUpCellLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppType.meta.copyWith(color: room.inkTertiary),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: room.edge),
+              ),
+              child: Icon(
+                Icons.add_rounded,
+                size: 18,
+                color: room.inkSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return AppCard.surfaceOutlined(
       key: ValueKey('service-matrix-cell-${service.routeParam}'),
@@ -1035,6 +1090,9 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
     // in build, where the dependency it registers means something. Null on the
     // Dashboard, which has no layer above it to dismiss.
     final dismissPortal = PortalDismissScope.maybeOf(context);
+    // The readout's row: the mark in its tile, the name, how it stands,
+    // and the way in. The picker keeps its card.
+    final asRow = role == ServiceMatrixRole.readout;
 
     return AppCard.surfaceOutlined(
       // Suffixed only on a picker cell. The readout key is what the dashboard
@@ -1090,49 +1148,232 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
       // Nothing inside is separately interactive, and every visible fragment is
       // already in the composed value above.
       excludeChildSemantics: true,
-      backgroundColor: surface,
+      backgroundColor: asRow ? Colors.transparent : surface,
+      borderColor: asRow ? Colors.transparent : null,
       // The light, and the only place a service accent appears on this screen.
       // Withheld from an unreachable card: a service that is not answering
       // should look unlit, and that has to include its own colour.
-      accentColor: answered ? service.accent : null,
+      accentColor: !asRow && answered ? service.accent : null,
       accentGlowAlpha: ServiceMatrixMetrics.accentWashAlpha,
       accentGlowCenter: Alignment.topLeft,
-      borderRadius: AppRadius.borderRadiusLg,
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _CellIdentity(
-            service: service,
-            displayName: displayName,
-            reachability: reachability,
-            faultTone: faultTone,
-            surface: surface,
-            instanceCount: instanceCount,
-          ),
-          if (role == ServiceMatrixRole.readout)
-            _CellLiveLine(
+      borderRadius: asRow ? BorderRadius.zero : AppRadius.borderRadiusLg,
+      padding: asRow ? _rowPadding : const EdgeInsets.all(AppSpacing.md),
+      child: asRow
+          ? _CellRow(
+              service: service,
+              displayName: displayName,
               reachability: reachability,
               faultTone: faultTone,
+              instanceCount: instanceCount,
               signals: signals,
               signalsFailed: signalsFailed,
               statusLabel: statusLabel,
-              surface: surface,
             )
-          else if (host.isNotEmpty)
-            Text(
-              host,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.labelSmall?.tabular.copyWith(
-                color:
-                    theme.extension<CupolaThemeColors>()?.dimText ??
-                    colorScheme.onSurfaceVariant,
-              ),
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _CellIdentity(
+                  service: service,
+                  displayName: displayName,
+                  reachability: reachability,
+                  faultTone: faultTone,
+                  surface: surface,
+                  instanceCount: instanceCount,
+                ),
+                if (role == ServiceMatrixRole.readout)
+                  _CellLiveLine(
+                    reachability: reachability,
+                    faultTone: faultTone,
+                    signals: signals,
+                    signalsFailed: signalsFailed,
+                    statusLabel: statusLabel,
+                    surface: surface,
+                  )
+                else if (host.isNotEmpty)
+                  Text(
+                    host,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall?.tabular.copyWith(
+                      color:
+                          theme.extension<CupolaThemeColors>()?.dimText ??
+                          colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
             ),
-        ],
+    );
+  }
+}
+
+/// A readout row's padding: the row is the target, 64 tall with its tile.
+const _rowPadding = EdgeInsets.symmetric(horizontal: 14, vertical: 10);
+
+/// One service as a row of the readout's list.
+class _CellRow extends StatelessWidget {
+  const _CellRow({
+    required this.service,
+    required this.displayName,
+    required this.reachability,
+    required this.faultTone,
+    required this.instanceCount,
+    required this.signals,
+    required this.signalsFailed,
+    required this.statusLabel,
+  });
+
+  final ServiceKey service;
+  final String displayName;
+  final ServiceReachability reachability;
+  final StatusTone faultTone;
+  final int? instanceCount;
+  final ServiceSignalPair? signals;
+  final bool signalsFailed;
+  final String statusLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
+    final answered =
+        reachability == ServiceReachability.online ||
+        reachability == ServiceReachability.fault;
+
+    // How it stands, one line: a dot of its tone, then the words.
+    final (StatusTone tone, Object state) = switch (reachability) {
+      ServiceReachability.online when signals == null && signalsFailed => (
+        StatusTone.neutral,
+        Text(
+          ServiceKpi.unavailableValue,
+          style: AppType.meta.copyWith(color: room.inkSecondary),
+        ),
       ),
+      ServiceReachability.online when signals == null => (
+        StatusTone.neutral,
+        ShimmerPlaceholder.text(width: 96),
+      ),
+      ServiceReachability.online => (
+        signals!.primary.needsAttention
+            ? signals!.primary.tone
+            : StatusTone.neutral,
+        Text.rich(
+          TextSpan(
+            children: [
+              for (final (index, signal) in [
+                signals!.primary,
+                ?signals!.secondary,
+              ].indexed) ...[
+                if (index > 0) const TextSpan(text: '\u00A0· '),
+                TextSpan(
+                  text: signal.value,
+                  style: signal.needsAttention
+                      ? TextStyle(
+                          color: statusToneColor(colorScheme, signal.tone),
+                        )
+                      : null,
+                ),
+                if (signal.label.isNotEmpty) TextSpan(text: ' ${signal.label}'),
+              ],
+            ],
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppType.meta.tabular.copyWith(color: room.inkSecondary),
+        ),
+      ),
+      _ => (
+        switch (reachability) {
+          ServiceReachability.checking ||
+          ServiceReachability.onlyAtHome => StatusTone.neutral,
+          ServiceReachability.fault => faultTone,
+          _ => StatusTone.error,
+        },
+        statusLabel,
+      ),
+    };
+    // A state that is not an answer is said in its tone (`2 requests wait
+    // for your approval` in blue, `Refused the key` in amber), measured on
+    // the slab; checking and only-at-home stay in the secondary ink.
+    final Widget words = switch (state) {
+      final String label => Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: AppType.meta.copyWith(
+          color: tone == StatusTone.neutral
+              ? room.inkSecondary
+              : statusToneColor(
+                  colorScheme,
+                  tone,
+                  surface: colorScheme.surfaceContainer,
+                ),
+        ),
+      ),
+      final Widget figures => figures,
+      _ => const SizedBox.shrink(),
+    };
+    final dot = statusToneColor(colorScheme, tone);
+    // The backlog is a ring, not a light: nothing is wrong, nothing is lit.
+    final ring = tone == StatusTone.neutral;
+
+    return Row(
+      children: [
+        Opacity(
+          opacity: answered ? 1 : 0.6,
+          child: ServiceMarkTile(icon: service.icon),
+        ),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppType.row.copyWith(
+                        color: answered ? room.ink : room.inkSecondary,
+                      ),
+                    ),
+                  ),
+                  if (instanceCount != null && instanceCount! > 1) ...[
+                    const SizedBox(width: AppSpacing.xs),
+                    Text(
+                      '×$instanceCount',
+                      style: AppType.meta.tabular.copyWith(
+                        color: room.inkTertiary,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  Container(
+                    width: 7,
+                    height: 7,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: ring ? null : dot,
+                      border: ring ? Border.all(color: dot, width: 1.5) : null,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(child: words),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Icon(Icons.chevron_right_rounded, size: 20, color: room.inkTertiary),
+      ],
     );
   }
 }

@@ -26,6 +26,11 @@ import 'package:cupola/core/widgets/media_detail_slot.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/core/widgets/staggered_entrance.dart';
 
+/// How far the hero's floor fades into the room under it: the art stops this
+/// short of the header's bottom edge and a band of the art's floor tone fades
+/// out over it.
+const double mediaDetailSeamBand = AppSpacing.xl;
+
 /// A reusable view for displaying media details with a cinematic collapsing
 /// hero, compact poster/title block, and a five-region sliver body.
 ///
@@ -728,7 +733,7 @@ class _MediaDetailHeader extends StatelessWidget {
             top: 0,
             left: 0,
             right: 0,
-            bottom: AppSpacing.lg,
+            bottom: mediaDetailSeamBand,
             child: ClipRect(
               child: Stack(
                 fit: StackFit.expand,
@@ -783,10 +788,12 @@ class _MediaDetailHeader extends StatelessWidget {
           // `Colors.transparent` would travel through transparent *black* and
           // smudge a grey band across the light theme.
           //
-          // One gutter, not more: at full collapse this band is the pinned
-          // bar's bottom 16pt, which sits clear of the bar's title, so the
-          // collapsed title keeps its full backing while content still fades
-          // under the bar instead of being cut by it. Costs no `saveLayer`:
+          // A gutter and a half, not more: the room's lamp hangs over the
+          // bar, and over a shorter band its light would step from row to
+          // row. At full collapse this band is the pinned bar's bottom 24pt,
+          // whose first rows are still nearly whole, so the collapsed title
+          // keeps its backing while content still fades under the bar instead
+          // of being cut by it. Costs no `saveLayer`:
           // the art group is clipped short rather than masked, so the poster
           // row (a Hero source that must never be faded), the glass bar and the
           // back button all stay outside it.
@@ -794,7 +801,7 @@ class _MediaDetailHeader extends StatelessWidget {
             left: 0,
             right: 0,
             bottom: 0,
-            height: AppSpacing.lg,
+            height: mediaDetailSeamBand,
             child: IgnorePointer(
               child: DecoratedBox(
                 decoration: BoxDecoration(

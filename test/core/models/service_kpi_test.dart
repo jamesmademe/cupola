@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/models/service_kpi.dart';
 import 'package:cupola/core/status/media_status.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/reel_line.dart';
 import 'package:cupola/core/widgets/service_kpi_peek.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -87,12 +89,12 @@ void main() {
         ),
       );
 
-      final icon = tester.widget<Icon>(find.byIcon(Icons.download_rounded));
-      expect(icon.color, isNot(accent));
-      final scheme = Theme.of(
-        tester.element(find.byType(ServiceKpiPeek)),
-      ).colorScheme;
-      expect(icon.color, scheme.onSurfaceVariant);
+      // The figure is the room's hero readout now, with no glyph: the dash
+      // itself is what must stay quiet.
+      final figure = tester.widget<ReelLine>(find.byType(ReelLine).first);
+      expect(figure.style?.color, isNot(accent));
+      final room = CupolaRoom.of(tester.element(find.byType(ServiceKpiPeek)));
+      expect(figure.style?.color, room.inkSecondary);
     });
 
     testWidgets('the card is one node, and it says why', (tester) async {

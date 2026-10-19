@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
@@ -15,6 +16,7 @@ import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/title_light.dart';
 import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
@@ -200,7 +202,15 @@ class _DiscoverPageState extends ConsumerState<DiscoverPage> {
       );
     }
 
+    // The room takes its light from the band's next thing, as the band does.
+    final lead = ref.watch(discoverRoomSourceProvider);
+    final light = lead == null
+        ? null
+        : ref.watch(titleLightProvider(lead)).value;
     return AmbientScaffold(
+      accent: light?.light,
+      art: light?.art,
+      accentDuration: AppAnimation.light,
       // The tab's well on a desktop window is measured on the catalogue's
       // columns: at 1140 the atrium's grids and the catalogue page they open
       // hold seven posters at 148, the library's grid at the same window. The

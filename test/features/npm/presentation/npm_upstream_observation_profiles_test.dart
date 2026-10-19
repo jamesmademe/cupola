@@ -76,7 +76,8 @@ void main() {
             find.widgetWithText(SectionHeader, 'Needs attention'),
           )
           .subtitle,
-      '0',
+      // No fault, and a count of none is not drawn under the heading.
+      isNull,
     );
     expect(
       find.textContaining(

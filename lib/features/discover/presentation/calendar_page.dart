@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_breakpoints.dart';
-import 'package:cupola/core/app_gradients.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/audience.dart';
@@ -459,39 +458,15 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     );
 
     return AmbientScaffold(
+      // The next release lights the page, as it lit the band that opened it.
       accent: light?.light,
+      art: light?.art,
+      accentDuration: AppAnimation.light,
       // The light is the window's, not the well's: it is drawn full-bleed
       // and the page keeps the well inside it.
       contentWell: false,
       body: Stack(
         children: [
-          // The next release lights the head of the page, as it lit the
-          // band that opened it.
-          if (light != null)
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              height: top + 420,
-              child: IgnorePointer(
-                child: LayoutBuilder(
-                  // The radius is a share of the box's shorter side. In a
-                  // box wider than it is tall (a desktop window) that side
-                  // is the height, and past it the glow would still be lit
-                  // at the foot and end there in an edge.
-                  builder: (context, box) => DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: AppGradients.serviceGlow(
-                        light.light,
-                        center: const Alignment(0.6, -1),
-                        radius: box.maxWidth > box.maxHeight ? 1 : 1.3,
-                        alpha: 0.28,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
           DesktopContentWell(
             child: LayoutBuilder(
               builder: (context, box) {

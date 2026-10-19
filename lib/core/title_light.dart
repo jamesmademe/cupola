@@ -10,6 +10,7 @@ import 'package:material_color_utilities/material_color_utilities.dart';
 
 import 'package:cupola/core/network/pinned_image_cache.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
+import 'package:cupola/core/room_art.dart';
 import 'package:cupola/core/widgets/artwork_decode.dart';
 
 /// The colours a title's artwork lights its room with (brand book, *The title
@@ -21,6 +22,7 @@ class TitleLight {
     required this.actionFill,
     required this.actionInk,
     required this.dayPrimary,
+    this.art,
   });
 
   /// The light itself: the ambient wash, the poster and hero glow. HCT tone
@@ -37,16 +39,24 @@ class TitleLight {
   /// The day room's tinted primary, under white: tone 40, chroma 16–48.
   final Color dayPrimary;
 
+  /// The light as a picture: the artwork itself, blurred, saturated and
+  /// capped, for the top of the room it lights (`AmbientBackground.art`).
+  /// Null for a light kept from an earlier launch, whose picture is read
+  /// again.
+  final RoomArt? art;
+
   @override
   bool operator ==(Object other) =>
       other is TitleLight &&
       other.light == light &&
       other.actionFill == actionFill &&
       other.actionInk == actionInk &&
-      other.dayPrimary == dayPrimary;
+      other.dayPrimary == dayPrimary &&
+      other.art == art;
 
   @override
-  int get hashCode => Object.hash(light, actionFill, actionInk, dayPrimary);
+  int get hashCode =>
+      Object.hash(light, actionFill, actionInk, dayPrimary, art);
 }
 
 /// The side of the decode the light is read from: 64 px, as the brand book
@@ -98,45 +108,65 @@ Future<TitleLight?> titleLightFromPixels(List<int> pixels) async {
 /// fetched fails the provider, and the room keeps the lamp.
 final titleLightProvider = FutureProvider.autoDispose
     .family<TitleLight?, String>((ref, url) async {
-      // Through the artwork ladder like every artwork read: a 64 box, rounded
-      // up to its rung. A light is a hue, and a hue needs no detail.
-      final provider =
-          artworkCacheSize(
-            const Size.square(titleLightDecodeSize * 1.0),
-            1,
-          ).resize(
-            CachedNetworkImageProvider(
-              url,
-              cacheManager: pinnedImageCacheFor(url),
-            ),
-          );
-      final decoded = Completer<ui.Image>();
-      final stream = provider.resolve(ImageConfiguration.empty);
-      late final ImageStreamListener listener;
-      listener = ImageStreamListener(
-        (info, _) {
-          if (!decoded.isCompleted) decoded.complete(info.image.clone());
-          info.dispose();
-          stream.removeListener(listener);
-        },
-        onError: (error, stack) {
-          if (!decoded.isCompleted) decoded.completeError(error, stack);
-          stream.removeListener(listener);
-        },
-      );
-      stream.addListener(listener);
-      ref.onDispose(() => stream.removeListener(listener));
-      final image = await decoded.future;
-      final rgba = await image.toByteData();
-      image.dispose();
-      if (rgba == null) return null;
-      final pixels = <int>[
-        for (var i = 0; i + 3 < rgba.lengthInBytes; i += 4)
-          if (rgba.getUint8(i + 3) == 0xFF)
-            0xFF000000 |
-                rgba.getUint8(i) << 16 |
-                rgba.getUint8(i + 1) << 8 |
-                rgba.getUint8(i + 2),
-      ];
-      return compute(titleLightFromPixels, pixels);
+      final art = await decodeArtworkPixels(ref, url);
+      if (art == null) return null;
+      return compute(titleLightOf, (source: url, pixels: art));
     }, retry: noProviderRetry);
+
+/// The light of [input] and its picture (`bakeRoomArt`), or null for artwork
+/// with too little chroma. Pure and isolate-safe: one trip off the UI isolate
+/// for both.
+Future<TitleLight?> titleLightOf(RoomArtSource input) async {
+  final rgba = input.pixels.rgba;
+  final light = await titleLightFromPixels([
+    for (var i = 0; i + 3 < rgba.length; i += 4)
+      if (rgba[i + 3] == 0xFF)
+        0xFF000000 | rgba[i] << 16 | rgba[i + 1] << 8 | rgba[i + 2],
+  ]);
+  if (light == null) return null;
+  return TitleLight(
+    light: light.light,
+    actionFill: light.actionFill,
+    actionInk: light.actionInk,
+    dayPrimary: light.dayPrimary,
+    art: bakeRoomArt(input),
+  );
+}
+
+/// The artwork at [url] decoded at [titleLightDecodeSize], or null when it
+/// decodes to nothing.
+///
+/// Every reading of a title's light starts here: the light's colours
+/// and the room's picture of it ([titleLightProvider]) are read off one
+/// decode.
+/// A picture that cannot be fetched throws, and the room keeps the lamp.
+Future<ArtworkPixels?> decodeArtworkPixels(Ref ref, String url) async {
+  // Through the artwork ladder like every artwork read: a 64 box, rounded
+  // up to its rung. A light is a hue, and a hue needs no detail.
+  final provider =
+      artworkCacheSize(const Size.square(titleLightDecodeSize * 1.0), 1).resize(
+        CachedNetworkImageProvider(url, cacheManager: pinnedImageCacheFor(url)),
+      );
+  final decoded = Completer<ui.Image>();
+  final stream = provider.resolve(ImageConfiguration.empty);
+  late final ImageStreamListener listener;
+  listener = ImageStreamListener(
+    (info, _) {
+      if (!decoded.isCompleted) decoded.complete(info.image.clone());
+      info.dispose();
+      stream.removeListener(listener);
+    },
+    onError: (error, stack) {
+      if (!decoded.isCompleted) decoded.completeError(error, stack);
+      stream.removeListener(listener);
+    },
+  );
+  stream.addListener(listener);
+  ref.onDispose(() => stream.removeListener(listener));
+  final image = await decoded.future;
+  final (width, height) = (image.width, image.height);
+  final rgba = await image.toByteData();
+  image.dispose();
+  if (rgba == null || width == 0 || height == 0) return null;
+  return (rgba: rgba.buffer.asUint8List(), width: width, height: height);
+}

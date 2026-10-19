@@ -339,8 +339,8 @@
     },
     "ambient-glow": {
       "$type": "number",
-      "$value": 0.1,
-      "$description": "Centre of the ambient wash behind headers and the onboarding canvas."
+      "$value": 0.14,
+      "$description": "Centre of the lamp: the light hung at the top of a room no title leads, and of a lit room until its picture comes up."
     }
   },
   "elevation": {

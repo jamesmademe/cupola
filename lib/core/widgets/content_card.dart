@@ -9,6 +9,7 @@ import 'package:cupola/core/network/pinned_image_cache.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/side_pane_route.dart';
 import 'package:cupola/core/widgets/artwork_decode.dart';
+import 'package:cupola/core/widgets/poster_glow.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 
@@ -46,7 +47,21 @@ class ContentCard extends StatelessWidget {
     this.onTap,
     this.paneTag,
     this.fallbackIcon = Icons.movie_outlined,
-  });
+  }) : _lit = false;
+
+  /// A rail's poster: it glows with its own light once its picture is drawn
+  /// ([PosterGlow]). For a rail's few, never a grid's hundreds.
+  const ContentCard.lit({
+    super.key,
+    required this.imageUrl,
+    this.httpHeaders,
+    this.badge,
+    this.onTap,
+    this.paneTag,
+    this.fallbackIcon = Icons.movie_outlined,
+  }) : _lit = true;
+
+  final bool _lit;
 
   /// Reach of the badge's shadow radial, as a fraction of the card's shorter
   /// side (its width). Half the width is about the reach the old badge-sized
@@ -56,6 +71,12 @@ class ContentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final public = _lit && httpHeaders == null && (imageUrl ?? '').isNotEmpty;
+    if (!public) return _card(context, null, null);
+    return PosterGlow(url: imageUrl, builder: _card);
+  }
+
+  Widget _card(BuildContext context, Color? light, VoidCallback? drawn) {
     final colorScheme = Theme.of(context).colorScheme;
 
     final card = Container(
@@ -63,14 +84,14 @@ class ContentCard extends StatelessWidget {
       // until the light is derived). It cast the older `level2` shadow ink.
       decoration: BoxDecoration(
         borderRadius: AppRadius.borderRadiusMd,
-        boxShadow: AppElevation.poster(colorScheme),
+        boxShadow: AppElevation.poster(colorScheme, light: light),
       ),
       clipBehavior: Clip.antiAlias,
       child: Stack(
         fit: StackFit.expand,
         children: [
           // Image
-          _buildImage(),
+          _buildImage(drawn),
 
           // Shadow ink behind the badge, so it stays legible over bright
           // artwork. Painted across the whole card and fading to nothing
@@ -119,7 +140,7 @@ class ContentCard extends StatelessWidget {
     return _PaneRing(tag: paneTag, radius: AppRadius.md, child: tile);
   }
 
-  Widget _buildImage() {
+  Widget _buildImage(VoidCallback? drawn) {
     if (imageUrl == null || imageUrl!.isEmpty) {
       return _buildPlaceholder();
     }
@@ -136,6 +157,12 @@ class ContentCard extends StatelessWidget {
         memCacheWidth: decode.width,
         memCacheHeight: decode.height,
         fit: BoxFit.cover,
+        imageBuilder: drawn == null
+            ? null
+            : (context, provider) {
+                drawn();
+                return Image(image: provider, fit: BoxFit.cover);
+              },
         // The shared shimmer, not a local clone: it is the one that honours
         // Reduce Motion, and a poster grid is where an unstoppable sweep is
         // most visible.

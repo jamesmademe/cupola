@@ -140,7 +140,7 @@ class HomeRowArt extends StatelessWidget {
               ),
               child: Icon(icon, size: 18, color: room.inkSecondary),
             )
-          : ContentCard(imageUrl: url),
+          : ContentCard.lit(imageUrl: url),
     );
   }
 }

@@ -98,7 +98,7 @@ is not drawn. The line under the name counts what moved and what waited (`3 movi
 queue answered whole, and `Nothing is downloading` is drawn only for such a read with no row, and not once an import is
 known to have finished after it.
 
-The slab is `slab`, `AppRadius.slab`, a `hair` edge, padding `gutter` × `slabY`, `md` between modules.
+The slab is `slab`, `AppRadius.slab`, a `hair` edge, padding `gutter` × `slabY`, `md` between modules. A module about titles may hand the frame its first title's light (`HomeModuleFrame(light:)`, the `TitleLight.art` of a public picture): the slab then glows with it (`SlabLight`: the picture laid over the slab from 40 past its sides and 80 above its top, 360 tall, at 0.5, clipped to its corners, coming up over `motion.light`). Coming up and Downloads do.
 
 ## Needs you
 

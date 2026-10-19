@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/title_light.dart';
+import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/lifecycle/page_activity.dart';
@@ -87,6 +89,19 @@ const _allUpNextLimit = 3;
 /// How many of today's imports All draws before the way to History.
 const _allFinishedLimit = 5;
 
+/// The artwork that lights Activity: the poster of the first download stuck,
+/// else of the first one moving; null for the lamp.
+final activityRoomSourceProvider = Provider.autoDispose<String?>((ref) {
+  final items = ref.watch(servicesQueueProvider).value?.items;
+  if (items == null) return null;
+  String? posterOf(bool Function(ServiceQueueItem item) leads) => [
+    for (final item in items)
+      if (leads(item) && (item.posterUrl ?? '').isNotEmpty) item.posterUrl!,
+  ].firstOrNull;
+  return posterOf((item) => isDownloadFault(item.fault)) ??
+      posterOf((item) => item.isMoving);
+});
+
 /// Activity: what is moving, what is stuck, who asked and who is watching.
 ///
 /// One page with four views, each at its own address ([ActivityTab]): All,
@@ -120,12 +135,21 @@ class ActivityPage extends ConsumerWidget {
     );
     final settings = ref.watch(currentSettingsProvider);
     final nothingSetUp = !_activityServices.any(settings.isServiceConfigured);
+    // The room takes its light from the download that leads it: the first one
+    // stuck, else the first one moving.
+    final lead = nothingSetUp ? null : ref.watch(activityRoomSourceProvider);
+    final light = lead == null
+        ? null
+        : ref.watch(titleLightProvider(lead)).value;
 
     return RefreshOnReturn(
       id: 'activity',
       maxAge: staleAfter,
       onStale: () => ref.triggerNavigationRefresh(NavigationSection.activity),
       child: AmbientScaffold(
+        accent: light?.light,
+        art: light?.art,
+        accentDuration: AppAnimation.light,
         body: nothingSetUp
             ? NothingSetUpView(bottomPadding: bottomPadding)
             : Stack(
@@ -787,10 +811,18 @@ class _DownloadsSection extends ConsumerWidget {
     final now = ref.watch(stallClockProvider)();
     final note = coverageNote(coverage);
 
+    // The slab glows with its first download's light.
+    final lead = [
+      for (final item in rows)
+        if ((item.posterUrl ?? '').isNotEmpty) item.posterUrl!,
+    ].firstOrNull;
     return ActivitySection(
       title: _title,
       meta: meta,
       semanticLabel: [_title, spokenDownloadsSubtitle(meta)].join(', '),
+      light: lead == null
+          ? null
+          : ref.watch(titleLightProvider(lead)).value?.art,
       children: [
         if (note != null)
           Padding(

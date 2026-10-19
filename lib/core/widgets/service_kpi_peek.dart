@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:cupola/core/app_elevation.dart';
 import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
@@ -36,6 +35,7 @@ class ServiceKpiPeek extends StatelessWidget {
 
   final EdgeInsetsGeometry padding;
 
+  /// The rail alone: a library's figures over its grid.
   const ServiceKpiPeek({
     super.key,
     required this.kpis,
@@ -46,9 +46,25 @@ class ServiceKpiPeek extends StatelessWidget {
       AppSpacing.lg,
       AppSpacing.md,
     ),
-  });
+  }) : _hero = false;
 
-  static const double _height = 78;
+  /// A service room's readout (its Overview): the figure the room leads with
+  /// as its hero, the rest as the rail under it.
+  const ServiceKpiPeek.room({
+    super.key,
+    required this.kpis,
+    required this.service,
+    this.padding = const EdgeInsets.fromLTRB(
+      AppSpacing.lg,
+      AppSpacing.xs,
+      AppSpacing.lg,
+      AppSpacing.md,
+    ),
+  }) : _hero = true;
+
+  final bool _hero;
+
+  static const double _height = 94;
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +80,7 @@ class ServiceKpiPeek extends StatelessWidget {
     final railHeight = TextScaleMetrics.boxHeight(
       context,
       base: _height,
-      textHeight: 34,
+      textHeight: 41,
     );
     // `skipLoadingOnReload`: a page's poll asks its sources again every few
     // seconds, and each ask reloads this rail. Back to skeleton on every tick
@@ -121,15 +137,55 @@ class ServiceKpiPeek extends StatelessWidget {
       },
       data: (items) {
         if (items.isEmpty) return const SizedBox.shrink();
-        return _rail(
-          context: context,
-          height: railHeight,
+        if (!_hero) {
+          return _rail(
+            context: context,
+            height: railHeight,
+            children: [
+              for (final kpi in items)
+                _KpiCard(kpi: kpi, fallbackAccent: service.accent),
+            ],
+          );
+        }
+        // The room's one hero readout (`412 movies`), the rest as tiles
+        // under it.
+        final lead = _leadOf(items);
+        final rest = [
+          for (final kpi in items)
+            if (!identical(kpi, lead)) kpi,
+        ];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            for (final kpi in items)
-              _KpiCard(kpi: kpi, fallbackAccent: service.accent),
+            _HeroFigure(kpi: lead),
+            if (rest.isNotEmpty)
+              _rail(
+                context: context,
+                height: railHeight,
+                children: [
+                  for (final kpi in rest)
+                    _KpiCard(kpi: kpi, fallbackAccent: service.accent),
+                ],
+              ),
           ],
         );
       },
+    );
+  }
+
+  /// The figure the room leads with: a download client's speed, else the
+  /// first figure, which every service lists as what it holds.
+  ServiceKpi _leadOf(List<ServiceKpi> items) {
+    const byService = {
+      ServiceKey.qbittorrent: 'Download',
+      ServiceKey.transmission: 'Download',
+      ServiceKey.sabnzbd: 'Download',
+      ServiceKey.nzbget: 'Download',
+    };
+    final label = byService[service];
+    return items.firstWhere(
+      (kpi) => kpi.label == label,
+      orElse: () => items.first,
     );
   }
 
@@ -156,6 +212,65 @@ class ServiceKpiPeek extends StatelessWidget {
           itemCount: children.length,
           separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
           itemBuilder: (_, index) => children[index],
+        ),
+      ),
+    );
+  }
+}
+
+/// The room's hero readout: the figure in the room's largest face and what it
+/// counts beside it, in the secondary ink (`412 movies`).
+class _HeroFigure extends StatelessWidget {
+  const _HeroFigure({required this.kpi});
+
+  final ServiceKpi kpi;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    final label = kpi.note ?? kpi.label;
+    // A noun reads as the figure's unit: `4 movies`, never `4 Movies`; a
+    // label that is an initialism keeps its case.
+    final unit = label.length > 1 && label[1] == label[1].toLowerCase()
+        ? label[0].toLowerCase() + label.substring(1)
+        : label;
+    return Semantics(
+      container: true,
+      excludeSemantics: true,
+      label: kpi.semanticLabel,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.sm,
+          AppSpacing.lg,
+          AppSpacing.md,
+        ),
+        child: MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaleMetrics.clampedScalerOf(context)),
+          child: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.end,
+            spacing: AppSpacing.sm,
+            children: [
+              ReelLine(
+                kpi.value,
+                options: ReelMotion.figure,
+                style: AppType.figureHero.copyWith(
+                  color: kpi.isUnavailable ? room.inkSecondary : room.ink,
+                ),
+                fallbackMaxLines: 1,
+              ),
+              Padding(
+                // The unit sits on the figure's baseline, not its foot.
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  unit,
+                  style: AppType.section.copyWith(color: room.inkSecondary),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -193,65 +308,64 @@ class _KpiCard extends StatelessWidget {
             surface: colorScheme.surfaceContainer,
           );
 
+    final room = CupolaRoom.of(context);
+    // The room's tile: a slab, the figure in the room's face and the label
+    // under it, the tone a dot beside the label as a legend draws it. The
+    // figure is the ink; an em dash is the secondary ink, a placeholder for a
+    // figure rather than one.
     final card = Container(
-      constraints: const BoxConstraints(minWidth: 92),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
+      constraints: const BoxConstraints(minWidth: 104),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainer,
-        borderRadius: AppRadius.borderRadiusMd,
-        border: Border.all(color: colorScheme.outlineVariant),
-        boxShadow: AppElevation.level1(colorScheme),
+        color: room.slab,
+        borderRadius: BorderRadius.circular(AppRadius.door),
+        border: Border.all(color: room.hair),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // The instrument readout, and the one number on a dashboard that
+          // is worth watching change: a library total ticking up after an
+          // import, a queue count draining. Safe to roll because the card is
+          // `minWidth`, not a fixed width, inside a horizontally scrolling
+          // rail: a wider value makes the card wider instead of overflowing.
+          ReelLine(
+            kpi.value,
+            options: ReelMotion.figure,
+            style: AppType.figure.copyWith(
+              color: kpi.isUnavailable ? room.inkSecondary : room.ink,
+            ),
+            fallbackMaxLines: 1,
+          ),
+          const SizedBox(height: 5),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(kpi.icon, size: 14, color: accent),
-              const SizedBox(width: AppSpacing.xs),
-              // The instrument readout, and the one number on a dashboard that
-              // is worth watching change: a library total ticking up after an
-              // import, a queue count draining. Safe to roll because the card is
-              // `minWidth`, not a fixed width, inside a horizontally scrolling
-              // rail: a wider value makes the card wider instead of overflowing,
-              // and no ellipsis is being relied on here to save it.
-              ReelLine(
-                kpi.value,
-                options: ReelMotion.figure,
-                style: theme.textTheme.titleMedium!.tabular.copyWith(
-                  // The em dash demotes to the secondary ink: it is a
-                  // placeholder for a figure, not a figure, and full
-                  // `onSurface` would give it the weight of one.
-                  color: kpi.isUnavailable
-                      ? colorScheme.onSurfaceVariant
-                      : colorScheme.onSurface,
-                  height: 1.1,
+              if (kpi.tone != null && !kpi.isUnavailable) ...[
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: accent,
+                    shape: BoxShape.circle,
+                  ),
                 ),
-                fallbackMaxLines: 1,
+                const SizedBox(width: 6),
+              ],
+              // The note replaces the label rather than joining it: the tile
+              // is two lines tall by construction. When the source did not
+              // answer, *why* is the more useful of the two.
+              Flexible(
+                child: Text(
+                  kpi.note ?? kpi.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppType.meta.copyWith(color: room.inkSecondary),
+                ),
               ),
             ],
-          ),
-          const SizedBox(height: 3),
-          Text(
-            // The note replaces the label rather than joining it: the rail is
-            // two lines tall by construction, and a card that grew a third
-            // would overflow every sibling at an accessibility reading size.
-            // When the source did not answer, *why* is the more useful of the
-            // two. The glyph and the surrounding cards already say which
-            // figure this is.
-            kpi.note ?? kpi.label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTheme.chrome(
-              context,
-              color: colorScheme.onSurfaceVariant,
-            ),
           ),
         ],
       ),
@@ -276,25 +390,22 @@ class _KpiSkeletonCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final room = CupolaRoom.of(context);
     return Container(
-      width: 100,
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
+      width: 104,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainer,
-        borderRadius: AppRadius.borderRadiusMd,
-        border: Border.all(color: colorScheme.outlineVariant),
+        color: room.slab,
+        borderRadius: BorderRadius.circular(AppRadius.door),
+        border: Border.all(color: room.hair),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ShimmerPlaceholder.text(width: 44, height: 16),
-          const SizedBox(height: 6),
-          ShimmerPlaceholder.text(width: 64, height: 9),
+          ShimmerPlaceholder.text(width: 44, height: 22),
+          const SizedBox(height: 8),
+          ShimmerPlaceholder.text(width: 64, height: 11),
         ],
       ),
     );

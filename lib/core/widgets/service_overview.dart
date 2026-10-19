@@ -157,42 +157,93 @@ class ServiceOverviewSection extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final tab = destination;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SectionHeader(
-          title: title,
-          subtitle: subtitle,
-          showChevron: false,
-          trailing: tab == null
-              ? null
-              : _TabLink(
-                  label: tab.label,
-                  color: serviceOverviewInk(service, colorScheme),
-                ),
-          // The link's "→" sits inside the region the header silences. Read
-          // out it is "rightwards arrow", so the destination comes back as a
-          // hint instead.
-          semanticHint: tab == null
-              ? null
-              : 'opens the ${service.title} ${tab.label} tab',
-          onTap: tab == null
-              ? null
-              : () => goToServiceTab(context, service, tab),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        if (padBody)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            child: child,
+    // A count of nothing under the heading says twice what the region's own
+    // empty note says in words (`Nothing needs you`): only a count of
+    // something, or an unknown one, is drawn.
+    final subtitle = _zeroCount.hasMatch(this.subtitle ?? '')
+        ? null
+        : this.subtitle;
+    final link = tab == null
+        ? null
+        : _TabLink(
+            label: tab.label,
+            color: serviceOverviewInk(service, colorScheme),
+          );
+    // The link's chevron sits inside the region the header silences, so the
+    // destination comes back as a hint instead.
+    final hint = tab == null
+        ? null
+        : 'opens the ${service.title} ${tab.label} tab';
+    final open = tab == null
+        ? null
+        : () => goToServiceTab(context, service, tab);
+    // Inside the slab the slab carries the inset.
+    final header = padBody
+        ? SectionHeader.flush(
+            title: title,
+            subtitle: subtitle,
+            showChevron: false,
+            trailing: link,
+            semanticHint: hint,
+            onTap: open,
           )
-        else
+        : SectionHeader(
+            title: title,
+            subtitle: subtitle,
+            showChevron: false,
+            trailing: link,
+            semanticHint: hint,
+            onTap: open,
+          );
+
+    // A rail runs off the page with its heading above it; every other region
+    // is a slab of the room, its heading inside.
+    if (!padBody) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          header,
+          const SizedBox(height: AppSpacing.sm),
           child,
-        const SizedBox(height: AppSpacing.lg),
-      ],
+          const SizedBox(height: AppSpacing.lg),
+        ],
+      );
+    }
+    final room = CupolaRoom.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.md,
+      ),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.md,
+          AppSpacing.lg,
+          AppSpacing.md,
+        ),
+        decoration: BoxDecoration(
+          color: room.slab,
+          borderRadius: BorderRadius.circular(AppRadius.slab),
+          border: Border.all(color: room.hair),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            header,
+            const SizedBox(height: AppSpacing.sm),
+            child,
+          ],
+        ),
+      ),
     );
   }
 }
+
+/// `0`, or `0 requests waiting`: a count of nothing.
+final _zeroCount = RegExp(r'^0(\s|$)');
 
 class _TabLink extends StatelessWidget {
   const _TabLink({required this.label, required this.color});
@@ -202,15 +253,21 @@ class _TabLink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      '$label →',
-      // One line, always: the arrow belongs to the word before it, and stranded
-      // on a line of its own it reads as a second control.
+    return Text.rich(
+      TextSpan(
+        text: label,
+        children: [
+          // The chevron belongs to the word before it: one line, always,
+          // and one text, never a second copy of the tab's name.
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Icon(Icons.chevron_right_rounded, size: 18, color: color),
+          ),
+        ],
+      ),
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
-      style: Theme.of(
-        context,
-      ).textTheme.labelMedium?.weight(FontWeight.w600).copyWith(color: color),
+      style: AppType.label.weight(FontWeight.w600).copyWith(color: color),
     );
   }
 }
@@ -640,6 +697,7 @@ class ServiceOverviewIdentity extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
+    final room = CupolaRoom.of(context);
 
     final summary = ref.watch(_overviewSummary(ref, service, instanceId));
     final instance = _overviewConnection(ref, service, instanceId);
@@ -715,63 +773,39 @@ class ServiceOverviewIdentity extends ConsumerWidget {
           if (lens != null && lens.isNotEmpty) lens,
         ]),
         excludeSemantics: true,
+        // The room's status line: its state as a dot and a word, then
+        // where it is and what it runs. Tone and word both, because colour is
+        // not information: the word is the channel that always works.
         child: Wrap(
           spacing: AppSpacing.sm,
           runSpacing: AppSpacing.xs,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Text(
-              facts.join(dotSeparator),
-              style: AppTheme.chrome(
-                context,
-                size: 12,
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            // Tone and glyph both, because colour is not information: the word
-            // is the channel that always works.
-            _StatusWord(
-              icon: presentation.icon,
-              label: presentation.label,
-              color: toneColor,
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: toneColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    [presentation.label, ...facts].join(dotSeparator),
+                    style: AppType.meta.copyWith(color: room.inkSecondary),
+                  ),
+                ),
+              ],
             ),
             if (lens != null && lens.isNotEmpty)
               _LensChip(service: service, label: lens),
           ],
         ),
       ),
-    );
-  }
-}
-
-class _StatusWord extends StatelessWidget {
-  const _StatusWord({
-    required this.icon,
-    required this.label,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 13, color: color),
-        const SizedBox(width: AppSpacing.xs),
-        Text(
-          label,
-          style: AppTheme.chrome(
-            context,
-            size: 12,
-            weight: FontWeight.w600,
-            color: color,
-          ),
-        ),
-      ],
     );
   }
 }
