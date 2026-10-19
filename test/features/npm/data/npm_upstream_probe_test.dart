@@ -142,5 +142,57 @@ void main() {
 
       expect(report.coverage, isNull);
     });
+
+    test(
+      'a loopback forward host is never probed: from here it is this device',
+      () async {
+        final probed = <String>[];
+        final probe = NpmUpstreamProbe(
+          connector: (host, _, _) async {
+            probed.add(host);
+            return true;
+          },
+        );
+        final loopbacks = [
+          '127.0.0.1',
+          '127.0.1.1',
+          'localhost',
+          'LOCALHOST',
+          'app.localhost',
+          '::1',
+          '[::1]',
+          '0.0.0.0',
+        ];
+        final hosts = [
+          for (final (i, target) in loopbacks.indexed)
+            _host(id: i, domain: 'h$i.example.net', forwardHost: target),
+          _host(id: 99, domain: 'z.example.net', forwardHost: '10.0.0.5'),
+        ];
+
+        final report = await probe.run(hosts);
+
+        expect(probed, ['10.0.0.5']);
+        for (final (i, _) in loopbacks.indexed) {
+          expect(report.forHost(i), NpmUpstream.unchecked);
+        }
+        // Unchecked inside the total, like a host outside the budget: the
+        // coverage line still counts them as hosts nobody measured.
+        expect(report.coverage, '1 of 9 enabled checked from this device');
+      },
+    );
+
+    test('a loopback host does not spend the budget', () async {
+      final probe = NpmUpstreamProbe(
+        budget: 1,
+        connector: (_, _, _) async => true,
+      );
+
+      final report = await probe.run([
+        _host(id: 1, domain: 'a.example.net', forwardHost: '127.0.0.1'),
+        _host(id: 2, domain: 'b.example.net', forwardHost: 'nas.lan'),
+      ]);
+
+      expect(report.forHost(2), NpmUpstream.answering);
+    });
   });
 }

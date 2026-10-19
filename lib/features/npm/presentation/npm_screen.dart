@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
+import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_radius.dart';
@@ -10,13 +11,15 @@ import 'package:cupola/core/status/silence_age.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/date_format.dart';
 import 'package:cupola/core/utils/dot_separator.dart';
+import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/npm/data/npm_upstream_probe.dart';
 import 'package:cupola/features/npm/domain/models/npm_models.dart';
 import 'package:cupola/features/npm/presentation/npm_access.dart';
 import 'package:cupola/features/npm/presentation/npm_actions.dart';
-import 'package:cupola/features/npm/presentation/npm_advanced_config_screen.dart';
 import 'package:cupola/features/npm/presentation/npm_capability.dart';
+import 'package:cupola/features/npm/presentation/npm_overview_provider.dart'
+    show NpmProxyHostRow;
 import 'package:cupola/features/npm/presentation/npm_provider.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
@@ -451,6 +454,13 @@ class _AccessListList extends ConsumerWidget {
   );
 }
 
+/// An audit entry's object type in words: `proxy-host` reads `proxy host`.
+@visibleForTesting
+String npmAuditObjectType(String raw) => raw.replaceAll(RegExp('[-_]'), ' ');
+
+String _capitalised(String text) =>
+    text.isEmpty ? text : '${text[0].toUpperCase()}${text.substring(1)}';
+
 class _AuditLogList extends ConsumerWidget {
   const _AuditLogList({required this.entriesAsync});
   final AsyncValue<List<NpmAuditEntry>> entriesAsync;
@@ -462,16 +472,20 @@ class _AuditLogList extends ConsumerWidget {
         : Column(
             children: entries
                 .map((entry) {
+                  // NPM's own words are its API's: `deleted`, `proxy-host`.
+                  // Said as a sentence here: `Deleted · jellyfin.lan` over
+                  // `Proxy host · 7 min ago`.
+                  final type = npmAuditObjectType(entry.objectType);
                   final target = entry.summary.isEmpty
-                      ? '${entry.objectType}${entry.objectId == null ? '' : ' #${entry.objectId}'}'
+                      ? '$type${entry.objectId == null ? '' : ' #${entry.objectId}'}'
                       : entry.summary;
                   final time = entry.createdOn == null
                       ? null
                       : formatRelativeDateTime(entry.createdOn!);
                   return _NpmReadOnlyTile(
                     icon: Icons.history_rounded,
-                    title: '${entry.action}\u00A0· $target',
-                    detail: [entry.objectType, ?time].join(dotSeparator),
+                    title: '${_capitalised(entry.action)}\u00A0· $target',
+                    detail: [_capitalised(type), ?time].join(dotSeparator),
                   );
                 })
                 .toList(growable: false),
@@ -657,42 +671,27 @@ class _ProxyHostTile extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
     // NPM answered and told us this host's config is refused: a fault, not
     // silence. Red on this screen belongs to an NPM that did not answer.
-    final (Color tone, IconData glyph, String state) = host.hasConfigError
+    final (Color tone, IconData glyph) = host.hasConfigError
         ? (
             statusToneColor(colorScheme, StatusTone.warning),
             Icons.error_outline_rounded,
-            'nginx error',
           )
         : host.enabled
         ? (
             statusToneColor(colorScheme, StatusTone.success),
             Icons.check_circle_rounded,
-            'Config loaded',
           )
-        : (
-            colorScheme.onSurfaceVariant,
-            Icons.pause_circle_rounded,
-            'Disabled',
-          );
+        : (colorScheme.onSurfaceVariant, Icons.pause_circle_rounded);
 
     final upstream =
         ref.watch(npmUpstreamReportProvider).asData?.value.forHost(host.id) ??
         NpmUpstream.unchecked;
-    final down = upstream == NpmUpstream.down;
 
-    // What the probe saw, and from where: a socket this device could not open
-    // is no outage of the host's, and the commonest reason for one is a
-    // forward host that only resolves on the server's own network. A host
-    // nobody probed says nothing at all: the section header carries the
-    // coverage, so silence here means "not measured", not "fine".
-    final detail = [
-      state,
-      host.target,
-      if (upstream == NpmUpstream.answering) 'upstream answering',
-      if (down) 'not reachable from this device',
-      if (host.hasCertificate) 'TLS',
-      if (host.hasAccessList) 'Access list',
-    ].join(dotSeparator);
+    // The same words, in the same order, as this host's row on the Overview:
+    // the state, what the probe saw and from where, then TLS and access list.
+    // One host read two ways on two tabs of one service is a reader asking
+    // which of them is true.
+    final detail = NpmProxyHostRow(host: host, upstream: upstream).detail;
 
     final hasFault = host.errorText.isNotEmpty;
     final detailText = host.errorText.isNotEmpty ? host.errorText : detail;
@@ -832,11 +831,7 @@ class _ProxyHostMenu extends ConsumerWidget {
             // Opening the editor is a read; the save inside it is what the role
             // gate and the typed confirm guard. A view-only account can and
             // should be able to look at the block.
-            Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => NpmAdvancedConfigScreen(host: host),
-              ),
-            );
+            context.push(ServiceRoutes.npmAdvanced(host.id));
         }
       },
       itemBuilder: (context) => [

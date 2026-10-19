@@ -112,6 +112,7 @@ import 'package:cupola/features/readarr/presentation/readarr_history_screen.dart
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_overview_screen.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_screen.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_tab_screens.dart';
+import 'package:cupola/features/npm/presentation/npm_advanced_config_screen.dart';
 import 'package:cupola/features/npm/presentation/npm_overview_screen.dart';
 import 'package:cupola/features/npm/presentation/npm_screen.dart';
 import 'package:cupola/features/transmission/presentation/transmission_overview_screen.dart';
@@ -2402,6 +2403,20 @@ GoRoute _npmBranchRoot(ServiceTab tab) => switch (tab) {
         topPadding: _serviceTabTopPadding,
       ),
     ),
+    // A child, so the URL leaves the tab root and the service header steps
+    // aside for the page's own app bar (`isServiceTabRoot`).
+    routes: [
+      _page(
+        ':hostId/advanced',
+        (state) => NpmAdvancedConfigScreen(
+          hostId: RouteUtils.safeIntParam(state, 'hostId')!,
+        ),
+        redirect: (context, state) =>
+            RouteUtils.safeIntParam(state, 'hostId') == null
+            ? ServiceRoutes.npmProxyHosts
+            : null,
+      ),
+    ],
   ),
   ServiceTab.certificates => _page(
     tab.segment,

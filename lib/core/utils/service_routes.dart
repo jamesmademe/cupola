@@ -542,6 +542,10 @@ class ServiceRoutes {
   static const npmAccessLists = '$nginxProxyManager/access-lists';
   static const npmAuditLog = '$nginxProxyManager/audit-log';
 
+  /// One proxy host's custom Nginx block, a child of the Proxy hosts tab,
+  /// e.g. `/stack/npm/proxy-hosts/4/advanced`.
+  static String npmAdvanced(int hostId) => '$npmProxyHosts/$hostId/advanced';
+
   /// ## `i`: which connection a detail page belongs to
   ///
   /// Every detail route below takes an optional `?i=<instanceId>`. Absent, the

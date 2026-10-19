@@ -93,6 +93,11 @@ class NpmUpstreamReport {
 ///    a phone on cellular is expected and is not evidence the site is down.
 ///  * Disabled hosts are not probed. NPM is not serving them, so their
 ///    backend's state is not a fact about this screen.
+///  * A host that forwards to loopback (`127.0.0.1`, `localhost`, `::1`) is
+///    not probed either. That address means the server's own machine, and
+///    from here it means this device: a socket opened to it measures whatever
+///    this device runs on that port. Such a host stays unchecked, inside the
+///    total, like a host outside the budget.
 class NpmUpstreamProbe {
   const NpmUpstreamProbe({
     this.connector = _connect,
@@ -132,7 +137,10 @@ class NpmUpstreamProbe {
             : a.primaryDomain.compareTo(b.primaryDomain);
       });
 
-    final targets = candidates.take(budget).toList(growable: false);
+    final targets = candidates
+        .where((h) => !_loopback(h.forwardHost))
+        .take(budget)
+        .toList(growable: false);
     final results = <int, NpmUpstream>{};
 
     for (var i = 0; i < targets.length; i += concurrency) {
@@ -153,6 +161,22 @@ class NpmUpstreamProbe {
       total: candidates.length,
       takenAt: DateTime.now(),
     );
+  }
+
+  /// Whether [forwardHost] names the server's own machine, which only the
+  /// server can reach. `0.0.0.0` counts: as a destination it is this machine.
+  static bool _loopback(String forwardHost) {
+    final host = forwardHost.trim().toLowerCase();
+    if (host == 'localhost' || host.endsWith('.localhost')) return true;
+    final address = InternetAddress.tryParse(
+      host.startsWith('[') && host.endsWith(']')
+          ? host.substring(1, host.length - 1)
+          : host,
+    );
+    if (address == null) return false;
+    return address.isLoopback ||
+        address == InternetAddress.anyIPv4 ||
+        address == InternetAddress.anyIPv6;
   }
 
   Future<bool> _probeOne(NpmProxyHost host) async {

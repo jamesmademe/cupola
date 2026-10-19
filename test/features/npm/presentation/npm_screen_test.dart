@@ -219,7 +219,9 @@ void main() {
       screen: const NpmScreen.auditLog(showAppBar: false),
       account: _admin,
     );
-    expect(find.textContaining('photos.example.net'), findsOneWidget);
+    // NPM's API words, said as a sentence: `updated` and `proxy-host`.
+    expect(find.text('Updated\u00A0· photos.example.net'), findsOneWidget);
+    expect(find.textContaining('Proxy host'), findsOneWidget);
   });
 
   testWidgets('Audit log explains the server-side admin capability', (
@@ -518,7 +520,7 @@ void main() {
   ) async {
     await _pump(
       tester,
-      screen: NpmAdvancedConfigScreen(host: _host(1, 'jellyfin.lan')),
+      screen: const NpmAdvancedConfigScreen(hostId: 1),
       account: _viewOnly,
     );
     // One banner, first, above the editor.
@@ -536,5 +538,42 @@ void main() {
       find.text(npmBlockedMessage(NpmResource.proxyHosts)),
       findsOneWidget,
     );
+  });
+
+  testWidgets('the advanced page reads its host from the id in the path', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      screen: const NpmAdvancedConfigScreen(hostId: 2),
+      account: _admin,
+    );
+    expect(
+      find.text('The custom Nginx block for immich.lan\u00A0· 0 lines'),
+      findsOneWidget,
+    );
+
+    // One line is a line.
+    await tester.enterText(find.byType(TextField), 'client_max_body_size 0;');
+    await tester.pump();
+    expect(
+      find.text('The custom Nginx block for immich.lan\u00A0· 1 line'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a host gone from NPM says so instead of an empty editor', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      screen: const NpmAdvancedConfigScreen(hostId: 99),
+      account: _admin,
+    );
+    expect(
+      find.text('This proxy host is no longer on Nginx Proxy Manager.'),
+      findsOneWidget,
+    );
+    expect(find.byType(TextField), findsNothing);
   });
 }

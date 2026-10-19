@@ -111,6 +111,14 @@ _tabDetailPaths = [
   // row of its own.
   (service: ServiceKey.dockge, tab: ServiceTab.stacks, path: 'new'),
   (service: ServiceKey.dockge, tab: ServiceTab.stacks, path: 'stack/:name'),
+  // A proxy host's custom Nginx block, opened from the host's own menu. Its
+  // page carries its own app bar, which the service header would sit on top
+  // of anywhere but a child of the tab.
+  (
+    service: ServiceKey.nginxProxyManager,
+    tab: ServiceTab.proxyHosts,
+    path: ':hostId/advanced',
+  ),
 ];
 
 /// The title's own page, hung last under every tab of the services that open
@@ -134,8 +142,8 @@ const List<String> _mediaPaths = [
 ///
 ///  * Seerr: its catalogue is the Discover tab of the app now;
 ///  * Transmission, SABnzbd, NZBGet: a queue slot is one row that expands;
-///  * Unraid, NPM: both were one page, and the split produced sections rather
-///    than pages.
+///  * Unraid: it was one page, and the split produced sections rather than
+///    pages.
 const List<ServiceKey> _servicesWithoutTabDetails = [
   // Seerr's see-alls, person and collection went with Discover to the app's
   // own tab; a title, a person and a collection hang under every tab of its
@@ -145,7 +153,6 @@ const List<ServiceKey> _servicesWithoutTabDetails = [
   ServiceKey.sabnzbd,
   ServiceKey.nzbget,
   ServiceKey.unraid,
-  ServiceKey.nginxProxyManager,
 ];
 
 /// The record each service's Library pushes, by the path it is mounted at.

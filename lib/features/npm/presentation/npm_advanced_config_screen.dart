@@ -10,6 +10,7 @@ import 'package:cupola/features/npm/domain/models/npm_models.dart';
 import 'package:cupola/features/npm/presentation/npm_actions.dart';
 import 'package:cupola/features/npm/presentation/npm_capability.dart';
 import 'package:cupola/features/npm/presentation/npm_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The per-host custom Nginx block, editable (decision 33).
@@ -30,22 +31,74 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///    and the line number, and a friendlier paraphrase would throw away the
 ///    only part that is actionable.
 ///
-/// Pushed rather than routed: `lib/core/router.dart` has no NPM children at all
-/// (the whole service is one page), and adding the route belongs to the tab-model
-/// slice. See the unit report: this is the one deviation from "detail routes
-/// resolve from path params alone".
-class NpmAdvancedConfigScreen extends ConsumerStatefulWidget {
-  const NpmAdvancedConfigScreen({super.key, required this.host});
+/// Routed, a child of the Proxy hosts tab (`ServiceRoutes.npmAdvanced`), and
+/// resolved from the path alone: the host is looked up by id in the table the
+/// tab already reads. It used to be pushed on the tab's own navigator, which
+/// left the URL on the tab, so the service header above stayed drawn and this
+/// page's app bar landed on top of it.
+class NpmAdvancedConfigScreen extends ConsumerWidget {
+  const NpmAdvancedConfigScreen({super.key, required this.hostId});
+
+  final int hostId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hosts = ref.watch(npmProxyHostsProvider);
+    // A reload keeps the editor: the save re-reads the table, and dropping
+    // the page to a skeleton would throw away the text being edited.
+    final Widget content = hosts.when(
+      skipLoadingOnReload: true,
+      data: (all) {
+        final host = all.where((h) => h.id == hostId).firstOrNull;
+        if (host == null) {
+          return const Padding(
+            padding: EdgeInsets.all(AppSpacing.lg),
+            child: Text('This proxy host is no longer on Nginx Proxy Manager.'),
+          );
+        }
+        return _AdvancedEditor(key: ValueKey(host.id), host: host);
+      },
+      loading: () => const ListRowsShimmer(count: 2),
+      error: (error, _) => InlineErrorRetry(
+        message: sectionFailureMessage(
+          ServiceKey.nginxProxyManager,
+          error,
+          consequence: 'the advanced config is not shown',
+        ),
+        error: error,
+        service: ServiceKey.nginxProxyManager,
+        onRetry: () => ref.invalidate(npmProxyHostsProvider),
+      ),
+    );
+
+    return AmbientScaffold(
+      accent: ServiceKey.nginxProxyManager.accent,
+      appBar: const GlassAppBar(title: Text('Advanced')),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Above the editor, not inside its padded column: the banner owns
+            // its own gutter.
+            const NpmCapabilityBannerSlot(resources: {NpmResource.proxyHosts}),
+            Expanded(child: content),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AdvancedEditor extends ConsumerStatefulWidget {
+  const _AdvancedEditor({super.key, required this.host});
 
   final NpmProxyHost host;
 
   @override
-  ConsumerState<NpmAdvancedConfigScreen> createState() =>
-      _NpmAdvancedConfigScreenState();
+  ConsumerState<_AdvancedEditor> createState() => _AdvancedEditorState();
 }
 
-class _NpmAdvancedConfigScreenState
-    extends ConsumerState<NpmAdvancedConfigScreen> {
+class _AdvancedEditorState extends ConsumerState<_AdvancedEditor> {
   late final TextEditingController _controller;
 
   /// The block as it stood when this editor opened. The session's only undo.
@@ -95,7 +148,7 @@ class _NpmAdvancedConfigScreenState
       title: 'Save the advanced config?',
       message:
           'This goes live the moment nginx reloads. If the block does not '
-          'parse, $domain stops answering until you come back and fix it, no '
+          'parse, $domain stops answering until you come back and fix it. No '
           'other host is affected. Cupola does not check Nginx syntax. Type the '
           'domain to save.',
       phrase: domain,
@@ -141,24 +194,6 @@ class _NpmAdvancedConfigScreenState
 
   @override
   Widget build(BuildContext context) {
-    return AmbientScaffold(
-      accent: ServiceKey.nginxProxyManager.accent,
-      appBar: const GlassAppBar(title: Text('Advanced')),
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Above the editor, not inside its padded column: the banner owns
-            // its own gutter.
-            const NpmCapabilityBannerSlot(resources: {NpmResource.proxyHosts}),
-            Expanded(child: _editor(context)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _editor(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final lines = _controller.text.trim().isEmpty
@@ -173,8 +208,8 @@ class _NpmAdvancedConfigScreenState
       ),
       children: [
         Text(
-          'the custom Nginx block for ${widget.host.primaryDomain}\u00A0· '
-          '$lines lines',
+          'The custom Nginx block for ${widget.host.primaryDomain}\u00A0· '
+          '$lines ${lines == 1 ? 'line' : 'lines'}',
           style: theme.textTheme.bodySmall?.copyWith(
             color: colorScheme.onSurfaceVariant,
           ),
@@ -304,8 +339,8 @@ class _NginxVerdict extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'nginx refused this block, $domain reads as config refused '
-                'until a reload succeeds. The text is saved exactly as typed.',
+                'nginx refused this block. Until a reload succeeds, $domain '
+                'reads as refused. The text is saved exactly as typed.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurface,
                 ),

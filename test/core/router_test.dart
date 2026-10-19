@@ -23,6 +23,7 @@ import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/music/presentation/lidarr_overview_screen.dart';
 import 'package:cupola/features/music/presentation/artist_page.dart';
 import 'package:cupola/features/readarr/presentation/author_page.dart';
+import 'package:cupola/features/npm/presentation/npm_advanced_config_screen.dart';
 import 'package:cupola/features/npm/presentation/npm_overview_screen.dart';
 import 'package:cupola/features/npm/presentation/npm_screen.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_overview_screen.dart';
@@ -75,6 +76,7 @@ import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_all_screens.dart';
 import 'package:cupola/features/home/presentation/home_screen.dart';
 import 'package:cupola/features/services/presentation/stack_screen.dart';
+import 'package:cupola/features/services/presentation/service_home_screen.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/discover/domain/seerr_invite.dart';
 import 'package:cupola/features/discover/domain/seerr_sign_in.dart';
@@ -1611,6 +1613,30 @@ void main() {
         tester.widget<NpmScreen>(find.byType(NpmScreen)).section,
         NpmSection.certificates,
       );
+
+      // A host's advanced block is a page of its own under Proxy hosts: the
+      // URL leaves the tab root, so the service header steps aside for the
+      // page's app bar instead of being drawn under it.
+      router.go(ServiceRoutes.npmAdvanced(4));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<NpmAdvancedConfigScreen>(
+              find.byType(NpmAdvancedConfigScreen),
+            )
+            .hostId,
+        4,
+      );
+      expect(
+        tester
+            .widget<ServiceHomeScreen>(find.byType(ServiceHomeScreen))
+            .showAppBar,
+        isFalse,
+      );
+
+      router.go('${ServiceRoutes.npmProxyHosts}/not-a-number/advanced');
+      await tester.pumpAndSettle();
+      expect(router.state.uri.path, ServiceRoutes.npmProxyHosts);
 
       // Dockge did not split: the stack list *was* the service, and it is the
       // Stacks tab whole.

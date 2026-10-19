@@ -621,7 +621,7 @@ extension ServiceKeyExtension on ServiceKey {
     // Says the uncomfortable thing plainly, because the user cannot choose
     // otherwise and deserves to know what they are handing over.
     ServiceKey.nginxProxyManager =>
-      'Nginx Proxy Manager issues no API key, the only credential it '
+      'Nginx Proxy Manager issues no API key. The only credential it '
           'accepts is an account login, which Cupola exchanges for a '
           'short-lived token it keeps in memory and never writes to disk. '
           'Create a dedicated user for Cupola rather than using your admin '
