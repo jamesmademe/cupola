@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
@@ -378,6 +380,11 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
   int _browses = 0;
   int _scans = 0;
 
+  /// The connection's whole library, read once per flow: see
+  /// [getLibraryMatches].
+  Future<List<ManualImportLookupResult>>? _libraryMatches;
+  (ServiceKey, String)? _libraryMatchesOf;
+
   /// The client for the connection this flow is bound to.
   ///
   /// Every call in this notifier goes through here rather than through the
@@ -415,6 +422,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
       targetId: targetId,
       isLoadingBrowse: true,
     );
+    _libraryMatches = null;
     final read = ++_browses;
     _scans++;
 
@@ -470,6 +478,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
       submittedItems: running ? previous.submittedItems : const [],
       submittedPaths: running ? previous.submittedPaths : const {},
     );
+    _libraryMatches = null;
     final read = ++_scans;
 
     try {
@@ -949,10 +958,33 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
     return _api(service).lookup(term);
   }
 
-  Future<List<ManualImportLookupResult>> getLibraryMatches() async {
+  /// The bound connection's library, the list the Fix sheet opens on.
+  ///
+  /// It is the whole of `GET /movie`, `/series` or `/artist`, megabytes on a
+  /// large library, and every sheet asked for it again: thirty files fixed by
+  /// hand were thirty downloads, plus one for the preselection. Read once per
+  /// flow instead, and shared while in flight; [start] and [startBlocked] drop
+  /// it, so a new flow sees a title added meanwhile. A read that fails is not
+  /// kept, so the next sheet asks again.
+  Future<List<ManualImportLookupResult>> getLibraryMatches() {
     final service = state.service;
-    if (service == null) return const [];
-    return _api(service).getLibraryMatches();
+    if (service == null) return Future.value(const []);
+    final of = (service, state.instanceId);
+    final held = _libraryMatches;
+    if (held != null && _libraryMatchesOf == of) return held;
+
+    final read = _api(service).getLibraryMatches();
+    _libraryMatches = read;
+    _libraryMatchesOf = of;
+    unawaited(
+      read.then<void>(
+        (_) {},
+        onError: (Object _) {
+          if (identical(_libraryMatches, read)) _libraryMatches = null;
+        },
+      ),
+    );
+    return read;
   }
 
   Future<List<ManualImportQualityOption>> getQualityOptions() async {
