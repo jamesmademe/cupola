@@ -388,6 +388,35 @@ void main() {
       },
     );
 
+    test('retries an upload once on 403: the form is sent a second time, '
+        'whole', () async {
+      // The body of a multipart upload is a stream that can be read once, and
+      // the retry used to hand the same one to Dio again, which refuses a form
+      // it has already sent: the 403 came back as the answer to an upload the
+      // second sign-in had made possible.
+      final adapter = _ScriptableAdapter(script: [200, 403, 200, 200]);
+      final c = _client(adapter, user: 'admin', pw: 'adminadmin');
+
+      final response = await c.post(
+        '/api/v2/torrents/add',
+        formData: FormData.fromMap({
+          'torrents': MultipartFile.fromBytes(
+            utf8.encode('d8:announce0:e'),
+            filename: 'a.torrent',
+          ),
+          'savepath': '/downloads',
+        }),
+      );
+
+      expect(response.statusCode, 200);
+      final uploads = adapter.requests
+          .where((r) => r.path == '/api/v2/torrents/add')
+          .toList();
+      expect(uploads, hasLength(2), reason: 'sent, refused, sent again');
+      expect(adapter.callIndex, 4);
+      c.close();
+    });
+
     test('retries once on 403, succeeds when retry returns 200', () async {
       // login → 200; data → 403; re-login → 200; data retry → 200.
       final adapter = _ScriptableAdapter(script: [200, 403, 200, 200]);

@@ -183,6 +183,10 @@ class QbittorrentClient {
           }
           error.requestOptions.extra['skipAuthRetry'] = true;
           try {
+            // A multipart body is a stream that can be read once, and Dio
+            // refuses a form it has already sent: the retry gets its own copy.
+            final body = error.requestOptions.data;
+            if (body is FormData) error.requestOptions.data = body.clone();
             final response = await _dio.fetch(error.requestOptions);
             handler.resolve(response);
           } catch (_) {
