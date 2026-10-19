@@ -3381,6 +3381,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             service: service,
             targetId: targetId,
             instanceId: instanceId,
+            initialPath: state.uri.queryParameters['path'],
           ),
         ),
       ),

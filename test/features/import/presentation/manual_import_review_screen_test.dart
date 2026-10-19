@@ -246,6 +246,7 @@ Future<void> _pumpReview(
   WidgetTester tester, {
   FakeApiClient? client,
   ThemeData? theme,
+  String? initialPath,
 }) async {
   // A tall viewport so the whole grouped list is laid out: the list is lazily
   // built, so anything below the fold genuinely does not exist to a finder.
@@ -265,7 +266,10 @@ Future<void> _pumpReview(
       ],
       child: MaterialApp(
         theme: theme ?? AppTheme.darkTheme(),
-        home: const ManualImportReviewScreen(service: ServiceKey.sonarr),
+        home: ManualImportReviewScreen(
+          service: ServiceKey.sonarr,
+          initialPath: initialPath,
+        ),
       ),
     ),
   );
@@ -390,6 +394,22 @@ void main() {
     await tester.pump();
 
     expect(find.text('No files match "zzzz"'), findsOneWidget);
+  });
+
+  testWidgets('a link straight to Review scans the folder it names', (
+    tester,
+  ) async {
+    // Seen live: `/import/review?service=radarr&path=…` scanned `/`, which
+    // the arr refuses, and said "Scan failed".
+    final client = _scanClient();
+    await _pumpReview(
+      tester,
+      client: client,
+      initialPath: '/downloads/complete',
+    );
+
+    expect(client.lastGetQueryParameters?['folder'], '/downloads/complete');
+    expect(find.textContaining('Boruto'), findsWidgets);
   });
 
   group('every ready row states matched identity then the raw file', () {

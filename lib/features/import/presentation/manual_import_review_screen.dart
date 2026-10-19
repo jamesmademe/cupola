@@ -117,11 +117,20 @@ class ManualImportReviewScreen extends ConsumerStatefulWidget {
   /// matching binding alone.
   final String? instanceId;
 
+  /// The folder the route named (`?path=`), or null when it named none.
+  ///
+  /// Like [instanceId], only load-bearing on a link straight to Review: a
+  /// hand-written one, or an old `/import/folder?path=` the router rewrites
+  /// here with its query. Without it the station scanned whatever folder the
+  /// flow last held, or `/`, which the arr refuses.
+  final String? initialPath;
+
   const ManualImportReviewScreen({
     super.key,
     required this.service,
     this.targetId,
     this.instanceId,
+    this.initialPath,
   });
 
   @override
@@ -156,15 +165,18 @@ class _ManualImportReviewScreenState
     Future.microtask(() async {
       final notifier = ref.read(manualImportFlowProvider.notifier);
       final state = ref.read(manualImportFlowProvider);
+      final path = widget.initialPath;
       if (state.service != widget.service ||
           // A flow bound to another connection is a scan of another server's
           // disk: it has to be restarted, not continued.
           state.instanceId != (widget.instanceId ?? '') ||
-          state.selectedFolder == null) {
+          state.selectedFolder == null ||
+          (path != null && path != state.selectedFolder)) {
         await notifier.start(
           widget.service,
           instanceId: widget.instanceId,
           targetId: widget.targetId,
+          initialPath: path,
         );
       }
       await notifier.loadSelectedFolderItems();
