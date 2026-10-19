@@ -45,7 +45,7 @@ The first release of Cupola. Everything before it was published as Seekarr (up t
 | Platform | File | Notes |
 | --- | --- | --- |
 | Android | `.apk` | Allow installs from unknown sources for your browser or file manager. |
-| macOS | `.dmg` | Not notarized: the first time, right-click Cupola and choose **Open**. |
+| macOS | `.dmg` | Signed with a Developer ID and notarized by Apple. |
 | iOS | unsigned `.ipa` | Install with AltStore, SideStore or Sideloadly. With a free Apple ID the install lasts **7 days** and has to be refreshed. |
 | Windows | `.zip` | Built by GitHub Actions and not signed: SmartScreen asks once. |
 | Linux | `.tar.gz` | Built by GitHub Actions; needs GTK 3 and libsecret. |

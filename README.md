@@ -331,8 +331,8 @@ sources for your browser or file manager.
 <summary><b>macOS</b></summary>
 <br/>
 
-Download the `.dmg`, drag **Cupola** to `/Applications`, and launch it. On first run
-right-click the app and choose **Open** to get past Gatekeeper.
+Download the `.dmg`, drag **Cupola** to `/Applications`, and launch it. The app is
+signed with a Developer ID and notarized by Apple, so it opens like any other.
 
 </details>
 
@@ -459,6 +459,11 @@ dart format --output=none --set-exit-if-changed .
 flutter test
 scripts/release.sh all
 ```
+
+`release.sh` writes the packages to `dist/<version>`. The macOS package needs the
+team's Developer ID certificate in the keychain and `CUPOLA_NOTARY_PROFILE` naming
+credentials saved with `xcrun notarytool store-credentials`.
+`scripts/release.sh testflight` uploads an iOS build to App Store Connect instead.
 
 CI runs the first three on every push; infos are fatal. The test suite is offline
 and deterministic by design: no network, no live instance. An opt-in end-to-end tier

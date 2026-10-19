@@ -8,10 +8,10 @@ APP_SLUG="cupola"
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 
 case "$TARGET" in
-  android|ios|macos|web|windows|linux|all)
+  android|ios|testflight|macos|web|windows|linux|all)
     ;;
   *)
-    printf 'Usage: scripts/release.sh [android|ios|macos|web|windows|linux|all]\n' >&2
+    printf 'Usage: scripts/release.sh [android|ios|testflight|macos|web|windows|linux|all]\n' >&2
     exit 1
     ;;
 esac
@@ -24,9 +24,32 @@ if [[ -z "$VERSION" ]]; then
 fi
 
 cd "$ROOT_DIR"
+
+# The macOS app ships exported for Developer ID (macos/ExportOptions.plist):
+# signed with the team's Developer ID certificate, carrying a Developer ID
+# profile that opens on any Mac and keeps the data protection keychain, then
+# notarized and stapled. CUPOLA_NOTARY_PROFILE names the credentials saved once
+# with `xcrun notarytool store-credentials`.
+if [[ ("$TARGET" == "macos" || "$TARGET" == "all") && "$(uname -s)" == "Darwin" ]]; then
+  if [[ -z "${CUPOLA_NOTARY_PROFILE:-}" ]]; then
+    printf 'Set CUPOLA_NOTARY_PROFILE to notarize the macOS app\n' >&2
+    exit 1
+  fi
+  MACOS_TEAM_ID=$(/usr/libexec/PlistBuddy -c 'Print :teamID' macos/ExportOptions.plist)
+  MACOS_SIGN_IDENTITY=$(security find-identity -v -p codesigning \
+    | awk -v team="($MACOS_TEAM_ID)" '/"Developer ID Application: / && index($0, team) { print $2; exit }')
+  if [[ -z "$MACOS_SIGN_IDENTITY" ]]; then
+    printf 'No Developer ID Application certificate for team %s in the keychain\n' "$MACOS_TEAM_ID" >&2
+    exit 1
+  fi
+fi
+
 DIST_DIR="dist/${VERSION}"
-rm -rf "$DIST_DIR"
-mkdir -p "$DIST_DIR"
+# An upload leaves the packages already built in place.
+if [[ "$TARGET" != "testflight" ]]; then
+  rm -rf "$DIST_DIR"
+  mkdir -p "$DIST_DIR"
+fi
 
 printf '==> Getting Flutter packages...\n'
 flutter pub get
@@ -116,6 +139,28 @@ if [[ "$TARGET" == "ios" || "$TARGET" == "all" ]]; then
   fi
 fi
 
+# TestFlight is never part of `all`: it uploads a build to App Store Connect,
+# signed for the store by the team in ios/ExportOptions-testflight.plist with
+# the Apple ID signed in to Xcode. The build number in pubspec.yaml has to be
+# higher than the last one uploaded.
+if [[ "$TARGET" == "testflight" ]]; then
+  if [[ "$(uname -s)" != "Darwin" ]]; then
+    printf 'TestFlight uploads can only be made on macOS\n' >&2
+    exit 1
+  fi
+
+  printf '==> Archiving iOS for App Store Connect...\n'
+  flutter build ios --release --config-only
+  IOS_ARCHIVE="build/ios/${APP_NAME}.xcarchive"
+  rm -rf "$IOS_ARCHIVE"
+  xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release \
+    -destination 'generic/platform=iOS' -archivePath "$IOS_ARCHIVE" -allowProvisioningUpdates -quiet archive
+
+  printf '==> Uploading to TestFlight...\n'
+  xcodebuild -exportArchive -archivePath "$IOS_ARCHIVE" -exportOptionsPlist ios/ExportOptions-testflight.plist \
+    -exportPath "build/ios/testflight" -allowProvisioningUpdates
+fi
+
 if [[ "$TARGET" == "macos" || "$TARGET" == "all" ]]; then
   if [[ "$(uname -s)" != "Darwin" ]]; then
     if [[ "$TARGET" == "macos" ]]; then
@@ -125,9 +170,16 @@ if [[ "$TARGET" == "macos" || "$TARGET" == "all" ]]; then
     printf 'SKIP: macOS release requires a macOS host\n'
   else
     printf '==> Building macOS release...\n'
-    flutter build macos --release
+    flutter build macos --release --config-only
+    MACOS_ARCHIVE="build/macos/${APP_NAME}.xcarchive"
+    MACOS_EXPORT="build/macos/export"
+    rm -rf "$MACOS_ARCHIVE" "$MACOS_EXPORT"
+    xcodebuild -workspace macos/Runner.xcworkspace -scheme Runner -configuration Release \
+      -archivePath "$MACOS_ARCHIVE" -allowProvisioningUpdates -quiet archive
+    xcodebuild -exportArchive -archivePath "$MACOS_ARCHIVE" -exportOptionsPlist macos/ExportOptions.plist \
+      -exportPath "$MACOS_EXPORT" -allowProvisioningUpdates
 
-    APP_PATH="build/macos/Build/Products/Release/${APP_NAME}.app"
+    APP_PATH="$MACOS_EXPORT/${APP_NAME}.app"
     DMG_STEM="$DIST_DIR/${APP_SLUG}-${VERSION}"
     DMG_PATH="${DMG_STEM}.dmg"
     DMG_WORK_DIR=$(mktemp -d)
@@ -152,6 +204,17 @@ if [[ "$TARGET" == "macos" || "$TARGET" == "all" ]]; then
       printf 'Missing macOS app bundle at %s\n' "$APP_PATH" >&2
       exit 1
     fi
+
+    codesign --verify --deep --strict "$APP_PATH"
+
+    # The app carries its own ticket too, so a copy dragged out of the .dmg
+    # opens on a Mac that is offline the first time.
+    printf '==> Notarizing macOS app...\n'
+    APP_ZIP="$DMG_WORK_DIR/${APP_SLUG}-${VERSION}.zip"
+    ditto -c -k --keepParent "$APP_PATH" "$APP_ZIP"
+    xcrun notarytool submit "$APP_ZIP" --keychain-profile "$CUPOLA_NOTARY_PROFILE" --wait
+    xcrun stapler staple "$APP_PATH"
+    spctl --assess --type execute --verbose "$APP_PATH"
 
     mkdir -p "$DMG_STAGING_DIR"
     ditto "$APP_PATH" "$DMG_STAGING_DIR/${APP_NAME}.app"
@@ -200,8 +263,16 @@ EOF
 
     printf '==> Compressing DMG...\n'
     hdiutil convert "$DMG_RW_PATH" -quiet -format UDZO -o "$DMG_STEM"
+    codesign --force --timestamp --sign "$MACOS_SIGN_IDENTITY" "$DMG_PATH"
+
+    printf '==> Notarizing DMG...\n'
+    xcrun notarytool submit "$DMG_PATH" --keychain-profile "$CUPOLA_NOTARY_PROFILE" --wait
+    xcrun stapler staple "$DMG_PATH"
+    spctl --assess --type open --context context:primary-signature --verbose "$DMG_PATH"
   fi
 fi
 
-printf '\n==> Release artifacts for v%s:\n' "$VERSION"
-ls -lh "$DIST_DIR/"
+if [[ "$TARGET" != "testflight" ]]; then
+  printf '\n==> Release artifacts for v%s:\n' "$VERSION"
+  ls -lh "$DIST_DIR/"
+fi
