@@ -58,7 +58,11 @@ class _ReadarrActivityScreenState extends ConsumerState<ReadarrActivityScreen> {
         : service.getAllMissing();
   }
 
-  void _reload() => setState(() => _future = _load());
+  // A block body: an arrow would hand `setState` the Future it assigns, which
+  // debug builds refuse.
+  void _reload() => setState(() {
+    _future = _load();
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -68,6 +72,14 @@ class _ReadarrActivityScreenState extends ConsumerState<ReadarrActivityScreen> {
     if (!configured) {
       return NotConfiguredPlaceholder.forService(ServiceKey.readarr);
     }
+
+    // The request is held in state, so moving the instance lens would
+    // otherwise leave the previous server's rows on screen under the new
+    // connection's label.
+    ref.listen(activeInstanceProvider(ServiceKey.readarr), (previous, next) {
+      if (previous?.id == next?.id) return;
+      _reload();
+    });
 
     final future = _future ??= _load();
     // The host's two bands and the status bar the upper one consumes: this
