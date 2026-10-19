@@ -2,7 +2,7 @@
 
 The Portal, live: drag the floating bar up and the page recedes into a card over the service matrix; release, and a spring decides whether it opens. The physics is the controller's, ported as written.
 
-Hand-written from `lib/features/shell/presentation/service_portal.dart` (`PortalPhysics`, `ServicePortalController`, `PortalStage`), `portal_coach_mark.dart` and `shell_screen.dart`. Frame 304 × 580pt, so the card's final bottom is 34 + 0.42 × 580 = 277.6 and the travel 302.4. Poses and anatomy are on the **ServicePortal** card; this one reuses its classes.
+Hand-written from `lib/features/shell/presentation/service_portal.dart` (`PortalPhysics`, `ServicePortalController`, `PortalStage`), `portal_coach_mark.dart` and `shell_screen.dart`. Frame 304 × 580pt, so the card's final bottom is 34 + 0.42 × 580 = 277.6 and the travel 302.4. Poses and anatomy are on the **ServicePortal** card; this one reuses its classes. The bar at the foot is the phone's bar at rest with Home lit, drawn as on the **NavPillTransition** card.
 
 The literals: hand-tuned on a device and signed off; they are not motion tokens and are not normalised:
 

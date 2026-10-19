@@ -13,6 +13,10 @@ the constants are named in both places.
 resolve its contrast the way the app does) are shared by the cards; colours and sizes come from the
 generated tokens. `python3 tool/design_system/gallery.py --serve` plays them in dark and light.
 
+Icons are Material Icons (`.cp-icon`, `.cp-icon.outlined`), as in the app. A glyph only Material Symbols
+has, such as Activity's pulse line (`vital_signs`), takes `.cp-icon.symbols` (outlined) or `.cp-icon.symbols.rounded`,
+and its card loads that family with `icon_names`, so only the glyphs it draws are fetched.
+
 | Card | Source |
 | --- | --- |
 | [DetailHeroCollapse](DetailHeroCollapse/README.md) | `lib/core/widgets/media_detail_view.dart` |

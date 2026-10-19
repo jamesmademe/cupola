@@ -1,10 +1,11 @@
-<!-- @dsCard group="Motion" height=300 subtitle="The floating bar: the pill slides and grows, the bar springs back" -->
+<!-- @dsCard group="Motion" height=300 subtitle="The floating bar: the pill slides to its column, the bar springs back" -->
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <title>NavPillTransition: preview</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round|Material+Icons+Outlined">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined&family=Material+Symbols+Rounded&icon_names=vital_signs&display=block">
 </head>
 <body>
 <div class="cp-motion cp-nav-pill-transition" data-reduce="false">
@@ -17,139 +18,88 @@
     <div class="cp-nav-pill-transition-well">
       <div class="cp-nav-pill-transition-page" aria-hidden="true"><i style="width:55%"></i><i style="width:80%"></i><i style="width:68%"></i></div>
       <div class="cp-nav-pill-transition-wrap" data-wrap>
-        <div class="cp-nav-pill-transition-bar" data-bar>
-          <nav class="cp-nav-pill-transition-inner" aria-label="Main" data-inner>
-            <div class="cp-nav-pill-transition-ind" data-ind aria-hidden="true"></div>
+        <div class="cp-navbar" data-bar>
+          <nav class="cp-navbar-cols" aria-label="Main" data-inner>
+            <div class="cp-navbar-pill cp-nav-pill-transition-ind" data-ind aria-hidden="true"></div>
           </nav>
         </div>
       </div>
     </div>
     <div class="cp-nav-pill-transition-panel">
       <dl class="cp-motion-readout">
-        <dt>item widths</dt><dd data-out="widths">—</dd>
+        <dt>columns</dt><dd data-out="widths">—</dd>
         <dt>pill</dt><dd data-out="pill">—</dd>
         <dt>geometry</dt><dd data-out="geo">320 ms · cubic-bezier(0.2, 0.8, 0.2, 1)</dd>
-        <dt>scale bump</dt><dd data-out="bump">1.02 · 180 ms · cubic-bezier(0.2, 0.8, 0.2, 1)</dd>
-        <dt>icon · label</dt><dd data-out="swap">fade 320 ms · size 320 ms</dd>
+        <dt>icon</dt><dd data-out="swap">fade 320 ms</dd>
+        <dt>name</dt><dd data-out="name">ink and weight at once</dd>
         <dt>drag offset</dt><dd data-out="drag">0.0, 0.0</dd>
         <dt>spring-back</dt><dd data-out="spring">520 ms · elasticOut(0.4)</dd>
       </dl>
       <span class="cp-motion-haptic" data-haptic><span class="cp-icon" aria-hidden="true">vibration</span>HapticFeedback.selectionClick</span>
-      <p class="cp-motion-note">The pill is the room's strong fill in every section, so only its geometry animates. Drag: resistance 0.15 ÷ (1 + |offset| ÷ 30), clamped to ±15 on each axis.</p>
+      <p class="cp-motion-note">Four columns of one width, each a glyph over its name; the pill is the room's strong fill and fills the lit column, so only its position animates. Drag: resistance 0.15 ÷ (1 + |offset| ÷ 30), clamped to ±15 on each axis.</p>
     </div>
   </div>
 </div>
 <script>
 (function () {
   var root = document.querySelector('.cp-nav-pill-transition');
+  /* NavTab.barFor(operator): icon / selectedIcon, Material Icons or Material Symbols as the app draws them. */
   var D = [
-    { label: 'Dashboard', icon: 'view_list' },
-    { label: 'Activity', icon: 'monitor_heart' },
-    { label: 'Search', icon: 'search' },
-    { label: 'Settings', icon: 'settings' }
+    { label: 'Home', icon: ['outlined', 'home'], lit: ['', 'home'] },
+    { label: 'Discover', icon: ['outlined', 'explore'], lit: ['', 'explore'] },
+    { label: 'Activity', icon: ['symbols', 'vital_signs'], lit: ['symbols rounded', 'vital_signs'] },
+    { label: 'Stack', icon: ['outlined', 'layers'], lit: ['', 'layers'] }
   ];
-  /* floating_bottom_nav_bar.dart: _NavBarItem + _NavBarLayoutMetrics, at text scale 1.0. */
-  var ICON = 20, PAD = 14, LABEL_GAP = 6, SLACK = 6, MIN_SELECTED = 84, COMPACT = 52, COMPACT_MIN = 48, BREAKPOINT = 360, EXTRA_SHARE = 0.6, SURFACE_PAD = 6, BORDER = 1;
+  /* floating_bottom_nav_bar.dart at text scale 1.0: FloatingNavBarMetrics.barHeight (size.tabbar) and surfacePadding, the 1pt border, the AppSpacing.lg side margins. */
+  var BAR_HEIGHT = 62, SURFACE_PAD = 5, BORDER = 1, SIDE = 16;
   var MAX_DRAG = 15, BASE_RESISTANCE = 0.15, FALLOFF = 30, SPRING_MS = 520;
   var REDUCED = 0.05; /* AnimationController under disableAnimations (animation_controller.dart:651) */
   var inner = root.querySelector('[data-inner]'), ind = root.querySelector('[data-ind]'), bar = root.querySelector('[data-bar]'), wrap = root.querySelector('[data-wrap]');
   var out = {}; root.querySelectorAll('[data-out]').forEach(function (el) { out[el.dataset.out] = el; });
   var haptic = root.querySelector('[data-haptic]');
-  var ctx = document.createElement('canvas').getContext('2d');
-  function textWidth(s) { ctx.font = '600 12px Onest, system-ui, sans-serif'; if ('letterSpacing' in ctx) ctx.letterSpacing = '0px'; return ctx.measureText(s).width; }
-  function selectedWidth(i) { return PAD * 2 + ICON + LABEL_GAP + D[i].w + SLACK; }
-  function sum(a) { return a.reduce(function (s, v) { return s + v; }, 0); }
-  function preferredInner() {
-    var sel = D.reduce(function (m, d, i) { return Math.max(m, Math.max(MIN_SELECTED, selectedWidth(i))); }, MIN_SELECTED);
-    var n = D.length, regular = sel + COMPACT * (n - 1) + (8 - 2) * (n - 1);
-    return regular >= BREAKPOINT ? regular : sel + COMPACT * (n - 1) + 4 * (n - 1);
-  }
-  function resolve(avail, sel) {
-    var n = D.length, gap = avail < BREAKPOINT ? 4 : 6, area = Math.max(0, avail - gap * (n - 1));
-    var w = D.map(function () { return COMPACT; });
-    w[sel] = Math.max(MIN_SELECTED, selectedWidth(sel));
-    var delta = area - sum(w);
-    if (delta >= 0) {
-      var se = delta * EXTRA_SHARE, ce = (delta - se) / (n - 1);
-      w = w.map(function (v, i) { return v + (i === sel ? se : ce); });
-    } else {
-      var deficit = -delta, cap = (COMPACT - COMPACT_MIN) * (n - 1), cr = Math.min(Math.max(deficit, 0), cap);
-      w = w.map(function (v, i) { return i === sel ? v : v - cr / (n - 1); });
-      deficit -= cr;
-      if (deficit > 0) { var sr = Math.min(deficit, Math.max(0, w[sel] - MIN_SELECTED)); w[sel] -= sr; deficit -= sr; }
-      if (deficit > 0) { var mins = D.map(function (d, i) { return i === sel ? MIN_SELECTED : COMPACT_MIN; }), f = area / sum(mins); w = mins.map(function (v) { return v * f; }); }
-    }
-    w[sel] += area - sum(w);
-    var lefts = [], x = 0; w.forEach(function (v) { lefts.push(x); x += v + gap; });
-    return { widths: w, lefts: lefts, gap: gap };
-  }
-  var selected = 0, items = [], layoutAvail = 0;
+  var selected = 0, items = [];
   function reduce() { return root.dataset.reduce === 'true'; }
+  function glyph(spec, cls) { var s = document.createElement('span'); s.className = 'cp-icon ' + spec[0] + ' ' + cls; s.textContent = spec[1]; s.setAttribute('aria-hidden', 'true'); return s; }
   function build() {
-    D.forEach(function (d) { d.w = textWidth(d.label); });
-    var surface = Math.min(preferredInner() + SURFACE_PAD * 2, wrap.clientWidth - 32);
-    bar.style.width = surface + 'px';
-    layoutAvail = surface - SURFACE_PAD * 2 - BORDER * 2;
     D.forEach(function (d, i) {
       var b = document.createElement('button');
-      b.type = 'button'; b.className = 'cp-nav-pill-transition-item';
-      b.setAttribute('aria-label', d.label + ', Tab ' + (i + 1) + ' of ' + D.length);
-      b.innerHTML = '<span class="cp-nav-pill-transition-content"><span class="cp-nav-pill-transition-icon"></span><span class="cp-nav-pill-transition-label"><span></span></span></span>';
-      b.addEventListener('click', function () { if (!b._suppress) select(i, true); b._suppress = false; });
+      b.type = 'button'; b.className = 'cp-nav-item cp-nav-pill-transition-item'; b.setAttribute('aria-label', d.label);
+      var icon = document.createElement('span'); icon.className = 'cp-nav-pill-transition-icon';
+      var off = glyph(d.icon, 'is-off'), on = glyph(d.lit, 'is-on');
+      off.style.opacity = i === selected ? '0' : '1'; on.style.opacity = i === selected ? '1' : '0'; /* the first frame does not fade */
+      icon.appendChild(off); icon.appendChild(on);
+      var name = document.createElement('span'); name.className = 'cp-nav-item-label'; name.textContent = d.label;
+      b.appendChild(icon); b.appendChild(name);
+      b.addEventListener('click', function () { if (b._suppress) { b._suppress = false; return; } select(i, true); });
       inner.appendChild(b);
-      items.push({ el: b, icon: b.querySelector('.cp-nav-pill-transition-icon'), label: b.querySelector('.cp-nav-pill-transition-label'), text: b.querySelector('.cp-nav-pill-transition-label > span'), sel: null });
+      items.push({ el: b, off: off, on: on });
     });
-    paint(true);
+    paint();
   }
-  /* Monochrome: the primary ink on the pill, the secondary ink off it; the same in every section. */
-  function itemColor(i, sel) { return sel ? 'var(--on-surface)' : 'var(--on-surface-variant)'; }
-  function swapIcon(it, i, sel, instant) {
-    /* AnimatedSwitcher(durationSm), keyed by isSelected: the old glyph fades out as the new fades in. */
-    var ms = 320 * (reduce() ? REDUCED : 1);
-    it.icon.querySelectorAll('span').forEach(function (old) { old.style.opacity = '0'; setTimeout(function () { old.remove(); }, ms + 20); });
-    var s = document.createElement('span');
-    s.className = 'cp-icon' + (sel ? '' : ' outlined'); s.setAttribute('aria-hidden', 'true');
-    s.textContent = D[i].icon; s.style.color = itemColor(i, sel); s.style.opacity = instant ? '1' : '0';
-    it.icon.appendChild(s);
-    if (!instant) { void s.offsetWidth; s.style.opacity = '1'; }
-  }
-  function paint(instant) {
-    var L = resolve(layoutAvail, selected);
-    inner.style.gap = L.gap + 'px';
-    if (instant) root.style.setProperty('--k', '0');
+  function paint() {
+    var col = inner.clientWidth / D.length;
     items.forEach(function (it, i) {
-      var sel = i === selected;
-      it.el.style.width = L.widths[i] + 'px';
-      it.el.classList.toggle('is-selected', sel);
-      it.el.setAttribute('aria-current', sel ? 'page' : 'false');
-      if (it.sel !== sel) {
-        swapIcon(it, i, sel, instant);
-        /* AnimatedSize: the child swaps at once, the box animates; a new label is revealed by the clip. */
-        if (sel) { it.text.textContent = D[i].label; it.text.style.color = itemColor(i, true); it.label.style.width = (LABEL_GAP + D[i].w) + 'px'; }
-        else { it.text.textContent = ''; it.label.style.width = '0px'; }
-        it.sel = sel;
-      }
+      var lit = i === selected;
+      it.el.classList.toggle('is-selected', lit);
+      it.el.setAttribute('aria-current', lit ? 'page' : 'false');
+      /* AnimatedSwitcher keyed on isSelected: the outgoing glyph fades out as the incoming one fades in. */
+      it.off.style.opacity = lit ? '0' : '1';
+      it.on.style.opacity = lit ? '1' : '0';
     });
-    var indW = Math.min(selectedWidth(selected), L.widths[selected]);
-    var indL = L.lefts[selected] + (L.widths[selected] - indW) / 2;
-    ind.style.left = indL + 'px'; ind.style.width = indW + 'px';
-    /* The room's strong fill, no edge: the same pill whichever section is selected. */
-    ind.style.background = 'var(--fill-strong)';
-    out.widths.textContent = L.widths.map(function (v) { return v.toFixed(1); }).join(' · ') + '  gap ' + L.gap;
-    out.pill.textContent = 'left ' + indL.toFixed(1) + ' · width ' + indW.toFixed(1) + ' · 36 tall';
-    if (instant) { void inner.offsetWidth; applyK(); }
+    ind.style.left = (col * selected) + 'px'; ind.style.width = col + 'px';
+    out.widths.textContent = D.length + ' × ' + col.toFixed(1) + '  bar ' + bar.offsetWidth + ' × ' + BAR_HEIGHT;
+    out.pill.textContent = 'left ' + (col * selected).toFixed(1) + ' · width ' + col.toFixed(1) + ' · ' + inner.clientHeight + ' tall';
   }
   function select(i, tap) {
     if (tap) { haptic.classList.add('is-firing'); clearTimeout(haptic._t); haptic._t = setTimeout(function () { haptic.classList.remove('is-firing'); }, 650); }
     if (i === selected) return;
-    selected = i; paint(false);
+    selected = i; paint();
   }
   function applyK() {
     var r = reduce();
     root.style.setProperty('--k', r ? String(REDUCED) : '1');
     out.geo.textContent = r ? '16 ms (5% of 320) · cubic-bezier(0.2, 0.8, 0.2, 1)' : '320 ms · cubic-bezier(0.2, 0.8, 0.2, 1)';
-    out.bump.textContent = r ? '1.02 · 9 ms' : '1.02 · 180 ms · cubic-bezier(0.2, 0.8, 0.2, 1)';
-    out.swap.textContent = r ? 'fade 16 ms · size 16 ms' : 'fade 320 ms · size 320 ms';
+    out.swap.textContent = r ? 'fade 16 ms' : 'fade 320 ms';
     out.spring.textContent = r ? '26 ms · elasticOut(0.4)' : '520 ms · elasticOut(0.4)';
   }
   /* ---- elastic drag: _applyElasticResistance, clamp, then Tween(offset → 0) on elasticOut ---- */
@@ -201,9 +151,10 @@
   var mq = window.matchMedia('(prefers-reduced-motion: reduce)');
   if (mq.addEventListener) mq.addEventListener('change', function (e) { setReduce(e.matches); });
   setReduce(mq.matches);
-  var go = function () { build(); };
-  if (document.fonts && document.fonts.load) document.fonts.load('600 12px Onest').then(go, go); else go();
-  new MutationObserver(function () { items.forEach(function (it, i) { it.sel = null; }); paint(true); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  bar.style.height = BAR_HEIGHT + 'px'; bar.style.padding = SURFACE_PAD + 'px'; bar.style.borderWidth = BORDER + 'px';
+  wrap.style.paddingLeft = wrap.style.paddingRight = SIDE + 'px';
+  build();
+  window.addEventListener('resize', paint);
 })();
 </script>
 </body>
