@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/lifecycle/page_activity.dart';
+import 'package:cupola/core/lifecycle/poll_clock.dart';
 import 'package:cupola/core/lifecycle/refresh_on_return.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
@@ -43,6 +44,16 @@ class StackScreen extends ConsumerWidget {
   /// screen left over lunch is not believed.
   static const _staleAfter = Duration(minutes: 2);
 
+  /// How old the four arrs' libraries may be before a silent return reads
+  /// them again.
+  ///
+  /// They are the heaviest answers the app asks for (`GET /movie` alone can be
+  /// several megabytes), and on this page they only count: Movies, Missing,
+  /// Episodes, figures that move a few times a day. A return every two minutes
+  /// re-reads the queues, the sessions and every probe; the libraries wait for
+  /// a pull, a re-tap, or this.
+  static const _librariesStaleAfter = Duration(minutes: 15);
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final bottomPadding = FloatingNavBarMetrics.getScrollViewBottomPadding(
@@ -55,6 +66,11 @@ class StackScreen extends ConsumerWidget {
     ) {
       _invalidateStack(ref);
     });
+
+    // The libraries this page opens over have just been read, by it or by the
+    // Home: that is when their clock starts.
+    final clock = ref.read(pollClockProvider);
+    if (!clock.hasRun(_librariesClockId)) clock.note(_librariesClockId);
 
     final settings = ref.watch(currentSettingsProvider);
     // The one live figure on this page is what plays, and it sits in the
@@ -84,10 +100,15 @@ class StackScreen extends ConsumerWidget {
     return RefreshOnReturn(
       id: 'services.stack',
       maxAge: _staleAfter,
-      // The same refresh a re-tap of the tab performs, rather than a second
-      // path to the same invalidations, and silent, because nobody pressed
-      // anything.
-      onStale: () => ref.triggerNavigationRefresh(NavigationSection.stack),
+      // The re-tap's invalidations, silent because nobody pressed anything,
+      // and without the libraries until they are old enough: see
+      // [_librariesStaleAfter].
+      onStale: () => _invalidateStack(
+        ref,
+        libraries:
+            clock.timeUntilDue(_librariesClockId, _librariesStaleAfter) ==
+            Duration.zero,
+      ),
       child: AmbientScaffold(
         // No accent passed: the room on this screen is lit by the neutral lamp,
         // like every room with no artwork. The fleet below is seventeen
@@ -310,7 +331,13 @@ Future<void> _refreshStack(WidgetRef ref) async {
   ]);
 }
 
-void _invalidateStack(WidgetRef ref) {
+/// The [PollClock] key for the age of the arrs' libraries on this page.
+const _librariesClockId = 'services.stack.libraries';
+
+/// Invalidates what the stack reads; [libraries] says whether the arrs' whole
+/// libraries are among it ([serviceKpiLibrarySources]). Only a silent return
+/// leaves them out.
+void _invalidateStack(WidgetRef ref, {bool libraries = true}) {
   for (final service in ServiceKey.values) {
     ref.invalidate(serviceSummaryProvider(service));
     // The matrix's live line is the reason to pull-to-refresh this screen, and
@@ -336,14 +363,17 @@ void _invalidateStack(WidgetRef ref) {
   // above rebuilt a wrapper that awaited an answer already in the cache. A pull
   // that redrew every figure and re-asked no server whether it was up.
   ref.invalidate(instanceSummaryProvider);
+  if (libraries) ref.read(pollClockProvider).note(_librariesClockId);
   // The library providers the KPI builders read through, and therefore the two
   // figures on every stack card. Invalidating `serviceKpiProvider` alone would
   // recompute the same numbers from the same cached libraries, which is a pull
   // that looks like it worked and changes nothing. The recently-added rail no
   // longer reads these: it rides one history page per arr.
-  ref.invalidate(servicesMoviesProvider);
-  ref.invalidate(servicesSeriesProvider);
-  ref.invalidate(servicesMusicProvider);
+  if (libraries) {
+    ref.invalidate(servicesMoviesProvider);
+    ref.invalidate(servicesSeriesProvider);
+    ref.invalidate(servicesMusicProvider);
+  }
   // And the four non-swallowing reads the rail makes of those same libraries.
   // They are separate providers so that a server which did not answer reads an
   // em dash rather than a confident zero; separate also means a pull that
@@ -353,8 +383,9 @@ void _invalidateStack(WidgetRef ref) {
   // Every service's, not four: `serviceKpiSources` is exhaustive over
   // `ServiceKey`, which the hand-written list of the four arrs was not.
   for (final service in ServiceKey.values) {
+    final skipped = serviceKpiLibrarySources(service);
     for (final source in serviceKpiSources(service)) {
-      ref.invalidate(source);
+      if (libraries || !skipped.contains(source)) ref.invalidate(source);
     }
   }
 }

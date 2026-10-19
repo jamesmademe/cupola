@@ -211,6 +211,28 @@ List<ProviderOrFamily> serviceKpiSources(ServiceKey service) =>
       ServiceKey.plex => [plexSessionsProvider, plexStrictLibrariesProvider],
     };
 
+/// The [serviceKpiSources] that download a whole library: the arrs' `GET /movie`,
+/// `/series`, `/artist`, `/album` and `/author`, the heaviest answers the app
+/// asks for, behind figures that change a few times a day.
+///
+/// A silent return to Stack skips these until they are old enough to be worth
+/// the download; a pull or a re-tap reads them like everything else.
+List<ProviderOrFamily> serviceKpiLibrarySources(ServiceKey service) =>
+    switch (service) {
+      ServiceKey.radarr => [radarrKpiLibraryProvider, moviesForProvider],
+      ServiceKey.sonarr => [sonarrKpiLibraryProvider, seriesForProvider],
+      ServiceKey.lidarr => [
+        lidarrKpiLibraryProvider,
+        musicForProvider,
+        lidarrAlbumKeysForProvider,
+      ],
+      ServiceKey.readarr => [
+        readarrKpiLibraryProvider,
+        readarrAuthorsForProvider,
+      ],
+      _ => const [],
+    };
+
 /// What a service page's pull-to-refresh has to re-ask: its reachability probe
 /// and every source its KPI rail reads.
 ///
