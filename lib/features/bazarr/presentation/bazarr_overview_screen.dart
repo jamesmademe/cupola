@@ -115,7 +115,6 @@ class _WantedSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final section = ref.watch(bazarrOverviewWantedProvider);
-    final total = section.asData?.value.total;
     // The slab glows with its first title's light: the public poster of the
     // arr that holds it, the same one the room is lit by.
     final lead = [
@@ -132,10 +131,9 @@ class _WantedSection extends ConsumerWidget {
       light: leadPoster == null
           ? null
           : ref.watch(titleLightProvider(leadPoster)).value?.art,
-      // "—" while it loads or after it failed: a "0 wanted" printed over an
-      // unanswered question is a claim nobody made. No age clause either:
-      // Bazarr's wanted rows carry no date, so "oldest 8 days" cannot be said.
-      subtitle: total == null ? '—' : '$total',
+      // No count under the title: the room's figure above (`N wanted`) is the
+      // same badge, and a second copy of it says nothing new. No age clause
+      // either: Bazarr's wanted rows carry no date.
       destination: ServiceTab.wanted,
       child: AsyncValueWidget<BazarrOverviewSection>.section(
         value: section,

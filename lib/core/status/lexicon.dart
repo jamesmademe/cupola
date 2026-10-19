@@ -35,6 +35,11 @@ enum StateWord {
   /// Someone stopped it on purpose. Not a fault, never "stuck".
   stopped('Stopped', StatusTone.neutral),
 
+  /// A viewer's pause in a player: the session holds its place and its
+  /// transcode, and is still listed. Playback only: `Stopped` would say they
+  /// ended it, and a download someone halted stays [stopped].
+  paused('Paused', StatusTone.neutral),
+
   /// The operator put the title on Seerr's blocklist, so Seerr takes no
   /// request for it. A deliberate choice, not a fault. The state, never the
   /// action: the arrs' "blocklist and search" verb stays banned.

@@ -134,8 +134,19 @@ void main() {
       find.semantics.byLabel('Severance, S2 E4, Italian, Sonarr'),
       findsOneWidget,
     );
-    // The header's figure is Bazarr's own badge, not the length of the page.
-    expect(find.text('47'), findsOneWidget);
+    // The slab's title carries no count: the room's figure above is the same
+    // badge, and a second copy under the title said nothing new.
+    expect(
+      find.widgetWithText(ServiceOverviewSection, 'Wanted subtitles'),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.widgetWithText(ServiceOverviewSection, 'Wanted subtitles'),
+        matching: find.text('47'),
+      ),
+      findsNothing,
+    );
   });
 
   testWidgets('a wanted row wears its title\'s public poster, and the slab '

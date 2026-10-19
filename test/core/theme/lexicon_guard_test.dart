@@ -529,6 +529,13 @@ const _allowed = <({String file, String literal, String reason})>[
         '"stopped"',
   ),
   (
+    file: 'lib/core/status/lexicon.dart',
+    literal: 'Paused',
+    reason:
+        "a viewer's pause in a player (`StateWord.paused`): the session is "
+        'still listed and holds its place; downloads stay "Stopped"',
+  ),
+  (
     file: 'lib/features/stream/domain/stream_semantics.dart',
     literal: 'paused',
     reason:

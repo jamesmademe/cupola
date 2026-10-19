@@ -24,14 +24,14 @@ String nowPlayingTitle(StreamSession session) {
   return [if (who.isNotEmpty) who, session.title, ?code].join(dotSeparator);
 }
 
-/// `Living room TV · 9 min left`, with `Stopped` before the time while the
+/// `Living room TV · 9 min left`, with `Paused` before the time while the
 /// player holds it: where, and how long is left. Nothing about when it
 /// started, which no server says.
 String nowPlayingLine(StreamSession session) {
   final remaining = session.remaining;
   return [
     if (session.deviceLabel.trim().isNotEmpty) session.deviceLabel.trim(),
-    if (session.isPaused) StateWord.stopped.label,
+    if (session.isPaused) StateWord.paused.label,
     if (remaining != null) '${formatTimeSpan(remaining)} left',
   ].join(dotSeparator);
 }

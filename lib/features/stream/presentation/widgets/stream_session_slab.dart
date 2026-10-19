@@ -268,7 +268,7 @@ class _Delivery extends StatelessWidget {
       surface: CupolaRoom.of(context).slab,
     );
     final words = [
-      if (session.isPaused) StateWord.stopped.label,
+      if (session.isPaused) StateWord.paused.label,
       session.playMethod.label,
       ?session.transcodeReasonLabel,
     ].join(dotSeparator);

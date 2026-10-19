@@ -166,7 +166,7 @@ under it, a hairline between rows. A 4pt bar (`HomeRowBar`) says how far somethi
   (`Approved · sent to Radarr`, `Declined`) without its buttons, in its place, until the Home is read again; a request
   answered from another list leaves the module at once. `See all requests` when more wait than the rows show.
 - **Now playing**: one row per playback, a disc with the viewer's initial, `Anna · Sintel` (an episode by its code),
-  `Living room TV · 9 min left` (`Stopped` while the player holds it), an ink bar: watching is not a status. The line
+  `Living room TV · 9 min left` (`Paused` while the player holds it), an ink bar: watching is not a status. The line
   under the name is the server (`Jellyfin`). Absent when nobody watches; a server that did not answer keeps it in place.
   Read again every 30 s while the Home is seen.
 
