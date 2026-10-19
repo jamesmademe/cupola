@@ -12,7 +12,6 @@ import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:cupola/features/discover/data/seerr_accounts.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
-import 'package:cupola/features/discover/domain/seerr_arr_server.dart';
 import 'package:cupola/features/discover/domain/seerr_numbering.dart';
 import 'package:cupola/features/discover/domain/seerr_server_facts.dart';
 import 'package:cupola/features/discover/domain/seerr_media_copy.dart';
@@ -27,6 +26,7 @@ import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
+import 'package:cupola/features/series/presentation/series_provider.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
@@ -88,6 +88,10 @@ final mediaRadarrCopyProvider = FutureProvider.autoDispose
 /// series, else the first Sonarr whose library carries the TMDB id (Sonarr v4
 /// records it; v3 does not, and a v3 Sonarr then cannot be matched without a
 /// Seerr). Null when nobody can say.
+///
+/// The library is the one the app already holds for that connection
+/// ([seriesForProvider], read once a session), never a download of its own:
+/// this runs on every opening of a series page.
 final mediaTvdbIdProvider = FutureProvider.autoDispose.family<int?, MediaKey>((
   ref,
   key,
@@ -108,9 +112,7 @@ final mediaTvdbIdProvider = FutureProvider.autoDispose.family<int?, MediaKey>((
   }
   for (final sonarr in _configured(ref, ServiceKey.sonarr)) {
     try {
-      final library = await ref
-          .watch(sonarrServiceForProvider(sonarr.id))
-          .getSeriesOrThrow();
+      final library = await ref.watch(seriesForProvider(sonarr.id).future);
       for (final series in library) {
         if (series.tmdbId == key.tmdbId && series.tvdbId > 0) {
           return series.tvdbId;
@@ -254,42 +256,60 @@ final mediaSeerrRecordProvider = FutureProvider.autoDispose
         throw ArgumentError.value(source.key, 'key', 'Seerr needs a TMDB id');
       }
       final seerr = ref.watch(seerrServiceForProvider(source.connectionId));
-      final details = source.key.isMovie
-          ? await seerr.getMovie(tmdbId)
-          : await seerr.getTv(tmdbId);
-      List<SeerrArrServer>? servers;
-      try {
-        servers = await seerr.getArrServers(_arrOf(source.key));
-      } catch (_) {
-        // An account without ADMIN may not read them, and a failed read is
-        // no list either: no copy is bound, and nothing is claimed.
-        servers = null;
-      }
-      int? rottenTomatoes;
-      double? imdb;
-      try {
-        if (source.key.isMovie) {
-          (:rottenTomatoes, :imdb) = await seerr.getMovieScores(tmdbId);
-        } else {
-          rottenTomatoes = await seerr.getTvCriticsScore(tmdbId);
-        }
-      } catch (_) {
-        // A score that did not answer reads `—`: never the record's
-        // failure.
-      }
+      // Four reads that need nothing from one another, started together: the
+      // page waits for the slowest, not for the sum, and the scores, which
+      // Seerr goes outside to fetch, no longer hold the title back. Every one
+      // but the record is answered with null where it is started, not where
+      // it is awaited: a read failing before its turn at `await` would be an
+      // error nobody is listening for.
+      final detailsRead = source.key.isMovie
+          ? seerr.getMovie(tmdbId)
+          : seerr.getTv(tmdbId);
+      // An account without ADMIN may not read the servers, and a failed read
+      // is no list either: no copy is bound, and nothing is claimed.
+      final serversRead = _orNull(
+        () => seerr.getArrServers(_arrOf(source.key)),
+      );
+      // A score that did not answer reads `—`: never the record's failure.
+      final scoresRead = _orNull<({int? rottenTomatoes, double? imdb})>(
+        () async {
+          if (source.key.isMovie) return seerr.getMovieScores(tmdbId);
+          return (
+            rottenTomatoes: await seerr.getTvCriticsScore(tmdbId),
+            imdb: null,
+          );
+        },
+      );
+      // Asked of a public route, once per connection; a silence leaves the
+      // codes that differ undecoded.
+      final numberingRead = _orNull(seerr.numbering);
+
+      final details = await detailsRead;
+      final servers = await serversRead;
+      final scores = await scoresRead;
       return MediaAnswer(
         MediaSeerrRecord(
           details: details,
           arrServers: servers,
-          rottenTomatoes: rottenTomatoes,
-          imdb: imdb,
-          // Asked of a public route, once per connection; a silence leaves
-          // the codes that differ undecoded.
-          numbering: await seerr.numbering().catchError((Object _) => null),
+          rottenTomatoes: scores?.rottenTomatoes,
+          imdb: scores?.imdb,
+          numbering: await numberingRead,
         ),
         DateTime.now(),
       );
     }, retry: noProviderRetry);
+
+/// [read]'s answer, or null when it threw, whether on the spot or later.
+///
+/// The read starts as this is called and the returned future never fails, so
+/// it can be started early and awaited at leisure.
+Future<T?> _orNull<T>(Future<T?> Function() read) async {
+  try {
+    return await read();
+  } catch (_) {
+    return null;
+  }
+}
 
 /// Whether [path], [title] and [year] Bazarr holds name the same copy as the
 /// arr's: the same path, or the same title and year.
