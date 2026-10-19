@@ -74,6 +74,21 @@ final pendingRequestsForProvider =
           .getPendingRequests();
     }, retry: noProviderRetry);
 
+/// Reads every list that shows Seerr's requests again: the lens's history,
+/// every connection's, the ones in motion and the ones waiting for a decision.
+///
+/// Through the [container] rather than a ref, so a write that outlasts the page
+/// that made it can still say what it changed. Dropping the family is dropping
+/// every connection's entry, and the lens's own id collapses onto the plain
+/// provider: dropping one and not the other leaves a stale copy behind.
+void invalidateSeerrRequests(ProviderContainer container) {
+  container
+    ..invalidate(requestsProvider)
+    ..invalidate(requestsForProvider)
+    ..invalidate(activeRequestsForProvider)
+    ..invalidate(pendingRequestsForProvider);
+}
+
 /// Whether the lens's Seerr has a server that takes 4K requests of [arr]
 /// (Radarr or Sonarr), from the list the request sheet reads
 /// (`/api/v1/service/radarr|sonarr`, which a requester may read too).

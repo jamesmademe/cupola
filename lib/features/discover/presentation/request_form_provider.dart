@@ -16,6 +16,7 @@ import 'package:cupola/features/discover/domain/seerr_grant.dart';
 import 'package:cupola/features/discover/domain/seerr_quota.dart';
 import 'package:cupola/features/discover/domain/seerr_refusal.dart';
 import 'package:cupola/features/discover/domain/seerr_request_gate.dart';
+import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
@@ -581,6 +582,9 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
             for (final season in state.seasons)
               if (!partialRequests || ticked.contains(season)) season,
           ];
+    // Taken before the `await`: the sheet can close while Seerr answers, and a
+    // request that was made still has to reach the lists that show it.
+    final container = ref.container;
     try {
       final service = ref.read(seerrServiceProvider);
       if (chooses) {
@@ -603,6 +607,7 @@ class RequestFormNotifier extends Notifier<RequestFormState> {
           seasons: seasons,
         );
       }
+      invalidateSeerrRequests(container);
       return null;
     } catch (error) {
       return _submitFailure(error, title: title);

@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/discover/domain/seerr_request_gate.dart';
@@ -466,6 +468,60 @@ void main() {
       });
     });
 
+    test('a request that was made is in the lists that show requests', () async {
+      // They are kept for the life of the app, so a list read before the
+      // request kept answering without it: Home and Requests did not show what
+      // the person had just asked for until they pulled down.
+      final service = _CountingSeerr();
+      final container = createContainer(service);
+      const args = (
+        mediaId: 321,
+        mediaType: 'movie',
+        copies: SeerrRequestCopies.both,
+      );
+      keepAlive(container, args);
+      await _flushProviderTasks();
+
+      Future<void> readEveryList() async {
+        await Future.wait([
+          container.read(requestsProvider.future),
+          container.read(requestsForProvider('').future),
+          container.read(activeRequestsForProvider('').future),
+          container.read(pendingRequestsForProvider('').future),
+        ]);
+      }
+
+      await readEveryList();
+      final before = service.requestReads;
+      expect(before, greaterThan(0));
+
+      final notifier = container.read(requestFormProvider(args).notifier);
+      expect(await notifier.submitRequest(), isNull);
+      await readEveryList();
+
+      expect(service.requestReads, before * 2);
+    });
+
+    test('a request that was refused leaves the lists as they were', () async {
+      final service = _CountingSeerr(refuses: true);
+      final container = createContainer(service);
+      const args = (
+        mediaId: 321,
+        mediaType: 'movie',
+        copies: SeerrRequestCopies.both,
+      );
+      keepAlive(container, args);
+      await _flushProviderTasks();
+      await container.read(requestsProvider.future);
+      final before = service.requestReads;
+
+      final notifier = container.read(requestFormProvider(args).notifier);
+      expect(await notifier.submitRequest(), isNotNull);
+      await container.read(requestsProvider.future);
+
+      expect(service.requestReads, before);
+    });
+
     group('with a standard and a 4K server', () {
       _FakeSeerr twoServers() => _FakeSeerr(
         radarrServers: [
@@ -560,6 +616,48 @@ void main() {
 Future<void> _flushProviderTasks() async {
   for (var i = 0; i < 5; i++) {
     await Future<void>.delayed(Duration.zero);
+  }
+}
+
+/// Counts how often the request history is read, and can refuse a request.
+class _CountingSeerr extends _FakeSeerr {
+  _CountingSeerr({this.refuses = false})
+    : super(
+        radarrServers: const [
+          {'id': 9, 'name': 'Main'},
+        ],
+        radarrProfilesByServer: const {
+          9: {
+            'profiles': [
+              {'id': 2, 'name': 'HD'},
+            ],
+            'rootFolders': [
+              {'path': '/movies'},
+            ],
+          },
+        },
+      );
+
+  final bool refuses;
+  int requestReads = 0;
+
+  @override
+  Future<List<SeerrRequest>> getRequests() async {
+    requestReads++;
+    return const [];
+  }
+
+  @override
+  Future<void> createRequest({
+    required String mediaType,
+    required int mediaId,
+    int? profileId,
+    String? rootFolder,
+    int? serverId,
+    bool is4k = false,
+    List<int>? seasons,
+  }) async {
+    if (refuses) throw Exception('refused');
   }
 }
 
