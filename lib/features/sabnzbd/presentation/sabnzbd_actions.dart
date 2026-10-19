@@ -22,10 +22,13 @@ Future<bool> runSabnzbdAction(
   List<ProviderOrFamily> invalidate = const [],
 }) async {
   final client = ref.read(sabnzbdClientProvider);
+  // Not [ref] after the `await`: it dies with the page that asked, and the
+  // write may outlast that page.
+  final container = ProviderScope.containerOf(context, listen: false);
   try {
     await action(client);
     for (final provider in invalidate) {
-      ref.invalidate(provider);
+      container.invalidate(provider);
     }
     if (successMessage != null && context.mounted) {
       SnackBarHelper.success(context, successMessage);

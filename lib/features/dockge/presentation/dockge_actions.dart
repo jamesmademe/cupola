@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
+import 'package:cupola/core/utils/service_action.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/features/dockge/data/dockge_client.dart';
@@ -30,27 +31,29 @@ Future<bool> runDockgeAction(
   // agent has to reach that agent, and `dockgeClientProvider` is always the
   // hub.
   final DockgeClient target = client ?? ref.read(dockgeLensedClientProvider);
+  // Taken before the `await`, not read from [ref] after it: an update runs for
+  // minutes, and the page that asked is routinely gone by the time it ends.
+  final container = ProviderScope.containerOf(context, listen: false);
+  final say = outcomeSayer(context);
   try {
     await action(target);
     for (final provider in invalidate) {
-      ref.invalidate(provider);
+      container.invalidate(provider);
     }
-    if (successMessage != null && context.mounted) {
-      SnackBarHelper.success(context, successMessage);
+    if (successMessage != null) {
+      say((at) => SnackBarHelper.success(at, successMessage));
     }
     return true;
   } catch (e) {
-    if (context.mounted) {
-      SnackBarHelper.error(context, failureMessage, detail: e);
-    }
+    say((at) => SnackBarHelper.error(at, failureMessage, detail: e));
     return false;
   }
 }
 
 /// Convenience wrapper around [runDockgeAction] for the action buttons/chips
 /// that fire a stack mutation with the positional
-/// `(action, success, failure)` shape. Invalidates [invalidate] and runs
-/// [onSuccess] only when the action succeeds. Returns the same `bool`.
+/// `(action, success, failure)` shape. Invalidates [invalidate] when the action
+/// succeeds. Returns the same `bool`.
 Future<bool> runDockgeStackAction(
   BuildContext context,
   WidgetRef ref,
@@ -58,21 +61,16 @@ Future<bool> runDockgeStackAction(
   String success,
   String failure, {
   List<ProviderOrFamily> invalidate = const [],
-  void Function()? onSuccess,
   DockgeClient? client,
-}) async {
-  final ok = await runDockgeAction(
-    context,
-    ref,
-    action: action,
-    successMessage: success,
-    failureMessage: failure,
-    invalidate: invalidate,
-    client: client,
-  );
-  if (ok && onSuccess != null) onSuccess();
-  return ok;
-}
+}) => runDockgeAction(
+  context,
+  ref,
+  action: action,
+  successMessage: success,
+  failureMessage: failure,
+  invalidate: invalidate,
+  client: client,
+);
 
 /// The stack commands that interrupt something that is running, and so ask
 /// first. Start is additive and stays a single tap; Delete has its own dialog.

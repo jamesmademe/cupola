@@ -37,13 +37,17 @@ Future<bool> runNpmAction(
         '',
     copy: npmCapabilityCopy(resource),
   );
+  // Taken before the `await`, not read from [ref] after it: a renewal or a slow
+  // write outlasts the page that asked.
+  final container = ProviderScope.containerOf(context, listen: false);
+  final say = outcomeSayer(context);
   try {
     await action(client);
     for (final provider in invalidate) {
-      ref.invalidate(provider);
+      container.invalidate(provider);
     }
-    if (successMessage != null && context.mounted) {
-      SnackBarHelper.success(context, successMessage);
+    if (successMessage != null) {
+      say((at) => SnackBarHelper.success(at, successMessage));
     }
     return true;
   } catch (e) {
@@ -53,17 +57,17 @@ Future<bool> runNpmAction(
     // an expired token onto the same `unauthorized` verdict, and neither of
     // those says anything about what this account may change: dimming the
     // whole screen over a mistyped password would be a lie with a long tail.
-    final refused = markCapabilityRefusal(ref, capability, e);
+    final refused = markCapabilityRefusal(container, capability, e);
     for (final provider in invalidate) {
-      ref.invalidate(provider);
+      container.invalidate(provider);
     }
-    if (context.mounted) {
+    say((at) {
       if (refused) {
-        showCapabilityRefusal(context, capability);
+        showCapabilityRefusal(at, capability);
       } else {
-        SnackBarHelper.error(context, failureMessage, detail: e);
+        SnackBarHelper.error(at, failureMessage, detail: e);
       }
-    }
+    });
     return false;
   }
 }

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_animation.dart';
@@ -20,15 +21,24 @@ import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
+/// What a command on [name] leaves out of date. Handed to the action wrapper as
+/// a list rather than run from a callback holding a `ref`: an update takes
+/// minutes, and the page that asked is routinely gone before it ends.
+List<ProviderOrFamily> _staleAfterAction(String name) => [
+  dockgeStackDetailProvider(name),
+  dockgeServiceStatusProvider(name),
+  dockgeStackListProvider,
+];
+
 class DockgeStackDetailScreen extends ConsumerWidget {
   const DockgeStackDetailScreen({super.key, required this.name});
 
   final String name;
 
   void _refresh(WidgetRef ref) {
-    ref.invalidate(dockgeStackDetailProvider(name));
-    ref.invalidate(dockgeServiceStatusProvider(name));
-    ref.invalidate(dockgeStackListProvider);
+    for (final provider in _staleAfterAction(name)) {
+      ref.invalidate(provider);
+    }
   }
 
   @override
@@ -131,7 +141,7 @@ class _DetailBody extends ConsumerWidget {
             detail.name,
             summary: _StatusHeader(status: detail.status),
           ),
-          _ActionBar(name: detail.name, onRefresh: onRefresh),
+          _ActionBar(name: detail.name),
           const SizedBox(height: 20),
           Text(
             'Services',
@@ -186,10 +196,9 @@ class _StatusHeader extends StatelessWidget {
 }
 
 class _ActionBar extends ConsumerWidget {
-  const _ActionBar({required this.name, required this.onRefresh});
+  const _ActionBar({required this.name});
 
   final String name;
-  final void Function(WidgetRef ref) onRefresh;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -221,7 +230,7 @@ class _ActionBar extends ConsumerWidget {
             (c) => c.startStack(name),
             'Started $name',
             'Could not start',
-            onSuccess: () => onRefresh(ref),
+            invalidate: _staleAfterAction(name),
           ),
         ),
         _ActionChip(
@@ -307,7 +316,7 @@ class _ActionBar extends ConsumerWidget {
       action,
       success,
       failure,
-      onSuccess: () => onRefresh(ref),
+      invalidate: _staleAfterAction(name),
     );
   }
 

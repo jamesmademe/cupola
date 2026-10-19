@@ -48,13 +48,16 @@ Future<bool> runNzbgetAction(
   List<ProviderOrFamily> invalidate = const [],
 }) async {
   final client = ref.read(nzbgetClientProvider);
+  // Not [ref] after the `await`: it dies with the page that asked, and the
+  // write may outlast that page.
+  final container = ProviderScope.containerOf(context, listen: false);
   try {
     final result = await action(client);
     // Refreshed either way: when NZBGet refuses a command it is usually because
     // the queue moved under us, and re-reading is what shows the user what is
     // actually there now.
     for (final provider in invalidate) {
-      ref.invalidate(provider);
+      container.invalidate(provider);
     }
     if (_isRejection(result)) {
       if (context.mounted) {

@@ -24,10 +24,13 @@ Future<bool> runTorrentAction(
   List<ProviderOrFamily> invalidate = const [],
 }) async {
   final service = ref.read(qbittorrentServiceProvider);
+  // Not [ref] after the `await`: it dies with the page that asked, and the
+  // write may outlast that page.
+  final container = ProviderScope.containerOf(context, listen: false);
   try {
     await action(service);
     for (final provider in invalidate) {
-      ref.invalidate(provider);
+      container.invalidate(provider);
     }
     if (successMessage != null && context.mounted) {
       SnackBarHelper.success(context, successMessage);

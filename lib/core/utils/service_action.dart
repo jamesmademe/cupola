@@ -61,13 +61,7 @@ Future<bool> _run(
   // The app's own navigator outlives every page: where the outcome is said
   // once the page that asked has gone, and where a Retry runs from.
   final host = Navigator.maybeOf(context, rootNavigator: true)?.context;
-  void say(void Function(BuildContext at) show) {
-    if (context.mounted) {
-      show(context);
-    } else if (host != null && host.mounted) {
-      show(host);
-    }
-  }
+  final say = outcomeSayer(context);
 
   try {
     await action();
@@ -108,6 +102,23 @@ Future<bool> _run(
   }
 }
 
+/// Says an outcome where it can be read: on [context] while the page that
+/// asked is still there, on the app's own navigator once it has gone. Taken
+/// **before** the first `await`, which is when the page is still there to
+/// reach the navigator through.
+void Function(void Function(BuildContext at) show) outcomeSayer(
+  BuildContext context,
+) {
+  final host = Navigator.maybeOf(context, rootNavigator: true)?.context;
+  return (show) {
+    if (context.mounted) {
+      show(context);
+    } else if (host != null && host.mounted) {
+      show(host);
+    }
+  };
+}
+
 /// Whether the service turned down this request as it was made: a 4xx other
 /// than a timeout (408) or too many requests (429), both of which pass.
 /// Sending it again gets the same answer.
@@ -138,21 +149,28 @@ bool reportCapabilityRefusal(
   CapabilityTarget capability,
   Object error,
 ) {
-  if (!markCapabilityRefusal(ref, capability, error)) return false;
+  if (!markCapabilityRefusal(
+    ProviderScope.containerOf(context, listen: false),
+    capability,
+    error,
+  )) {
+    return false;
+  }
   showCapabilityRefusal(context, capability);
   return true;
 }
 
 /// The ledger half of [reportCapabilityRefusal]: records the refusal and says
-/// whether [error] was one. Needs no [BuildContext], so it runs even when the
-/// page that started the write has gone.
+/// whether [error] was one. Takes the [container] rather than a ref, which
+/// dies with its widget, so it runs even when the page that started the write
+/// has gone.
 bool markCapabilityRefusal(
-  WidgetRef ref,
+  ProviderContainer container,
   CapabilityTarget capability,
   Object error,
 ) {
   if (!isPermissionRefusal(error)) return false;
-  ref
+  container
       .read(capabilityScopeProvider.notifier)
       .markReadOnly(capability.connectionId);
   return true;

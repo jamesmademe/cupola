@@ -42,10 +42,13 @@ Future<bool> runTransmissionAction(
   List<ProviderOrFamily> invalidate = const [],
 }) async {
   final client = ref.read(transmissionClientProvider);
+  // Not [ref] after the `await`: it dies with the page that asked, and the
+  // write may outlast that page.
+  final container = ProviderScope.containerOf(context, listen: false);
   try {
     await action(client);
     for (final provider in invalidate) {
-      ref.invalidate(provider);
+      container.invalidate(provider);
     }
     if (successMessage != null && context.mounted) {
       SnackBarHelper.success(context, successMessage);
@@ -55,7 +58,7 @@ Future<bool> runTransmissionAction(
     // Refreshed on failure too: a rejected command usually means the queue
     // moved under us, and re-reading is what shows the user what is there now.
     for (final provider in invalidate) {
-      ref.invalidate(provider);
+      container.invalidate(provider);
     }
     if (context.mounted) {
       SnackBarHelper.error(context, failureMessage, detail: e);
@@ -185,6 +188,8 @@ Future<TransmissionAddVerdict> runTransmissionAdd(
   Uint8List? file,
   List<ProviderOrFamily> invalidate = const [],
 }) async {
+  // Not [ref] after the `await`: it dies with the page that asked.
+  final container = ProviderScope.containerOf(context, listen: false);
   TransmissionAddReport report;
   try {
     final client = ref.read(transmissionClientProvider);
@@ -206,7 +211,7 @@ Future<TransmissionAddVerdict> runTransmissionAdd(
     );
   }
   for (final provider in invalidate) {
-    ref.invalidate(provider);
+    container.invalidate(provider);
   }
   if (context.mounted) {
     switch (report.verdict) {
