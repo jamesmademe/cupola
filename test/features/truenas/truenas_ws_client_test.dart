@@ -232,6 +232,34 @@ void main() {
     expect(server.upgrades, 2, reason: 'the idle socket was closed');
   });
 
+  test(
+    'a call that timed out does not keep the socket from going idle',
+    () async {
+      // The regression: a timeout removed the call from the pending map without
+      // completing it, so the count of what was using the socket stayed at one for
+      // the life of the client and the idle close never ran again.
+      server.silentMethods.add('system.info');
+      final client = _LoopbackClient(
+        baseUrl: server.url,
+        callTimeout: const Duration(milliseconds: 300),
+        idleTimeout: const Duration(milliseconds: 200),
+      );
+      addTearDown(client.close);
+
+      await expectLater(
+        client.call('system.info'),
+        throwsA(isA<TrueNasException>()),
+      );
+      server.silentMethods.clear();
+      expect(await client.call('pool.query'), 'ok');
+      expect(server.upgrades, 2);
+
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      expect(await client.call('pool.query'), 'ok');
+      expect(server.upgrades, 3, reason: 'the idle socket was closed');
+    },
+  );
+
   test('in-flight calls fail when the connection is dropped', () async {
     server.silentMethods.addAll({'a.slow', 'b.slow'});
     final client = _LoopbackClient(

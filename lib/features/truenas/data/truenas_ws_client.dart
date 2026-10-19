@@ -481,12 +481,6 @@ class TrueNasWsClient {
     final completer = Completer<dynamic>();
     _idle.begin();
     _pending[id] = completer;
-    unawaited(
-      completer.future.then<void>(
-        (_) => _idle.end(),
-        onError: (Object _) => _idle.end(),
-      ),
-    );
     socket.add(
       jsonEncode({
         'jsonrpc': '2.0',
@@ -531,7 +525,12 @@ class TrueNasWsClient {
               reason: ServiceFailureReason.timeout,
             );
           },
-        );
+        )
+        // The end of the call as the caller sees it, not the completer's: a
+        // timeout takes the call out of `_pending` without completing it, and
+        // counting the completer left the socket held for the life of the
+        // client, so the idle close never ran again.
+        .whenComplete(_idle.end);
   }
 
   /// Tears the transport down so the next call reconnects, failing everything
