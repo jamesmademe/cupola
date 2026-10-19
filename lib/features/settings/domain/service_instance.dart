@@ -276,6 +276,13 @@ class ServiceInstance {
     return url.isNotEmpty && credential.isNotEmpty;
   }
 
+  /// Whether this connection is reached somewhere else than [prior] was: the
+  /// address at home, the one away, or what a gateway in front of either asks
+  /// for. A name, a key or a viewer is not a move: the certificate a server
+  /// presents belongs to the address.
+  bool reachesDifferentlyFrom(ServiceInstance prior) =>
+      url != prior.url || access != prior.access || away != prior.away;
+
   /// The join: `Radarr` with no label, `Radarr · 4K` with one.
   ///
   /// **Formatting only. It cannot answer whether the label should be shown.**

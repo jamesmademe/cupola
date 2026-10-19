@@ -751,7 +751,18 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     // authenticated rather than blindly accepted. Only prompts when the
     // failure is specifically an untrusted certificate; a reachable server or
     // an unrelated failure just saves as before.
-    final pinned = await _maybePromptCertTrust(updated, notifier);
+    //
+    // And only when the save moved the connection: an address, the one away,
+    // or what a gateway in front of either asks for. Anything else (a name, a
+    // key, a viewer) leaves the certificate as it was, and used to wait out a
+    // connection test first, two timeouts of it with the server down, before
+    // closing on a label. "Test connection" runs that flow on demand.
+    final saved = updated.instanceById(_target.id);
+    final moved =
+        prior == null || saved == null || saved.reachesDifferentlyFrom(prior);
+    final pinned = moved
+        ? await _maybePromptCertTrust(updated, notifier)
+        : null;
     if (!mounted) return;
     if (pinned != null) updated = pinned;
 
