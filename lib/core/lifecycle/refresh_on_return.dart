@@ -55,14 +55,21 @@ class _RefreshOnReturnState extends ConsumerState<RefreshOnReturn> {
       // A page that has never been marked is not stale, it is new: whatever it
       // is showing, it has just loaded. Marking it now starts the clock for the
       // next return.
-      if (clock.hasRun(widget.id) &&
-          clock.timeUntilDue(widget.id, widget.maxAge) == Duration.zero) {
+      //
+      // The clock is the age of what is on screen, so it moves only when
+      // something was read: here, or when the refresh below runs. A return that
+      // read nothing leaves it where it was, or a page visited every ninety
+      // seconds would never get as old as [RefreshOnReturn.maxAge].
+      if (!clock.hasRun(widget.id)) {
+        clock.note(widget.id);
+      } else if (clock.timeUntilDue(widget.id, widget.maxAge) ==
+          Duration.zero) {
+        clock.note(widget.id);
         // Post-frame: `onStale` invalidates providers, and this runs in build.
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) widget.onStale();
         });
       }
-      clock.note(widget.id);
     }
     _wasLive = isLive;
 

@@ -115,6 +115,24 @@ void main() {
       expect(refreshes, hasLength(1));
     });
 
+    testWidgets('short absences add up: the clock runs from the last read, not '
+        'from the last return', (tester) async {
+      final host = await pump(tester);
+
+      // Two glances at another tab, ninety seconds each. Neither is long enough
+      // alone, and nothing was read in between, so the page is three minutes
+      // old on the second return.
+      for (var glance = 0; glance < 2; glance++) {
+        host.setBranchActive(false);
+        await tester.pumpAndSettle();
+        now = now.add(const Duration(seconds: 90));
+        host.setBranchActive(true);
+        await tester.pumpAndSettle();
+
+        expect(refreshes, hasLength(glance));
+      }
+    });
+
     testWidgets('a rebuild while visible does not refresh', (tester) async {
       final host = await pump(tester);
       now = now.add(const Duration(minutes: 10));
