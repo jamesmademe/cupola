@@ -22,6 +22,8 @@ import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/providers/provider_retry.dart';
+
 /// Wanted rows the section draws before the header's count is the only place
 /// the rest are reported.
 const int bazarrWantedPreviewLimit = 5;
@@ -235,11 +237,11 @@ final bazarrOverviewWantedProvider =
       final items = await ref.watch(bazarrDashboardWantedProvider.future);
       final badges = await ref.watch(bazarrBadgesProvider.future);
       return bazarrWantedSection(items, total: badges.totalWanted);
-    });
+    }, retry: noProviderRetry);
 
 /// The Overview's second region: what Bazarr did recently.
 final bazarrOverviewHistoryProvider =
     FutureProvider.autoDispose<List<BazarrOverviewRow>>((ref) async {
       final items = await ref.watch(bazarrDashboardHistoryProvider.future);
       return bazarrHistoryRows(items);
-    });
+    }, retry: noProviderRetry);

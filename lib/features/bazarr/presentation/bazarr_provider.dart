@@ -43,9 +43,13 @@ BazarrService _bazarrService(Ref ref, {required String? instanceId}) {
 }
 
 /// Aggregated counts for the Bazarr dashboard stat row.
+///
+/// `retry: noProviderRetry`, like every source the readout rail waits on: under
+/// the default policy a Bazarr that does not answer holds the rail on its
+/// skeleton for the whole backoff (about half a minute) before it says so.
 final bazarrBadgesProvider = FutureProvider<BazarrBadges>((ref) async {
   return ref.watch(bazarrServiceProvider).getBadges();
-});
+}, retry: noProviderRetry);
 
 /// Every provider Bazarr has enabled, ready or waited out.
 final bazarrProviderStatusesProvider =
@@ -64,7 +68,7 @@ final bazarrDashboardWantedProvider = FutureProvider<List<BazarrWantedItem>>((
     service.getWantedMovies(start: 0, length: _defaultDashboardPageSize),
   ]);
   return [...results[0].data, ...results[1].data];
-});
+}, retry: noProviderRetry);
 
 /// Recent subtitle activity merged from episodes + movies history.
 final bazarrDashboardHistoryProvider = FutureProvider<List<BazarrHistoryItem>>((
@@ -85,7 +89,7 @@ final bazarrDashboardHistoryProvider = FutureProvider<List<BazarrHistoryItem>>((
     return tb.compareTo(ta);
   });
   return items;
-});
+}, retry: noProviderRetry);
 
 /// One typed page from either half of Bazarr history.
 final bazarrHistoryPageProvider = FutureProvider.autoDispose
