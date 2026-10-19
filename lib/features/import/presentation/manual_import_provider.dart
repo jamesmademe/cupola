@@ -364,6 +364,20 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
   @override
   ManualImportFlowState build() => const ManualImportFlowState();
 
+  /// Which reads the flow is waiting on, one count for the folder listing and
+  /// one for the scans. Every read that writes what the screens draw takes the
+  /// next number when it starts and drops its answer if a later one has taken
+  /// one since.
+  ///
+  /// The notifier is not `autoDispose`, and a scan of a big folder can take
+  /// minutes: without this, an answer that arrived after the person had chosen
+  /// another folder wrote the first folder's files under the second one, ticked
+  /// them, and ended the second one's spinner. Choosing a folder ends the scan
+  /// of the one before it; a scan does not end the listing of the folder it
+  /// reads, so the two are counted apart.
+  int _browses = 0;
+  int _scans = 0;
+
   /// The client for the connection this flow is bound to.
   ///
   /// Every call in this notifier goes through here rather than through the
@@ -401,10 +415,13 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
       targetId: targetId,
       isLoadingBrowse: true,
     );
+    final read = ++_browses;
+    _scans++;
 
     try {
       final api = _api(service);
       final rootFolders = await api.getRootFolders();
+      if (read != _browses) return;
       final defaultPath = initialPath ?? '/';
       state = state.copyWith(
         rootFolders: rootFolders,
@@ -415,6 +432,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
       );
       await selectFolder(defaultPath);
     } catch (error) {
+      if (read != _browses) return;
       state = state.copyWith(
         isLoadingBrowse: false,
         error: mapImportError(error, service),
@@ -452,9 +470,11 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
       submittedItems: running ? previous.submittedItems : const [],
       submittedPaths: running ? previous.submittedPaths : const {},
     );
+    final read = ++_scans;
 
     try {
       final inFlight = await ref.read(servicesInFlightProvider.future);
+      if (read != _scans) return;
       final lens = ref.read(activeInstanceProvider(service))?.id ?? '';
       final downloads = blockedDownloadsOf(
         inFlight.faults,
@@ -472,6 +492,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
                 onError: (Object _) => null,
               ),
       ]);
+      if (read != _scans) return;
       final spent = state.submittedPaths;
       final seen = <String>{};
       final items = [
@@ -484,6 +505,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
         ...split.clear,
         ...split.needYou,
       ]);
+      if (read != _scans) return;
       state = state.copyWith(
         items: [...split.clear, ...split.needYou],
         selectedPaths: {for (final item in split.clear) item.path},
@@ -501,6 +523,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
         isLoadingItems: false,
       );
     } catch (error) {
+      if (read != _scans) return;
       state = state.copyWith(
         isLoadingItems: false,
         error: mapImportError(error, service),
@@ -602,19 +625,26 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
     final service = state.service;
     if (service == null || path.isEmpty) return;
 
+    // Choosing a folder ends any scan of the one before it: what that scan
+    // finds belongs to a folder that is no longer the selected one.
+    final read = ++_browses;
+    _scans++;
     state = state.copyWith(
       currentPath: path,
       selectedFolder: path,
       fileSystem: null,
       isLoadingBrowse: true,
+      isLoadingItems: false,
       error: null,
     );
 
     try {
       final api = _api(service);
       final fileSystem = await api.getFileSystem(path);
+      if (read != _browses) return;
       state = state.copyWith(fileSystem: fileSystem, isLoadingBrowse: false);
     } catch (error) {
+      if (read != _browses) return;
       state = state.copyWith(
         isLoadingBrowse: false,
         error: mapImportError(error, service),
@@ -624,6 +654,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
 
   Future<void> loadSelectedFolderItems() async {
     final items = await _refreshSelectedFolderItems(clearItems: true);
+    if (items == null) return;
     if (items.isNotEmpty || state.error == null) _persistLastFolder();
     await _applyTargetPreselection();
   }
@@ -736,7 +767,9 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
     }
   }
 
-  Future<List<ManualImportItem>> _refreshSelectedFolderItems({
+  /// Null when a later read took over before this one answered: nothing was
+  /// written, and the caller has nothing more to do for it.
+  Future<List<ManualImportItem>?> _refreshSelectedFolderItems({
     bool preserveSelection = false,
     bool clearItems = false,
     bool preserveCommand = false,
@@ -761,6 +794,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
       submittedPaths: preserveCommand ? null : const {},
       error: null,
     );
+    final read = ++_scans;
 
     try {
       final api = _api(service);
@@ -773,6 +807,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
         // actually reporting a successful earlier import.
         filterExistingFiles: false,
       );
+      if (read != _scans) return null;
       // Only files that are actually importable are preselected. Selecting the
       // unmatched ones too is how the old flow ended up with a confirm button
       // that one bad file could hold hostage, and an already-imported file is
@@ -814,6 +849,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
       );
       return items;
     } catch (error) {
+      if (read != _scans) return null;
       state = state.copyWith(
         isLoadingItems: false,
         error: mapImportError(error, service),
