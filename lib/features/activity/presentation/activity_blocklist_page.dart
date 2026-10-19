@@ -8,6 +8,7 @@ import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/widgets/brief_failure_line.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
+import 'package:cupola/core/widgets/page_title.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_item_tiles.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -20,6 +21,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 class ActivityBlocklistPage extends ConsumerWidget {
   const ActivityBlocklistPage({super.key});
 
+  static const _title = 'Blocklist';
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final read = ref.watch(globalBlocklistItemsProvider);
@@ -29,6 +32,7 @@ class ActivityBlocklistPage extends ConsumerWidget {
       body = read.hasError
           ? ListView(
               children: [
+                const PageTitle(_title),
                 AppErrorState(
                   error: read.error!,
                   service: ServiceKey.radarr,
@@ -37,15 +41,17 @@ class ActivityBlocklistPage extends ConsumerWidget {
               ],
             )
           : ListView(
-              padding: const EdgeInsets.only(top: AppSpacing.md),
-              children: [AppSkeleton.listRows(count: 5)],
+              children: [
+                const PageTitle(_title),
+                AppSkeleton.listRows(count: 5),
+              ],
             );
     } else {
       final failures = feed.failures.toList(growable: false);
       body = ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(top: AppSpacing.sm),
         children: [
+          const PageTitle(_title),
           for (final failure in failures)
             if (failure.error case final error?)
               Padding(
@@ -75,7 +81,7 @@ class ActivityBlocklistPage extends ConsumerWidget {
       );
     }
     return AmbientScaffold(
-      appBar: GlassAppBar(title: const Text('Blocklist')),
+      appBar: const GlassAppBar.inPage(pageTitle: _title),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(globalBlocklistItemsProvider);

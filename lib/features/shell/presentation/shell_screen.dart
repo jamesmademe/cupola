@@ -14,6 +14,7 @@ import 'package:cupola/core/app_identity.dart';
 import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/utils/a11y_announce.dart';
+import 'package:cupola/core/widgets/front_room.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/ambient_background.dart';
 import 'package:cupola/core/widgets/floating_nav_rail.dart';
@@ -72,6 +73,10 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   /// access could be [dispose] (rail layout never touches it in build), and
   /// creating a ticker during unmount trips the deactivated-ancestor assert.
   late final ServicePortalController _portal;
+
+  /// The light of the room in front, which the bar and the rail take a sheen
+  /// of (`FrontRoomLight`).
+  final _frontRoom = FrontRoomLight();
 
   String? _lastLocation;
 
@@ -192,6 +197,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     _demoTimer?.cancel();
     _portal.covering.removeListener(_reportBackOwnership);
     _portal.dispose();
+    _frontRoom.dispose();
     super.dispose();
   }
 
@@ -416,7 +422,9 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     // Windows and Linux it can neither be moved nor closed. The drag strip is
     // that something, and renders nothing on a phone.
     if (!AppBreakpoints.isDesktopPlatform) {
-      return ReleaseSearchLifecycle(child: touchShell);
+      return ReleaseSearchLifecycle(
+        child: FrontRoomScope(light: _frontRoom, child: touchShell),
+      );
     }
     return ReleaseSearchLifecycle(
       child: Material(
@@ -424,7 +432,9 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
         child: Column(
           children: [
             const WindowDragStrip(trail: [kAppName]),
-            Expanded(child: touchShell),
+            Expanded(
+              child: FrontRoomScope(light: _frontRoom, child: touchShell),
+            ),
           ],
         ),
       ),

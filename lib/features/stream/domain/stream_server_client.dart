@@ -197,6 +197,13 @@ abstract interface class StreamServerClient {
   /// Never retried: [cancelToken] ends it.
   Future<MediaKey?> getSeriesKey(String seriesId, {CancelToken? cancelToken});
 
+  /// The page the movie or the series [titleId] has, read and checked as
+  /// [getSeriesKey] reads a series': what a live session's title is known by
+  /// to the arrs (`StreamSession.titleId`). Null when the server holds no id
+  /// for it, said something else, or did not answer. Never retried:
+  /// [cancelToken] ends it.
+  Future<MediaKey?> getTitleKey(String titleId, {CancelToken? cancelToken});
+
   /// The children of a series, season or album.
   ///
   /// Throws on a remote failure: an empty list is an item with nothing

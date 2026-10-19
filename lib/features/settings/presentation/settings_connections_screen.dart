@@ -12,6 +12,7 @@ import 'package:cupola/core/widgets/domain_section.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/section_header.dart';
+import 'package:cupola/core/widgets/page_title.dart';
 import 'package:cupola/features/onboarding/data/known_candidates_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_candidate.dart';
@@ -53,7 +54,7 @@ class SettingsConnectionsScreen extends ConsumerWidget {
     return AmbientScaffold(
       // No accent: a settings pane has no artwork, so its room is lit by the
       // neutral lamp, the fallback of `AmbientBackground`.
-      appBar: const GlassAppBar(title: Text('Connections')),
+      appBar: const GlassAppBar.inPage(pageTitle: 'Connections'),
       body: SettingsMasterDetail(
         child: ListView(
           padding: EdgeInsets.fromLTRB(
@@ -65,6 +66,7 @@ class SettingsConnectionsScreen extends ConsumerWidget {
             FloatingNavBarMetrics.getScrollViewBottomPadding(context),
           ),
           children: [
+            const PageTitle.flush('Connections'),
             if (found.isNotEmpty) ...[
               const SectionHeader.flush(
                 title: 'Ready to add',

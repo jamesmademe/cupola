@@ -6,6 +6,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/connection_capability.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/core/widgets/page_title.dart';
 import 'package:cupola/features/npm/domain/models/npm_models.dart';
 import 'package:cupola/features/npm/presentation/npm_actions.dart';
 import 'package:cupola/features/npm/presentation/npm_capability.dart';
@@ -73,11 +74,12 @@ class NpmAdvancedConfigScreen extends ConsumerWidget {
 
     return AmbientScaffold(
       accent: ServiceKey.nginxProxyManager.accent,
-      appBar: const GlassAppBar(title: Text('Advanced')),
+      appBar: const GlassAppBar.inPage(pageTitle: 'Advanced'),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            const PageTitle('Advanced'),
             // Above the editor, not inside its padded column: the banner owns
             // its own gutter.
             const NpmCapabilityBannerSlot(resources: {NpmResource.proxyHosts}),

@@ -1017,6 +1017,45 @@ void main() {
     });
   });
 
+  group('getTitleKey', () {
+    Map<String, dynamic> answer(String id, String type, String tmdb) => {
+      'Items': [
+        {
+          'Id': id,
+          'Name': 'x',
+          'Type': type,
+          'ProviderIds': {'Tmdb': tmdb},
+        },
+      ],
+      'TotalRecordCount': 1,
+    };
+
+    test('a movie and a series name their pages, read for their ids '
+        'alone', () async {
+      final adapter = CapturingHttpAdapter(
+        response: answer(_seriesId, 'Movie', '45745'),
+      );
+      expect(
+        await _client(adapter).getTitleKey(_seriesId),
+        const MediaKey.movie(45745),
+      );
+      expect(adapter.lastUri!.queryParameters['fields'], 'ProviderIds');
+
+      adapter.response = answer(_seriesId, 'Series', '95396');
+      expect(
+        await _client(adapter).getTitleKey(_seriesId),
+        const MediaKey.tv(95396),
+      );
+    });
+
+    test('an episode names no page: a session names its series', () async {
+      final adapter = CapturingHttpAdapter(
+        response: answer(_seriesId, 'Episode', '95396'),
+      );
+      expect(await _client(adapter).getTitleKey(_seriesId), isNull);
+    });
+  });
+
   group('getSeriesKey', () {
     Map<String, dynamic> row(
       String id, {

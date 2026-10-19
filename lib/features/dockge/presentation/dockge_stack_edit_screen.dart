@@ -7,6 +7,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/core/widgets/page_title.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack_detail.dart';
 import 'package:cupola/features/dockge/presentation/dockge_actions.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
@@ -159,9 +160,7 @@ class _DockgeStackEditScreenState extends ConsumerState<DockgeStackEditScreen> {
 
     return AmbientScaffold(
       accent: ServiceKey.dockge.accent,
-      appBar: GlassAppBar(
-        title: Text(widget.isNew ? 'New stack' : 'Edit ${widget.name}'),
-      ),
+      appBar: GlassAppBar.inPage(pageTitle: _title),
       body: SafeArea(
         // An empty editor is indistinguishable from a stack with no services,
         // and Save/Deploy would write it back as the truth. Until the real
@@ -169,7 +168,10 @@ class _DockgeStackEditScreenState extends ConsumerState<DockgeStackEditScreen> {
         child: !isConfigured
             // Nothing to edit and nowhere to save it: an editor here would
             // take a compose file the user typed and fail on the write.
-            ? const NotConfiguredPlaceholder(serviceName: 'Dockge')
+            ? TitledBody(
+                title: _title,
+                child: const NotConfiguredPlaceholder(serviceName: 'Dockge'),
+              )
             : (detailAsync != null && !_prefilled)
             ? _loadState(detailAsync)
             : _editor(context),
@@ -177,10 +179,19 @@ class _DockgeStackEditScreenState extends ConsumerState<DockgeStackEditScreen> {
     );
   }
 
+  /// The page's name: a new stack, or the one being edited.
+  String get _title => widget.isNew ? 'New stack' : 'Edit ${widget.name}';
+
   Widget _loadState(AsyncValue<DockgeStackDetail> detail) {
     return ListView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.lg,
+      ),
       children: [
+        PageTitle.flush(_title),
         if (detail.hasError)
           AppErrorState(
             error: detail.error!,
@@ -197,8 +208,9 @@ class _DockgeStackEditScreenState extends ConsumerState<DockgeStackEditScreen> {
   Widget _editor(BuildContext context) {
     final canSubmit = !_busy && _hasContent;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
       children: [
+        PageTitle.flush(_title),
         if (widget.isNew) ...[
           _Label('Stack name'),
           const SizedBox(height: 6),

@@ -21,6 +21,7 @@ import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/widgets/media_grid.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/selection_pills.dart';
+import 'package:cupola/core/widgets/page_title.dart';
 import 'package:cupola/features/discover/domain/catalog_curation.dart';
 import 'package:cupola/features/discover/domain/catalog_query.dart';
 import 'package:cupola/features/discover/domain/discover_index.dart';
@@ -307,6 +308,19 @@ int _doorColumns(BuildContext context, double width) {
   };
 }
 
+/// The Trending door's pictures, as it draws them: the first title's poster
+/// small, for its light, then the next two. Discover's room takes its light
+/// from one of them or from the next thing out (`discoverRoomLightProvider`).
+({String? light, List<String> posters}) trendingDoorPictures(
+  List<MediaPreview> trending,
+) {
+  MediaPreview? at(int i) => i < trending.length ? trending[i] : null;
+  return (
+    light: _poster(at(0), size: 'w92'),
+    posters: [?_poster(at(1)), ?_poster(at(2))],
+  );
+}
+
 String? _poster(MediaPreview? item, {String size = 'w154'}) {
   final path = item?.posterPath;
   if (path == null || path.isEmpty) return null;
@@ -320,6 +334,7 @@ class _Doors extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final trending = ref.watch(atriumTrendingProvider).value ?? const [];
+    final trendingDoor = trendingDoorPictures(trending);
     final best = ref.watch(bestMissingProvider).value ?? const [];
     final genres = ref.watch(catalogGenresProvider(CatalogKind.movie)).value;
     final networks = _libraryNetworks(ref);
@@ -341,8 +356,8 @@ class _Doors extends ConsumerWidget {
           DiscoverDoor.lobby(
             title: 'Trending',
             subtitle: 'This week',
-            lightUrl: _poster(at(trending, 0), size: 'w92'),
-            posterUrls: [?_poster(at(trending, 1)), ?_poster(at(trending, 2))],
+            lightUrl: trendingDoor.light,
+            posterUrls: trendingDoor.posters,
             onTap: () => open(DiscoverIndex.trending),
           ),
           DiscoverDoor.lobby(
@@ -521,17 +536,17 @@ class _DiscoverIndexPageState extends ConsumerState<DiscoverIndexPage> {
   Widget build(BuildContext context) {
     return AmbientScaffold(
       contentWellWidth: AppBreakpoints.contentWell,
-      appBar: GlassAppBar(title: Text(_open.label)),
+      appBar: GlassAppBar.inPage(pageTitle: _open.label),
       body: RefreshIndicator(
         onRefresh: () async => DiscoverAtrium.invalidate(ref),
         child: ListView(
           primary: true,
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.only(
-            top: AppSpacing.sm,
             bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
           ),
           children: [
+            PageTitle(_open.label),
             SelectionPills<DiscoverIndex>(
               values: DiscoverIndex.values,
               selected: _open,

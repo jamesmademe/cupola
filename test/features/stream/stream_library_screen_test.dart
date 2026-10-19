@@ -100,6 +100,12 @@ class _ScriptedServer implements StreamServerClient {
   }) async => null;
 
   @override
+  Future<MediaKey?> getTitleKey(
+    String titleId, {
+    CancelToken? cancelToken,
+  }) async => null;
+
+  @override
   Future<StreamItem?> findByExternalId({
     String? tmdbId,
     String? tvdbId,

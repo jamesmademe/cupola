@@ -7,6 +7,7 @@ import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/settings_switch_row.dart';
+import 'package:cupola/core/widgets/page_title.dart';
 import 'package:cupola/features/shell/domain/portal_hints.dart';
 import 'package:cupola/features/settings/presentation/widgets/settings_master_detail.dart';
 
@@ -27,16 +28,17 @@ class SettingsHintsScreen extends ConsumerWidget {
     return AmbientScaffold(
       // No accent: a settings pane has no artwork, so its room is lit by the
       // neutral lamp, the fallback of `AmbientBackground`.
-      appBar: const GlassAppBar(title: Text('Hints')),
+      appBar: const GlassAppBar.inPage(pageTitle: 'Hints'),
       body: SettingsMasterDetail(
         child: ListView(
           padding: EdgeInsets.fromLTRB(
             AppSpacing.lg,
-            AppSpacing.sm,
+            0,
             AppSpacing.lg,
             FloatingNavBarMetrics.getScrollViewBottomPadding(context),
           ),
           children: [
+            const PageTitle.flush('Hints'),
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.lg),
               child: Text(

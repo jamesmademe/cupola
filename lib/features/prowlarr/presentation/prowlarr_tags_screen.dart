@@ -12,6 +12,7 @@ import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
+import 'package:cupola/core/widgets/page_title.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -21,19 +22,21 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 class ProwlarrTagsScreen extends ConsumerWidget {
   const ProwlarrTagsScreen({super.key});
 
+  static const _title = 'Tags';
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detailsAsync = ref.watch(prowlarrTagDetailsProvider);
 
     return Scaffold(
-      appBar: GlassAppBar(
+      appBar: GlassAppBar.inPage(
+        pageTitle: _title,
         leading: IconButton(
           icon: const Icon(Icons.chevron_left_rounded),
           tooltip: 'Back',
           onPressed: () =>
               RouteUtils.popOrGo(context, ServiceRoutes.prowlarrSettings),
         ),
-        title: const Text('Tags'),
         actions: [
           IconButton(
             icon: const Icon(Icons.add_rounded),
@@ -45,24 +48,27 @@ class ProwlarrTagsScreen extends ConsumerWidget {
       body: detailsAsync.when(
         data: (tags) {
           if (tags.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.xl),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'No tags yet. Tags decide which apps receive which '
-                      'indexers.',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    FilledButton.icon(
-                      onPressed: () => _create(context, ref),
-                      icon: const Icon(Icons.add_rounded, size: 18),
-                      label: const Text('Add tag'),
-                    ),
-                  ],
+            return TitledBody(
+              title: _title,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xl),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'No tags yet. Tags decide which apps receive which '
+                        'indexers.',
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      FilledButton.icon(
+                        onPressed: () => _create(context, ref),
+                        icon: const Icon(Icons.add_rounded, size: 18),
+                        label: const Text('Add tag'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -79,22 +85,31 @@ class ProwlarrTagsScreen extends ConsumerWidget {
             },
             child: ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-              itemCount: sorted.length,
-              itemBuilder: (context, index) => _TagRow(
-                tag: sorted[index],
-                onRename: () => _rename(context, ref, sorted[index]),
-                onDelete: () => _delete(context, ref, sorted[index]),
-              ),
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              // The page's name, then a row a tag.
+              itemCount: sorted.length + 1,
+              itemBuilder: (context, index) => index == 0
+                  ? const PageTitle(_title)
+                  : _TagRow(
+                      tag: sorted[index - 1],
+                      onRename: () => _rename(context, ref, sorted[index - 1]),
+                      onDelete: () => _delete(context, ref, sorted[index - 1]),
+                    ),
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => AppErrorState(
-          error: error,
-          serviceName: ServiceKey.prowlarr.title,
-          service: ServiceKey.prowlarr,
-          onRetry: () => ref.invalidate(prowlarrTagDetailsProvider),
+        loading: () => const TitledBody(
+          title: _title,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        error: (error, _) => TitledBody(
+          title: _title,
+          child: AppErrorState(
+            error: error,
+            serviceName: ServiceKey.prowlarr.title,
+            service: ServiceKey.prowlarr,
+            onRetry: () => ref.invalidate(prowlarrTagDetailsProvider),
+          ),
         ),
       ),
     );

@@ -8,6 +8,7 @@ import 'package:cupola/core/room_art.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/ambient_background.dart';
 import 'package:cupola/core/widgets/desktop_content_well.dart';
+import 'package:cupola/core/widgets/page_title.dart';
 
 /// A [Scaffold] pre-wired for the premium ambient look: an [AmbientBackground]
 /// paints the gradient full-bleed and the Scaffold itself is transparent, so the
@@ -24,7 +25,7 @@ import 'package:cupola/core/widgets/desktop_content_well.dart';
 /// body starts at the bar's lower edge, so a list scrolled up would be cut
 /// there, a hard line across a bar that is otherwise glass. With an [appBar],
 /// a vertical scroll view whose top is the body's top is covered, over
-/// [_UnderBarFade.height] below its edge, by the room itself ([AmbientRoom]):
+/// [ScrollEdgeFade.height] below its edge, by the room itself ([AmbientRoom]):
 /// whole at the edge and gone below it, so what passes the edge melts into
 /// the light around it with no line and no step. It appears with the first
 /// points scrolled, so a list at rest is drawn whole. No blur (the
@@ -89,19 +90,21 @@ class AmbientScaffold extends StatelessWidget {
       // line its title and actions up with the body.
       child: ContentWellScope(
         width: contentWell ? contentWellWidth : null,
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          extendBody: extendBody,
-          extendBodyBehindAppBar: extendBodyBehindAppBar,
-          appBar: appBar,
-          body: _underBar(
-            contentWell
-                ? DesktopContentWell(maxWidth: contentWellWidth, child: body)
-                : body,
+        child: _PageScrollHost(
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            extendBody: extendBody,
+            extendBodyBehindAppBar: extendBodyBehindAppBar,
+            appBar: appBar,
+            body: _underBar(
+              contentWell
+                  ? DesktopContentWell(maxWidth: contentWellWidth, child: body)
+                  : body,
+            ),
+            floatingActionButton: floatingActionButton,
+            bottomNavigationBar: bottomNavigationBar,
+            resizeToAvoidBottomInset: resizeToAvoidBottomInset,
           ),
-          floatingActionButton: floatingActionButton,
-          bottomNavigationBar: bottomNavigationBar,
-          resizeToAvoidBottomInset: resizeToAvoidBottomInset,
         ),
       ),
     );
@@ -110,16 +113,58 @@ class AmbientScaffold extends StatelessWidget {
   /// [body], faded at its top edge when there is a bar for it to pass under.
   Widget _underBar(Widget body) => appBar == null || extendBodyBehindAppBar
       ? body
-      : _UnderBarFade(child: body);
+      : ScrollEdgeFade(child: body);
 }
 
-/// The fade at the top of a body under a bar; see [AmbientScaffold].
+/// Whether the page's heading has scrolled under its bar ([PageScrollScope]),
+/// from the body's own scroll view: the vertical one nearest the body.
+class _PageScrollHost extends StatefulWidget {
+  const _PageScrollHost({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_PageScrollHost> createState() => _PageScrollHostState();
+}
+
+class _PageScrollHostState extends State<_PageScrollHost> {
+  final _under = ValueNotifier<bool>(false);
+
+  @override
+  void dispose() {
+    _under.dispose();
+    super.dispose();
+  }
+
+  bool _onNotification(Notification notification) {
+    final metrics = switch (notification) {
+      ScrollNotification(:final metrics, depth: 0) => metrics,
+      ScrollMetricsNotification(:final metrics, depth: 0) => metrics,
+      _ => null,
+    };
+    if (metrics == null || metrics.axisDirection != AxisDirection.down) {
+      return false;
+    }
+    _under.value = metrics.extentBefore > PageTitle.scrolledUnder;
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) => NotificationListener<Notification>(
+    onNotification: _onNotification,
+    child: PageScrollScope(headingUnder: _under, child: widget.child),
+  );
+}
+
+/// The fade at the top of a body under a bar ([AmbientScaffold]), or under
+/// anything fixed over a list (`TitledBody`'s heading): a list scrolled up
+/// melts into the room at this box's top edge instead of being cut there.
 ///
 /// Listens to the scroll views under it and remembers, for each, how much of
 /// its content lies above its top edge. Where each one is on screen is asked
 /// only when the fade is painted, once layout is done.
-class _UnderBarFade extends StatefulWidget {
-  const _UnderBarFade({required this.child});
+class ScrollEdgeFade extends StatefulWidget {
+  const ScrollEdgeFade({super.key, required this.child});
 
   final Widget child;
 
@@ -128,10 +173,10 @@ class _UnderBarFade extends StatefulWidget {
   static const double height = AppSpacing.xl;
 
   @override
-  State<_UnderBarFade> createState() => _UnderBarFadeState();
+  State<ScrollEdgeFade> createState() => _ScrollEdgeFadeState();
 }
 
-class _UnderBarFadeState extends State<_UnderBarFade> {
+class _ScrollEdgeFadeState extends State<ScrollEdgeFade> {
   final _edges = _HiddenAbove();
 
   @override
@@ -184,13 +229,13 @@ class _UnderBarFadeState extends State<_UnderBarFade> {
 }
 
 /// How strongly each scroll view under a bar is faded, from 0 at rest to 1
-/// once [_UnderBarFade.height] of it has gone above its edge. Says so only
+/// once [ScrollEdgeFade.height] of it has gone above its edge. Says so only
 /// when a strength changes, so a long scroll repaints nothing.
 class _HiddenAbove extends ChangeNotifier {
   final Map<BuildContext, double> strength = {};
 
   void record(BuildContext scrollable, double above) {
-    final next = (above / _UnderBarFade.height).clamp(0.0, 1.0);
+    final next = (above / ScrollEdgeFade.height).clamp(0.0, 1.0);
     final previous = strength[scrollable] ?? 0;
     if (next == previous) return;
     // A list that has left the page leaves nothing behind.
@@ -318,7 +363,7 @@ class _RenderFade extends RenderBox {
       if (at.dy.abs() > 0.5) continue;
       final rect =
           offset + Offset(at.dx, 0) &
-          Size(box.size.width, _UnderBarFade.height);
+          Size(box.size.width, ScrollEdgeFade.height);
       // The strip alone is a layer: the room painted into it, then kept
       // where the fade is.
       canvas.saveLayer(rect, Paint());

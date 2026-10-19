@@ -7,6 +7,7 @@ import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/room_art.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/front_room.dart';
 
 /// Paints the room behind [child], full-bleed: the ground, and the room's
 /// light at the top of it.
@@ -71,6 +72,15 @@ class AmbientBackground extends StatelessWidget {
     // rather than cutting at the edges of a lit stretch.
     final target = scope?.accent ?? accent ?? AppColors.lamp;
 
+    // The floating chrome takes a sheen of the room in front: this one, while
+    // it is ([FrontRoomReporter]). The lamp casts none.
+    return FrontRoomReporter(
+      light: target == AppColors.lamp ? null : target,
+      child: _drifting(context, target, art),
+    );
+  }
+
+  Widget _drifting(BuildContext context, Color target, RoomArt? art) {
     if (MediaQuery.disableAnimationsOf(context)) {
       return _Room(accent: target, art: art, child: child);
     }
@@ -531,12 +541,17 @@ class SlabLight extends StatefulWidget {
 
 class _SlabLightState extends State<SlabLight>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _rise = AnimationController(
-    vsync: this,
-    duration: AppAnimation.light,
-  );
+  // Made with the state, not on first use: a slab whose picture never came
+  // would otherwise make its ticker while it is being disposed.
+  late final AnimationController _rise;
   ui.Image? _picture;
   (RoomArt, Brightness)? _wanted;
+
+  @override
+  void initState() {
+    super.initState();
+    _rise = AnimationController(vsync: this, duration: AppAnimation.light);
+  }
 
   @override
   void didChangeDependencies() {

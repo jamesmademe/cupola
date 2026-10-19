@@ -8,6 +8,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
+import 'package:cupola/core/widgets/page_title.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_indexer_actions.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
@@ -22,20 +23,23 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 class ProwlarrSettingsScreen extends ConsumerWidget {
   const ProwlarrSettingsScreen({super.key});
 
+  static const _title = 'Prowlarr settings';
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: GlassAppBar(
+      appBar: GlassAppBar.inPage(
+        pageTitle: _title,
         leading: IconButton(
           icon: const Icon(Icons.chevron_left_rounded),
           tooltip: 'Back',
           onPressed: () => RouteUtils.popOrGo(context, ServiceRoutes.prowlarr),
         ),
-        title: const Text('Prowlarr settings'),
       ),
       body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
         children: [
+          const PageTitle(_title),
           for (final kind in ProwlarrProviderKind.values)
             _SettingsRow(
               icon: kind.icon,

@@ -9,6 +9,7 @@ import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/front_room.dart';
 
 /// A destination for the [FloatingBottomNavBar].
 class FloatingNavDestination {
@@ -422,93 +423,109 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
                   ),
                   child: ClipRRect(
                     borderRadius: AppRadius.borderRadiusXl,
-                    child: Container(
-                      key: const ValueKey('floating-nav-surface'),
-                      width: preferredSurfaceWidth,
-                      height: barHeight,
-                      decoration: BoxDecoration(
-                        color: glassColor,
-                        borderRadius: AppRadius.borderRadiusXl,
-                        border: Border.all(color: borderColor),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: _barHorizontalPadding,
-                        vertical: _barVerticalPadding,
-                      ),
-                      child: SizedBox.expand(
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            final layout = _NavBarLayoutMetrics.resolve(
-                              availableWidth: constraints.maxWidth,
-                              destinations: widget.destinations,
-                              selectedIndex: widget.selectedIndex,
-                              selectedExtraShare: _selectedExtraShare,
-                              textScaler: textScaler,
-                              labelStyle: labelStyle,
-                            );
-                            final indicatorWidth = selectedDestination == null
-                                ? 0.0
-                                : _NavBarItem.preferredSelectedWidthFor(
-                                        selectedDestination,
-                                        textScaler,
-                                        labelStyle,
-                                      )
-                                      .clamp(
-                                        0.0,
-                                        layout.itemWidths[widget.selectedIndex],
-                                      )
-                                      .toDouble();
-                            final indicatorLeft = selectedDestination == null
-                                ? 0.0
-                                : layout.itemLefts[widget.selectedIndex] +
-                                      ((layout.itemWidths[widget
-                                                  .selectedIndex] -
-                                              indicatorWidth) /
-                                          2);
+                    // Lit enamel: a sheen of the room in front at its top,
+                    // gone by 70% of its height, and its pill tinted by the
+                    // same light ([RoomSheen]).
+                    child: RoomSheen(
+                      builder: (context, sheen, pill) => Container(
+                        key: const ValueKey('floating-nav-surface'),
+                        width: preferredSurfaceWidth,
+                        height: barHeight,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              sheen.withValues(alpha: glassColor.a),
+                              glassColor,
+                            ],
+                            stops: const [0, 0.7],
+                          ),
+                          borderRadius: AppRadius.borderRadiusXl,
+                          border: Border.all(color: borderColor),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: _barHorizontalPadding,
+                          vertical: _barVerticalPadding,
+                        ),
+                        child: SizedBox.expand(
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final layout = _NavBarLayoutMetrics.resolve(
+                                availableWidth: constraints.maxWidth,
+                                destinations: widget.destinations,
+                                selectedIndex: widget.selectedIndex,
+                                selectedExtraShare: _selectedExtraShare,
+                                textScaler: textScaler,
+                                labelStyle: labelStyle,
+                              );
+                              final indicatorWidth = selectedDestination == null
+                                  ? 0.0
+                                  : _NavBarItem.preferredSelectedWidthFor(
+                                          selectedDestination,
+                                          textScaler,
+                                          labelStyle,
+                                        )
+                                        .clamp(
+                                          0.0,
+                                          layout.itemWidths[widget
+                                              .selectedIndex],
+                                        )
+                                        .toDouble();
+                              final indicatorLeft = selectedDestination == null
+                                  ? 0.0
+                                  : layout.itemLefts[widget.selectedIndex] +
+                                        ((layout.itemWidths[widget
+                                                    .selectedIndex] -
+                                                indicatorWidth) /
+                                            2);
 
-                            return Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                if (selectedDestination != null)
-                                  IgnorePointer(
-                                    child: _NavBarIndicator(
-                                      left: indicatorLeft,
-                                      width: indicatorWidth,
-                                      barHeight: constraints.maxHeight,
-                                      selectedDestination: selectedDestination,
-                                    ),
-                                  ),
-                                Row(
-                                  children: [
-                                    for (
-                                      var index = 0;
-                                      index < widget.destinations.length;
-                                      index++
-                                    ) ...[
-                                      if (index > 0)
-                                        SizedBox(width: layout.gap),
-                                      AnimatedContainer(
-                                        duration: AppAnimation.durationSm,
-                                        curve: AppAnimation.emphasizedCurve,
-                                        width: layout.itemWidths[index],
-                                        child: _NavBarItem(
-                                          destination:
-                                              widget.destinations[index],
-                                          isSelected:
-                                              index == widget.selectedIndex,
-                                          index: index,
-                                          destinationCount:
-                                              widget.destinations.length,
-                                          onTap: () =>
-                                              _handleDestinationTap(index),
-                                        ),
+                              return Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  if (selectedDestination != null)
+                                    IgnorePointer(
+                                      child: _NavBarIndicator(
+                                        left: indicatorLeft,
+                                        width: indicatorWidth,
+                                        barHeight: constraints.maxHeight,
+                                        selectedDestination:
+                                            selectedDestination,
+                                        fill: pill,
                                       ),
+                                    ),
+                                  Row(
+                                    children: [
+                                      for (
+                                        var index = 0;
+                                        index < widget.destinations.length;
+                                        index++
+                                      ) ...[
+                                        if (index > 0)
+                                          SizedBox(width: layout.gap),
+                                        AnimatedContainer(
+                                          duration: AppAnimation.durationSm,
+                                          curve: AppAnimation.emphasizedCurve,
+                                          width: layout.itemWidths[index],
+                                          child: _NavBarItem(
+                                            destination:
+                                                widget.destinations[index],
+                                            isSelected:
+                                                index == widget.selectedIndex,
+                                            index: index,
+                                            destinationCount:
+                                                widget.destinations.length,
+                                            onTap: () =>
+                                                _handleDestinationTap(index),
+                                          ),
+                                        ),
+                                      ],
                                     ],
-                                  ],
-                                ),
-                              ],
-                            );
-                          },
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
                         ),
                       ),
                     ),
@@ -534,15 +551,20 @@ class _NavBarIndicator extends StatelessWidget {
     required this.width,
     required this.barHeight,
     required this.selectedDestination,
+    required this.fill,
   });
+
+  /// The pill's fill: the room's strong fill, tinted by the light of the room
+  /// in front ([RoomSheen]).
+  final Color fill;
 
   @override
   Widget build(BuildContext context) {
     // The room's strong fill (white at 12% in the dark room, the day room's
-    // ink at 12% on paper) and no edge: the pill is the one lit shape in the
-    // bar, the same in every section, so it says "you are here" and nothing
-    // about which section "here" is.
-    final activeBackground = CupolaRoom.of(context).fillStrong;
+    // ink at 12% on paper), tinted by the light of the room in front, and no
+    // edge: the pill is the one lit shape in the bar, so it says "you are
+    // here" and nothing about which section "here" is.
+    final activeBackground = fill;
     final pillHeight = _NavBarItem.pillHeightFor(
       FloatingNavBarMetrics.effectiveTextScaler(context),
       _NavBarItem.labelStyleOf(context),

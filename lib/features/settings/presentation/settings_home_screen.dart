@@ -6,12 +6,19 @@ import 'package:cupola/features/outside/presentation/settings_notifications_scre
 import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/audience.dart';
+import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
+import 'package:cupola/core/widgets/page_title.dart';
+import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/home/presentation/widgets/settings_home_row.dart';
+import 'package:cupola/features/services/domain/services_semantics.dart';
+import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_address.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/regions.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -44,9 +51,10 @@ class SettingsHomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(currentSettingsProvider);
+    // The page's name opens the list, and carries the space above itself.
     final padding = EdgeInsets.fromLTRB(
       AppSpacing.lg,
-      AppSpacing.md,
+      0,
       AppSpacing.lg,
       FloatingNavBarMetrics.getScrollViewBottomPadding(context),
     );
@@ -62,11 +70,17 @@ class SettingsHomeScreen extends ConsumerWidget {
       StatefulNavigationShell.maybeOf(context)?.goBranch(from!.index);
     }
 
+    final requester = ref.watch(shellAudienceProvider) == Audience.requester;
+    // The page's name in the page, and under it how the stack stands.
+    final heading = PageTitle.flush(
+      'Settings',
+      summary: requester ? null : const _SettingsSummary(),
+    );
     final page = AmbientScaffold(
       // No accent: a settings pane has no artwork, so its room is lit by the
       // neutral lamp, the fallback of `AmbientBackground`.
-      appBar: GlassAppBar(
-        title: const Text('Settings'),
+      appBar: GlassAppBar.inPage(
+        pageTitle: 'Settings',
         leading: from == null
             ? null
             : IconButton(
@@ -79,12 +93,13 @@ class SettingsHomeScreen extends ConsumerWidget {
         // Asked of the layout itself rather than re-derived here, so the pane
         // and the rail can never disagree about which of the two is on screen.
         child: SettingsMasterDetail.showsRail(context)
-            ? SettingsSummaryPane(padding: padding)
+            ? SettingsSummaryPane(padding: padding, heading: heading)
             : ListView(
                 padding: padding,
-                children: ref.watch(shellAudienceProvider) == Audience.requester
-                    ? _requesterIndex(context, settings)
+                children: requester
+                    ? [heading, ..._requesterIndex(context, settings)]
                     : [
+                        heading,
                         const ConnectionsSummaryCard(),
                         const SizedBox(height: AppSpacing.xl),
                         ..._buildGeneralSection(context, settings),
@@ -263,5 +278,81 @@ class SettingsHomeScreen extends ConsumerWidget {
     final normalizedRegion = SettingsModel.normalizeRegion(region);
     final regionName = commonRegions[normalizedRegion] ?? normalizedRegion;
     return '$regionName ($normalizedRegion)';
+  }
+}
+
+/// The line under Settings' name: how many services are set up, how many are
+/// not, and where this device is, as the connections with an address away
+/// say. The dot is the tone of the stack, as the Connections card paints it.
+class _SettingsSummary extends ConsumerWidget {
+  const _SettingsSummary();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final room = CupolaRoom.of(context);
+    final readout = ref.watch(connectionsReadoutProvider);
+    final where = _whereOf(ref);
+    final parts = [
+      '${readout.setUp} set up',
+      if (readout.notSetUp.isNotEmpty) '${readout.notSetUp.length} not set up',
+    ];
+    final whereWords = switch (where) {
+      ConnectionRoute.home => 'At home',
+      ConnectionRoute.away => 'Away',
+      null => null,
+    };
+    return Semantics(
+      container: true,
+      label: joinSpokenParts([...parts, ?whereWords]),
+      excludeSemantics: true,
+      child: Wrap(
+        spacing: AppSpacing.s,
+        runSpacing: AppSpacing.xs,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          if (readout.setUp > 0)
+            Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(
+                color: statusToneColor(
+                  Theme.of(context).colorScheme,
+                  readout.tone,
+                ),
+                shape: BoxShape.circle,
+              ),
+            ),
+          Text(parts.join(dotSeparator)),
+          if (whereWords != null) ...[
+            Text(dotSeparator.trim()),
+            Icon(
+              where == ConnectionRoute.home
+                  ? Icons.home_outlined
+                  : Icons.public_rounded,
+              size: 15,
+              color: room.inkSecondary,
+            ),
+            Text(whereWords),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Where this device is, as the app reckons it (`awayFromHomeProvider`):
+  /// null while no connection has an address away, since without one the app
+  /// cannot tell away from a server that is down.
+  static ConnectionRoute? _whereOf(WidgetRef ref) {
+    final anyAway = ref.watch(
+      currentSettingsProvider.select(
+        (settings) => settings.instances.any(
+          (instance) => instance.away?.url.trim().isNotEmpty ?? false,
+        ),
+      ),
+    );
+    if (!anyAway) return null;
+    return ref.watch(awayFromHomeProvider)
+        ? ConnectionRoute.away
+        : ConnectionRoute.home;
   }
 }

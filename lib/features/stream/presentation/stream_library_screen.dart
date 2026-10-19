@@ -7,6 +7,7 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/core/widgets/page_title.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -62,6 +63,9 @@ class StreamLibraryScreen extends ConsumerStatefulWidget {
 }
 
 class _StreamLibraryScreenState extends ConsumerState<StreamLibraryScreen> {
+  /// The library's name, as the server gives it.
+  String get _title => widget.libraryTitle ?? 'Library';
+
   late PagingController<int, StreamItem> _paging;
   StreamLibraryLens _lens = StreamLibraryLens.continueWatching;
 
@@ -242,9 +246,12 @@ class _StreamLibraryScreenState extends ConsumerState<StreamLibraryScreen> {
         .isServiceConfigured(widget.service)) {
       return AmbientScaffold(
         accent: accent,
-        appBar: GlassAppBar(title: Text(widget.libraryTitle ?? 'Library')),
+        appBar: GlassAppBar.inPage(pageTitle: _title),
         body: SafeArea(
-          child: NotConfiguredPlaceholder.forService(widget.service),
+          child: TitledBody(
+            title: _title,
+            child: NotConfiguredPlaceholder.forService(widget.service),
+          ),
         ),
       );
     }
@@ -270,10 +277,12 @@ class _StreamLibraryScreenState extends ConsumerState<StreamLibraryScreen> {
 
     return AmbientScaffold(
       accent: accent,
-      appBar: GlassAppBar(title: Text(widget.libraryTitle ?? 'Library')),
+      appBar: GlassAppBar.inPage(pageTitle: _title),
       body: SafeArea(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            PageTitle(_title),
             _LensChips(
               selected: _lens,
               accent: accent,

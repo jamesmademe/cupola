@@ -253,6 +253,20 @@ void main() {
       },
     };
 
+    test('a session names its title by the series for an episode, by the '
+        'movie for a movie', () {
+      final episode = session();
+      (episode['NowPlayingItem'] as Map<String, dynamic>)['SeriesId'] = 'ser1';
+      expect(jellyfinStreamSessionFromJson(episode)!.titleId, 'ser1');
+
+      final movie = session();
+      (movie['NowPlayingItem'] as Map<String, dynamic>)
+        ..['Type'] = 'Movie'
+        ..remove('SeriesName')
+        ..['Id'] = 'mov1';
+      expect(jellyfinStreamSessionFromJson(movie)!.titleId, 'mov1');
+    });
+
     test('a live TranscodingInfo outranks a PlayMethod that has not arrived', () {
       // `PlayMethod` is populated a beat after playback starts, and the board must
       // not spend those seconds calling a transcode free.

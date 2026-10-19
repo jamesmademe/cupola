@@ -16,7 +16,6 @@ import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
-import 'package:cupola/core/title_light.dart';
 import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
@@ -36,6 +35,7 @@ import 'package:cupola/features/discover/domain/seerr_status.dart';
 import 'package:cupola/features/discover/presentation/discover_atrium.dart';
 import 'package:cupola/features/discover/presentation/discover_calendar_band.dart';
 import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
+import 'package:cupola/features/discover/presentation/discover_room_light.dart';
 import 'package:cupola/features/discover/presentation/widgets/discover_region_chip.dart';
 import 'package:cupola/features/discover/presentation/widgets/search_row.dart';
 import 'package:cupola/features/discover/presentation/widgets/seerr_not_set_up.dart';
@@ -202,11 +202,9 @@ class _DiscoverPageState extends ConsumerState<DiscoverPage> {
       );
     }
 
-    // The room takes its light from the band's next thing, as the band does.
-    final lead = ref.watch(discoverRoomSourceProvider);
-    final light = lead == null
-        ? null
-        : ref.watch(titleLightProvider(lead)).value;
+    // The room takes the most coloured light of the band's next thing and
+    // Trending's first titles.
+    final light = ref.watch(discoverRoomLightProvider);
     return AmbientScaffold(
       accent: light?.light,
       art: light?.art,

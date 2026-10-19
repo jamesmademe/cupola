@@ -17,7 +17,9 @@ import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
+import 'package:cupola/features/media/presentation/arr_public_poster.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Wanted rows the section draws before the header's count is the only place
@@ -128,6 +130,23 @@ BazarrOverviewSection bazarrWantedSection(
   ]),
   total: total,
 );
+
+/// The title [item] wants subtitles for, as the arr Bazarr follows knows it:
+/// the series for an episode, the movie for a movie; null when Bazarr named
+/// neither. What its row's poster and light are read by
+/// (`arrPublicPosterByIdProvider`).
+ArrTitleRef? bazarrArrTitleOf(BazarrWantedItem item) {
+  final series = item.seriesTitle?.trim();
+  if (item.sonarrSeriesId case final id?
+      when series != null && series.isNotEmpty) {
+    return (service: ServiceKey.sonarr, id: id, title: series);
+  }
+  final movie = item.title?.trim();
+  if (item.radarrId case final id? when movie != null && movie.isNotEmpty) {
+    return (service: ServiceKey.radarr, id: id, title: movie);
+  }
+  return null;
+}
 
 // ─── History ────────────────────────────────────────────────────────────────
 

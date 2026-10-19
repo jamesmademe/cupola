@@ -9,6 +9,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/core/widgets/page_title.dart';
 import 'package:cupola/features/activity/presentation/download_actions.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_section.dart'
     show ActivitySlab;
@@ -206,14 +207,15 @@ class _BlockedImportReviewPageState
     final picked = needYou.where((i) => selected.contains(i.path)).length;
     final chosen = pickedClear + picked;
 
+    final title = read && total > 0 ? blockedImportTitle(total) : 'Review';
     return AmbientScaffold(
-      appBar: GlassAppBar(
-        title: Text(read && total > 0 ? blockedImportTitle(total) : 'Review'),
-      ),
+      appBar: GlassAppBar.inPage(pageTitle: title),
       body: SafeArea(
         top: false,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            PageTitle(title),
             Expanded(child: body),
             if (read && total > 0)
               BlockedImportBar(

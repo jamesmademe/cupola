@@ -5,6 +5,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/core/widgets/page_title.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/settings/data/connection_reach_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
@@ -53,8 +54,13 @@ class StreamItemScreen extends ConsumerWidget {
     if (!ref.watch(currentSettingsProvider).isServiceConfigured(service)) {
       return AmbientScaffold(
         accent: service.accent,
-        appBar: GlassAppBar(title: Text(service.title)),
-        body: SafeArea(child: NotConfiguredPlaceholder.forService(service)),
+        appBar: GlassAppBar.inPage(pageTitle: service.title),
+        body: SafeArea(
+          child: TitledBody(
+            title: service.title,
+            child: NotConfiguredPlaceholder.forService(service),
+          ),
+        ),
       );
     }
 
@@ -62,24 +68,28 @@ class StreamItemScreen extends ConsumerWidget {
     final itemKey = (service: service, instanceId: connection, itemId: itemId);
     final itemAsync = ref.watch(streamItemForProvider(itemKey));
 
+    final title = itemAsync.value?.title ?? service.title;
     return AmbientScaffold(
       accent: service.accent,
-      appBar: GlassAppBar(title: Text(itemAsync.value?.title ?? service.title)),
+      appBar: GlassAppBar.inPage(pageTitle: title),
       body: SafeArea(
-        child: AsyncValueWidget<StreamItem?>(
-          value: itemAsync,
-          serviceName: service.title,
-          onRetry: () => refreshStreamItem(ref, itemKey),
-          isEmpty: (item) => item == null,
-          emptyBuilder: const AppEmptyState(
-            icon: Icons.help_outline_rounded,
-            title: 'Not on the server',
-            message:
-                'This item is no longer in the library, or the account this '
-                'connection uses cannot see it.',
+        child: TitledBody(
+          title: title,
+          child: AsyncValueWidget<StreamItem?>(
+            value: itemAsync,
+            serviceName: service.title,
+            onRetry: () => refreshStreamItem(ref, itemKey),
+            isEmpty: (item) => item == null,
+            emptyBuilder: const AppEmptyState(
+              icon: Icons.help_outline_rounded,
+              title: 'Not on the server',
+              message:
+                  'This item is no longer in the library, or the account this '
+                  'connection uses cannot see it.',
+            ),
+            data: (item) =>
+                _Body(service: service, instanceId: connection, item: item!),
           ),
-          data: (item) =>
-              _Body(service: service, instanceId: connection, item: item!),
         ),
       ),
     );

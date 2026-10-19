@@ -333,10 +333,15 @@ Future<void> _pumpHome(
     ],
   );
   addTearDown(router.dispose);
+  // The line under Settings' name asks where this device is, which reads the
+  // remembered routes of a connection with an address away.
+  final scope = await settingsScope();
 
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        sharedPreferencesProvider.overrideWithValue(scope.prefs),
+        secureSettingsStoreProvider.overrideWithValue(scope.secureStore),
         currentSettingsProvider.overrideWith((ref) => settings),
         serviceDiagnosisProvider.overrideWith((ref, service) async {
           onDiagnose?.call();

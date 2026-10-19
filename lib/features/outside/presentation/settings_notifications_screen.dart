@@ -16,6 +16,7 @@ import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/notice_line.dart';
 import 'package:cupola/core/widgets/settings_switch_row.dart';
+import 'package:cupola/core/widgets/page_title.dart';
 import 'package:cupola/features/outside/data/outside_settings.dart';
 import 'package:cupola/features/outside/domain/outside_notices.dart';
 import 'package:cupola/features/release_search/presentation/release_search_entry.dart'
@@ -95,16 +96,17 @@ class _SettingsNotificationsScreenState
     final ios = platform == TargetPlatform.iOS;
 
     return AmbientScaffold(
-      appBar: const GlassAppBar(title: Text('Notifications')),
+      appBar: const GlassAppBar.inPage(pageTitle: 'Notifications'),
       body: SettingsMasterDetail(
         child: ListView(
           padding: EdgeInsets.fromLTRB(
             AppSpacing.lg,
-            AppSpacing.sm,
+            0,
             AppSpacing.lg,
             FloatingNavBarMetrics.getScrollViewBottomPadding(context),
           ),
           children: [
+            const PageTitle.flush('Notifications'),
             if (blocked) ...[
               NoticeLine(
                 tone: StatusTone.warning,

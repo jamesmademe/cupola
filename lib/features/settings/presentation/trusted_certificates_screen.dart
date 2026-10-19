@@ -10,6 +10,7 @@ import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
+import 'package:cupola/core/widgets/page_title.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/presentation/widgets/cert_trust_content.dart';
@@ -23,6 +24,8 @@ import 'package:cupola/features/settings/presentation/widgets/settings_master_de
 /// finds a pin whose services have all since been removed, or shows the one
 /// decision covering three services at once. This screen is that one place.
 class TrustedCertificatesScreen extends ConsumerWidget {
+  static const _title = 'Trusted certificates';
+
   const TrustedCertificatesScreen({super.key});
 
   @override
@@ -33,26 +36,30 @@ class TrustedCertificatesScreen extends ConsumerWidget {
     return AmbientScaffold(
       // No accent: a settings pane has no artwork, so its room is lit by the
       // neutral lamp, the fallback of `AmbientBackground`.
-      appBar: const GlassAppBar(title: Text('Trusted certificates')),
+      appBar: const GlassAppBar.inPage(pageTitle: _title),
       body: SettingsMasterDetail(
         child: origins.isEmpty
-            ? const AppEmptyState(
-                icon: Icons.verified_user_outlined,
-                title: 'Nothing trusted yet',
-                message:
-                    'A self-signed certificate you choose to trust, for a '
-                    'service behind a home-made reverse proxy, say, shows up '
-                    'here, and can be revoked from here even after every '
-                    'service that used it is gone.',
+            ? const TitledBody(
+                title: _title,
+                child: AppEmptyState(
+                  icon: Icons.verified_user_outlined,
+                  title: 'Nothing trusted yet',
+                  message:
+                      'A self-signed certificate you choose to trust, for a '
+                      'service behind a home-made reverse proxy, say, shows up '
+                      'here, and can be revoked from here even after every '
+                      'service that used it is gone.',
+                ),
               )
             : ListView(
                 padding: EdgeInsets.fromLTRB(
                   AppSpacing.lg,
-                  AppSpacing.sm,
+                  0,
                   AppSpacing.lg,
                   FloatingNavBarMetrics.getScrollViewBottomPadding(context),
                 ),
                 children: [
+                  const PageTitle.flush(_title),
                   // The doctrine was written down only on the empty state,
                   // which is the one screen where nobody needs it. A user
                   // arrives here with three pins and one question: why is this

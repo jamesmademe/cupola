@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 
+import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/room_art.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/core/utils/unit_space.dart';
+import 'package:cupola/core/widgets/ambient_background.dart';
 import 'package:cupola/core/widgets/app_card.dart';
+import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
 import 'package:cupola/features/stream/domain/stream_semantics.dart';
@@ -49,9 +53,22 @@ class StreamSessionCard extends StatelessWidget {
     this.onStop,
     this.onTogglePause,
     this.onMessage,
+    this.posterUrl,
+    this.posterHeaders,
+    this.light,
   });
 
   final StreamSession session;
+
+  /// The title's poster beside its words: the public poster the arrs hold for
+  /// it when there is one (it glows with its own light), else the server's
+  /// own, fetched with [posterHeaders]. Null draws the words alone.
+  final String? posterUrl;
+  final Map<String, String>? posterHeaders;
+
+  /// The picture of the title's light: a card about a title glows with it
+  /// (brand book, *The title light*). Null for an unlit card.
+  final RoomArt? light;
   final Color accent;
 
   /// Which server the session is playing from, for a list that merges two
@@ -96,69 +113,117 @@ class StreamSessionCard extends StatelessWidget {
       surface: colorScheme.surfaceContainer,
     );
 
-    return AppCard.filled(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Semantics(
-            container: true,
-            label: session.title,
-            value: streamSessionValue(
-              userName: session.userName,
-              title: session.title,
-              subtitle: session.subtitle,
-              playMethodLabel: session.playMethod.label,
-              transcodeReason: reason,
-              deviceLabel: session.deviceLabel,
-              progressLabel: progressLabel,
-              bitrateLabel: rate,
-              bitrateIsNominal: session.bitrateIsNominal,
-              isPaused: session.isPaused,
-              serverName: serverName,
-            ),
-            excludeSemantics: true,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _TitleRow(session: session),
-                const SizedBox(height: AppSpacing.sm),
-                _CostRow(
-                  session: session,
-                  reason: reason,
-                  color: costColor,
-                  rate: rate,
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  [
-                    session.userName,
-                    session.deviceLabel,
-                    ?serverName,
-                  ].join(dotSeparator),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                if (session.progress != null) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  _ProgressBar(progress: session.progress!),
-                ],
-              ],
-            ),
+    // What is playing, how, and who is watching it on what.
+    final lines = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _TitleRow(session: session),
+        const SizedBox(height: AppSpacing.sm),
+        _CostRow(
+          session: session,
+          reason: reason,
+          color: costColor,
+          rate: rate,
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          [
+            session.userName,
+            session.deviceLabel,
+            ?serverName,
+          ].join(dotSeparator),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
           ),
-          if (onTogglePause != null || onMessage != null || onStop != null)
-            _SessionActions(
-              isPaused: session.isPaused,
-              onTogglePause: onTogglePause,
-              onMessage: onMessage,
-              onStop: onStop,
+        ),
+      ],
+    );
+
+    final poster = posterUrl;
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          container: true,
+          label: session.title,
+          value: streamSessionValue(
+            userName: session.userName,
+            title: session.title,
+            subtitle: session.subtitle,
+            playMethodLabel: session.playMethod.label,
+            transcodeReason: reason,
+            deviceLabel: session.deviceLabel,
+            progressLabel: progressLabel,
+            bitrateLabel: rate,
+            bitrateIsNominal: session.bitrateIsNominal,
+            isPaused: session.isPaused,
+            serverName: serverName,
+          ),
+          excludeSemantics: true,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (poster != null && poster.isNotEmpty)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: _posterWidth,
+                      height: _posterHeight,
+                      child: ContentCard.lit(
+                        imageUrl: poster,
+                        httpHeaders: posterHeaders,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(child: lines),
+                  ],
+                )
+              else
+                lines,
+              if (session.progress != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                _ProgressBar(progress: session.progress!),
+              ],
+            ],
+          ),
+        ),
+        if (onTogglePause != null || onMessage != null || onStop != null)
+          _SessionActions(
+            isPaused: session.isPaused,
+            onTogglePause: onTogglePause,
+            onMessage: onMessage,
+            onStop: onStop,
+          ),
+      ],
+    );
+
+    final art = light;
+    if (art == null) return AppCard.filled(child: content);
+    // The light lies under the words, to the card's edges: the card carries
+    // its own inset inside the clip.
+    return AppCard.filled(
+      padding: EdgeInsets.zero,
+      child: ClipRRect(
+        borderRadius: AppRadius.borderRadiusSlab,
+        child: Stack(
+          children: [
+            Positioned.fill(child: SlabLight(art: art)),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: content,
             ),
-        ],
+          ],
+        ),
       ),
     );
   }
+
+  /// The poster's size beside the words, as an Overview row's.
+  static const double _posterWidth = 36;
+  static const double _posterHeight = 54;
 
   static String? _progressLabel(double? progress) {
     if (progress == null) return null;

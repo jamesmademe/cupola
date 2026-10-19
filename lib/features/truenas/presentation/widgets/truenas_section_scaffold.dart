@@ -6,6 +6,7 @@ import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/capability_banner.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
+import 'package:cupola/core/widgets/page_title.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/truenas/presentation/truenas_capability.dart';
 import 'package:cupola/features/truenas/presentation/widgets/truenas_version_banner.dart';
@@ -51,11 +52,7 @@ class TrueNasSectionScaffold extends StatelessWidget {
     // lift the FAB so it can't be hidden behind the bar.
     return AmbientScaffold(
       accent: ServiceKey.truenas.accent,
-      appBar: GlassAppBar(
-        title: Text(title),
-        actions: actions,
-        bottom: appBarBottom,
-      ),
+      appBar: GlassAppBar.inPage(pageTitle: title, actions: actions),
       floatingActionButton: floatingActionButton == null
           ? null
           : Padding(
@@ -65,7 +62,11 @@ class TrueNasSectionScaffold extends StatelessWidget {
               child: floatingActionButton,
             ),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          PageTitle(title),
+          // A section's tabs sit under its name, not over it.
+          ?appBarBottom,
           if (showVersionBanner) const TrueNasVersionBanner(),
           if (capabilityAreas case final areas?)
             Consumer(

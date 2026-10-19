@@ -19,6 +19,7 @@ import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/notice_line.dart';
 import 'package:cupola/core/widgets/qr_code_view.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/core/widgets/page_title.dart';
 import 'package:cupola/features/pairing/data/pair_server.dart';
 import 'package:cupola/features/pairing/data/pair_session.dart';
 import 'package:cupola/features/pairing/domain/pair_link.dart';
@@ -114,16 +115,17 @@ class _PairOfferScreenState extends ConsumerState<PairOfferScreen> {
     return AmbientScaffold(
       // No accent: a settings pane has no artwork, so its room is lit by the
       // neutral lamp, the fallback of `AmbientBackground`.
-      appBar: const GlassAppBar(title: Text('Set up another device')),
+      appBar: const GlassAppBar.inPage(pageTitle: 'Set up another device'),
       body: SettingsMasterDetail(
         child: ListView(
           padding: EdgeInsets.fromLTRB(
             AppSpacing.lg,
-            AppSpacing.sm,
+            0,
             AppSpacing.lg,
             FloatingNavBarMetrics.getScrollViewBottomPadding(context),
           ),
           children: [
+            const PageTitle.flush('Set up another device'),
             Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(

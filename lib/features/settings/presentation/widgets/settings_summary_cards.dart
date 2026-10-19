@@ -53,9 +53,12 @@ import 'package:cupola/features/shell/domain/shell_audience.dart';
 /// (`settings_app_rows.dart`) under the phone's own labels, in the phone's
 /// order; Reset keeps its confirmation.
 class SettingsSummaryPane extends ConsumerWidget {
-  const SettingsSummaryPane({super.key, required this.padding});
+  const SettingsSummaryPane({super.key, required this.padding, this.heading});
 
   final EdgeInsetsGeometry padding;
+
+  /// The page's name over the cards (`PageTitle`), or null.
+  final Widget? heading;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -65,6 +68,7 @@ class SettingsSummaryPane extends ConsumerWidget {
       return ListView(
         padding: padding,
         children: [
+          ?heading,
           const RequesterAccountCard(),
           const SizedBox(height: AppSpacing.xl),
           const _RegionSummaryCard(),
@@ -86,6 +90,7 @@ class SettingsSummaryPane extends ConsumerWidget {
     return ListView(
       padding: padding,
       children: [
+        ?heading,
         const ConnectionsSummaryCard(),
         const SizedBox(height: AppSpacing.xl),
         const _TrustedCertificatesSummaryCard(),
@@ -127,6 +132,52 @@ class _AboutSummaryCard extends StatelessWidget {
   }
 }
 
+/// The stack's connections as one readout: every service set up, how it
+/// answered, and the ones not set up. The Connections card leads with it and
+/// the Settings page's line under its name says it again in short.
+final connectionsReadoutProvider = Provider.autoDispose<ConnectionsReadout>((
+  ref,
+) {
+  final settings = ref.watch(currentSettingsProvider);
+  final states = <ServiceKey, ConnectionPresentation>{};
+  final notSetUp = <ServiceKey>[];
+  // Counted by the Stack's rule (`foldedServiceHealthProvider`): a service
+  // that answered with a refusal or a fault answered. Its fault is still
+  // named in its group.
+  var answered = 0;
+  for (final service in ServiceKey.values) {
+    if (!settings.hasServiceConnection(service)) {
+      notSetUp.add(service);
+      continue;
+    }
+    final async = ref.watch(serviceDiagnosisProvider(service));
+    final diagnosis = async.isLoading ? null : async.asData?.value;
+    final reason = diagnosis?.reason;
+    if (diagnosis?.status == ServiceConnectionStatus.connected ||
+        (reason != null &&
+            !failureDidNotAnswer(reason) &&
+            reason != ServiceFailureReason.sessionEnded)) {
+      answered++;
+    }
+    states[service] = describeConnection(
+      service,
+      // Loading is a state of its own in the vocabulary, and a provider that
+      // threw says exactly what a failed probe says: we could not confirm it.
+      status: async.isLoading
+          ? ServiceConnectionStatus.checking
+          : (async.asData?.value.status ??
+                ServiceConnectionStatus.disconnected),
+      reason: async.asData?.value.reason,
+      gateway: async.asData?.value.gateway,
+    );
+  }
+  return ConnectionsReadout.from(
+    states: states,
+    notSetUp: notSetUp,
+    answeringServices: answered,
+  );
+});
+
 /// The connections card: the count, then only the connections that are wrong.
 ///
 /// Shared by the summary pane and the phone index rather than drawn twice:
@@ -144,46 +195,8 @@ class ConnectionsSummaryCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
-    final settings = ref.watch(currentSettingsProvider);
-
-    final states = <ServiceKey, ConnectionPresentation>{};
-    final notSetUp = <ServiceKey>[];
-    // Counted by the Stack's rule (`foldedServiceHealthProvider`): a service
-    // that answered with a refusal or a fault answered. Its fault is still
-    // named in its group below.
-    var answered = 0;
-    for (final service in ServiceKey.values) {
-      if (!settings.hasServiceConnection(service)) {
-        notSetUp.add(service);
-        continue;
-      }
-      final async = ref.watch(serviceDiagnosisProvider(service));
-      final diagnosis = async.isLoading ? null : async.asData?.value;
-      final reason = diagnosis?.reason;
-      if (diagnosis?.status == ServiceConnectionStatus.connected ||
-          (reason != null &&
-              !failureDidNotAnswer(reason) &&
-              reason != ServiceFailureReason.sessionEnded)) {
-        answered++;
-      }
-      states[service] = describeConnection(
-        service,
-        // Loading is a state of its own in the vocabulary, and a provider that
-        // threw says exactly what a failed probe says: we could not confirm it.
-        status: async.isLoading
-            ? ServiceConnectionStatus.checking
-            : (async.asData?.value.status ??
-                  ServiceConnectionStatus.disconnected),
-        reason: async.asData?.value.reason,
-        gateway: async.asData?.value.gateway,
-      );
-    }
-
-    final readout = ConnectionsReadout.from(
-      states: states,
-      notSetUp: notSetUp,
-      answeringServices: answered,
-    );
+    final readout = ref.watch(connectionsReadoutProvider);
+    final notSetUp = readout.notSetUp;
 
     return _SummaryCard(
       label: 'Connections',

@@ -113,6 +113,24 @@ final titleLightProvider = FutureProvider.autoDispose
       return compute(titleLightOf, (source: url, pixels: art));
     }, retry: noProviderRetry);
 
+/// The most coloured of the lights of [urls] (`RoomArt.chroma`), once each has
+/// been read; null while one is still being read, so a room chooses once
+/// rather than as each light arrives, and null when none of them has a light
+/// (the lamp). The first wins a tie: [urls] is in order of preference.
+TitleLight? mostColouredTitleLight(Ref ref, List<String> urls) {
+  TitleLight? best;
+  for (final url in urls) {
+    final read = ref.watch(titleLightProvider(url));
+    if (read.isLoading && !read.hasValue && !read.hasError) return null;
+    final light = read.value;
+    if (light == null) continue;
+    if (best == null || (light.art?.chroma ?? 0) > (best.art?.chroma ?? 0)) {
+      best = light;
+    }
+  }
+  return best;
+}
+
 /// The light of [input] and its picture (`bakeRoomArt`), or null for artwork
 /// with too little chroma. Pure and isolate-safe: one trip off the UI isolate
 /// for both.

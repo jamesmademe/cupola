@@ -111,6 +111,13 @@ class StreamSession {
   /// session paused for an hour still has nine minutes left.
   final Duration? remaining;
 
+  /// The server's own id of the title being played: the movie's, or for an
+  /// episode the series' (Jellyfin's `SeriesId`, Plex's
+  /// `grandparentRatingKey`). What the title is known by to the arrs is read
+  /// from it (`StreamServerClient.getTitleKey`). Null when the server sent
+  /// none, or for what is neither a movie nor an episode.
+  final String? titleId;
+
   const StreamSession({
     required this.id,
     required this.userName,
@@ -125,6 +132,7 @@ class StreamSession {
     required this.progress,
     required this.isPaused,
     this.remaining,
+    this.titleId,
   });
 
   /// Whether this session is the reason you would look at the board.

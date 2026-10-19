@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/connection_capability.dart';
+import 'package:cupola/core/room_art.dart';
+import 'package:cupola/core/title_light.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
@@ -13,6 +15,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
 import 'package:cupola/features/stream/domain/stream_semantics.dart';
 import 'package:cupola/features/stream/presentation/stream_connection_provider.dart';
+import 'package:cupola/features/stream/presentation/stream_session_poster.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_message_prompt.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_session_card.dart';
 
@@ -116,12 +119,19 @@ class StreamNowPlayingSection extends ConsumerWidget {
                       ),
                       child: StaggeredEntrance(
                         index: i,
-                        child: StreamSessionCard(
-                          session: list[i],
-                          accent: service.accent,
-                          onStop: _stopHandler(context, ref, list[i]),
-                          onTogglePause: _pauseHandler(context, ref, list[i]),
-                          onMessage: _messageHandler(context, ref, list[i]),
+                        child: _litCard(
+                          ref,
+                          list[i],
+                          (poster, headers, light) => StreamSessionCard(
+                            session: list[i],
+                            accent: service.accent,
+                            posterUrl: poster,
+                            posterHeaders: headers,
+                            light: light,
+                            onStop: _stopHandler(context, ref, list[i]),
+                            onTogglePause: _pauseHandler(context, ref, list[i]),
+                            onMessage: _messageHandler(context, ref, list[i]),
+                          ),
                         ),
                       ),
                     ),
@@ -132,6 +142,48 @@ class StreamNowPlayingSection extends ConsumerWidget {
       ],
     );
   }
+
+  /// [session]'s card, given its poster and its light: the public poster the
+  /// arrs hold for its title, which it glows with, else the server's own
+  /// artwork through its key, which lights nothing.
+  Widget _litCard(
+    WidgetRef ref,
+    StreamSession session,
+    Widget Function(
+      String? poster,
+      Map<String, String>? headers,
+      RoomArt? light,
+    )
+    card,
+  ) {
+    final title = streamSessionTitleOf(service, instanceId, session);
+    final public = title == null
+        ? null
+        : ref.watch(streamSessionPosterProvider(title)).value;
+    if (public != null) {
+      return card(
+        public,
+        null,
+        ref.watch(titleLightProvider(public)).value?.art,
+      );
+    }
+    final path = session.posterPath;
+    final own = path == null || path.isEmpty
+        ? null
+        : ref
+              .watch(
+                streamClientForProvider((
+                  service: service,
+                  instanceId: instanceId,
+                )),
+              )
+              .imageFor(path, width: _posterWidth);
+    return card(own?.url, own?.headers, null);
+  }
+
+  /// How wide the server's own artwork is asked for: the card's 36pt poster
+  /// at three pixels a point.
+  static const int _posterWidth = 108;
 
   /// The stop control, or null when stopping is not available.
   ///

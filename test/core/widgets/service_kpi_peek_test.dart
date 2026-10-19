@@ -28,6 +28,16 @@ Future<void> _pump(
 }
 
 void main() {
+  test('the hero says one of a count in the singular', () {
+    expect(heroUnitForOne('streams'), 'stream');
+    expect(heroUnitForOne('movies'), 'movie');
+    expect(heroUnitForOne('libraries'), 'library');
+    expect(heroUnitForOne('series'), 'series');
+    expect(heroUnitForOne('wanted'), 'wanted');
+    expect(heroUnitForOne('status'), 'status');
+    expect(heroUnitForOne('config errors'), 'config error');
+  });
+
   group('a rail whose figures could not be read', () {
     testWidgets('reads an em dash rather than vanishing', (tester) async {
       // `SizedBox.shrink()` on error makes "no figures" and "no rail"

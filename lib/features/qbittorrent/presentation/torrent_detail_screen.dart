@@ -13,6 +13,7 @@ import 'package:cupola/core/utils/route_utils.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/core/widgets/page_title.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent_file.dart';
@@ -89,19 +90,22 @@ class _TorrentDetailScreenState extends ConsumerState<TorrentDetailScreen>
     // Loading, failed or gone: the page keeps its frame and its way back,
     // rather than a bare body with no bar to leave by.
     return Scaffold(
-      appBar: GlassAppBar(title: const Text('Torrent')),
-      body: AsyncValueWidget<List<Torrent>>(
-        value: torrentAsync,
-        serviceName: 'qBittorrent',
-        silentService: ServiceKey.qbittorrent,
-        onRetry: () {
-          clearQbittorrentLoginRefusal(ref);
-          ref.invalidate(qbittorrentTorrentsProvider(widget.hash));
-        },
-        data: (_) => const AppEmptyState.compact(
-          icon: Icons.search_off_rounded,
-          title: 'This torrent is not in qBittorrent',
-          message: 'It may have been removed there.',
+      appBar: const GlassAppBar.inPage(pageTitle: 'Torrent'),
+      body: TitledBody(
+        title: 'Torrent',
+        child: AsyncValueWidget<List<Torrent>>(
+          value: torrentAsync,
+          serviceName: 'qBittorrent',
+          silentService: ServiceKey.qbittorrent,
+          onRetry: () {
+            clearQbittorrentLoginRefusal(ref);
+            ref.invalidate(qbittorrentTorrentsProvider(widget.hash));
+          },
+          data: (_) => const AppEmptyState.compact(
+            icon: Icons.search_off_rounded,
+            title: 'This torrent is not in qBittorrent',
+            message: 'It may have been removed there.',
+          ),
         ),
       ),
     );

@@ -6,8 +6,12 @@ import 'package:go_router/go_router.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/room_art.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/date_format.dart';
 import 'package:cupola/core/utils/dot_separator.dart';
+import 'package:cupola/core/widgets/ambient_background.dart';
+import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/inline_error_retry.dart';
@@ -119,6 +123,7 @@ class ServiceOverviewSection extends StatelessWidget {
     required this.child,
     this.subtitle,
     this.destination,
+    this.light,
   }) : padBody = true;
 
   /// A region whose body bleeds to the window edge: a poster rail, whose first
@@ -134,7 +139,8 @@ class ServiceOverviewSection extends StatelessWidget {
     required this.child,
     this.subtitle,
     this.destination,
-  }) : padBody = false;
+  }) : padBody = false,
+       light = null;
 
   /// Whose Overview this is. It decides the link's ink and which shell the link
   /// switches a branch on.
@@ -151,6 +157,11 @@ class ServiceOverviewSection extends StatelessWidget {
 
   /// False for [ServiceOverviewSection.bleed].
   final bool padBody;
+
+  /// The picture of the light of the region's first title: its slab glows
+  /// with it, as a card about a title does (brand book, *The title light*).
+  /// Null for an unlit slab, and always for a rail, which has no slab.
+  final RoomArt? light;
 
   @override
   Widget build(BuildContext context) {
@@ -217,25 +228,36 @@ class ServiceOverviewSection extends StatelessWidget {
         AppSpacing.lg,
         AppSpacing.md,
       ),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.md,
-          AppSpacing.lg,
-          AppSpacing.md,
-        ),
+      child: DecoratedBox(
         decoration: BoxDecoration(
           color: room.slab,
           borderRadius: BorderRadius.circular(AppRadius.slab),
           border: Border.all(color: room.hair),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            header,
-            const SizedBox(height: AppSpacing.sm),
-            child,
-          ],
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.slab),
+          child: Stack(
+            children: [
+              if (light case final light?)
+                Positioned.fill(child: SlabLight(art: light)),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.md,
+                  AppSpacing.lg,
+                  AppSpacing.md,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    header,
+                    const SizedBox(height: AppSpacing.sm),
+                    child,
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -590,6 +612,133 @@ class _RowActionButton extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: theme.textTheme.labelLarge?.weight(FontWeight.w600),
         ),
+      ),
+    );
+  }
+}
+
+/// The 36×54 art beside an Overview row about a title: its poster, glowing
+/// with its own light once drawn, or a plate with the title's initials when
+/// there is none to show.
+///
+/// A public picture only (TMDB's, TheTVDB's): the arrs' own copies sit behind
+/// their key, and a row's poster is read for its light.
+class ServiceOverviewArt extends StatelessWidget {
+  const ServiceOverviewArt({
+    super.key,
+    required this.posterUrl,
+    required this.title,
+  });
+
+  final String? posterUrl;
+
+  /// The title the row is about, for the plate's initials.
+  final String title;
+
+  static const double width = 36;
+  static const double height = 54;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = posterUrl;
+    return ExcludeSemantics(
+      child: SizedBox(
+        width: width,
+        height: height,
+        child: url == null || url.isEmpty
+            ? _InitialsPlate(initials: overviewInitialsOf(title))
+            : ContentCard.lit(imageUrl: url),
+      ),
+    );
+  }
+}
+
+/// The first letters of the first two words of [title], `NS` for *Night
+/// Shift*; the first two letters of a one-word title; empty for none.
+String overviewInitialsOf(String title) {
+  final words = [
+    for (final word in title.trim().split(RegExp(r'\s+')))
+      if (word.replaceAll(_notAWordLetter, '') case final letters
+          when letters.isNotEmpty)
+        letters,
+  ];
+  if (words.isEmpty) return '';
+  final letters = words.length == 1
+      ? words.first.characters.take(2).toString()
+      : '${words[0].characters.first}${words[1].characters.first}';
+  return letters.toUpperCase();
+}
+
+final _notAWordLetter = RegExp(r'[^\p{L}\p{N}]', unicode: true);
+
+class _InitialsPlate extends StatelessWidget {
+  const _InitialsPlate({required this.initials});
+
+  final String initials;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: room.fillStrong,
+        borderRadius: AppRadius.borderRadiusSm,
+        border: Border.all(color: room.edge),
+      ),
+      child: Center(
+        child: Text(
+          initials,
+          maxLines: 1,
+          style: AppType.label
+              .weight(FontWeight.w600)
+              .copyWith(color: room.inkSecondary),
+        ),
+      ),
+    );
+  }
+}
+
+/// The day a row of what is coming falls on, as a column: `Today` or the
+/// weekday in the row's figure, the date under it, `21 Oct`.
+class ServiceOverviewDay extends StatelessWidget {
+  const ServiceOverviewDay({super.key, required this.day, required this.now});
+
+  final DateTime day;
+  final DateTime now;
+
+  /// The column's width: `Tomorrow` scales down into it rather than lose a
+  /// letter.
+  static const double width = 58;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    final words = formatDayLabel(day, now);
+    // `Today`, `Tomorrow`, else the weekday alone: the date is under it.
+    final lead = calendarDaysBetween(now, day) <= 1
+        ? words
+        : shortWeekdayName(day);
+    return SizedBox(
+      width: width,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              lead,
+              maxLines: 1,
+              style: AppType.figureSmall.copyWith(color: room.ink),
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            formatDayMonthNoYear(day),
+            maxLines: 1,
+            style: AppType.caption.copyWith(color: room.inkSecondary),
+          ),
+        ],
       ),
     );
   }

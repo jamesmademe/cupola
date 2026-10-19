@@ -11,6 +11,7 @@ import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/core/widgets/page_title.dart';
 import 'package:cupola/features/dockge/data/dockge_client.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack_detail.dart';
@@ -44,8 +45,8 @@ class DockgeStackDetailScreen extends ConsumerWidget {
 
     return AmbientScaffold(
       accent: ServiceKey.dockge.accent,
-      appBar: GlassAppBar(
-        title: Text(name),
+      appBar: GlassAppBar.inPage(
+        pageTitle: name,
         actions: [
           if (isConfigured)
             IconButton(
@@ -59,7 +60,10 @@ class DockgeStackDetailScreen extends ConsumerWidget {
       body: SafeArea(
         child: isConfigured
             ? _StackDetailBody(name: name, onRefresh: _refresh)
-            : const NotConfiguredPlaceholder(serviceName: 'Dockge'),
+            : TitledBody(
+                title: name,
+                child: const NotConfiguredPlaceholder(serviceName: 'Dockge'),
+              ),
       ),
     );
   }
@@ -82,11 +86,17 @@ class _StackDetailBody extends ConsumerWidget {
         .watch(dockgeStackDetailProvider(name))
         .when(
           data: (detail) => _DetailBody(detail: detail, onRefresh: onRefresh),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => AppErrorState(
-            error: error,
-            service: ServiceKey.dockge,
-            onRetry: () => onRefresh(ref),
+          loading: () => TitledBody(
+            title: name,
+            child: const Center(child: CircularProgressIndicator()),
+          ),
+          error: (error, _) => TitledBody(
+            title: name,
+            child: AppErrorState(
+              error: error,
+              service: ServiceKey.dockge,
+              onRetry: () => onRefresh(ref),
+            ),
           ),
         );
   }
@@ -111,13 +121,16 @@ class _DetailBody extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.lg,
-          AppSpacing.md,
+          0,
           AppSpacing.lg,
           AppSpacing.xxl,
         ),
         children: [
-          _StatusHeader(status: detail.status),
-          const SizedBox(height: AppSpacing.lg),
+          // The stack's name, and how it stands under it.
+          PageTitle.flush(
+            detail.name,
+            summary: _StatusHeader(status: detail.status),
+          ),
           _ActionBar(name: detail.name, onRefresh: onRefresh),
           const SizedBox(height: 20),
           Text(
@@ -151,17 +164,19 @@ class _StatusHeader extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final statusColor = statusToneColor(colorScheme, status.tone);
 
+    // The line under the stack's name: its state as a dot and a word, the
+    // word in the dot's tone.
     return Row(
       children: [
         Container(
-          width: 12,
-          height: 12,
+          width: 7,
+          height: 7,
           decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 6),
         Text(
           status.label,
-          style: Theme.of(context).textTheme.titleMedium!
+          style: AppType.meta
               .weight(FontWeight.w600)
               .copyWith(color: statusColor),
         ),

@@ -13,6 +13,7 @@ import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/text_scale.dart';
 
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/title_light.dart';
 
 import 'package:cupola/core/utils/image_utils.dart';
 
@@ -141,10 +142,18 @@ class _DecisionsSection extends ConsumerWidget {
     final total = section.asData?.value.total;
     // A lost page of requests leaves the count a floor: `3+`.
     final floor = section.asData?.value.isFloor ?? false;
+    // The slab glows with its first title's light.
+    final lead = [
+      for (final row in section.value?.rows ?? const <SeerrOverviewRow>[])
+        ?_posterOf(row),
+    ].firstOrNull;
 
     return ServiceOverviewSection(
       service: ServiceKey.seerr,
       title: 'Needs a decision',
+      light: lead == null
+          ? null
+          : ref.watch(titleLightProvider(lead)).value?.art,
       // "—" while the list is loading or after it failed: a "0 waiting" printed
       // over an unanswered question is a claim nobody made.
       subtitle: total == null
@@ -186,8 +195,8 @@ class _DecisionRow extends StatelessWidget {
 
   final SeerrOverviewRow row;
 
-  /// The dot's width and the gap after it: where the row's words start.
-  static const double _indent = 8 + AppSpacing.sm;
+  /// The poster's width and the gap after it: where the row's words start.
+  static const double _indent = ServiceOverviewArt.width + AppSpacing.sm;
 
   @override
   Widget build(BuildContext context) {
@@ -254,27 +263,26 @@ class _RequestRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    // Through the tone rule, never a raw `AppColors.*`. A pending request is
-    // neutral here by construction; see [SeerrOverviewRow.tone].
-    final tone = statusToneColor(
-      colorScheme,
-      row.tone,
-      surface: colorScheme.surfaceContainerLow,
-    );
-
+    // The title's poster, as the Requests tab draws it: the section names
+    // what state its rows are in, so the row needs no dot to say it again.
     return ServiceOverviewRow(
       spoken: row.spoken,
-      leading: Container(
-        width: 8,
-        height: 8,
-        margin: const EdgeInsets.only(top: 5),
-        decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
+      leading: ServiceOverviewArt(
+        posterUrl: _posterOf(row),
+        title: row.request.media?.title ?? row.headline,
       ),
       title: row.headline,
       detail: row.detail,
     );
   }
+}
+
+/// The public poster of the title [row] asks for (TMDB's, small: it is drawn
+/// at 36 wide), or null.
+String? _posterOf(SeerrOverviewRow row) {
+  final path = row.request.media?.posterPath;
+  if (path == null || path.isEmpty) return null;
+  return ImageUtils.buildTmdbPosterUrl(path, size: 'w154');
 }
 
 // ─── 3. Trending ────────────────────────────────────────────────────────────

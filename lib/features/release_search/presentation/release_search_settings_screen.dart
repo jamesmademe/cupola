@@ -14,6 +14,7 @@ import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/core/widgets/page_title.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/features/release_search/data/release_search_notifications.dart';
 import 'package:cupola/features/release_search/data/release_search_transport.dart';
@@ -127,7 +128,7 @@ class _ReleaseSearchSettingsScreenState
       // No accent: this is a *settings* pane that happens to be owned by
       // release search, and like its six siblings its room is lit by the
       // neutral lamp, the fallback of `AmbientBackground`.
-      appBar: const GlassAppBar(title: Text('Background search')),
+      appBar: const GlassAppBar.inPage(pageTitle: 'Background search'),
       // Background search is a section of the settings rail
       // (`SettingsMasterDetail.sections`), and it was the single destination in
       // that list not wrapped in the layout: a bare `GoRoute` rather than a
@@ -141,11 +142,12 @@ class _ReleaseSearchSettingsScreenState
         child: ListView(
           padding: EdgeInsets.fromLTRB(
             AppSpacing.lg,
-            AppSpacing.sm,
+            0,
             AppSpacing.lg,
             FloatingNavBarMetrics.getScrollViewBottomPadding(context),
           ),
           children: [
+            const PageTitle.flush('Background search'),
             if (canRunInBackground)
               SettingsGroupCard(
                 children: [

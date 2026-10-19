@@ -687,24 +687,35 @@ class JellyfinClient implements StreamServerClient {
   }
 
   @override
-  Future<MediaKey?> getSeriesKey(
-    String seriesId, {
+  Future<MediaKey?> getSeriesKey(String seriesId, {CancelToken? cancelToken}) =>
+      _keyOf(seriesId, const {StreamItemKind.series}, cancelToken: cancelToken);
+
+  @override
+  Future<MediaKey?> getTitleKey(String titleId, {CancelToken? cancelToken}) =>
+      _keyOf(titleId, const {
+        StreamItemKind.movie,
+        StreamItemKind.series,
+      }, cancelToken: cancelToken);
+
+  /// The page the item [id] has, when it is one of [kinds].
+  Future<MediaKey?> _keyOf(
+    String id,
+    Set<StreamItemKind> kinds, {
     CancelToken? cancelToken,
   }) async {
     try {
       final items = await _fetchItems('/Items', {
-        'ids': seriesId,
+        'ids': id,
         // The ids are all this read is for: no artwork, no synopsis.
         'fields': 'ProviderIds',
         'userId': ?_resolveViewerId(null),
       }, cancelToken: cancelToken);
       // A server that ignored `ids` answers with the start of its library:
-      // only the series itself names its page.
-      final series = items.where(
-        (item) =>
-            _sameId(item.id, seriesId) && item.kind == StreamItemKind.series,
+      // only the item itself names its page.
+      final named = items.where(
+        (item) => _sameId(item.id, id) && kinds.contains(item.kind),
       );
-      return series.isEmpty ? null : MediaKey.ofStreamItem(series.first);
+      return named.isEmpty ? null : MediaKey.ofStreamItem(named.first);
     } catch (_) {
       return null;
     }

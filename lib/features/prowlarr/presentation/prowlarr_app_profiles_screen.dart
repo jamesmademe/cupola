@@ -14,6 +14,7 @@ import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
+import 'package:cupola/core/widgets/page_title.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -26,19 +27,21 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 class ProwlarrAppProfilesScreen extends ConsumerWidget {
   const ProwlarrAppProfilesScreen({super.key});
 
+  static const _title = 'Sync profiles';
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profilesAsync = ref.watch(prowlarrAppProfilesProvider);
 
     return Scaffold(
-      appBar: GlassAppBar(
+      appBar: GlassAppBar.inPage(
+        pageTitle: _title,
         leading: IconButton(
           icon: const Icon(Icons.chevron_left_rounded),
           tooltip: 'Back',
           onPressed: () =>
               RouteUtils.popOrGo(context, ServiceRoutes.prowlarrSettings),
         ),
-        title: const Text('Sync profiles'),
         actions: [
           IconButton(
             icon: const Icon(Icons.add_rounded),
@@ -55,8 +58,9 @@ class ProwlarrAppProfilesScreen extends ConsumerWidget {
           },
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
             children: [
+              const PageTitle(_title),
               for (final profile in profiles)
                 _ProfileRow(
                   profile: profile,
@@ -74,12 +78,18 @@ class ProwlarrAppProfilesScreen extends ConsumerWidget {
             ],
           ),
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => AppErrorState(
-          error: error,
-          serviceName: ServiceKey.prowlarr.title,
-          service: ServiceKey.prowlarr,
-          onRetry: () => ref.invalidate(prowlarrAppProfilesProvider),
+        loading: () => const TitledBody(
+          title: _title,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        error: (error, _) => TitledBody(
+          title: _title,
+          child: AppErrorState(
+            error: error,
+            serviceName: ServiceKey.prowlarr.title,
+            service: ServiceKey.prowlarr,
+            onRetry: () => ref.invalidate(prowlarrAppProfilesProvider),
+          ),
         ),
       ),
     );

@@ -452,6 +452,22 @@ void main() {
       expect(session.isPaused, isFalse);
     });
 
+    test('a session names its title by the show for an episode, by the '
+        'movie for a movie, and by nothing for a track', () async {
+      final adapter = CapturingHttpAdapter(
+        response: jsonFixtureMap('plex/sessions_mixed.json'),
+      );
+      final sessions = await _client(adapter).getSessions();
+
+      expect({
+        for (final session in sessions) session.title: session.titleId,
+      }, containsPair('Interstellar', '20418'));
+      expect(
+        sessions.map((session) => session.titleId),
+        containsAll(['20418', '20991', '41000', null]),
+      );
+    });
+
     test('a transcode explains itself in prose', () async {
       final adapter = CapturingHttpAdapter(
         response: jsonFixtureMap('plex/sessions_transcode.json'),
@@ -1710,6 +1726,39 @@ void main() {
       );
     });
   });
+  group('getTitleKey', () {
+    Map<String, dynamic> container(String type) => {
+      'MediaContainer': {
+        'size': 1,
+        'Metadata': [
+          {
+            'ratingKey': '41000',
+            'key': '/library/metadata/41000',
+            'title': 'Sintel',
+            'type': type,
+            'Guid': [
+              {'id': 'tmdb://45745'},
+            ],
+          },
+        ],
+      },
+    };
+
+    test('a movie names its page, read with its guids', () async {
+      final adapter = CapturingHttpAdapter(response: container('movie'));
+      expect(
+        await _client(adapter).getTitleKey('41000'),
+        const MediaKey.movie(45745),
+      );
+      expect(adapter.lastUri!.queryParameters['includeGuids'], '1');
+    });
+
+    test('an episode names no page: a session names its show', () async {
+      final adapter = CapturingHttpAdapter(response: container('episode'));
+      expect(await _client(adapter).getTitleKey('41000'), isNull);
+    });
+  });
+
   group('getSeriesKey', () {
     Map<String, dynamic> container(Map<String, dynamic> show) => {
       'MediaContainer': {

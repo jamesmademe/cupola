@@ -165,10 +165,16 @@ void _jellyfinSeriesRead(
       request.query['ids'] == _cosmosOnJellyfin ? answer(request) : null,
 );
 
-/// The reads that ask Jellyfin for a series by its id.
+/// The reads that ask Jellyfin for a series by its id: not the room's read of
+/// what is playing, for its light (Sintel, a movie).
 Iterable<NetworkRequest> _seriesReads(ProfileHarness harness) => harness.network
     .requestsTo(WorldIds.jellyfin)
-    .where((r) => r.path == '/Items' && r.query.containsKey('ids'));
+    .where(
+      (r) =>
+          r.path == '/Items' &&
+          r.query.containsKey('ids') &&
+          r.query['ids'] != 'jf-${WorldTitles.sintel.key}',
+    );
 
 // === Plex ===================================================================
 

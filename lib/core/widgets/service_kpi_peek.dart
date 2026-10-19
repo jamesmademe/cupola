@@ -218,6 +218,29 @@ class ServiceKpiPeek extends StatelessWidget {
   }
 }
 
+/// [noun], a count's plural label, for a count of one: `streams` reads
+/// `stream`, `libraries` `library`. A label that is not a plural (`wanted`,
+/// `series`, `status`) is itself.
+@visibleForTesting
+String heroUnitForOne(String noun) {
+  final words = noun.split(' ');
+  final last = words.last;
+  final lower = last.toLowerCase();
+  final one = switch (lower) {
+    'series' || 'status' => last,
+    'movies' => last.substring(0, last.length - 1),
+    _ when lower.endsWith('ies') && lower.length > 4 =>
+      '${last.substring(0, last.length - 3)}y',
+    _ when lower.endsWith('ss') => last,
+    _ when lower.endsWith('s') && lower.length > 2 => last.substring(
+      0,
+      last.length - 1,
+    ),
+    _ => last,
+  };
+  return [...words.sublist(0, words.length - 1), one].join(' ');
+}
+
 /// The room's hero readout: the figure in the room's largest face and what it
 /// counts beside it, in the secondary ink (`412 movies`).
 class _HeroFigure extends StatelessWidget {
@@ -230,10 +253,12 @@ class _HeroFigure extends StatelessWidget {
     final room = CupolaRoom.of(context);
     final label = kpi.note ?? kpi.label;
     // A noun reads as the figure's unit: `4 movies`, never `4 Movies`; a
-    // label that is an initialism keeps its case.
-    final unit = label.length > 1 && label[1] == label[1].toLowerCase()
+    // label that is an initialism keeps its case; and one of it is one,
+    // `1 stream`.
+    final noun = label.length > 1 && label[1] == label[1].toLowerCase()
         ? label[0].toLowerCase() + label.substring(1)
         : label;
+    final unit = kpi.value.trim() == '1' ? heroUnitForOne(noun) : noun;
     return Semantics(
       container: true,
       excludeSemantics: true,

@@ -367,6 +367,14 @@ void main() {
             containsSemantics(hint: trueNasCapabilityHint, isEnabled: true),
             reason: c.verb,
           );
+          // The page's name sits over the section now: a control under the
+          // fold is scrolled to first.
+          final screen =
+              tester.view.physicalSize / tester.view.devicePixelRatio;
+          if (tester.getRect(c.control.first).bottom > screen.height) {
+            await tester.ensureVisible(c.control.first);
+            await tester.pump();
+          }
           await tester.tap(c.control.first);
           await tester.pumpAndSettle();
           expect(

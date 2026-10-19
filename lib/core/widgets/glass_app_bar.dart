@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/ambient_background.dart';
 import 'package:cupola/core/widgets/desktop_content_well.dart';
+import 'package:cupola/core/widgets/page_title.dart';
 
 /// A near-transparent app-bar surface that lets the page's ambient gradient
 /// read continuously behind it: no opaque strip and no hairline border that
@@ -220,6 +222,10 @@ class _RenderScrim extends RenderBox {
 /// frosts the gradient/content instead of painting an opaque strip over it.
 class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
   final Widget? title;
+
+  /// The name of a page that says it in the page ([PageTitle]); see
+  /// [GlassAppBar.inPage].
+  final String? pageTitle;
   final Widget? leading;
   final List<Widget>? actions;
   final bool centerTitle;
@@ -236,7 +242,22 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.bottom,
     this.toolbarHeight = kToolbarHeight,
     this.automaticallyImplyLeading = true,
-  });
+  }) : pageTitle = null;
+
+  /// The bar of a page that says its name in the page ([PageTitle]), as every
+  /// page pushed over a tab does (brand book, *A page's name is in the
+  /// page*): at rest only the way back and the page's actions. [pageTitle] comes into it, small, once the page's
+  /// heading has scrolled under it, so a long page never loses its name.
+  const GlassAppBar.inPage({
+    super.key,
+    required String this.pageTitle,
+    this.leading,
+    this.actions,
+    this.bottom,
+    this.toolbarHeight = kToolbarHeight,
+    this.automaticallyImplyLeading = true,
+  }) : title = null,
+       centerTitle = false;
 
   @override
   Size get preferredSize =>
@@ -272,7 +293,10 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
       titleTextStyle: AppType.feature.copyWith(
         color: CupolaRoom.of(context).ink,
       ),
-      title: title,
+      title: switch (pageTitle) {
+        final name? => _ScrolledUnderTitle(name: name),
+        null => title,
+      },
       leading: leading,
       actions: actions,
       centerTitle: centerTitle,
@@ -282,4 +306,35 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
       flexibleSpace: glass ? const GlassSurface() : null,
     ),
   );
+}
+
+/// A page's name in its bar once its heading has scrolled under it
+/// ([GlassAppBar.inPage]): absent at rest, so the name is said once.
+class _ScrolledUnderTitle extends StatelessWidget {
+  const _ScrolledUnderTitle({required this.name});
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    final under = PageScrollScope.maybeOf(context);
+    if (under == null) return const SizedBox.shrink();
+    final style = AppType.section.copyWith(color: CupolaRoom.of(context).ink);
+    return ValueListenableBuilder<bool>(
+      valueListenable: under,
+      builder: (context, shown, _) => AnimatedSwitcher(
+        duration: AppAnimation.durationSm,
+        child: shown
+            ? Text(
+                name,
+                key: const ValueKey('page-title-in-bar'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: style,
+              )
+            // The page's heading names it: the bar says nothing twice.
+            : const SizedBox.shrink(),
+      ),
+    );
+  }
 }

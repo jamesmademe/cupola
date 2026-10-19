@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cupola/core/platform/local_network_access.dart';
 import 'package:cupola/core/platform/secure_clipboard.dart';
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/data/settings_service.dart';
@@ -64,10 +65,14 @@ void main() {
       // The pane is titled with the service's name alone. It used to read
       // "Radarr Settings", which is the name of the *other* page: a service's
       // own configuration, written through its API, and this one is the form
-      // for reaching it. Two "Radarr"s on screen now: the app bar and the
-      // header card under it.
+      // for reaching it. Said once, in the page, in the room role: the bar
+      // takes it only once the page has scrolled it under.
       expect(find.text('Radarr Settings'), findsNothing);
-      expect(find.text('Radarr'), findsNWidgets(2));
+      expect(find.text('Radarr'), findsOneWidget);
+      expect(
+        tester.widget<Text>(find.text('Radarr')).style!.fontSize,
+        AppType.room.fontSize,
+      );
       expect(find.text('Save'), findsOneWidget);
       expect(find.text('Address at home'), findsOneWidget);
       expect(find.text('Address away\u00A0· optional'), findsOneWidget);

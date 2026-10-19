@@ -5,6 +5,7 @@ import 'package:cupola/core/app_elevation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/widgets/front_room.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 
 /// The phone's bar stood on its side, for a tablet: the person's sections in
@@ -112,63 +113,75 @@ class FloatingNavRail extends StatelessWidget {
     final itemHeight = _itemHeightOf(context);
     final lit = selectedIndex >= 0 && selectedIndex < destinations.length;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppRadius.full),
-        boxShadow: AppElevation.glass(colorScheme),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppRadius.full),
-        child: Container(
-          key: const ValueKey('floating-nav-rail-surface'),
-          padding: const EdgeInsets.all(_inset),
-          decoration: BoxDecoration(
-            color: glassColor,
-            borderRadius: BorderRadius.circular(AppRadius.full),
-            border: Border.all(color: borderColor, width: _edge),
-          ),
-          child: SizedBox(
-            width: itemWidth,
-            height: itemHeight * destinations.length,
-            child: Stack(
-              children: [
-                // The one lit shape, sliding to the section the person is on:
-                // the room's strong fill, no edge, the same in every section.
-                if (lit)
-                  AnimatedPositioned(
-                    duration: AppAnimation.durationSm,
-                    curve: AppAnimation.emphasizedCurve,
-                    left: 0,
-                    top: itemHeight * selectedIndex,
-                    width: itemWidth,
-                    height: itemHeight,
-                    child: IgnorePointer(
-                      child: DecoratedBox(
-                        key: const ValueKey('floating-nav-rail-indicator'),
-                        decoration: BoxDecoration(
-                          color: CupolaRoom.of(context).fillStrong,
-                          borderRadius: BorderRadius.circular(_item / 2),
+    // Lit enamel, as the bar's: a sheen of the room in front at its top and
+    // its pill tinted by the same light ([RoomSheen]).
+    return RoomSheen(
+      builder: (context, sheen, pill) => DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppRadius.full),
+          boxShadow: AppElevation.glass(colorScheme),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.full),
+          child: Container(
+            key: const ValueKey('floating-nav-rail-surface'),
+            padding: const EdgeInsets.all(_inset),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  sheen.withValues(alpha: glassColor.a),
+                  glassColor,
+                ],
+                stops: const [0, 0.7],
+              ),
+              borderRadius: BorderRadius.circular(AppRadius.full),
+              border: Border.all(color: borderColor, width: _edge),
+            ),
+            child: SizedBox(
+              width: itemWidth,
+              height: itemHeight * destinations.length,
+              child: Stack(
+                children: [
+                  // The one lit shape, sliding to the section the person is on:
+                  // the room's strong fill tinted by the room in front, no edge.
+                  if (lit)
+                    AnimatedPositioned(
+                      duration: AppAnimation.durationSm,
+                      curve: AppAnimation.emphasizedCurve,
+                      left: 0,
+                      top: itemHeight * selectedIndex,
+                      width: itemWidth,
+                      height: itemHeight,
+                      child: IgnorePointer(
+                        child: DecoratedBox(
+                          key: const ValueKey('floating-nav-rail-indicator'),
+                          decoration: BoxDecoration(
+                            color: pill,
+                            borderRadius: BorderRadius.circular(_item / 2),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                Column(
-                  children: [
-                    for (var index = 0; index < destinations.length; index++)
-                      SizedBox(
-                        width: itemWidth,
-                        height: itemHeight,
-                        child: _RailItem(
-                          destination: destinations[index],
-                          lit: index == selectedIndex,
-                          index: index,
-                          count: destinations.length,
-                          onTap: () => onDestinationSelected(index),
+                  Column(
+                    children: [
+                      for (var index = 0; index < destinations.length; index++)
+                        SizedBox(
+                          width: itemWidth,
+                          height: itemHeight,
+                          child: _RailItem(
+                            destination: destinations[index],
+                            lit: index == selectedIndex,
+                            index: index,
+                            count: destinations.length,
+                            onTap: () => onDestinationSelected(index),
+                          ),
                         ),
-                      ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),

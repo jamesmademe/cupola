@@ -12,6 +12,8 @@ import 'package:cupola/core/text_scale.dart';
 
 import 'package:cupola/core/theme.dart';
 
+import 'package:cupola/core/title_light.dart';
+
 import 'package:cupola/core/utils/arr_activity_display.dart';
 
 import 'package:cupola/core/utils/arr_model_helpers.dart';
@@ -192,10 +194,21 @@ class _AiringSection extends ConsumerWidget {
     // unanswered question is a claim nobody made. This is the one figure on
     // this page whose source can answer and still say nothing.
     final count = data == null || !data.canReport ? null : data.entries.length;
+    // The slab glows with its first series' light, read from a public picture
+    // only.
+    final lead = [
+      for (final entry
+          in data?.entries.take(sonarrAiringPreviewLimit) ??
+              const <SonarrAiringEntry>[])
+        ?remotePosterOf(entry.series.images),
+    ].firstOrNull;
 
     return ServiceOverviewSection(
       service: ServiceKey.sonarr,
       title: 'Airing this week',
+      light: lead == null
+          ? null
+          : ref.watch(titleLightProvider(lead)).value?.art,
       // Series, never episodes. One `nextAiring` per series is all this window
       // has, so a series airing twice this week is one row here, and calling
       // these episodes would be short by exactly the ones it cannot see.
@@ -246,8 +259,8 @@ class _AiringRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final day = formatDayLabel(entry.airsAt, DateTime.now());
+    final now = DateTime.now();
+    final day = formatDayLabel(entry.airsAt, now);
     final series = entry.series;
     // Monitored is the fact that decides whether Sonarr will actually do
     // anything when the episode drops, which is the whole reason the row is
@@ -260,18 +273,16 @@ class _AiringRow extends StatelessWidget {
 
     return ServiceOverviewRow(
       spoken: joinSpokenParts([day, series.title, spokenFromDotted(qualifier)]),
-      leading: SizedBox(
-        width: 58,
-        child: Text(
-          day,
-          maxLines: 2,
-          style: AppTheme.chrome(
-            context,
-            size: 11,
-            weight: FontWeight.w600,
-            color: colorScheme.onSurfaceVariant,
+      leading: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ServiceOverviewDay(day: entry.airsAt, now: now),
+          const SizedBox(width: AppSpacing.sm),
+          ServiceOverviewArt(
+            posterUrl: remotePosterOf(series.images),
+            title: series.title,
           ),
-        ),
+        ],
       ),
       title: series.title,
       detail: qualifier,

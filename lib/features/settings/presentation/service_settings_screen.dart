@@ -58,6 +58,8 @@ import 'package:cupola/features/settings/presentation/widgets/seerr_account_fiel
 import 'package:cupola/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/widgets/selection_pills.dart';
+import 'package:cupola/core/widgets/page_title.dart';
+import 'package:cupola/core/widgets/service_mark_tile.dart';
 
 /// One service's address and credentials, and the state of that connection.
 ///
@@ -1024,14 +1026,14 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     return AmbientScaffold(
       // The room takes the colour of the service being worked on.
       accent: service.accent,
-      appBar: GlassAppBar(
+      appBar: GlassAppBar.inPage(
         // The service's name alone. It read "Radarr Settings", which is the
         // name of a different page: *Service settings* is Radarr's own
         // configuration, read and written through Radarr's API, while this form
         // is how Cupola reaches it: address, key, certificate, connection
         // name. Two pages one word apart is how a user ends up on the wrong
         // one; the breadcrumb above already says Settings › Connections.
-        title: Text(service.title),
+        pageTitle: service.title,
         actions: [_buildSaveAction()],
       ),
       body: Form(
@@ -1042,7 +1044,7 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
         child: SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(
             AppSpacing.lg,
-            AppSpacing.sm,
+            0,
             AppSpacing.lg,
             FloatingNavBarMetrics.getScrollViewBottomPadding(context),
           ),
@@ -1205,41 +1207,23 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
   }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final serviceTheme = ServiceTheme.fromAccent(service.accent);
-
-    return AppCard.filled(
-      accentColor: service.accent,
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: serviceTheme.softContainer,
-              borderRadius: AppRadius.borderRadiusMd,
-            ),
-            // The mark on its 14% tile over the card, walked rather than raw.
-            child: Icon(
-              service.icon,
-              color: ServiceTheme.onTint(
-                service.accent,
-                surface: colorScheme.surfaceContainer,
-                tintAlpha: 0.14,
-              ),
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.lg),
-          Expanded(
-            child: Column(
+    // The service's mark and its name, as its room names it, and under the
+    // name what it is and how this connection stands.
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: AppSpacing.xs),
+          child: ServiceMarkTile(icon: service.icon),
+        ),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: PageTitle.flush(
+            service.title,
+            summary: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  service.title,
-                  style: theme.textTheme.titleMedium!.weight(FontWeight.w600),
-                ),
-                const SizedBox(height: 2),
                 Text(
                   '${service.domain.label}\u00A0· ${service.apiVersion}',
                   style: theme.textTheme.bodySmall?.copyWith(
@@ -1291,8 +1275,8 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
               ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

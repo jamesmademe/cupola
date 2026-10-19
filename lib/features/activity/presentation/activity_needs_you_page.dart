@@ -5,6 +5,7 @@ import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/core/widgets/page_title.dart';
 import 'package:cupola/features/activity/data/activity_answered.dart';
 import 'package:cupola/features/activity/data/activity_live.dart';
 import 'package:cupola/features/activity/domain/activity_readout.dart'
@@ -78,7 +79,7 @@ class _ActivityNeedsYouPageState extends ConsumerState<ActivityNeedsYouPage> {
         coverage.failed.isEmpty;
 
     return AmbientScaffold(
-      appBar: GlassAppBar(title: const Text('Needs you')),
+      appBar: const GlassAppBar.inPage(pageTitle: 'Needs you'),
       body: RefreshIndicator(
         onRefresh: () => refreshActivity(ref, ActivityTab.all),
         child: ListView(
@@ -164,60 +165,59 @@ class _Heading extends StatelessWidget {
       decoration: BoxDecoration(shape: BoxShape.circle, color: color),
     );
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.gutter,
-        AppSpacing.sm,
-        AppSpacing.gutter,
-        AppSpacing.xs,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (meta.isNotEmpty)
-            Semantics(
-              label: meta.replaceAll(dotSeparator, ', '),
-              excludeSemantics: true,
-              child: Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.xxs,
-                children: [
-                  if (faults > 0)
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        dot(amber),
-                        Text(
-                          faults == 1 ? '1 fault' : '$faults faults',
-                          style: style.copyWith(color: amber),
-                        ),
-                      ],
+    final lines = [
+      if (meta.isNotEmpty)
+        Semantics(
+          label: meta.replaceAll(dotSeparator, ', '),
+          excludeSemantics: true,
+          child: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.xxs,
+            children: [
+              if (faults > 0)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    dot(amber),
+                    Text(
+                      faults == 1 ? '1 fault' : '$faults faults',
+                      style: style.copyWith(color: amber),
                     ),
-                  if (requests > 0)
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        dot(blue),
-                        Text(
-                          requests == 1 ? '1 request' : '$requests requests',
-                          style: style.copyWith(color: blue),
-                        ),
-                      ],
+                  ],
+                ),
+              if (requests > 0)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    dot(blue),
+                    Text(
+                      requests == 1 ? '1 request' : '$requests requests',
+                      style: style.copyWith(color: blue),
                     ),
-                ],
-              ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+      if (answeredLine case final line?) ...[
+        const SizedBox(height: AppSpacing.xxs),
+        Text(line, style: AppType.meta.copyWith(color: room.inkSecondary)),
+      ],
+      if (note case final note?) ...[
+        const SizedBox(height: AppSpacing.xs),
+        note,
+      ],
+    ];
+    // The page's name, and under it what waits: the faults and the requests.
+    return PageTitle(
+      'Needs you',
+      summary: lines.isEmpty
+          ? null
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: lines,
             ),
-          if (answeredLine case final line?) ...[
-            const SizedBox(height: AppSpacing.xxs),
-            Text(line, style: AppType.meta.copyWith(color: room.inkSecondary)),
-          ],
-          if (note case final note?) ...[
-            const SizedBox(height: AppSpacing.xs),
-            note,
-          ],
-        ],
-      ),
     );
   }
 }

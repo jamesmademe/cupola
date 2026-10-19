@@ -513,6 +513,11 @@ StreamSession? jellyfinStreamSessionFromJson(Map<String, dynamic> session) {
       position: playState['PositionTicks'],
       runtime: nowPlaying['RunTimeTicks'],
     ),
+    titleId: switch (kind) {
+      StreamItemKind.episode => nowPlaying['SeriesId']?.toString(),
+      StreamItemKind.movie => nowPlaying['Id']?.toString(),
+      _ => null,
+    }?.ifEmptyNull(),
   );
 }
 

@@ -14,18 +14,6 @@ import 'package:cupola/features/discover/presentation/library_calendar_provider.
 import 'package:cupola/features/discover/presentation/widgets/calendar_band.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-/// The artwork that lights Discover: the poster at the end of the band's
-/// line, the next thing out (a picture behind a key is not read for a light);
-/// null for the lamp.
-final discoverRoomSourceProvider = Provider.autoDispose<String?>((ref) {
-  if (!ref.watch(hasCalendarProvider)) return null;
-  final events = ref.watch(calendarProvider).value?.events;
-  if (events == null) return null;
-  final now = ref.watch(calendarClockProvider)();
-  final poster = CalendarDigest.of(events, now).lead?.poster;
-  return poster == null || poster.headers != null ? null : poster.url;
-});
-
 /// The atrium's band, over the calendar it opens: the operator's whenever
 /// the household has something the calendar can read, whatever Seerr says,
 /// since it comes from the arrs; the requester's from her requests.

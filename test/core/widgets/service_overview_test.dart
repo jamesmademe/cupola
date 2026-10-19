@@ -1,6 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/room_art.dart';
+import 'package:cupola/core/widgets/ambient_background.dart';
 import 'package:cupola/core/widgets/service_overview.dart';
 import 'package:cupola/features/services/domain/attention_door.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
@@ -588,6 +592,81 @@ void main() {
           reason: 'bleeding=$bleeding',
         );
       }
+    });
+  });
+
+  group('a section about titles', () {
+    testWidgets('glows with its first title\'s light inside its slab, and a '
+        'rail never does', (tester) async {
+      final art = bakeRoomArt((
+        source: 'teal',
+        pixels: (
+          rgba: Uint8List.fromList([
+            for (var i = 0; i < 16 * 16; i++) ...[46, 125, 122, 255],
+          ]),
+          width: 16,
+          height: 16,
+        ),
+      ))!;
+      await tester.pumpWidget(
+        _host(
+          ServiceOverviewSection(
+            service: ServiceKey.sonarr,
+            title: 'Airing this week',
+            light: art,
+            child: const SizedBox(height: 40),
+          ),
+        ),
+      );
+      expect(find.byType(SlabLight), findsOneWidget);
+
+      await tester.pumpWidget(
+        _host(
+          const ServiceOverviewSection(
+            service: ServiceKey.sonarr,
+            title: 'Airing this week',
+            child: SizedBox(height: 40),
+          ),
+        ),
+      );
+      expect(find.byType(SlabLight), findsNothing);
+    });
+
+    testWidgets('a row with no poster shows the title\'s initials', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _host(const ServiceOverviewArt(posterUrl: null, title: 'Night Shift')),
+      );
+      expect(find.text('NS'), findsOneWidget);
+    });
+
+    test('initials: two words, one word, and none', () {
+      expect(overviewInitialsOf('Night Shift'), 'NS');
+      expect(overviewInitialsOf('The Long Field'), 'TL');
+      expect(overviewInitialsOf('Severance'), 'SE');
+      expect(overviewInitialsOf('  '), '');
+      expect(overviewInitialsOf('Cupertino: Part 2'), 'CP');
+    });
+
+    testWidgets('the day reads Today, else the weekday, over its date', (
+      tester,
+    ) async {
+      final now = DateTime(2026, 10, 19, 9);
+      await tester.pumpWidget(
+        _host(
+          Column(
+            children: [
+              ServiceOverviewDay(day: DateTime(2026, 10, 19), now: now),
+              ServiceOverviewDay(day: DateTime(2026, 10, 21), now: now),
+            ],
+          ),
+        ),
+      );
+      expect(find.text('Today'), findsOneWidget);
+      expect(find.text('19 Oct'), findsOneWidget);
+      expect(find.text('Wed'), findsOneWidget);
+      expect(find.text('21 Oct'), findsOneWidget);
     });
   });
 }

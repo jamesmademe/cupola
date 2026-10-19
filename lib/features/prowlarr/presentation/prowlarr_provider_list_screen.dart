@@ -12,6 +12,7 @@ import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/core/widgets/page_title.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider_actions.dart';
@@ -34,14 +35,14 @@ class ProwlarrProviderListScreen extends ConsumerWidget {
     final tagLabels = ref.watch(prowlarrTagLabelsProvider);
 
     return Scaffold(
-      appBar: GlassAppBar(
+      appBar: GlassAppBar.inPage(
+        pageTitle: kind.title,
         leading: IconButton(
           icon: const Icon(Icons.chevron_left_rounded),
           tooltip: 'Back',
           onPressed: () =>
               RouteUtils.popOrGo(context, ServiceRoutes.prowlarrSettings),
         ),
-        title: Text(kind.title),
         actions: [
           IconButton(
             icon: const Icon(Icons.add_rounded),
@@ -58,29 +59,32 @@ class ProwlarrProviderListScreen extends ConsumerWidget {
       body: providersAsync.when(
         data: (providers) {
           if (providers.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.xl),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      kind.icon,
-                      size: 40,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    Text(
-                      'No ${kind.title.toLowerCase()} configured.',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    FilledButton.icon(
-                      onPressed: () => addProviderFlow(context, ref, kind),
-                      icon: const Icon(Icons.add_rounded, size: 18),
-                      label: Text('Add ${kind.singular}'),
-                    ),
-                  ],
+            return TitledBody(
+              title: kind.title,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xl),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        kind.icon,
+                        size: 40,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        'No ${kind.title.toLowerCase()} configured.',
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      FilledButton.icon(
+                        onPressed: () => addProviderFlow(context, ref, kind),
+                        icon: const Icon(Icons.add_rounded, size: 18),
+                        label: Text('Add ${kind.singular}'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -92,10 +96,12 @@ class ProwlarrProviderListScreen extends ConsumerWidget {
             },
             child: ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-              itemCount: providers.length,
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              // The page's name, then a row a provider.
+              itemCount: providers.length + 1,
               itemBuilder: (context, index) {
-                final provider = providers[index];
+                if (index == 0) return PageTitle(kind.title);
+                final provider = providers[index - 1];
                 return _ProviderRow(
                   kind: kind,
                   resource: provider,
@@ -111,13 +117,21 @@ class ProwlarrProviderListScreen extends ConsumerWidget {
             ),
           );
         },
-        loading: () =>
-            const ProwlarrListShimmer(count: 4, verticalPadding: AppSpacing.sm),
-        error: (error, _) => AppErrorState(
-          error: error,
-          serviceName: ServiceKey.prowlarr.title,
-          service: ServiceKey.prowlarr,
-          onRetry: () => ref.invalidate(prowlarrProvidersProvider(kind)),
+        loading: () => TitledBody(
+          title: kind.title,
+          child: const ProwlarrListShimmer(
+            count: 4,
+            verticalPadding: AppSpacing.sm,
+          ),
+        ),
+        error: (error, _) => TitledBody(
+          title: kind.title,
+          child: AppErrorState(
+            error: error,
+            serviceName: ServiceKey.prowlarr.title,
+            service: ServiceKey.prowlarr,
+            onRetry: () => ref.invalidate(prowlarrProvidersProvider(kind)),
+          ),
         ),
       ),
     );

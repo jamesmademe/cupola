@@ -348,6 +348,11 @@ StreamSession? plexSessionFromJson(Map<String, dynamic> json) {
             milliseconds: (durationMs - viewOffsetMs).clamp(0, durationMs),
           )
         : null,
+    titleId: switch (kind) {
+      StreamItemKind.episode => plexString(json['grandparentRatingKey']),
+      StreamItemKind.movie => plexString(json['ratingKey']),
+      _ => null,
+    },
   );
 }
 

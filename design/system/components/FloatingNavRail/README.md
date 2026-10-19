@@ -6,9 +6,9 @@ Rendered from `lib/core/widgets/floating_nav_rail.dart` by `test/design_catalog/
 
 ## Parts
 
-- **The pill**: 72 wide at the default reading size: the 60pt items, 5pt of glass and the 1pt hairline on each side. It is as tall as its items, `radius-full`, the bar's glass (`glassSurface`), hairline (white at 12% in the dark room, `outline` at 85% in the light one) and lift (`AppElevation.glass`). It sits `FloatingNavRail.margin` (16) from the edge, in the vertical middle of the screen, inside the safe area on the leading side.
+- **The pill**: 72 wide at the default reading size: the 60pt items, 5pt of glass and the 1pt hairline on each side. It is as tall as its items, `radius-full`, the bar's glass (`glassSurface`) with the bar's sheen of the room in front, hairline (white at 12% in the dark room, `outline` at 85% in the light one) and lift (`AppElevation.glass`). It sits `FloatingNavRail.margin` (16) from the edge, in the vertical middle of the screen, inside the safe area on the leading side.
 - **An item**: 60 × 60, the glyph (20, the bar's outlined and filled poses) over its name in `labelMedium` 500, 600 where lit, 4 between them. Ink: `on-surface` where lit, `on-surface-variant` elsewhere. Never a section's colour.
-- **The lit disc**: the room's strong fill (`fill-strong`), no edge, radius 30, so a circle at the default size; it slides to the section on `emphasized`, as the bar's pill does. In Settings, which is no section, nothing is lit.
+- **The lit disc**: the room's strong fill (`fill-strong`), tinted as the bar's pill is in a lit room, no edge, radius 30, so a circle at the default size; it slides to the section on `emphasized`, as the bar's pill does. In Settings, which is no section, nothing is lit.
 - **The count**: the bar's ink disc on the glyph's corner (`NavBadgedIcon`), `9+` past nine; only Activity carries one.
 - **Larger text**: the names grow to the bar's 1.3 and stop; the pill widens to the longest name and its items grow taller, so no name is cut.
 - **Under it** the shell paints the room's own light across the whole screen, so the strip the rail floats in continues the page beside it: the page's glow is centred near the same corner, and the two meet within a shade.

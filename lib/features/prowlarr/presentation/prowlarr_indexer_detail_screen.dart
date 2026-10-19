@@ -13,6 +13,7 @@ import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/core/widgets/page_title.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_history_format.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_indexer_actions.dart';
@@ -38,34 +39,37 @@ class ProwlarrIndexerDetailScreen extends ConsumerWidget {
     );
     if (!configured) {
       return Scaffold(
-        appBar: GlassAppBar(
+        appBar: GlassAppBar.inPage(
+          pageTitle: 'Indexer',
           leading: IconButton(
             icon: const Icon(Icons.chevron_left_rounded),
             onPressed: () =>
                 RouteUtils.popOrGo(context, ServiceRoutes.prowlarrIndexers),
             tooltip: 'Back',
           ),
-          title: const Text('Indexer'),
         ),
-        body: NotConfiguredPlaceholder.forService(ServiceKey.prowlarr),
+        body: TitledBody(
+          title: 'Indexer',
+          child: NotConfiguredPlaceholder.forService(ServiceKey.prowlarr),
+        ),
       );
     }
 
     final indexerAsync = ref.watch(prowlarrIndexerByIdProvider(indexerId));
 
+    // The indexer's name, once it is read.
+    final title = indexerAsync.maybeWhen(
+      data: (indexer) => indexer?.name ?? 'Indexer',
+      orElse: () => 'Indexer',
+    );
     return Scaffold(
-      appBar: GlassAppBar(
+      appBar: GlassAppBar.inPage(
+        pageTitle: title,
         leading: IconButton(
           icon: const Icon(Icons.chevron_left_rounded),
           onPressed: () =>
               RouteUtils.popOrGo(context, ServiceRoutes.prowlarrIndexers),
           tooltip: 'Back',
-        ),
-        title: Text(
-          indexerAsync.maybeWhen(
-            data: (indexer) => indexer?.name ?? 'Indexer',
-            orElse: () => 'Indexer',
-          ),
         ),
         actions: [
           indexerAsync.maybeWhen(
@@ -83,10 +87,13 @@ class ProwlarrIndexerDetailScreen extends ConsumerWidget {
       body: indexerAsync.when(
         data: (indexer) {
           if (indexer == null) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(AppSpacing.xl),
-                child: Text('Indexer not found.'),
+            return TitledBody(
+              title: title,
+              child: const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(AppSpacing.xl),
+                  child: Text('Indexer not found.'),
+                ),
               ),
             );
           }
@@ -100,8 +107,9 @@ class ProwlarrIndexerDetailScreen extends ConsumerWidget {
             },
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
               children: [
+                PageTitle(title),
                 _StatusBanner(indexerId: indexerId),
                 _ActionRow(indexer: indexer),
                 _InfoCard(indexer: indexer),
@@ -119,15 +127,21 @@ class ProwlarrIndexerDetailScreen extends ConsumerWidget {
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => AppErrorState(
-          error: error,
-          serviceName: ServiceKey.prowlarr.title,
-          service: ServiceKey.prowlarr,
-          // The source, not the lookup: `prowlarrIndexerByIdProvider`
-          // only re-reads the list, so invalidating it alone re-read
-          // the list's cached failure and the Retry did nothing.
-          onRetry: () => ref.invalidate(prowlarrIndexersProvider),
+        loading: () => TitledBody(
+          title: title,
+          child: const Center(child: CircularProgressIndicator()),
+        ),
+        error: (error, _) => TitledBody(
+          title: title,
+          child: AppErrorState(
+            error: error,
+            serviceName: ServiceKey.prowlarr.title,
+            service: ServiceKey.prowlarr,
+            // The source, not the lookup: `prowlarrIndexerByIdProvider`
+            // only re-reads the list, so invalidating it alone re-read
+            // the list's cached failure and the Retry did nothing.
+            onRetry: () => ref.invalidate(prowlarrIndexersProvider),
+          ),
         ),
       ),
     );

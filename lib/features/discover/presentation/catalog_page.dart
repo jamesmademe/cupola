@@ -20,6 +20,7 @@ import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/media_grid.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/selection_pills.dart';
+import 'package:cupola/core/widgets/page_title.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/catalog_curation.dart';
 import 'package:cupola/features/discover/domain/catalog_query.dart';
@@ -140,8 +141,11 @@ class _CatalogPageState extends ConsumerState<CatalogPage> {
     if (!watchSeerrConfigured(ref)) {
       return Scaffold(
         backgroundColor: room.ground,
-        appBar: GlassAppBar(title: Text(_title(ref))),
-        body: NotConfiguredPlaceholder.forService(ServiceKey.seerr),
+        appBar: GlassAppBar.inPage(pageTitle: _title(ref)),
+        body: TitledBody(
+          title: _title(ref),
+          child: NotConfiguredPlaceholder.forService(ServiceKey.seerr),
+        ),
       );
     }
     ref.listen(catalogHideOwnedProvider, (previous, next) {

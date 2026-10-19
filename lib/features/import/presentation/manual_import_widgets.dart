@@ -13,6 +13,7 @@ import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
+import 'package:cupola/core/widgets/page_title.dart';
 import 'package:cupola/features/import/domain/manual_import_models.dart';
 import 'package:cupola/features/import/presentation/manual_import_provider.dart';
 import 'package:cupola/features/import/presentation/manual_import_routes.dart';
@@ -48,8 +49,8 @@ extension ManualImportServiceCopy on ServiceKey {
 }
 
 /// The shared scaffold for the three import stations: ambient room tinted by
-/// the owning service, glass app bar with a two-line title, and an optional
-/// pinned bottom bar for the station's primary action.
+/// the owning service, the flow's name in the page with the station under it,
+/// and an optional pinned bottom bar for the station's primary action.
 class ManualImportFrame extends StatelessWidget {
   final ServiceKey service;
   final String title;
@@ -70,11 +71,10 @@ class ManualImportFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return AmbientScaffold(
       accent: service.accent,
-      appBar: GlassAppBar(
+      appBar: GlassAppBar.inPage(
+        pageTitle: title,
         leading: Semantics(
           button: true,
           label: MaterialLocalizations.of(context).backButtonTooltip,
@@ -88,34 +88,26 @@ class ManualImportFrame extends StatelessWidget {
             ),
           ),
         ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.titleMedium!.weight(FontWeight.w600),
-            ),
-            Text(
-              subtitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              // Track passes a submitted-file count through this slot; the
-              // other two stations pass digitless copy, which tabular figures
-              // leave untouched.
-              style: theme.textTheme.labelSmall!.tabular.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
         actions: actions,
       ),
       body: SafeArea(
         top: false,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // The flow's name, and under it which part of it this is.
+            PageTitle(
+              title,
+              summary: Text(
+                subtitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                // Track passes a submitted-file count through this slot; the
+                // other two stations pass digitless copy, which tabular
+                // figures leave untouched.
+                style: AppType.meta.tabular,
+              ),
+            ),
             Expanded(child: child),
             ?bottomBar,
           ],

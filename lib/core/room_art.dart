@@ -81,6 +81,7 @@ class RoomArt {
     required this.inset,
     required this.dark,
     required this.day,
+    this.chroma = 0,
   });
 
   /// The artwork it was read from: two bakes of one picture are one light.
@@ -89,6 +90,13 @@ class RoomArt {
   final int inset;
   final Uint8List dark;
   final Uint8List day;
+
+  /// How coloured the picture lights the dark room, 0 to 1: the mean chroma
+  /// (the brightest channel less the dimmest) of the dark bake over its box.
+  /// Read off the bake rather than the artwork, so a poster with a small
+  /// bright patch on black weighs what its room will show. Where a room may
+  /// take its light from one of several titles, it takes the most coloured.
+  final double chroma;
 
   @override
   bool operator ==(Object other) =>
@@ -143,6 +151,7 @@ RoomArt? bakeRoomArt(RoomArtSource input) {
   final day = Uint8List(n * n * 4);
   final darkGround = _rgb(DesignTokensDark.colorRoomGround.toARGB32());
   final dayGround = _rgb(DesignTokensLight.colorRoomGround.toARGB32());
+  var chroma = 0.0;
   final reach =
       RoomLightMetrics.opacity * (1 - RoomLightMetrics.darkScrimAlphas.first);
   final dayReach =
@@ -151,17 +160,20 @@ RoomArt? bakeRoomArt(RoomArtSource input) {
     final a = planes[3][i].clamp(0.0, 1.0);
     if (a < 1 / 255) continue;
     final rgb = [planes[0][i] / a, planes[1][i] / a, planes[2][i] / a];
-    _write(
-      dark,
-      i,
-      _ceiling(
-        _saturate(rgb, RoomLightMetrics.darkSaturation),
-        darkGround,
-        reach * a,
-        RoomLightMetrics.darkCeiling,
-      ),
-      a,
+    final lit = _ceiling(
+      _saturate(rgb, RoomLightMetrics.darkSaturation),
+      darkGround,
+      reach * a,
+      RoomLightMetrics.darkCeiling,
     );
+    _write(dark, i, lit, a);
+    final (x, y) = (i % n - inset, i ~/ n - inset);
+    if (x >= 0 && x < side && y >= 0 && y < side) {
+      chroma +=
+          (math.max(lit[0], math.max(lit[1], lit[2])) -
+              math.min(lit[0], math.min(lit[1], lit[2]))) *
+          a;
+    }
     _write(
       day,
       i,
@@ -180,6 +192,7 @@ RoomArt? bakeRoomArt(RoomArtSource input) {
     inset: inset,
     dark: dark,
     day: day,
+    chroma: chroma / (side * side),
   );
 }
 

@@ -12,6 +12,8 @@ import 'package:cupola/core/text_scale.dart';
 
 import 'package:cupola/core/theme.dart';
 
+import 'package:cupola/core/title_light.dart';
+
 import 'package:cupola/core/utils/arr_activity_display.dart';
 
 import 'package:cupola/core/utils/date_format.dart';
@@ -185,10 +187,21 @@ class _ComingUpSection extends ConsumerWidget {
     // it was still showing. A source that never answered has no retained value
     // and still reads "—".
     final count = releases.hasValue ? releases.requireValue.length : null;
+    // The slab glows with its first title's light, read from a public
+    // picture only, once the row has drawn it.
+    final lead = [
+      for (final release
+          in releases.value?.take(radarrComingUpPreviewLimit) ??
+              const <RadarrUpcomingRelease>[])
+        ?remotePosterOf(release.movie.images),
+    ].firstOrNull;
 
     return ServiceOverviewSection(
       service: ServiceKey.radarr,
       title: 'Coming up',
+      light: lead == null
+          ? null
+          : ref.watch(titleLightProvider(lead)).value?.art,
       // "—" while the library is loading or after it failed: a "0 releases"
       // printed over an unanswered question is a claim nobody made.
       subtitle:
@@ -228,8 +241,8 @@ class _ComingUpRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final day = formatDayLabel(release.date, DateTime.now());
+    final now = DateTime.now();
+    final day = formatDayLabel(release.date, now);
     final movie = release.movie;
     // Monitored is the fact that decides whether Radarr will actually do
     // anything on that date, which is the whole reason the row is worth a line.
@@ -240,18 +253,16 @@ class _ComingUpRow extends StatelessWidget {
 
     return ServiceOverviewRow(
       spoken: joinSpokenParts([day, movie.title, spokenFromDotted(qualifier)]),
-      leading: SizedBox(
-        width: 58,
-        child: Text(
-          day,
-          maxLines: 2,
-          style: AppTheme.chrome(
-            context,
-            size: 11,
-            weight: FontWeight.w600,
-            color: colorScheme.onSurfaceVariant,
+      leading: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ServiceOverviewDay(day: release.date, now: now),
+          const SizedBox(width: AppSpacing.sm),
+          ServiceOverviewArt(
+            posterUrl: remotePosterOf(movie.images),
+            title: movie.title,
           ),
-        ),
+        ],
       ),
       title: movie.title,
       detail: qualifier,

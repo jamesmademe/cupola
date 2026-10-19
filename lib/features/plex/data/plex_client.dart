@@ -814,13 +814,25 @@ class PlexClient implements StreamServerClient {
   }
 
   @override
-  Future<MediaKey?> getSeriesKey(
-    String seriesId, {
+  Future<MediaKey?> getSeriesKey(String seriesId, {CancelToken? cancelToken}) =>
+      _keyOf(seriesId, const {StreamItemKind.series}, cancelToken: cancelToken);
+
+  @override
+  Future<MediaKey?> getTitleKey(String titleId, {CancelToken? cancelToken}) =>
+      _keyOf(titleId, const {
+        StreamItemKind.movie,
+        StreamItemKind.series,
+      }, cancelToken: cancelToken);
+
+  /// The page the item [id] has, when it is one of [kinds].
+  Future<MediaKey?> _keyOf(
+    String id,
+    Set<StreamItemKind> kinds, {
     CancelToken? cancelToken,
   }) async {
     try {
       final container = await _container(
-        '/library/metadata/${_pathSegment(seriesId)}',
+        '/library/metadata/${_pathSegment(id)}',
         // `Guid[]` is only sent when asked for. The same two flags as
         // [getItem]: no stat of the files, no agent refresh.
         queryParameters: {'includeGuids': 1, 'checkFiles': 0, 'skipRefresh': 1},
@@ -831,11 +843,11 @@ class PlexClient implements StreamServerClient {
           ? metadata.whereType<Map>().firstOrNull
           : null;
       if (first == null) return null;
-      final series = plexItemFromJson(first.cast<String, dynamic>());
-      // Only the series itself names its page.
-      return series == null || series.id != seriesId.trim()
+      final item = plexItemFromJson(first.cast<String, dynamic>());
+      // Only the item itself names its page.
+      return item == null || item.id != id.trim() || !kinds.contains(item.kind)
           ? null
-          : MediaKey.ofStreamItem(series);
+          : MediaKey.ofStreamItem(item);
     } catch (_) {
       return null;
     }
