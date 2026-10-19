@@ -27,6 +27,10 @@ extension GatedPoll on Ref {
   /// last case ticks straight away, and it is deferred to a microtask because
   /// [onTick] invalidates providers, which is illegal inside a provider's build.
   ///
+  /// [dueNow] is for the page that did *not* just load what it shows: an
+  /// app-wide cache another page filled, of any age. The first tick is then
+  /// now, whatever the clock says.
+  ///
   /// The stop is one frame plus a microtask behind the page going away: the
   /// rebuild drops the watch, dropping the last listener schedules disposal, and
   /// disposal cancels the timer. Against a multi-second interval that window
@@ -37,6 +41,7 @@ extension GatedPoll on Ref {
     required String id,
     required Duration interval,
     required void Function() onTick,
+    bool dueNow = false,
   }) {
     final clock = read(pollClockProvider);
     var disposed = false;
@@ -54,7 +59,7 @@ extension GatedPoll on Ref {
       timer = Timer.periodic(interval, (_) => tick());
     }
 
-    final due = clock.timeUntilDue(id, interval);
+    final due = dueNow ? Duration.zero : clock.timeUntilDue(id, interval);
     if (due == Duration.zero) {
       scheduleMicrotask(() {
         tick();

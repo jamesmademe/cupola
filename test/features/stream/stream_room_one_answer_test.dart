@@ -157,6 +157,77 @@ void main() {
     await tester.pump(streamSessionsInterval * 3);
     expect(reads, settled);
   });
+
+  testWidgets('opened over an answer another page read, the Overview reads '
+      'again at once', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(420, 2400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    var playing = <StreamSession>[];
+    var reads = 0;
+
+    final container = ProviderContainer(
+      retry: (_, _) => null,
+      overrides: [
+        currentSettingsProvider.overrideWith(
+          (ref) => settingsWith(
+            jellyfinUrl: 'http://jelly.lan:8096',
+            jellyfinApiKey: 'key',
+            jellyfinUserId: 'viewer-1',
+          ),
+        ),
+        jellyfinSessionsProvider.overrideWith((ref) async {
+          reads++;
+          return playing;
+        }),
+        jellyfinLibrariesProvider.overrideWith((ref) async => const []),
+        jellyfinStrictLibrariesProvider.overrideWith((ref) async => const []),
+        streamSessionPosterProvider.overrideWith((ref, title) async => null),
+        serviceSummaryProvider.overrideWith(
+          (ref, key) async => ServiceSummary(
+            service: key,
+            status: ServiceSummaryStatus.online,
+            host: 'media.lan',
+            version: '10.10.6',
+          ),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    // The Home read the sessions a while ago, when nobody was watching: the
+    // answer stays in the app-wide cache after the Home goes off screen.
+    await container.read(jellyfinSessionsProvider.future);
+    expect(reads, 1);
+
+    // Anna starts watching; then the Jellyfin room is opened.
+    playing = [_session('s1', 'Sintel', 'jf-sintel')];
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          theme: AppTheme.darkTheme(),
+          themeAnimationDuration: Duration.zero,
+          home: const StreamOverviewScreen(
+            service: ServiceKey.jellyfin,
+            topPadding: 0,
+          ),
+        ),
+      ),
+    );
+    await _settle(tester);
+
+    // Not a poll interval later: the page did not just read what it shows,
+    // so it reads again as it opens.
+    expect(reads, 2);
+    expect(find.textContaining('Sintel'), findsOneWidget);
+
+    // The container outlives the page: leave the page and close the
+    // container, so no timer it started is left behind.
+    await tester.pumpWidget(const SizedBox());
+    container.dispose();
+    await tester.pump();
+  });
 }
 
 /// Lets the reads land and the page redraw. Not `pumpAndSettle`: a card

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show ProviderBase;
 
 import 'package:cupola/core/capability/connection_capability.dart';
 import 'package:cupola/core/lifecycle/gated_poll.dart';
@@ -71,25 +72,38 @@ const streamSessionsInterval = Duration(seconds: 15);
 /// server's Overview and its playback tab to watch while they are the page on
 /// screen (`watchWhileLive`).
 ///
-/// It reads [streamSessionsForProvider] again, and for the lens the cache that
-/// one collapses onto, so the room's figure, its Now playing and its light,
-/// which all read that one answer, move together. Skipped while the last read
-/// is still out, as the Home's (`readAgainUnlessInFlight`).
+/// It reads again the one request behind the connection's answer: for the
+/// lens the cache [streamSessionsForProvider] collapses onto (which carries
+/// that family with it), so the room's figure, its Now playing and its light,
+/// which all read that one answer, move together; for any other connection
+/// the family itself. Skipped while that read is still out, as the Home's
+/// (`readAgainUnlessInFlight`). Not the lens's family beside its cache: it
+/// waits on the cache, so it reads as loading whenever the cache is, and
+/// asking it skipped the tick that should have read the cache again.
+///
+/// The lens's cache lives as long as the app, so a room opened after the Home
+/// read it finds an answer of any age: the poll then reads again at once
+/// rather than an interval later, or the room said `0 streams` over a
+/// playback that had started since. A room opened cold is loading its own
+/// read, and the in-flight skip leaves that one alone.
 final streamSessionsPollProvider = Provider.autoDispose
     .family<void, StreamConnection>((ref, key) {
+      ProviderBase<AsyncValue<List<StreamSession>>> source() {
+        final lens = ref.read(activeInstanceProvider(key.service))?.id ?? '';
+        if (key.instanceId.isNotEmpty && key.instanceId != lens) {
+          return streamSessionsForProvider(key);
+        }
+        return key.service == ServiceKey.jellyfin
+            ? jellyfinSessionsProvider
+            : plexSessionsProvider;
+      }
+
+      final read = source();
       ref.gatedPoll(
         id: 'stream.sessions.${key.service.name}.${key.instanceId}',
         interval: streamSessionsInterval,
-        onTick: () {
-          final lens = ref.read(activeInstanceProvider(key.service))?.id ?? '';
-          ref.readAgainUnlessInFlight([
-            if (key.instanceId.isEmpty || key.instanceId == lens)
-              key.service == ServiceKey.jellyfin
-                  ? jellyfinSessionsProvider
-                  : plexSessionsProvider,
-            streamSessionsForProvider(key),
-          ]);
-        },
+        dueNow: ref.exists(read) && !ref.read(read).isLoading,
+        onTick: () => ref.readAgainUnlessInFlight([source()]),
       );
     });
 
