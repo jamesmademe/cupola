@@ -789,10 +789,12 @@ class _TrendingIndexState extends ConsumerState<_TrendingIndex> {
   @override
   Widget build(BuildContext context) {
     final query = CatalogQuery.trending(window: _window);
-    // This week's first page is the shelf's own read; today's is its own.
-    final items = _window == TrendingWindow.week
-        ? ref.watch(atriumTrendingProvider)
-        : ref.watch(_trendingTodayProvider);
+    // This week's first page is the shelf's own read; today's is its own. The
+    // one watched is the one Retry drops.
+    final source = _window == TrendingWindow.week
+        ? atriumTrendingProvider
+        : _trendingTodayProvider;
+    final items = ref.watch(source);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -809,7 +811,7 @@ class _TrendingIndexState extends ConsumerState<_TrendingIndex> {
           error: (error, _) => _IndexFailure(
             error: error,
             what: 'the trending titles',
-            onRetry: () => ref.invalidate(_trendingTodayProvider),
+            onRetry: () => ref.invalidate(source),
           ),
           data: (list) => Column(
             crossAxisAlignment: CrossAxisAlignment.start,

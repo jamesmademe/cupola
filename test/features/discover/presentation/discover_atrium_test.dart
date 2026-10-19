@@ -193,6 +193,32 @@ void main() {
       expect(find.text('Coming soon'), findsOneWidget);
     });
 
+    testWidgets('Retry on the Trending index asks Seerr again for this week', (
+      tester,
+    ) async {
+      // The index opens on this week, which is the atrium's own read. Its Retry
+      // dropped today's provider, which nobody was watching: a button that did
+      // nothing, over an error the atrium keeps until somebody drops it.
+      var reads = 0;
+      await _pumpAtrium(
+        tester,
+        trending: (ref) async {
+          if (++reads == 1) throw const SocketException('Connection refused');
+          return _trending;
+        },
+        // A link straight to the index, with Seerr not answering.
+        location: '${ServiceRoutes.discover}/browse/trending',
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Trending One'), findsNothing);
+
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+
+      expect(reads, 2);
+      expect(find.text('Trending One'), findsOneWidget);
+    });
+
     testWidgets('the row keeps its order and brings the open index into view', (
       tester,
     ) async {
@@ -338,6 +364,7 @@ Future<ProviderContainer> _pumpAtrium(
   List<SeerrGenre> movieGenres = const [SeerrGenre(id: 16, name: 'Animation')],
   Size size = const Size(1200, 3000),
   double textScale = 1,
+  String? location,
 }) async {
   // Tall viewport so every shelf builds (the vertical ListView is lazy).
   tester.view.physicalSize = size;
@@ -380,7 +407,7 @@ Future<ProviderContainer> _pumpAtrium(
           child: child!,
         ),
         routerConfig: GoRouter(
-          initialLocation: ServiceRoutes.discover,
+          initialLocation: location ?? ServiceRoutes.discover,
           routes: [
             GoRoute(
               path: ServiceRoutes.discover,
