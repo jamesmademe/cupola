@@ -172,6 +172,22 @@ final streamItemForProvider = FutureProvider.autoDispose
       return client.getItem(key.itemId, cancelToken: cancelToken);
     }, retry: noProviderRetry);
 
+/// How many titles one library holds, in the unit it browses in, on the
+/// connection [StreamItemKey.instanceId] names ([StreamItemKey.itemId] is the
+/// library's id). Null when the server did not say: never a count of nothing.
+final streamLibraryItemCountProvider = FutureProvider.autoDispose
+    .family<int?, StreamItemKey>((ref, key) {
+      final client = ref.watch(
+        streamClientForProvider((
+          service: key.service,
+          instanceId: key.instanceId,
+        )),
+      );
+      final cancelToken = CancelToken();
+      ref.onDispose(cancelToken.cancel);
+      return client.getLibraryItemCount(key.itemId, cancelToken: cancelToken);
+    }, retry: noProviderRetry);
+
 /// What is inside one item (seasons, episodes, tracks), read like
 /// [streamItemForProvider].
 final streamChildrenForProvider = FutureProvider.autoDispose

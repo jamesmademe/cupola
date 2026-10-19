@@ -36,6 +36,7 @@ class BazarrOverviewRow {
     required this.headline,
     required this.detail,
     required this.tone,
+    this.title,
   });
 
   /// `Severance · S2 E4`, `Poor Things`.
@@ -45,6 +46,11 @@ class BazarrOverviewRow {
   final String detail;
 
   final StatusTone tone;
+
+  /// The title a wanted row is about, as the arr Bazarr follows knows it
+  /// ([bazarrArrTitleOf]): what its poster and the slab's light are read by.
+  /// Null on a history row, and for a row Bazarr named no title for.
+  final ArrTitleRef? title;
 
   /// The row as one sentence, with the layout's `·` turned back into commas,
   /// in the headline too, which carries one on a history row.
@@ -126,6 +132,7 @@ BazarrOverviewSection bazarrWantedSection(
         headline: bazarrWantedHeadline(item),
         detail: bazarrWantedDetail(item),
         tone: StatusTone.neutral,
+        title: bazarrArrTitleOf(item),
       ),
   ]),
   total: total,

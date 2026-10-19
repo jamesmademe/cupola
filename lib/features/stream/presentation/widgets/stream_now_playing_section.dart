@@ -4,12 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/connection_capability.dart';
 import 'package:cupola/core/room_art.dart';
+import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/title_light.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/plex/presentation/plex_capability.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
+import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
@@ -18,6 +20,7 @@ import 'package:cupola/features/stream/presentation/stream_connection_provider.d
 import 'package:cupola/features/stream/presentation/stream_session_poster.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_message_prompt.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_session_card.dart';
+import 'package:cupola/features/stream/presentation/widgets/stream_session_slab.dart';
 
 /// Who is watching, right now: the one thing only a media server knows.
 ///
@@ -50,12 +53,27 @@ import 'package:cupola/features/stream/presentation/widgets/stream_session_card.
 /// empty state and not a failure: it is a quiet room, and on a home server it is
 /// the normal condition. It gets one line.
 class StreamNowPlayingSection extends ConsumerWidget {
+  /// The playbacks as cards, for the page that lists them (a media server's
+  /// Activity tab).
   const StreamNowPlayingSection({
     super.key,
     required this.service,
     required this.sessions,
     this.instanceId = '',
-  });
+  }) : _slab = false;
+
+  /// The region of a media server's Overview: a slab lit by the first title,
+  /// with the way to the tab that lists the playbacks. One playback is drawn
+  /// large with its picture ([StreamSessionFeature]), several as lines
+  /// ([StreamSessionLine]); each keeps the controls the server allows.
+  const StreamNowPlayingSection.slab({
+    super.key,
+    required this.service,
+    required this.sessions,
+    this.instanceId = '',
+  }) : _slab = true;
+
+  final bool _slab;
 
   final ServiceKey service;
 
@@ -88,6 +106,8 @@ class StreamNowPlayingSection extends ConsumerWidget {
           break;
       }
     }
+
+    if (_slab) return _slabOf(context, ref, value, ownerOnly: ownerOnly);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -142,6 +162,115 @@ class StreamNowPlayingSection extends ConsumerWidget {
       ],
     );
   }
+
+  /// The Overview's slab: see [StreamNowPlayingSection.slab].
+  Widget _slabOf(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<List<StreamSession>> value, {
+    required bool ownerOnly,
+  }) {
+    final tab = switch (service) {
+      ServiceKey.plex => ServiceTab.activities,
+      _ => ServiceTab.activity,
+    };
+    final first = value.value?.firstOrNull;
+    return ServiceOverviewSection(
+      service: service,
+      title: 'Now playing',
+      destination: tabsFor(service)?.contains(tab) ?? false ? tab : null,
+      light: first == null ? null : _lightOf(ref, first),
+      child: ownerOnly
+          ? const PlexOwnerOnlyNote()
+          : AsyncValueWidget<List<StreamSession>>(
+              value: value,
+              serviceName: service.title,
+              instanceId: instanceId,
+              onRetry: () => refreshStreamSessions(ref, service, instanceId),
+              isEmpty: (list) => list.isEmpty,
+              emptyBuilder: const _IdleRoom(),
+              data: (list) => list.length == 1
+                  ? StreamSessionFeature(
+                      session: list.single,
+                      picture: _pictureOf(ref, list.single, wide: true),
+                      onStop: _stopHandler(context, ref, list.single),
+                      onTogglePause: _pauseHandler(context, ref, list.single),
+                      onMessage: _messageHandler(context, ref, list.single),
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (var i = 0; i < list.length; i++) ...[
+                          if (i > 0)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: AppSpacing.md,
+                              ),
+                              child: Divider(
+                                height: 1,
+                                color: CupolaRoom.of(context).hair,
+                              ),
+                            ),
+                          StreamSessionLine(
+                            session: list[i],
+                            picture: _pictureOf(ref, list[i], wide: false),
+                            onStop: _stopHandler(context, ref, list[i]),
+                            onTogglePause: _pauseHandler(context, ref, list[i]),
+                            onMessage: _messageHandler(context, ref, list[i]),
+                          ),
+                        ],
+                      ],
+                    ),
+            ),
+    );
+  }
+
+  /// The public poster the arrs hold for [session]'s title, or null.
+  String? _publicPosterOf(WidgetRef ref, StreamSession session) {
+    final title = streamSessionTitleOf(service, instanceId, session);
+    return title == null
+        ? null
+        : ref.watch(streamSessionPosterProvider(title)).value;
+  }
+
+  /// The light of [session]'s title: from its public poster only.
+  RoomArt? _lightOf(WidgetRef ref, StreamSession session) {
+    final public = _publicPosterOf(ref, session);
+    return public == null
+        ? null
+        : ref.watch(titleLightProvider(public)).value?.art;
+  }
+
+  /// What [session] is drawn with in the slab: the server's wide artwork
+  /// through its key, else the public poster, else the server's poster.
+  StreamSessionPicture? _pictureOf(
+    WidgetRef ref,
+    StreamSession session, {
+    required bool wide,
+  }) {
+    final client = ref.watch(
+      streamClientForProvider((service: service, instanceId: instanceId)),
+    );
+    final width = wide ? _featureWidth : _lineWidth;
+    final backdrop = session.backdropPath;
+    if (backdrop != null && backdrop.isNotEmpty) {
+      if (client.imageFor(backdrop, width: width) case final source?) {
+        return (url: source.url, headers: source.headers);
+      }
+    }
+    if (_publicPosterOf(ref, session) case final public?) {
+      return (url: public, headers: null);
+    }
+    final poster = session.posterPath;
+    if (poster == null || poster.isEmpty) return null;
+    final source = client.imageFor(poster, width: width);
+    return source == null ? null : (url: source.url, headers: source.headers);
+  }
+
+  /// How wide the slab's pictures are asked for, at three pixels a point:
+  /// the one playback across the slab, a line's thumbnail.
+  static const int _featureWidth = 1080;
+  static const int _lineWidth = 336;
 
   /// [session]'s card, given its poster and its light: the public poster the
   /// arrs hold for its title, which it glows with, else the server's own

@@ -191,7 +191,7 @@ class StreamSessionCard extends StatelessWidget {
           ),
         ),
         if (onTogglePause != null || onMessage != null || onStop != null)
-          _SessionActions(
+          StreamSessionActions(
             isPaused: session.isPaused,
             onTogglePause: onTogglePause,
             onMessage: onMessage,
@@ -231,7 +231,8 @@ class StreamSessionCard extends StatelessWidget {
   }
 }
 
-/// The controls for one live playback.
+/// The controls for one live playback, on its card and in a room's Now
+/// playing; nothing when the server allows none.
 ///
 /// A trailing row at the card's foot rather than a glyph tucked beside the
 /// title: three of them do not fit a phone's title line beside a two-line title,
@@ -239,8 +240,9 @@ class StreamSessionCard extends StatelessWidget {
 /// `VisualDensity.compact`: a 40pt target on a surface whose whole job is to
 /// interrupt someone. Each one keeps `IconButton`'s full 48×48 and carries a
 /// tooltip, which is also its spoken name.
-class _SessionActions extends StatelessWidget {
-  const _SessionActions({
+class StreamSessionActions extends StatelessWidget {
+  const StreamSessionActions({
+    super.key,
     required this.isPaused,
     required this.onTogglePause,
     required this.onMessage,
@@ -254,6 +256,9 @@ class _SessionActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (onTogglePause == null && onMessage == null && onStop == null) {
+      return const SizedBox.shrink();
+    }
     final color = Theme.of(context).colorScheme.onSurfaceVariant;
 
     return Row(

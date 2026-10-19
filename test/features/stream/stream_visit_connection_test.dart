@@ -165,7 +165,9 @@ void main() {
       expect(_nowPlayingReads(tester), WorldIds.jellyfinCabin);
 
       // The Overview: the cabin's address on the identity line, and the
-      // cabin's own sessions and libraries asked for.
+      // cabin's own libraries asked for. Its sessions are the read the
+      // playbacks page already made of the cabin: the figure and Now playing
+      // share it, so it is not asked again.
       _forget(harness);
       await _openTab(tester, ServiceTab.overview);
       expect(_badge(tester), 'Cabin');
@@ -173,8 +175,9 @@ void main() {
       expect(find.textContaining('nas.home.arpa'), findsNothing);
       expect(
         _reached(harness, WorldIds.jellyfinCabin),
-        containsAll(['/Sessions', '/Library/VirtualFolders']),
+        contains('/Library/VirtualFolders'),
       );
+      expect(_nowPlayingReads(tester), WorldIds.jellyfinCabin);
       expect(_reached(harness, WorldIds.jellyfin), isEmpty);
 
       // Libraries: each room opens on the cabin, so its browse reads it.

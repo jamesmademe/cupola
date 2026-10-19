@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/capability/connection_capability.dart';
 import 'package:cupola/core/text_scale.dart';
@@ -229,12 +230,9 @@ class _PlexActivitiesBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sessions = ref.watch(
-      streamSessionsForProvider((
-        service: ServiceKey.plex,
-        instanceId: instanceId,
-      )),
-    );
+    final connection = (service: ServiceKey.plex, instanceId: instanceId);
+    ref.watchWhileLive(context, streamSessionsPollProvider(connection));
+    final sessions = ref.watch(streamSessionsForProvider(connection));
     // The host's two bands and the status bar the upper one consumes: this
     // page has no `SafeArea` and no app bar to take the inset off first.
     final top = topPadding + MediaQuery.paddingOf(context).top;

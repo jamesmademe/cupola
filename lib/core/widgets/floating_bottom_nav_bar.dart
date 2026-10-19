@@ -81,8 +81,8 @@ class FloatingNavBarMetrics {
   /// Bottom padding below the nav bar (excluding safe area).
   static const double bottomPadding = AppSpacing.xs;
 
-  /// Inset between the glass surface edge and the item row.
-  static const double surfacePadding = 6.0;
+  /// Inset between the glass surface edge and the pill.
+  static const double surfacePadding = 5.0;
 
   /// Total height at the default reading size, excluding safe area.
   ///
@@ -107,14 +107,14 @@ class FloatingNavBarMetrics {
 
   /// Height of the bar at the current reading size.
   ///
-  /// Derived from the tallest thing inside it (the selection pill), so the row
-  /// can never overflow the surface.
+  /// Derived from what is inside it (a glyph over its name, with air above
+  /// and below inside the pill), so a column can never overflow the surface.
   static double barHeightFor(BuildContext context) {
-    final pillHeight = _NavBarItem.pillHeightFor(
+    final content = _NavBarItem.contentHeightFor(
       effectiveTextScaler(context),
       _NavBarItem.labelStyleOf(context),
     );
-    final needed = pillHeight + (surfacePadding * 2);
+    final needed = content + (AppSpacing.xs + surfacePadding) * 2;
     return needed > barHeight ? needed : barHeight;
   }
 
@@ -153,9 +153,9 @@ class FloatingNavBarMetrics {
 ///
 /// Features:
 /// - Floating design with margins on all sides
-/// - Rounded corners using [AppRadius.xl]
-/// - Compact selected pill, monochrome: the room's strong fill under the
-///   primary ink, the same in every section
+/// - As wide as the page, a stadium, four columns of one width: each
+///   destination its glyph over its name, the lit one a pill filling its
+///   column, monochrome: the room's strong fill under the primary ink
 /// - Elastic drag animation (rubber band effect)
 /// - Glass surface: a semi-opaque tint, deliberately NOT a backdrop blur.
 ///   With `extendBody: true` every screen scrolls under this bar, so a
@@ -239,12 +239,6 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
 
   /// Controls how quickly resistance increases with distance.
   static const double _resistanceFalloff = 30.0;
-
-  static const double _barHorizontalPadding =
-      FloatingNavBarMetrics.surfacePadding;
-  static const double _barVerticalPadding =
-      FloatingNavBarMetrics.surfacePadding;
-  static const double _selectedExtraShare = 0.6;
 
   @override
   void initState() {
@@ -364,13 +358,7 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
     // on every tab, so an unscoped subscription rebuilds it on every keyboard
     // frame.
     final bottomPadding = MediaQuery.paddingOf(context).bottom;
-    // Clamped so the bar follows the user's reading size without letting an
-    // accessibility scale turn it into a full-height panel.
-    final textScaler = FloatingNavBarMetrics.effectiveTextScaler(context);
     final barHeight = FloatingNavBarMetrics.barHeightFor(context);
-    // Resolved once and threaded down: the pill's width and height are measured
-    // from this exact style before the label is painted with it.
-    final labelStyle = _NavBarItem.labelStyleOf(context);
     final isDark = colorScheme.brightness == Brightness.dark;
     final glassColor =
         theme.extension<CupolaThemeColors>()?.glassSurface ??
@@ -378,21 +366,19 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
     final borderColor = isDark
         ? Colors.white.withValues(alpha: 0.12)
         : colorScheme.outline.withValues(alpha: 0.85);
-    final selectedDestination =
-        widget.selectedIndex >= 0 &&
-            widget.selectedIndex < widget.destinations.length
-        ? widget.destinations[widget.selectedIndex]
+    final count = widget.destinations.length;
+    final selected = widget.selectedIndex >= 0 && widget.selectedIndex < count
+        ? widget.selectedIndex
         : null;
 
     return GestureDetector(
       onPanStart: _onPanStart,
       onPanUpdate: _onPanUpdate,
       onPanEnd: _onPanEnd,
-      // Only where the pill is drawn. The slot is as wide as the screen and
-      // the content scrolls under it (`extendBody`), so an opaque slot ate
-      // every tap on what showed beside and below the pill.
+      // Only where the bar is drawn: the content scrolls under the slot
+      // (`extendBody`), so an opaque slot ate every tap in its margins.
       behavior: HitTestBehavior.deferToChild,
-      child: Container(
+      child: Padding(
         // Outer padding to make it float
         padding: EdgeInsets.only(
           left: AppSpacing.lg,
@@ -400,397 +386,106 @@ class _FloatingBottomNavBarState extends State<FloatingBottomNavBar>
           bottom: bottomPadding + FloatingNavBarMetrics.bottomPadding,
           top: FloatingNavBarMetrics.topPadding,
         ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final preferredSurfaceWidth =
-                (_NavBarLayoutMetrics.preferredInnerWidth(
-                          widget.destinations,
-                          textScaler,
-                          labelStyle,
-                        ) +
-                        (_barHorizontalPadding * 2))
-                    .clamp(0.0, constraints.maxWidth)
-                    .toDouble();
-
-            return Align(
-              alignment: Alignment.center,
-              heightFactor: 1,
-              child: _dragTransform(
-                child: DecoratedBox(
+        child: _dragTransform(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: AppRadius.borderRadiusFull,
+              boxShadow: AppElevation.glass(colorScheme),
+            ),
+            child: ClipRRect(
+              borderRadius: AppRadius.borderRadiusFull,
+              // Lit enamel: a sheen of the room in front at its top, gone by
+              // 70% of its height, and its pill tinted by the same light
+              // ([RoomSheen]).
+              child: RoomSheen(
+                builder: (context, sheen, pill) => Container(
+                  key: const ValueKey('floating-nav-surface'),
+                  height: barHeight,
                   decoration: BoxDecoration(
-                    borderRadius: AppRadius.borderRadiusXl,
-                    boxShadow: AppElevation.glass(colorScheme),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: AppRadius.borderRadiusXl,
-                    // Lit enamel: a sheen of the room in front at its top,
-                    // gone by 70% of its height, and its pill tinted by the
-                    // same light ([RoomSheen]).
-                    child: RoomSheen(
-                      builder: (context, sheen, pill) => Container(
-                        key: const ValueKey('floating-nav-surface'),
-                        width: preferredSurfaceWidth,
-                        height: barHeight,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              sheen.withValues(alpha: glassColor.a),
-                              glassColor,
-                            ],
-                            stops: const [0, 0.7],
-                          ),
-                          borderRadius: AppRadius.borderRadiusXl,
-                          border: Border.all(color: borderColor),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: _barHorizontalPadding,
-                          vertical: _barVerticalPadding,
-                        ),
-                        child: SizedBox.expand(
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              final layout = _NavBarLayoutMetrics.resolve(
-                                availableWidth: constraints.maxWidth,
-                                destinations: widget.destinations,
-                                selectedIndex: widget.selectedIndex,
-                                selectedExtraShare: _selectedExtraShare,
-                                textScaler: textScaler,
-                                labelStyle: labelStyle,
-                              );
-                              final indicatorWidth = selectedDestination == null
-                                  ? 0.0
-                                  : _NavBarItem.preferredSelectedWidthFor(
-                                          selectedDestination,
-                                          textScaler,
-                                          labelStyle,
-                                        )
-                                        .clamp(
-                                          0.0,
-                                          layout.itemWidths[widget
-                                              .selectedIndex],
-                                        )
-                                        .toDouble();
-                              final indicatorLeft = selectedDestination == null
-                                  ? 0.0
-                                  : layout.itemLefts[widget.selectedIndex] +
-                                        ((layout.itemWidths[widget
-                                                    .selectedIndex] -
-                                                indicatorWidth) /
-                                            2);
-
-                              return Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  if (selectedDestination != null)
-                                    IgnorePointer(
-                                      child: _NavBarIndicator(
-                                        left: indicatorLeft,
-                                        width: indicatorWidth,
-                                        barHeight: constraints.maxHeight,
-                                        selectedDestination:
-                                            selectedDestination,
-                                        fill: pill,
-                                      ),
-                                    ),
-                                  Row(
-                                    children: [
-                                      for (
-                                        var index = 0;
-                                        index < widget.destinations.length;
-                                        index++
-                                      ) ...[
-                                        if (index > 0)
-                                          SizedBox(width: layout.gap),
-                                        AnimatedContainer(
-                                          duration: AppAnimation.durationSm,
-                                          curve: AppAnimation.emphasizedCurve,
-                                          width: layout.itemWidths[index],
-                                          child: _NavBarItem(
-                                            destination:
-                                                widget.destinations[index],
-                                            isSelected:
-                                                index == widget.selectedIndex,
-                                            index: index,
-                                            destinationCount:
-                                                widget.destinations.length,
-                                            onTap: () =>
-                                                _handleDestinationTap(index),
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ],
-                              );
-                            },
-                          ),
-                        ),
-                      ),
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        sheen.withValues(alpha: glassColor.a),
+                        glassColor,
+                      ],
+                      stops: const [0, 0.7],
                     ),
+                    borderRadius: AppRadius.borderRadiusFull,
+                    border: Border.all(color: borderColor),
+                  ),
+                  padding: const EdgeInsets.all(_barPadding),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      // Four columns of one width: every destination says its
+                      // name, and the lit one is the pill that fills its column.
+                      final column = count == 0
+                          ? 0.0
+                          : constraints.maxWidth / count;
+                      return Stack(
+                        children: [
+                          if (selected != null)
+                            AnimatedPositioned(
+                              duration: AppAnimation.durationSm,
+                              curve: AppAnimation.emphasizedCurve,
+                              left: column * selected,
+                              top: 0,
+                              width: column,
+                              height: constraints.maxHeight,
+                              child: IgnorePointer(
+                                child: DecoratedBox(
+                                  key: const ValueKey('floating-nav-indicator'),
+                                  // The room's strong fill, tinted by the light
+                                  // of the room in front, and no edge: the pill
+                                  // says "you are here" and nothing about which
+                                  // section "here" is.
+                                  decoration: BoxDecoration(
+                                    color: pill,
+                                    borderRadius: AppRadius.borderRadiusFull,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          Row(
+                            children: [
+                              for (var index = 0; index < count; index++)
+                                Expanded(
+                                  child: _NavBarItem(
+                                    destination: widget.destinations[index],
+                                    isSelected: index == selected,
+                                    index: index,
+                                    destinationCount: count,
+                                    onTap: () => _handleDestinationTap(index),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ),
               ),
-            );
-          },
+            ),
+          ),
         ),
       ),
     );
   }
-}
 
-class _NavBarIndicator extends StatelessWidget {
-  final double left;
-  final double width;
-  final double barHeight;
-  final FloatingNavDestination selectedDestination;
-
-  const _NavBarIndicator({
-    required this.left,
-    required this.width,
-    required this.barHeight,
-    required this.selectedDestination,
-    required this.fill,
-  });
-
-  /// The pill's fill: the room's strong fill, tinted by the light of the room
-  /// in front ([RoomSheen]).
-  final Color fill;
-
-  @override
-  Widget build(BuildContext context) {
-    // The room's strong fill (white at 12% in the dark room, the day room's
-    // ink at 12% on paper), tinted by the light of the room in front, and no
-    // edge: the pill is the one lit shape in the bar, so it says "you are
-    // here" and nothing about which section "here" is.
-    final activeBackground = fill;
-    final pillHeight = _NavBarItem.pillHeightFor(
-      FloatingNavBarMetrics.effectiveTextScaler(context),
-      _NavBarItem.labelStyleOf(context),
-    ).clamp(0.0, barHeight);
-
-    return Stack(
-      children: [
-        AnimatedPositioned(
-          duration: AppAnimation.durationSm,
-          curve: AppAnimation.emphasizedCurve,
-          left: left,
-          top: (barHeight - pillHeight) / 2,
-          width: width,
-          height: pillHeight,
-          child: DecoratedBox(
-            key: const ValueKey('floating-nav-indicator'),
-            decoration: BoxDecoration(
-              color: activeBackground,
-              borderRadius: BorderRadius.circular(_NavBarItem.itemRadius),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _NavBarLayoutMetrics {
-  static const double _compactBreakpoint = DesignTokens.breakpointNavCompact;
-  static const double _compactTargetWidth = 52.0;
-  static const double _compactMinWidth = 48.0;
-
-  final List<double> itemWidths;
-  final List<double> itemLefts;
-  final double gap;
-
-  const _NavBarLayoutMetrics({
-    required this.itemWidths,
-    required this.itemLefts,
-    required this.gap,
-  });
-
-  static double preferredInnerWidth(
-    List<FloatingNavDestination> destinations,
-    TextScaler scaler,
-    TextStyle labelStyle,
-  ) {
-    final count = destinations.length;
-    if (count == 0) return 0.0;
-
-    final preferredSelectedWidth = destinations.fold<double>(
-      _NavBarItem.minSelectedWidth,
-      (currentMax, destination) {
-        final width = _NavBarItem.preferredSelectedWidthFor(
-          destination,
-          scaler,
-          labelStyle,
-        ).clamp(_NavBarItem.minSelectedWidth, double.infinity).toDouble();
-        return width > currentMax ? width : currentMax;
-      },
-    );
-
-    if (count == 1) {
-      return preferredSelectedWidth;
-    }
-
-    double widthForGap(double gap) {
-      return preferredSelectedWidth +
-          (_compactTargetWidth * (count - 1)) +
-          (gap * (count - 1));
-    }
-
-    final regularGap = AppSpacing.s;
-    final regularWidth = widthForGap(regularGap);
-    if (regularWidth >= _compactBreakpoint) {
-      return regularWidth;
-    }
-
-    return widthForGap(AppSpacing.xs);
-  }
-
-  factory _NavBarLayoutMetrics.resolve({
-    required double availableWidth,
-    required List<FloatingNavDestination> destinations,
-    required int selectedIndex,
-    required double selectedExtraShare,
-    required TextScaler textScaler,
-    required TextStyle labelStyle,
-  }) {
-    final count = destinations.length;
-    final gap = count > 1
-        ? (availableWidth < _compactBreakpoint ? AppSpacing.xs : AppSpacing.s)
-        : 0.0;
-    final totalGapWidth = gap * (count - 1);
-    final itemAreaWidth = (availableWidth - totalGapWidth)
-        .clamp(0.0, double.infinity)
-        .toDouble();
-
-    if (count == 0) {
-      return const _NavBarLayoutMetrics(itemWidths: [], itemLefts: [], gap: 0);
-    }
-
-    if (selectedIndex < 0 || selectedIndex >= count) {
-      final equalWidth = itemAreaWidth / count;
-      final itemWidths = List<double>.filled(count, equalWidth);
-      return _NavBarLayoutMetrics(
-        itemWidths: itemWidths,
-        itemLefts: _leftsFor(itemWidths, gap),
-        gap: gap,
-      );
-    }
-
-    final itemWidths = List<double>.filled(count, _compactTargetWidth);
-    itemWidths[selectedIndex] = _NavBarItem.preferredSelectedWidthFor(
-      destinations[selectedIndex],
-      textScaler,
-      labelStyle,
-    ).clamp(_NavBarItem.minSelectedWidth, double.infinity).toDouble();
-
-    var delta = itemAreaWidth - _sum(itemWidths);
-
-    if (delta >= 0) {
-      if (count == 1) {
-        itemWidths[0] += delta;
-      } else {
-        final selectedExtra = delta * selectedExtraShare;
-        final compactExtra = (delta - selectedExtra) / (count - 1);
-
-        for (var index = 0; index < count; index++) {
-          itemWidths[index] += index == selectedIndex
-              ? selectedExtra
-              : compactExtra;
-        }
-      }
-    } else {
-      var deficit = -delta;
-
-      if (count > 1) {
-        final compactReductionCapacity =
-            (_compactTargetWidth - _compactMinWidth) * (count - 1);
-        final compactReduction = deficit.clamp(0.0, compactReductionCapacity);
-        final perCompactReduction = compactReduction / (count - 1);
-
-        for (var index = 0; index < count; index++) {
-          if (index == selectedIndex) {
-            continue;
-          }
-          itemWidths[index] -= perCompactReduction;
-        }
-
-        deficit -= compactReduction;
-      }
-
-      if (deficit > 0) {
-        final selectedReductionCapacity =
-            (itemWidths[selectedIndex] - _NavBarItem.minSelectedWidth)
-                .clamp(0.0, double.infinity)
-                .toDouble();
-        final selectedReduction = deficit.clamp(0.0, selectedReductionCapacity);
-
-        itemWidths[selectedIndex] -= selectedReduction;
-        deficit -= selectedReduction;
-      }
-
-      if (deficit > 0) {
-        final minimumWidths = List<double>.filled(count, _compactMinWidth);
-        minimumWidths[selectedIndex] = _NavBarItem.minSelectedWidth;
-        final scaleFactor = itemAreaWidth / _sum(minimumWidths);
-
-        for (var index = 0; index < count; index++) {
-          itemWidths[index] = minimumWidths[index] * scaleFactor;
-        }
-      }
-    }
-
-    itemWidths[selectedIndex] += itemAreaWidth - _sum(itemWidths);
-
-    return _NavBarLayoutMetrics(
-      itemWidths: itemWidths,
-      itemLefts: _leftsFor(itemWidths, gap),
-      gap: gap,
-    );
-  }
-
-  static List<double> _leftsFor(List<double> widths, double gap) {
-    final lefts = <double>[];
-    var currentLeft = 0.0;
-
-    for (final width in widths) {
-      lefts.add(currentLeft);
-      currentLeft += width + gap;
-    }
-
-    return lefts;
-  }
-
-  static double _sum(List<double> widths) {
-    return widths.fold(0.0, (sum, width) => sum + width);
-  }
+  /// Between the glass's edge and the pill.
+  static const double _barPadding = FloatingNavBarMetrics.surfacePadding;
 }
 
 class _NavBarItem extends StatelessWidget {
-  static const double _iconSize = 20.0;
-  static const double _itemHorizontalPadding = 14.0;
+  /// The glyph, the rail's size: the two are one control on two devices.
+  static const double iconSize = 20.0;
 
-  /// The app's selected-affordance radius, shared with the Activity segment
-  /// pills so "this one is active" reads the same in both places.
-  static const double itemRadius = AppRadius.pill;
-  static const double _labelGap = 6.0;
+  /// Between the glyph and its name.
+  static const double labelGap = AppSpacing.xxs;
 
   /// How far a count badge reaches past the icon's right edge.
   static const double badgeOverhang = 6.0;
-
-  /// Gap between the icon and the selected label.
-  ///
-  /// A badge overhangs the icon, so the label moves out of its way by the same
-  /// amount: measured at the plain gap, the badge's collar landed on the
-  /// label's first letter.
-  static double labelGapFor(FloatingNavDestination destination) =>
-      _labelGap + (destination.badgeCount > 0 ? badgeOverhang : 0);
-  static const double _selectedWidthSlack = 6.0;
-  static const double minSelectedWidth = 84.0;
-
-  /// Height of the animated selection pill: shorter than the full inner bar
-  /// height so the highlight feels proportionate rather than filling the bar.
-  static const double _pillHeight = 36.0;
 
   final FloatingNavDestination destination;
   final bool isSelected;
@@ -809,57 +504,18 @@ class _NavBarItem extends StatelessWidget {
     required this.onTap,
   });
 
-  /// Icons keep a fixed size, as the system tab bar's do: the compact
-  /// (unselected) items are icon-only and sized from this, so scaling it would
-  /// overflow them before the label ever grew.
-  static const double iconSize = _iconSize;
+  /// A destination's name: `labelMedium`, a step heavier where lit, as the
+  /// rail's names.
+  static TextStyle labelStyleOf(BuildContext context, {bool lit = true}) =>
+      Theme.of(
+        context,
+      ).textTheme.labelMedium!.weight(lit ? FontWeight.w600 : FontWeight.w500);
 
-  /// The selected destination's label style: `labelMedium` at w600.
-  ///
-  /// Nav is chrome in a fixed-height pill, which is exactly what the label roles
-  /// are for, and `labelMedium` is the 12pt rung this bar has always drawn at.
-  ///
-  /// It lives in one place because the bar *measures its own label*: both
-  /// [pillHeightFor] and [preferredSelectedWidthFor] lay this style out to
-  /// derive the pill's geometry, and [build] then paints with it. Measuring one
-  /// style and painting another is how a bar that fits becomes a bar that
-  /// overflows, so the geometry reads its size and leading off the role rather
-  /// than off a private literal that could drift from the ramp.
-  static TextStyle labelStyleOf(BuildContext context) =>
-      Theme.of(context).textTheme.labelMedium!.weight(FontWeight.w600);
-
-  /// Height of the selection pill at the current reading size.
-  static double pillHeightFor(TextScaler scaler, TextStyle labelStyle) {
-    final scaledLabel =
-        scaler.scale(labelStyle.fontSize ?? 12) * (labelStyle.height ?? 1.0);
-    final tallest = scaledLabel > iconSize ? scaledLabel : iconSize;
-    final needed = tallest + (AppSpacing.sm * 2);
-    return needed > _pillHeight ? needed : _pillHeight;
-  }
-
-  /// Width the selected pill wants at the current reading size.
-  ///
-  /// [scaler] must be threaded in: measuring at 1.0x while the label renders
-  /// scaled is what made the bar overflow at accessibility text sizes. So must
-  /// [labelStyle], for the same reason; see [labelStyleOf].
-  static double preferredSelectedWidthFor(
-    FloatingNavDestination destination,
-    TextScaler scaler,
-    TextStyle labelStyle,
-  ) {
-    final painter = TextPainter(
-      text: TextSpan(text: destination.label, style: labelStyle),
-      textDirection: TextDirection.ltr,
-      textScaler: scaler,
-      maxLines: 1,
-    )..layout();
-
-    return _itemHorizontalPadding * 2 +
-        iconSize +
-        labelGapFor(destination) +
-        painter.width +
-        _selectedWidthSlack;
-  }
+  /// Height of the glyph over its name at the current reading size.
+  static double contentHeightFor(TextScaler scaler, TextStyle labelStyle) =>
+      iconSize +
+      labelGap +
+      scaler.scale(labelStyle.fontSize ?? 12) * (labelStyle.height ?? 1.0);
 
   @override
   Widget build(BuildContext context) {
@@ -867,19 +523,16 @@ class _NavBarItem extends StatelessWidget {
     final scaler = FloatingNavBarMetrics.effectiveTextScaler(context);
 
     // Monochrome: the selected icon and label are the primary ink on the
-    // strong fill (see [_NavBarIndicator]), the rest the secondary ink. Both
-    // are the room's own inks, spaced for the surfaces they sit on, so there is
-    // no hue to walk and nothing a section could make fail in daylight, which
-    // is where a section accent over a 13% tint of itself measured under 2:1.
+    // strong fill, the rest the secondary ink. Both are the room's own inks,
+    // spaced for the surfaces they sit on, so there is no hue to walk and
+    // nothing a section could make fail in daylight.
     final itemColor = isSelected
         ? colorScheme.onSurface
         : colorScheme.onSurfaceVariant;
 
-    // Rail parity: NavigationRail and NavigationBar both append this, so the
-    // wide-window rail already announced "Tab 1 of 4" while this bar did not:
-    // the same app saying two different things about the same navigation. '\n'
-    // is the separator Flutter itself uses when merging labels, so the string is
-    // byte-identical to Material's.
+    // Rail parity: NavigationRail and NavigationBar both append this. '\n'
+    // is the separator Flutter itself uses when merging labels, so the string
+    // is byte-identical to Material's.
     final indexLabel = MaterialLocalizations.of(
       context,
     ).tabLabel(tabIndex: index + 1, tabCount: destinationCount);
@@ -901,85 +554,38 @@ class _NavBarItem extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-          child: Center(
-            child: AnimatedScale(
-              scale: isSelected ? 1.02 : 1.0,
-              duration: AppAnimation.durationXs,
-              curve: AppAnimation.emphasizedCurve,
-              child: AnimatedContainer(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            NavBadgedIcon(
+              count: destination.badgeCount,
+              label: destination.badgeLabel,
+              child: AnimatedSwitcher(
                 duration: AppAnimation.durationSm,
-                curve: AppAnimation.emphasizedCurve,
-                constraints: const BoxConstraints(minWidth: 48),
-                // No fixed horizontal padding here: the item's assigned width
-                // already accounts for _itemHorizontalPadding (see
-                // preferredSelectedWidthFor), so adding it again as padding made
-                // the row compete with its own allotment and overflow by a
-                // fraction of a pixel at large reading sizes. Centring the
-                // content reproduces the same insets and cannot overflow.
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                decoration: BoxDecoration(
-                  color: Colors.transparent,
-                  borderRadius: BorderRadius.circular(itemRadius),
-                  border: Border.all(color: Colors.transparent),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    NavBadgedIcon(
-                      count: destination.badgeCount,
-                      label: destination.badgeLabel,
-                      child: AnimatedSwitcher(
-                        duration: AppAnimation.durationSm,
-                        child: Icon(
-                          isSelected
-                              ? destination.selectedIcon
-                              : destination.icon,
-                          key: ValueKey(isSelected),
-                          color: itemColor,
-                          size: iconSize,
-                        ),
-                      ),
-                    ),
-                    // Flexible so the label ellipsises when the row is tighter
-                    // than the measured preference: at large reading sizes the
-                    // available width can fall short of what the pill wants.
-                    Flexible(
-                      child: AnimatedSize(
-                        duration: AppAnimation.durationSm,
-                        curve: AppAnimation.emphasizedCurve,
-                        alignment: Alignment.centerLeft,
-                        child: isSelected
-                            ? Padding(
-                                padding: EdgeInsets.only(
-                                  left: labelGapFor(destination),
-                                ),
-                                child: AnimatedDefaultTextStyle(
-                                  duration: AppAnimation.durationSm,
-                                  // The same style the pill was measured with.
-                                  style: labelStyleOf(
-                                    context,
-                                  ).copyWith(color: itemColor),
-                                  child: Text(
-                                    destination.label,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    // Clamped scaler: the pill was measured with
-                                    // it, so the label must render with it too.
-                                    textScaler: scaler,
-                                  ),
-                                ),
-                              )
-                            : const SizedBox.shrink(),
-                      ),
-                    ),
-                  ],
+                child: Icon(
+                  isSelected ? destination.selectedIcon : destination.icon,
+                  key: ValueKey(isSelected),
+                  color: itemColor,
+                  size: iconSize,
                 ),
               ),
             ),
-          ),
+            const SizedBox(height: labelGap),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
+              child: Text(
+                destination.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                // Clamped scaler: the bar was measured with it.
+                textScaler: scaler,
+                style: labelStyleOf(
+                  context,
+                  lit: isSelected,
+                ).copyWith(color: itemColor),
+              ),
+            ),
+          ],
         ),
       ),
     );

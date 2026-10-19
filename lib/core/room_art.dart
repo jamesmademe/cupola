@@ -46,7 +46,11 @@ abstract final class RoomLightMetrics {
   /// lightest scrim): at most this relative luminance in the dark room, so
   /// secondary text on it stays legible, and at least [dayFloor] on paper, so
   /// a dark poster tints the page instead of darkening it.
-  static const double darkCeiling = 0.22;
+  ///
+  /// Half the brightest room measured on a phone (a pink and yellow poster,
+  /// about 0.06 at the top): a bright poster lit its room five times more
+  /// than a dark one lit its own. A dark poster stays under it, unchanged.
+  static const double darkCeiling = 0.03;
   static const double dayFloor = 0.72;
 
   /// The box the picture covers in a room [width] wide.

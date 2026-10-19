@@ -74,6 +74,11 @@ class StreamSession {
   /// into a string would put it into `CachedNetworkImage`'s cache key.
   final String? posterPath;
 
+  /// Relative path of the title's wide artwork on the server (its backdrop,
+  /// or an episode's still), resolved like [posterPath]; null when the server
+  /// holds none. What a room's Now playing draws large.
+  final String? backdropPath;
+
   final StreamPlayMethod playMethod;
 
   /// Why the server is not sending the file untouched, in its own words.
@@ -133,6 +138,7 @@ class StreamSession {
     required this.isPaused,
     this.remaining,
     this.titleId,
+    this.backdropPath,
   });
 
   /// Whether this session is the reason you would look at the board.

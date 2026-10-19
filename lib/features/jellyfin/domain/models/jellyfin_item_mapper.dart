@@ -487,6 +487,7 @@ StreamSession? jellyfinStreamSessionFromJson(Map<String, dynamic> session) {
         : _itemSubtitle(nowPlaying, kind),
     deviceLabel: _deviceLabel(session),
     posterPath: jellyfinPosterPath(nowPlaying),
+    backdropPath: jellyfinBackdropPath(nowPlaying),
     playMethod: playMethod,
     // A direct stream has reasons too, and dropping them was the bug: Jellyfin
     // remuxes *because of something* (an unsupported container, an external

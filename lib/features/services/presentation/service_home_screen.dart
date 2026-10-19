@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -209,10 +210,7 @@ class _ServiceDashboardAppBar extends ConsumerWidget {
               IconButton(
                 // The secondary ink, like every glyph on the band: the band is
                 // monochrome, the service is named beside it.
-                icon: Icon(
-                  Icons.monitor_heart_outlined,
-                  color: room.inkSecondary,
-                ),
+                icon: Icon(Symbols.vital_signs, color: room.inkSecondary),
                 onPressed: () => context.go('/activity'),
                 tooltip: 'Activity',
               ),

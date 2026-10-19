@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/text_scale.dart';
@@ -176,6 +177,9 @@ class _OverviewBody extends ConsumerWidget {
     // server it is talking to and must not be the thing that first reaches a
     // provider on an unconfigured service.
     final connection = (service: service, instanceId: instanceId);
+    // Read again while the room is seen: its figure, Now playing and light
+    // all read this one answer, so they move together.
+    ref.watchWhileLive(context, streamSessionsPollProvider(connection));
     final sessions = ref.watch(streamSessionsForProvider(connection));
     final libraries = ref.watch(streamLibrariesForProvider(connection));
 
@@ -246,7 +250,7 @@ class _OverviewBody extends ConsumerWidget {
                 // Who is watching, first and on both servers: it is the one fact
                 // only a media server holds, and the only region on this page
                 // that is about people rather than about files.
-                StreamNowPlayingSection(
+                StreamNowPlayingSection.slab(
                   service: service,
                   instanceId: instanceId,
                   sessions: sessions,

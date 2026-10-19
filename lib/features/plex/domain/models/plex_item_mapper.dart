@@ -324,6 +324,13 @@ StreamSession? plexSessionFromJson(Map<String, dynamic> json) {
         : plexArtworkKey(json['thumb']) ??
               plexArtworkKey(json['parentThumb']) ??
               plexArtworkKey(json['grandparentThumb']),
+    // `art` is Plex's background, an episode's its show's; an episode's own
+    // `thumb` is a still of it, as wide.
+    backdropPath: kind == StreamItemKind.episode
+        ? plexArtworkKey(json['grandparentArt']) ??
+              plexArtworkKey(json['art']) ??
+              plexArtworkKey(json['thumb'])
+        : plexArtworkKey(json['art']),
     // No `TranscodeSession` at all is the *only* signal Plex gives for a direct
     // play; there is no field that says so.
     playMethod: transcode?.playMethod ?? StreamPlayMethod.directPlay,

@@ -28,6 +28,7 @@ import 'package:cupola/features/plex/presentation/plex_capability.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/domain/models/stream_session.dart';
+import 'package:cupola/features/stream/presentation/stream_activity_provider.dart';
 import 'package:cupola/features/movies/presentation/movies_provider.dart';
 import 'package:cupola/features/music/presentation/music_provider.dart';
 import 'package:cupola/features/series/presentation/series_provider.dart';
@@ -110,10 +111,12 @@ final serviceKpiProvider = FutureProvider.autoDispose
           return _transmissionKpis(ref);
         case ServiceKey.nginxProxyManager:
           return _npmKpis(ref);
-        // The **strict** providers, not the clients directly: the figures need
-        // a failure that survives the fetch, and the provider layer is what
-        // makes that shareable with the Overview, invalidatable with the rest
-        // and overridable by name in a test.
+        // Providers, not the clients directly: the figures need a failure that
+        // survives the fetch, and the provider layer is what makes that
+        // shareable with the Overview, invalidatable with the rest and
+        // overridable by name in a test. The sessions are the very read the
+        // room's Now playing and its light take, so the figure cannot say
+        // `1 stream` over a list that has moved on (or the other way round).
         //
         // What a refusal means is asked through the container, captured now:
         // the answer is needed after the reads, past an `await`, where this
@@ -121,14 +124,14 @@ final serviceKpiProvider = FutureProvider.autoDispose
         case ServiceKey.jellyfin:
           final container = ref.container;
           return _jellyfinKpis(
-            ref.watch(jellyfinStrictSessionsProvider.future),
+            ref.watch(jellyfinSessionsProvider.future),
             ref.watch(jellyfinStrictLibrariesProvider.future),
             kind: () => container.read(jellyfinCredentialKindProvider.future),
           );
         case ServiceKey.plex:
           final container = ref.container;
           return _plexKpis(
-            ref.watch(plexStrictSessionsProvider.future),
+            ref.watch(plexSessionsProvider.future),
             ref.watch(plexStrictLibrariesProvider.future),
             probe: () => container.read(
               connectionCapabilityProvider(
@@ -197,13 +200,10 @@ List<ProviderOrFamily> serviceKpiSources(ServiceKey service) =>
         npmCertificatesProvider,
       ],
       ServiceKey.jellyfin => [
-        jellyfinStrictSessionsProvider,
+        jellyfinSessionsProvider,
         jellyfinStrictLibrariesProvider,
       ],
-      ServiceKey.plex => [
-        plexStrictSessionsProvider,
-        plexStrictLibrariesProvider,
-      ],
+      ServiceKey.plex => [plexSessionsProvider, plexStrictLibrariesProvider],
     };
 
 /// What a service page's pull-to-refresh has to re-ask: its reachability probe
@@ -658,7 +658,12 @@ Future<List<ServiceKpi>> _jellyfinKpisFor(Ref ref, String instanceId) {
   final client = ref.watch(jellyfinClientForProvider(instanceId));
   final container = ref.container;
   return _jellyfinKpis(
-    client.getSessionsOrThrow(),
+    ref.watch(
+      streamSessionsForProvider((
+        service: ServiceKey.jellyfin,
+        instanceId: instanceId,
+      )).future,
+    ),
     client.getLibrariesOrThrow(),
     kind: () =>
         container.read(jellyfinCredentialKindForProvider(instanceId).future),
@@ -669,7 +674,12 @@ Future<List<ServiceKpi>> _plexKpisFor(Ref ref, String instanceId) {
   final client = ref.watch(plexClientForProvider(instanceId));
   final container = ref.container;
   return _plexKpis(
-    client.getSessionsOrThrow(),
+    ref.watch(
+      streamSessionsForProvider((
+        service: ServiceKey.plex,
+        instanceId: instanceId,
+      )).future,
+    ),
     client.getLibrariesOrThrow(),
     probe: () =>
         container.read(connectionCapabilityProvider(instanceId).future),

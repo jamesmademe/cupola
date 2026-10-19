@@ -61,8 +61,9 @@ void main() {
     width: 480,
     scenes: [
       _scene(
-        'Home selected · the strong-fill pill with icon and label in the '
-        'primary ink, the other three icon only in the secondary ink',
+        'Home selected · four columns of one width, each a glyph over its '
+        'name; the lit one a strong-fill pill filling its column in the '
+        'primary ink, the rest in the secondary ink',
         _operatorBar.indexOf(NavTab.home),
       ),
       _scene(
@@ -91,7 +92,7 @@ void main() {
         width: 390,
       ),
       _scene(
-        '320pt window · the bar fills the width and the items tighten',
+        '320pt window · the columns narrow and every name still fits',
         0,
         searchesWaiting: 3,
         width: 320,
@@ -111,14 +112,14 @@ void main() {
         width: 390,
       ),
       CatalogScene(
-        'At 2× reading size · the label and the badge clamp at 1.3×, the bar '
-        'grows to fit its pill and the badge to fit its count',
+        'At 2× reading size · the names and the badge clamp at 1.3×, the bar '
+        'keeps its height and the badge grows to fit its count',
         (_) => _bar(1, searchesWaiting: 3),
         width: 390,
         textScale: catalogTextScale,
       ),
       CatalogScene(
-        'At 2× reading size, Activity selected · 9+ on a compact item',
+        'At 2× reading size, Activity selected · 9+ over its name',
         (_) => _bar(2, searchesWaiting: 12),
         width: 390,
         textScale: catalogTextScale,

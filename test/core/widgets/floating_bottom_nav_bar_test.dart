@@ -8,20 +8,24 @@ import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 
 void main() {
   group('FloatingBottomNavBar', () {
-    testWidgets('shows only the selected label in the compact nav pill', (
+    testWidgets('every destination says its name, the lit one too', (
       tester,
     ) async {
       await _pumpNavBar(tester, selectedIndex: 0);
 
-      expect(find.text('Services'), findsOneWidget);
-      expect(find.text('Activity'), findsNothing);
-      expect(find.text('Search'), findsNothing);
-      expect(find.text('Settings'), findsNothing);
+      for (final label in const [
+        'Services',
+        'Activity',
+        'Search',
+        'Settings',
+      ]) {
+        expect(find.text(label), findsOneWidget, reason: label);
+      }
     });
 
     group('semantics', () {
-      // Unselected destinations render no text at all, so `label:` on the
-      // Semantics is the only thing naming them. This group is what stops that
+      // Each destination's own node names it with its place in the bar: the
+      // drawn names are silenced under it. This group is what stops that
       // wiring being deleted as dead code.
       testWidgets('each destination is a button naming its tab position', (
         tester,
@@ -100,14 +104,12 @@ void main() {
 
       await _pumpNavBar(tester, selectedIndex: 0);
 
-      final startRect = _indicatorRect(tester);
-      final startLeft = startRect.left;
+      final startLeft = _indicatorRect(tester).left;
 
       await _pumpNavBar(tester, selectedIndex: 2, settle: false);
       await tester.pump(const Duration(milliseconds: 80));
 
       final midLeft = _indicatorRect(tester).left;
-
       expect(midLeft, greaterThan(startLeft));
 
       await tester.pumpAndSettle();
@@ -115,87 +117,39 @@ void main() {
       final endRect = _indicatorRect(tester);
       final searchRect = _itemRect(tester, 'search');
       expect(midLeft, lessThan(endRect.left));
-      expect(startRect.width, greaterThan(endRect.width));
-      expect(endRect.center.dx, closeTo(searchRect.center.dx, 0.5));
-      expect(endRect.left, greaterThanOrEqualTo(searchRect.left - 0.5));
-      expect(endRect.right, lessThanOrEqualTo(searchRect.right + 0.5));
+      // The pill is the lit column, edge to edge.
+      expect(endRect.left, closeTo(searchRect.left, 0.5));
+      expect(endRect.right, closeTo(searchRect.right, 0.5));
     });
 
-    testWidgets(
-      'uses a compact centered navbar and aligns edge selections on iPhone widths',
-      (tester) async {
-        _setTestViewport(tester, const Size(390, 844));
+    testWidgets('as wide as the page, in four columns of one width', (
+      tester,
+    ) async {
+      _setTestViewport(tester, const Size(390, 844));
 
-        await _pumpNavBar(tester, selectedIndex: 0);
-
+      for (final selected in const [0, 3]) {
+        await _pumpNavBar(tester, selectedIndex: selected);
         expect(tester.takeException(), isNull);
 
-        final servicesRect = _itemRect(tester, 'services');
-        final activityRect = _itemRect(tester, 'activity');
-        final searchRect = _itemRect(tester, 'search');
-        final settingsRect = _itemRect(tester, 'settings');
-        final servicesIndicatorRect = _indicatorRect(tester);
-        final navSurfaceRect = _navSurfaceRect(tester);
-        final maxSurfaceWidth = 390.0 - (AppSpacing.lg * 2);
+        final surface = _navSurfaceRect(tester);
+        expect(surface.left, closeTo(AppSpacing.lg, 0.5));
+        expect(surface.right, closeTo(390 - AppSpacing.lg, 0.5));
+        expect(surface.height, FloatingNavBarMetrics.barHeight);
 
-        expect(navSurfaceRect.width, lessThan(maxSurfaceWidth));
-        expect(navSurfaceRect.center.dx, closeTo(195.0, 0.5));
-        expect(servicesRect.width, greaterThan(activityRect.width));
-        expect(servicesRect.width, greaterThan(searchRect.width));
-        expect(servicesRect.width, greaterThan(settingsRect.width));
-        expect(activityRect.width, closeTo(searchRect.width, 0.5));
-        expect(
-          servicesIndicatorRect.center.dx,
-          closeTo(servicesRect.center.dx, 0.5),
-        );
-        expect(
-          servicesIndicatorRect.width,
-          lessThanOrEqualTo(servicesRect.width + 0.5),
-        );
-        expect(
-          servicesIndicatorRect.left,
-          greaterThanOrEqualTo(servicesRect.left - 0.5),
-        );
-        expect(
-          servicesIndicatorRect.right,
-          lessThanOrEqualTo(servicesRect.right + 0.5),
-        );
-
-        await _pumpNavBar(tester, selectedIndex: 3);
-
-        expect(tester.takeException(), isNull);
-
-        final selectedSettingsRect = _itemRect(tester, 'settings');
-        final settingsIndicatorRect = _indicatorRect(tester);
-        final updatedNavSurfaceRect = _navSurfaceRect(tester);
-
-        expect(
-          selectedSettingsRect.width,
-          greaterThan(_itemRect(tester, 'search').width),
-        );
-        expect(updatedNavSurfaceRect.width, closeTo(navSurfaceRect.width, 0.5));
-        expect(
-          updatedNavSurfaceRect.center.dx,
-          closeTo(navSurfaceRect.center.dx, 0.5),
-        );
-        expect(
-          settingsIndicatorRect.center.dx,
-          closeTo(selectedSettingsRect.center.dx, 0.5),
-        );
-        expect(
-          settingsIndicatorRect.width,
-          lessThanOrEqualTo(selectedSettingsRect.width + 0.5),
-        );
-        expect(
-          settingsIndicatorRect.left,
-          greaterThanOrEqualTo(selectedSettingsRect.left - 0.5),
-        );
-        expect(
-          settingsIndicatorRect.right,
-          lessThanOrEqualTo(selectedSettingsRect.right + 0.5),
-        );
-      },
-    );
+        final widths = [
+          for (final label in const [
+            'services',
+            'activity',
+            'search',
+            'settings',
+          ])
+            _itemRect(tester, label).width,
+        ];
+        for (final width in widths) {
+          expect(width, closeTo(widths.first, 0.5));
+        }
+      }
+    });
 
     testWidgets('stays anchored near the bottom of the viewport', (
       tester,
@@ -489,7 +443,7 @@ void main() {
         }
       });
 
-      testWidgets('the selected label keeps clear of the badge', (
+      testWidgets('the badge keeps clear of the name under its glyph', (
         tester,
       ) async {
         for (final scale in [1.0, 1.3, 2.0]) {
@@ -502,9 +456,9 @@ void main() {
           final badgeRect = tester.getRect(badge());
           final labelRect = tester.getRect(find.text('Activity'));
           expect(
-            labelRect.left - badgeRect.right,
-            greaterThanOrEqualTo(4),
-            reason: 'at ${scale}x the badge ring touched the label',
+            labelRect.top,
+            greaterThanOrEqualTo(badgeRect.bottom - 0.01),
+            reason: 'at ${scale}x the badge sat on the name',
           );
         }
       });

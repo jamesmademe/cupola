@@ -7,11 +7,13 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/title_light.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/bazarr/data/bazarr_service.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_overview_screen.dart';
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
+import 'package:cupola/features/media/presentation/arr_public_poster.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -136,6 +138,54 @@ void main() {
     expect(find.text('47'), findsOneWidget);
   });
 
+  testWidgets('a wanted row wears its title\'s public poster, and the slab '
+      'is lit by the first one', (tester) async {
+    const poster = 'https://artworks.thetvdb.com/severance.jpg';
+    final lit = <String>[];
+    final service = FakeBazarrService()
+      ..badges = _badges(episodes: 2, movies: 0)
+      ..wantedEpisodesResult = const BazarrPagedResult(
+        data: [
+          BazarrWantedItem(
+            seriesTitle: 'Severance',
+            episodeNumber: 'S02E04',
+            sonarrSeriesId: 3,
+            missingLanguages: [BazarrSubtitleLanguage(name: 'Italian')],
+          ),
+          BazarrWantedItem(
+            seriesTitle: 'Night Shift',
+            episodeNumber: 'S01E01',
+            sonarrSeriesId: 9,
+            missingLanguages: [BazarrSubtitleLanguage(name: 'German')],
+          ),
+        ],
+        total: 2,
+      );
+
+    await _pump(
+      tester,
+      service: service,
+      settle: false,
+      overrides: [
+        arrPublicPosterByIdProvider.overrideWith(
+          (ref, title) async => title.id == 3 ? poster : null,
+        ),
+        titleLightProvider.overrideWith((ref, url) async {
+          lit.add(url);
+          return null;
+        }),
+      ],
+    );
+
+    final art = tester
+        .widgetList<ServiceOverviewArt>(find.byType(ServiceOverviewArt))
+        .toList();
+    expect([for (final a in art) a.posterUrl], [poster, null]);
+    // No poster held: the title's initials, never an empty box.
+    expect(find.text('NS'), findsOneWidget);
+    expect(lit, [poster]);
+  });
+
   testWidgets('a section whose source failed does not take the page with it', (
     tester,
   ) async {
@@ -223,6 +273,8 @@ Future<void> _pump(
   String? version = '1.5.1',
   bool configured = true,
   double textScaleFactor = 1.0,
+  List<dynamic> overrides = const [],
+  bool settle = true,
 }) async {
   await tester.binding.setSurfaceSize(const Size(420, 2600));
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -252,6 +304,7 @@ Future<void> _pump(
                 Map<String, String> accessHeaders = const {},
               }) => _StatusClient(version),
         ),
+        ...overrides,
       ],
       child: MaterialApp(
         theme: AppTheme.darkTheme(),
@@ -266,7 +319,14 @@ Future<void> _pump(
       ),
     ),
   );
-  await tester.pumpAndSettle();
+  if (settle) {
+    await tester.pumpAndSettle();
+    return;
+  }
+  // A poster still loading shimmers for as long as it loads.
+  for (var i = 0; i < 10; i++) {
+    await tester.pump(const Duration(milliseconds: 50));
+  }
 }
 
 BazarrBadges _badges({required int episodes, required int movies}) =>

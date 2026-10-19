@@ -48,10 +48,21 @@ class ActivityBlocklistPage extends ConsumerWidget {
             );
     } else {
       final failures = feed.failures.toList(growable: false);
+      final blocked = blocklistCountOf(feed);
       body = ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
-          const PageTitle(_title),
+          PageTitle(
+            _title,
+            summary: blocked == null
+                ? null
+                : Text(
+                    '${blocked.count}${blocked.floor ? '+' : ''} blocked',
+                    semanticsLabel: blocked.floor
+                        ? 'at least ${blocked.count} blocked'
+                        : null,
+                  ),
+          ),
           for (final failure in failures)
             if (failure.error case final error?)
               Padding(
@@ -93,4 +104,24 @@ class ActivityBlocklistPage extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// How many releases the arrs keep blocked, for the line under the page's
+/// name: the servers' own totals, summed. A floor (`12+`) when a server did
+/// not answer, gave no total or its walk stopped short, since a sum missing a
+/// term looks exactly like a sum. Null for nothing to say: an empty list says
+/// so in its own words, and a failure in its own line.
+({int count, bool floor})? blocklistCountOf(ActivityFeed feed) {
+  var count = 0;
+  var floor = false;
+  for (final result in feed.configured) {
+    if (result.error != null) {
+      floor = true;
+      continue;
+    }
+    final total = result.total;
+    if (total == null || result.cutShort) floor = true;
+    count += total ?? result.items.length;
+  }
+  return count == 0 ? null : (count: count, floor: floor);
 }

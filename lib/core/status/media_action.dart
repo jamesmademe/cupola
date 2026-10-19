@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/percent_format.dart';
@@ -411,7 +412,7 @@ MediaPrimaryAction _queueOrNothing(
   return MediaPrimaryAction(
     kind: MediaActionKind.openQueue,
     label: 'Open queue',
-    icon: Icons.monitor_heart_outlined,
+    icon: Symbols.vital_signs,
     consequence: consequence,
   );
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/utils/date_format.dart';
 import 'package:cupola/core/utils/dot_separator.dart';
@@ -209,6 +210,7 @@ class _JellyfinActivityBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final connection = (service: ServiceKey.jellyfin, instanceId: instanceId);
+    ref.watchWhileLive(context, streamSessionsPollProvider(connection));
     final sessions = ref.watch(streamSessionsForProvider(connection));
     // The host's two bands and the status bar the upper one consumes: this
     // page has no `SafeArea` and no app bar to take the inset off first.

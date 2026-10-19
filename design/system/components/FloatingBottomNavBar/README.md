@@ -6,16 +6,16 @@ Rendered from `lib/core/widgets/floating_bottom_nav_bar.dart` by `test/design_ca
 
 ## The bar
 
-- Height `FloatingNavBarMetrics.barHeight` (62, `size.tabbar`) at the default reading size, growing to fit its pill at larger ones. Outer padding `AppSpacing.lg` at the sides, `AppSpacing.sm` above, `AppSpacing.xs` plus the bottom safe area below.
-- The surface is only as wide as its items want (the widest selected pill plus 52pt per other item and the gaps), centred, and never wider than the space it is given.
-- `AppRadius.borderRadiusXl` (30), `CupolaThemeColors.glassSurface` fill (the enamel step, `#1A1A1F`, at 95% dark / white at 95% light, a semi-opaque tint, deliberately not a backdrop blur, because every screen scrolls under it), lit from the room in front: a 14% sheen of its light at the top, gone by 70% of the height (`RoomSheen`, `FrontRoomLight`; a lamp room casts none), drifting to a new room's over `motion.light`, `AppElevation.glass` shadow, a 1px border (white at 12% on dark, `outline` at 85% on light), 6pt inner padding.
+- Height `FloatingNavBarMetrics.barHeight` (62, `size.tabbar`) at every reading size the bar allows (it would grow only if a glyph over its name did not fit). Outer padding `AppSpacing.lg` at the sides, `AppSpacing.sm` above, `AppSpacing.xs` plus the bottom safe area below.
+- The surface is as wide as the page less its two margins: a stadium (`AppRadius.full`), `CupolaThemeColors.glassSurface` fill (the enamel step, `#1A1A1F`, at 95% dark / white at 95% light, a semi-opaque tint, deliberately not a backdrop blur, because every screen scrolls under it), lit from the room in front: a 14% sheen of its light at the top, gone by 70% of the height (`RoomSheen`, `FrontRoomLight`; a lamp room casts none), drifting to a new room's over `motion.light`, `AppElevation.glass` shadow, a 1px border (white at 12% on dark, `outline` at 85% on light), 5pt inner padding.
+- **Columns of one width**, one per destination: four for the operator, three for the requester. A 320pt window narrows them and every name still fits.
 
 ## Items
 
-- **Selected**: a pill at least 36pt tall, `AppRadius.pill` (fully rounded), at least 84pt wide, 14pt horizontal padding, `selectedIcon` + label with a 6pt gap. **Monochrome**: the pill is the room's strong fill (`CupolaRoom.fillStrong`: white at 12% dark, ink at 12% light) with no edge, tinted in a lit room by its light (the light at 18% in the dark room, the title's day primary at 18% on paper), and the icon and label are the primary ink (`onSurface`); no section has a colour of its own. Label `labelMedium` at 600, one line. The pill slides between items over `AppAnimation.durationSm` on the emphasised curve, and the item scales to 1.02.
-- **Unselected**: `icon` only (the outlined variant), 20pt, `onSurfaceVariant`, on a 48 × 48 minimum target; the item slot is 52pt, tightening to 48 when space runs out.
-- Gap between items: 6pt, or 4pt when the bar's inner width is under `breakpointNavCompact` (360).
-- **Badge**: at least 15 × 15 at the default reading size and growing with the bar's clamped scaler (1.3×) rather than clipping inside a fixed height, `radius-full`, 4pt horizontal padding; its top-right corner 4pt above and 6pt beyond the icon's, and while the item is selected the label moves right by the same 6pt so it keeps its own 6pt gap from the badge's ring. The **ink disc**: filled with `primary` (the primary ink), never a status tone and never a section's colour, a 1.5pt `surface` ring, the count in `labelSmall` 600 tabular figures in `onPrimary` (the on-ink), capped at `9+`. Only Activity carries one: finished searches nobody has opened.
+- **Every destination says its name**: the glyph (20pt, the rail's size) over its name with 2pt between (`AppSpacing.xxs`), centred in its column, the name `labelMedium`, one line, ellipsised only if a column could not hold it.
+- **Selected**: the pill is the whole column, edge to edge inside the 5pt padding, fully rounded; the `selectedIcon`, the name at 600, both in the primary ink (`onSurface`). **Monochrome**: the pill is the room's strong fill (`CupolaRoom.fillStrong`: white at 12% dark, ink at 12% light) with no edge, tinted in a lit room by its light (the light at 18% in the dark room, the title's day primary at 18% on paper); no section has a colour of its own. The pill slides between columns over `AppAnimation.durationSm` on the emphasised curve.
+- **Unselected**: the outlined `icon`, the name at 500, both in the secondary ink (`onSurfaceVariant`); the whole column is the target.
+- **Badge**: at least 15 × 15 at the default reading size and growing with the bar's clamped scaler (1.3×) rather than clipping inside a fixed height, `radius-full`, 4pt horizontal padding; its top-right corner 4pt above and 6pt beyond the icon's, clear of the name under the glyph. The **ink disc**: filled with `primary` (the primary ink), never a status tone and never a section's colour, a 1.5pt `surface` ring, the count in `labelSmall` 600 tabular figures in `onPrimary` (the on-ink), capped at `9+`. Only Activity carries one: finished searches nobody has opened.
 
 ## Reading size and clearance
 
@@ -27,7 +27,7 @@ A horizontal drag rubber-bands the bar up to 15pt with growing resistance and sp
 
 ## Where it is not used
 
-At `AppBreakpoints.touchRail` (840) and wider on a touch device, the bar stands on its side: [FloatingNavRail](../FloatingNavRail/README.md), the same destinations, glass and badge at the middle of the leading edge. A desktop window drawing the desktop shell navigates from [DesktopNavRail](../DesktopNavRail/README.md) instead.
+At `AppBreakpoints.touchRail` (840) and wider on a touch device, the bar stands on its side: [FloatingNavRail](../FloatingNavRail/README.md), the same destinations, glyphs over names, glass and badge at the middle of the leading edge. A desktop window drawing the desktop shell navigates from [DesktopNavRail](../DesktopNavRail/README.md) instead.
 
 ## The consumer provides
 
@@ -44,7 +44,7 @@ Each sheet is drawn in the dark and the light room.
 - The operator's bar with Home, Activity, Discover and Stack selected; a badge on Activity (3, and 9+ past nine).
 - Settings on screen: no tab selected, every item at rest.
 - The requester's bar: Home, Discover, Requests.
-- A 320pt window, where the bar fills the width and the items tighten.
+- A 320pt window, where the columns narrow and every name still fits.
 - Over artwork, where the glass is a tint.
 - Text at 200%: Activity with a badge, and Discover selected with 9+.
 

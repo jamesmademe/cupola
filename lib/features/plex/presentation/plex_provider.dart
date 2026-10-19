@@ -166,28 +166,15 @@ final plexChildrenProvider = FutureProvider.autoDispose
       return ref.watch(plexClientProvider).getChildren(ratingKey);
     }, retry: noProviderRetry);
 
-/// Sessions with the transport failure preserved, for the surfaces that state
-/// a **figure** rather than draw a board.
+/// The libraries with the transport failure preserved, for the surfaces that
+/// state a **figure** rather than draw a board (the KPI rail).
 ///
-/// Written when `getSessions()` still answered an unreachable server with
-/// `const []`, wrong for a counter, where `0 streams` is a claim nobody made,
-/// and, it turned out, wrong for the board too. Both now throw; the KPI rail
-/// and the reachability signal keep reading this one.
-///
-/// It is a provider and not a call the KPI layer makes on the client itself,
-/// which is the part worth keeping: read straight off the client, every rebuild
-/// of an `autoDispose` rail was a fresh `/status/sessions` on the wire, the Overview's
-/// own copy of the same request could not be shared with it, and a fake client
-/// was the only thing a test could substitute. A provider caches, invalidates
-/// with everything else, and can be overridden by name.
-final plexStrictSessionsProvider = FutureProvider<List<StreamSession>>(
-  (ref) => ref.watch(plexClientProvider).getSessionsOrThrow(),
-  retry: noProviderRetry,
-);
-
-/// The libraries, with the failure preserved. See
-/// [plexStrictSessionsProvider] for why this exists beside
-/// [plexLibrariesProvider] rather than replacing it.
+/// Written when `getLibraries()` still answered an unreachable server with
+/// `const []`, wrong for a counter, where `0 libraries` is a claim nobody
+/// made. A provider rather than a call the KPI layer makes on the client: it
+/// caches, invalidates with everything else, and can be overridden by name.
+/// The sessions had a twin of this too; it went once both reads threw, because
+/// two caches of one sessions read let the figure and Now playing disagree.
 final plexStrictLibrariesProvider = FutureProvider<List<StreamLibrary>>(
   (ref) => ref.watch(plexClientProvider).getLibrariesOrThrow(),
   retry: noProviderRetry,

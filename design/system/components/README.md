@@ -85,6 +85,7 @@ cards live in [`../motion/`](../motion/).
 | Service surfaces | [AmbientScaffold](AmbientScaffold/README.md) | `lib/core/widgets/ambient_scaffold.dart`, `lib/features/services/presentation/service_home_screen.dart` |
 | Service surfaces | [DomainSectionHeader](DomainSectionHeader/README.md) | `lib/core/widgets/domain_section.dart`, `lib/features/settings/domain/service_key.dart` |
 | Service surfaces | [ServiceOverview](ServiceOverview/README.md) | `lib/core/widgets/service_overview.dart`, `lib/features/movies/presentation/radarr_overview_screen.dart` |
+| Service surfaces | [NowPlaying](NowPlaying/README.md) | `lib/features/stream/presentation/widgets/stream_session_slab.dart`, `lib/features/stream/presentation/widgets/stream_now_playing_section.dart` |
 | Service surfaces | [ServiceRing](ServiceRing/README.md) | `lib/core/widgets/service_ring.dart` |
 | Onboarding | [SetupDoors](SetupDoors/README.md) | `lib/core/widgets/setup_doors.dart` |
 | Onboarding | [PairReceive](PairReceive/README.md) | `lib/features/pairing/presentation/pair_receive_screen.dart`, `lib/features/pairing/presentation/pair_words.dart` |

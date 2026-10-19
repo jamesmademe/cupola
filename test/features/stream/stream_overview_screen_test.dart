@@ -16,8 +16,10 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/models/stream_library.dart';
+import 'package:cupola/features/stream/domain/models/stream_session.dart';
 import 'package:cupola/features/stream/presentation/stream_overview_provider.dart';
 import 'package:cupola/features/stream/presentation/stream_overview_screen.dart';
+import 'package:cupola/features/stream/presentation/widgets/stream_session_slab.dart';
 
 import '../../test_helpers/settings_scope.dart';
 
@@ -75,8 +77,8 @@ void main() {
           .widgetList<SectionHeader>(find.byType(SectionHeader))
           .map((header) => header.semanticHint),
       [
-        // Now playing is a section of this page, not a door to a tab.
-        null,
+        // Now playing leads to the tab that lists the playbacks.
+        'opens the Plex Activities tab',
         'opens the Plex On deck tab',
         'opens the Plex Libraries tab',
         // Server has nowhere to go: Plex's bar has no tab that owns connection
@@ -85,6 +87,81 @@ void main() {
         null,
       ],
     );
+  });
+
+  testWidgets('one playback is drawn large, with what is left and the '
+      'controls Jellyfin allows', (tester) async {
+    await _pump(
+      tester,
+      service: ServiceKey.jellyfin,
+      sessions: [_session('a', 'Anna', 'Sintel')],
+    );
+
+    expect(find.byType(StreamSessionFeature), findsOneWidget);
+    expect(find.byType(StreamSessionLine), findsNothing);
+    expect(find.text('Anna\u00A0· Sintel'), findsOneWidget);
+    expect(find.text('9\u00A0min left'), findsOneWidget);
+    expect(find.byTooltip('Pause this playback'), findsOneWidget);
+    expect(find.byTooltip('Send a message to this player'), findsOneWidget);
+    expect(find.byTooltip('Stop this playback'), findsOneWidget);
+    // The wide picture is the server's own, through its key.
+    final picture = tester.widget<StreamSessionFeature>(
+      find.byType(StreamSessionFeature),
+    );
+    expect(picture.picture?.url, contains('/Images/Backdrop/0'));
+    expect(picture.picture?.headers, isNotEmpty);
+    // The way to the tab that lists the playbacks.
+    expect(
+      tester
+          .widget<SectionHeader>(
+            find.widgetWithText(SectionHeader, 'Now playing'),
+          )
+          .semanticHint,
+      'opens the Jellyfin Activity tab',
+    );
+  });
+
+  testWidgets('several playbacks are drawn as lines, one sentence each', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      service: ServiceKey.plex,
+      sessions: [
+        _session('a', 'Giulia', 'Spring'),
+        _session('b', 'Tom', 'Big Buck Bunny'),
+      ],
+    );
+
+    expect(find.byType(StreamSessionFeature), findsNothing);
+    expect(find.byType(StreamSessionLine), findsNWidgets(2));
+    expect(find.text('Giulia\u00A0· Spring'), findsOneWidget);
+    expect(find.text('Tom\u00A0· Big Buck Bunny'), findsOneWidget);
+    // Plex stops and nothing else: no pause, no message.
+    expect(find.byTooltip('Pause this playback'), findsNothing);
+    expect(find.byTooltip('Stop this playback'), findsNWidgets(2));
+    expect(
+      find.semantics.byLabel('Spring'),
+      findsOneWidget,
+      reason: 'a line speaks once, by its title',
+    );
+  });
+
+  testWidgets('playbacks do not overflow at an accessibility reading size', (
+    tester,
+  ) async {
+    for (final sessions in [
+      [_session('a', 'Anna', 'Sintel')],
+      [_session('a', 'Giulia', 'Spring'), _session('b', 'Tom', 'Elephants')],
+    ]) {
+      await _pump(
+        tester,
+        service: ServiceKey.jellyfin,
+        sessions: sessions,
+        textScaleFactor: 2.0,
+      );
+      expect(tester.takeException(), isNull);
+    }
   });
 
   testWidgets('the Libraries header counts rooms and names the one scanning', (
@@ -314,6 +391,7 @@ Future<void> _pump(
   WidgetTester tester, {
   required ServiceKey service,
   List<StreamLibrary> libraries = const [],
+  List<StreamSession> sessions = const [],
   List<StreamItem> onDeck = const [],
   PlexServerCapabilities? capabilities,
   bool failLibraries = false,
@@ -347,8 +425,8 @@ Future<void> _pump(
         currentSettingsProvider.overrideWith((ref) => settings),
         // Both sessions providers: the page reads one of them, and overriding
         // the other costs nothing while keeping the harness symmetrical.
-        jellyfinSessionsProvider.overrideWith((ref) async => const []),
-        plexSessionsProvider.overrideWith((ref) async => const []),
+        jellyfinSessionsProvider.overrideWith((ref) async => sessions),
+        plexSessionsProvider.overrideWith((ref) async => sessions),
         jellyfinLibrariesProvider.overrideWith((ref) async {
           if (failLibraries) throw Exception('libraries failed');
           return libraries;
@@ -392,8 +470,32 @@ Future<void> _pump(
       ),
     ),
   );
-  await tester.pumpAndSettle();
+  if (sessions.isEmpty) {
+    await tester.pumpAndSettle();
+    return;
+  }
+  // A playback's picture shimmers while it loads, for as long as it loads.
+  for (var i = 0; i < 10; i++) {
+    await tester.pump(const Duration(milliseconds: 50));
+  }
 }
+
+StreamSession _session(String id, String user, String title) => StreamSession(
+  id: id,
+  userName: user,
+  title: title,
+  subtitle: null,
+  deviceLabel: 'Living room TV',
+  posterPath: '/Items/$id/Images/Primary',
+  backdropPath: '/Items/$id/Images/Backdrop/0',
+  playMethod: StreamPlayMethod.directPlay,
+  transcodeReasons: const [],
+  bitrate: null,
+  bitrateIsNominal: true,
+  progress: 0.5,
+  isPaused: false,
+  remaining: const Duration(minutes: 9),
+);
 
 StreamLibrary _library({
   required String name,

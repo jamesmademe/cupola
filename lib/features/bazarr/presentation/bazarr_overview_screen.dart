@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_animation.dart';
 
+import 'package:cupola/core/title_light.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/media/presentation/arr_public_poster.dart';
 
 import 'package:cupola/features/bazarr/presentation/bazarr_overview_provider.dart';
 
@@ -114,10 +116,22 @@ class _WantedSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final section = ref.watch(bazarrOverviewWantedProvider);
     final total = section.asData?.value.total;
+    // The slab glows with its first title's light: the public poster of the
+    // arr that holds it, the same one the room is lit by.
+    final lead = [
+      for (final row in section.value?.rows ?? const <BazarrOverviewRow>[])
+        ?row.title,
+    ].firstOrNull;
+    final leadPoster = lead == null
+        ? null
+        : ref.watch(arrPublicPosterByIdProvider(lead)).value;
 
     return ServiceOverviewSection(
       service: ServiceKey.bazarr,
       title: 'Wanted subtitles',
+      light: leadPoster == null
+          ? null
+          : ref.watch(titleLightProvider(leadPoster)).value?.art,
       // "—" while it loads or after it failed: a "0 wanted" printed over an
       // unanswered question is a claim nobody made. No age clause either:
       // Bazarr's wanted rows carry no date, so "oldest 8 days" cannot be said.
@@ -141,7 +155,7 @@ class _WantedSection extends ConsumerWidget {
           label: 'Nothing wanted',
         ),
         data: (data) => Column(
-          children: [for (final row in data.rows) _BazarrRow(row: row)],
+          children: [for (final row in data.rows) _WantedRow(row: row)],
         ),
       ),
     );
@@ -182,6 +196,30 @@ class _HistorySection extends ConsumerWidget {
         data: (items) =>
             Column(children: [for (final row in items) _BazarrRow(row: row)]),
       ),
+    );
+  }
+}
+
+/// A wanted row: the title's poster, as the Wanted tab's own rows are about
+/// a title. The section says what state its rows are in, so no dot.
+class _WantedRow extends ConsumerWidget {
+  const _WantedRow({required this.row});
+
+  final BazarrOverviewRow row;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final title = row.title;
+    return ServiceOverviewRow(
+      spoken: row.spoken,
+      leading: ServiceOverviewArt(
+        posterUrl: title == null
+            ? null
+            : ref.watch(arrPublicPosterByIdProvider(title)).value,
+        title: title?.title ?? row.headline,
+      ),
+      title: row.headline,
+      detail: row.detail,
     );
   }
 }

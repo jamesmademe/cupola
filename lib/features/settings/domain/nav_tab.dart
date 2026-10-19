@@ -39,9 +39,11 @@ enum NavTab {
   ),
   activity(
     label: 'Activity',
-    icon: Icons.monitor_heart_outlined,
-    selectedIcon: Icons.monitor_heart_rounded,
-    railIcon: Symbols.monitor_heart_rounded,
+    // The pulse line, as drawn in the brand's tab bar: Material Symbols has
+    // it, Material Icons does not.
+    icon: Symbols.vital_signs,
+    selectedIcon: Symbols.vital_signs_rounded,
+    railIcon: Symbols.vital_signs_rounded,
     routePath: '/activity',
   ),
 

@@ -14,6 +14,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 import 'package:cupola/features/stream/domain/stream_semantics.dart';
 import 'package:cupola/features/stream/domain/stream_server_client.dart';
+import 'package:cupola/features/stream/domain/models/stream_library.dart';
 import 'package:cupola/features/stream/presentation/stream_connection_provider.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_poster_tile.dart';
 
@@ -232,6 +233,35 @@ class _StreamLibraryScreenState extends ConsumerState<StreamLibraryScreen> {
     streamClientForProvider((service: widget.service, instanceId: _connection)),
   );
 
+  /// `368 movies` under the library's name: the whole library, which the
+  /// grid, read a page at a time, never says. Nothing while it is read or when
+  /// the server does not say.
+  Widget? _countLine(WidgetRef ref, String connection) {
+    final count = ref
+        .watch(
+          streamLibraryItemCountProvider((
+            service: widget.service,
+            instanceId: connection,
+            itemId: widget.libraryId,
+          )),
+        )
+        .value;
+    if (count == null) return null;
+    final libraries = ref
+        .watch(
+          streamLibrariesForProvider((
+            service: widget.service,
+            instanceId: connection,
+          )),
+        )
+        .value;
+    final kind = libraries
+        ?.where((library) => library.id == widget.libraryId)
+        .firstOrNull
+        ?.kind;
+    return Text(streamLibraryCountLine(count, kind, widget.service));
+  }
+
   @override
   Widget build(BuildContext context) {
     final accent = widget.service.accent;
@@ -282,7 +312,7 @@ class _StreamLibraryScreenState extends ConsumerState<StreamLibraryScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            PageTitle(_title),
+            PageTitle(_title, summary: _countLine(ref, connection)),
             _LensChips(
               selected: _lens,
               accent: accent,
@@ -569,4 +599,27 @@ class _EmptyLens extends StatelessWidget {
           : null,
     );
   }
+}
+
+/// `368 movies`, `86 series`, `1 album`: a library's count in the unit it
+/// browses in, as the server counts it (a music library is albums on
+/// Jellyfin, artists on Plex); `items` for a library of another kind.
+String streamLibraryCountLine(
+  int count,
+  StreamLibraryKind? kind,
+  ServiceKey service,
+) {
+  final (one, many) = switch (kind) {
+    StreamLibraryKind.movies => ('movie', 'movies'),
+    StreamLibraryKind.shows => ('series', 'series'),
+    StreamLibraryKind.music when service == ServiceKey.plex => (
+      'artist',
+      'artists',
+    ),
+    StreamLibraryKind.music => ('album', 'albums'),
+    StreamLibraryKind.photos ||
+    StreamLibraryKind.other ||
+    null => ('item', 'items'),
+  };
+  return '$count ${count == 1 ? one : many}';
 }

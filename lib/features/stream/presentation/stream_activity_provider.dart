@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/capability/connection_capability.dart';
+import 'package:cupola/core/lifecycle/gated_poll.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/plex/presentation/plex_capability.dart';
@@ -62,6 +63,35 @@ final streamSessionsForProvider =
           : ref.watch(plexClientForProvider(key.instanceId));
       return client.getSessions();
     }, retry: noProviderRetry);
+
+/// How often a media server's own pages read its sessions again while seen.
+const streamSessionsInterval = Duration(seconds: 15);
+
+/// The poll that keeps one connection's sessions current, for the media
+/// server's Overview and its playback tab to watch while they are the page on
+/// screen (`watchWhileLive`).
+///
+/// It reads [streamSessionsForProvider] again, and for the lens the cache that
+/// one collapses onto, so the room's figure, its Now playing and its light,
+/// which all read that one answer, move together. Skipped while the last read
+/// is still out, as the Home's (`readAgainUnlessInFlight`).
+final streamSessionsPollProvider = Provider.autoDispose
+    .family<void, StreamConnection>((ref, key) {
+      ref.gatedPoll(
+        id: 'stream.sessions.${key.service.name}.${key.instanceId}',
+        interval: streamSessionsInterval,
+        onTick: () {
+          final lens = ref.read(activeInstanceProvider(key.service))?.id ?? '';
+          ref.readAgainUnlessInFlight([
+            if (key.instanceId.isEmpty || key.instanceId == lens)
+              key.service == ServiceKey.jellyfin
+                  ? jellyfinSessionsProvider
+                  : plexSessionsProvider,
+            streamSessionsForProvider(key),
+          ]);
+        },
+      );
+    });
 
 /// Every configured connection of the media servers, in registry and then
 /// the user's order, with what a row calls it.
