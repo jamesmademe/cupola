@@ -45,22 +45,20 @@ Future<void> _pump(
   required List<GlobalActivityItem> queue,
   List<ServiceKey> unreachable = const [],
 }) async {
-  final container = ProviderContainer(
-    overrides: [
-      ...await settingsScopeOverrides(),
-      globalNowItemsProvider.overrideWith(
-        (ref) async => ActivityFeed(items: queue, results: const []),
-      ),
-      // Nothing unreachable unless asked: the pane's red line is correct when
-      // it appears, and most of this file is not about it.
-      unreachableServicesProvider.overrideWithValue(unreachable),
-    ],
-  );
-  addTearDown(container.dispose);
-
   await tester.pumpWidget(
-    UncontrolledProviderScope(
-      container: container,
+    // A scope of its own each time, so the pane's poll is disposed with the
+    // tree that held it rather than with the test.
+    ProviderScope(
+      key: UniqueKey(),
+      overrides: [
+        ...await settingsScopeOverrides(),
+        globalNowItemsProvider.overrideWith(
+          (ref) async => ActivityFeed(items: queue, results: const []),
+        ),
+        // Nothing unreachable unless asked: the pane's red line is correct when
+        // it appears, and most of this file is not about it.
+        unreachableServicesProvider.overrideWithValue(unreachable),
+      ],
       child: MaterialApp.router(
         theme: theme,
         routerConfig: GoRouter(
@@ -76,6 +74,13 @@ Future<void> _pump(
       ),
     ),
   );
+  await tester.pumpAndSettle();
+}
+
+/// The pane polls while it is mounted, and a test that ends with it mounted ends
+/// with a timer pending: the poll stops a frame behind the pane.
+Future<void> _unmount(WidgetTester tester) async {
+  await tester.pumpWidget(const SizedBox());
   await tester.pumpAndSettle();
 }
 
@@ -108,6 +113,7 @@ void main() {
         isNot(dark),
         reason: 'the pane glyph must be walked against the light ground',
       );
+      await _unmount(tester);
     });
 
     // The bar spends the row's already-resolved tone instead of re-deciding
@@ -136,6 +142,7 @@ void main() {
           surface: light.colorScheme.surfaceContainerLowest,
         ),
       );
+      await _unmount(tester);
     });
 
     // A calm transfer keeps the scheme's primary, so the amber is a signal
@@ -153,6 +160,7 @@ void main() {
         ),
       );
       expect(bar.valueColor!.value, light.colorScheme.primary);
+      await _unmount(tester);
     });
   });
 
@@ -201,6 +209,7 @@ void main() {
         find.descendant(of: line, matching: find.text('Retry')),
       );
       expect(retry.style?.color, isNot(red));
+      await _unmount(tester);
     });
   });
 }

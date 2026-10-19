@@ -56,38 +56,33 @@ void main() {
   testWidgets('an empty queue beside a failure names what it left out', (
     tester,
   ) async {
-    final container = ProviderContainer(
-      overrides: [
-        ...await settingsScopeOverrides(),
-        globalNowItemsProvider.overrideWith(
-          (ref) async => const ActivityFeed(
-            items: [],
-            results: [
-              ActivityServiceResult(
-                service: ServiceKey.radarr,
-                items: [],
-                total: 0,
-                configured: true,
-              ),
-              ActivityServiceResult(
-                service: ServiceKey.sonarr,
-                instanceId: 'anime',
-                label: 'Anime',
-                items: [],
-                configured: true,
-                error: SocketException('Connection refused'),
-              ),
-            ],
-          ),
-        ),
-        unreachableServicesProvider.overrideWithValue(const []),
-      ],
-    );
-    addTearDown(container.dispose);
-
     await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
+      ProviderScope(
+        overrides: [
+          ...await settingsScopeOverrides(),
+          globalNowItemsProvider.overrideWith(
+            (ref) async => const ActivityFeed(
+              items: [],
+              results: [
+                ActivityServiceResult(
+                  service: ServiceKey.radarr,
+                  items: [],
+                  total: 0,
+                  configured: true,
+                ),
+                ActivityServiceResult(
+                  service: ServiceKey.sonarr,
+                  instanceId: 'anime',
+                  label: 'Anime',
+                  items: [],
+                  configured: true,
+                  error: SocketException('Connection refused'),
+                ),
+              ],
+            ),
+          ),
+          unreachableServicesProvider.overrideWithValue(const []),
+        ],
         child: MaterialApp(home: _pane()),
       ),
     );
@@ -97,5 +92,10 @@ void main() {
       find.text('Nothing downloading right now. Sonarr Anime not counted.'),
       findsOneWidget,
     );
+
+    // The pane polls while it is mounted, and a test that ends with it mounted
+    // ends with a timer pending: the poll stops a frame behind the pane.
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
   });
 }

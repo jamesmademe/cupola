@@ -214,6 +214,8 @@ void main() {
       await tester.tap(find.byTooltip('Inspector  ⌥I'));
       await tester.pumpAndSettle();
       expect(find.byType(InspectorPane), findsNothing);
+      // The pane's poll stops a frame behind the pane.
+      await tester.pump(const Duration(milliseconds: 1));
     });
   });
 
@@ -229,6 +231,8 @@ void main() {
 
       await _press(tester, LogicalKeyboardKey.keyI, alt: true);
       expect(find.byType(InspectorPane), findsNothing);
+      // The pane's poll stops a frame behind the pane.
+      await tester.pump(const Duration(milliseconds: 1));
     });
   });
 

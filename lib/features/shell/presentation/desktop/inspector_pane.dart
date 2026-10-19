@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/features/activity/domain/activity_readout.dart';
 import 'package:cupola/features/home/domain/downloads.dart';
@@ -12,6 +13,7 @@ import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/features/activity/data/activity_live.dart';
 import 'package:cupola/features/activity/data/selected_download.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
 import 'package:cupola/features/activity/presentation/download_page.dart';
@@ -39,6 +41,9 @@ class InspectorPane extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
+    // Read again while the pane is on screen: its queue and its day's history
+    // have no other reader to keep them current.
+    ref.watchWhileLive(context, inspectorPollProvider);
     final queue = ref.watch(globalNowItemsProvider);
     // The same fold the Dashboard header counts: this card names a service
     // only when every connection of it is dark.

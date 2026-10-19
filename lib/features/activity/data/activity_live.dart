@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/lifecycle/gated_poll.dart';
 import 'package:cupola/features/activity/data/acted_faults.dart';
 import 'package:cupola/features/activity/domain/activity_tab.dart';
+import 'package:cupola/features/activity/presentation/activity_provider.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/activity/data/household_requests.dart';
 import 'package:cupola/features/home/data/answered_requests.dart';
@@ -80,6 +81,26 @@ final activityLivePollProvider = Provider.autoDispose.family<void, ActivityTab>(
     }
   },
 );
+
+/// What the desktop inspector reads again while it is on screen, to watch with
+/// `watchWhileLive`.
+///
+/// The pane's queue and its day's history are providers of its own that live as
+/// long as the app, and nothing else read them again: the first read of the
+/// session was what the pane drew from then on. `dueNow` because the pane did
+/// not just load what it shows, whatever the clock says: closed and opened again
+/// it holds the last read, of any age.
+final inspectorPollProvider = Provider.autoDispose<void>((ref) {
+  ref.gatedPoll(
+    id: 'inspector.live',
+    interval: activityLiveInterval,
+    dueNow: true,
+    onTick: () => ref.readAgainUnlessInFlight([
+      globalNowItemsProvider,
+      globalHistoryFeedProvider,
+    ]),
+  );
+});
 
 /// Drops what [tab] draws, so it is read again: a pull, a second tap on the
 /// tab, a return after a while.
