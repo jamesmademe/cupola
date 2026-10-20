@@ -153,11 +153,16 @@ bool trueNasMayWriteService(
 
 /// The roles in an `auth.me` result, or null when it carries none: an answer
 /// that says nothing.
+///
+/// The middleware holds the roles as a Python set, and its JSON encoder writes
+/// a set as `{"$set": [...]}`, so that envelope is what a real server sends
+/// (the web UI reads `privilege.roles.$set`). A bare list is accepted too.
 Set<String>? trueNasRolesFromMe(Object? me) {
   if (me is! Map) return null;
   final privilege = me['privilege'];
   if (privilege is! Map) return null;
-  final roles = privilege['roles'];
+  final raw = privilege['roles'];
+  final roles = raw is Map ? raw[r'$set'] : raw;
   if (roles is! List) return null;
   return {for (final role in roles) role.toString().toUpperCase()};
 }

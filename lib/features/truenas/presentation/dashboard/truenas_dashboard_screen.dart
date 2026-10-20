@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/utils/percent_format.dart';
+import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -33,6 +35,10 @@ import 'package:cupola/features/truenas/domain/truenas_capability.dart';
 class TrueNasDashboardMetrics {
   final TrueNasReportingGraph? cpu;
   final TrueNasReportingGraph? memory;
+
+  /// The ZFS ARC size (`arcsize`), which the kernel does not count as
+  /// available memory.
+  final TrueNasReportingGraph? arc;
   final TrueNasReportingGraph? network;
 
   /// The network sparkline series, derived once per fetch. Deriving it in the
@@ -47,17 +53,105 @@ class TrueNasDashboardMetrics {
   const TrueNasDashboardMetrics({
     this.cpu,
     this.memory,
+    this.arc,
     this.network,
     this.networkSeries = const [],
     this.answered = true,
   });
 
-  /// CPU busy fraction from the last sample: `(total - idle) / total`, where
-  /// `total` is the sum of all CPU-state series. Unit-independent.
-  double? get cpuUsage => _busyFraction(cpu, idleLabel: 'idle');
+  /// CPU busy fraction from the newest sample.
+  ///
+  /// TrueNAS 25.04 and later chart `truenas_cpu_usage.cpu`: a `cpu` series for
+  /// the whole machine and one `cpuN` per core, each already a busy
+  /// percentage (idle and iowait left out). 24.10 charts netdata's
+  /// `system.cpu` by CPU state, read as one minus the idle share.
+  double? get cpuUsage =>
+      _aggregateCpu(cpu) ?? _busyFraction(cpu, idleLabel: 'idle');
 
-  /// Memory used fraction from the last sample: `used / sum(all series)`.
-  double? get memoryUsage => _fractionOf(memory, matching: 'used');
+  /// The fraction of [totalBytes] (the `physmem` of `system.info`) that
+  /// services use, from the newest samples.
+  ///
+  /// TrueNAS 25.04 and later chart `truenas_meminfo.available` (the kernel's
+  /// `MemAvailable`, one `available` series in bytes) and `arcsize`. The ZFS
+  /// ARC is not in `MemAvailable` and grows into whatever RAM is idle, so
+  /// `total - available` reads near full on any healthy NAS. Services are
+  /// `total - available - arc`, the figure the TrueNAS dashboard's own memory
+  /// widget calls Services. A chart split by state with a `used` series is
+  /// read as its share.
+  double? memoryUsage({int? totalBytes}) {
+    if (memoryBreakdown(totalBytes: totalBytes) case final split?) {
+      return split.usedFraction;
+    }
+    final available = _available;
+    if (available != null && totalBytes != null && totalBytes > 0) {
+      return (1 - available / totalBytes).clamp(0, 1).toDouble();
+    }
+    return _fractionOf(memory, matching: 'used');
+  }
+
+  /// Where [totalBytes] of memory are, from the newest samples: the split the
+  /// TrueNAS dashboard's memory widget draws. Null unless both the
+  /// `available` and the ARC series answered.
+  TrueNasMemoryBreakdown? memoryBreakdown({int? totalBytes}) {
+    final available = _available;
+    final arcBytes = _newest(arc, 'size');
+    if (available == null ||
+        arcBytes == null ||
+        totalBytes == null ||
+        totalBytes <= 0) {
+      return null;
+    }
+    final free = available.round().clamp(0, totalBytes);
+    final zfsCache = arcBytes.round().clamp(0, totalBytes - free);
+    return TrueNasMemoryBreakdown(
+      total: totalBytes,
+      services: totalBytes - free - zfsCache,
+      zfsCache: zfsCache,
+      free: free,
+    );
+  }
+
+  /// The newest `available` sample. No machine has nothing available: a zero
+  /// is a gap netdata filled in, and reads as no answer.
+  double? get _available {
+    final available = _newest(memory, 'available');
+    return available != null && available > 0 ? available : null;
+  }
+
+  /// The machine-wide busy fraction of a per-core usage chart: its `cpu`
+  /// series, or the mean of its `cpuN` series when the aggregate is missing.
+  static double? _aggregateCpu(TrueNasReportingGraph? g) {
+    final whole = _newest(g, 'cpu');
+    if (whole != null) return (whole / 100).clamp(0, 1).toDouble();
+    if (g == null || g.data.isEmpty) return null;
+    final last = g.data.last;
+    final labels = g.seriesLabels;
+    final cores = <double>[
+      for (var i = 0; i < labels.length; i++)
+        if (_coreLabel.hasMatch(labels[i].toLowerCase()) &&
+            (i + 1) < last.length &&
+            last[i + 1] != null)
+          last[i + 1]!,
+    ];
+    if (cores.isEmpty) return null;
+    final mean = cores.reduce((a, b) => a + b) / cores.length;
+    return (mean / 100).clamp(0, 1).toDouble();
+  }
+
+  static final _coreLabel = RegExp(r'^cpu\d+$');
+
+  /// The newest value of the series labelled exactly [label], or null when
+  /// the graph has no such series or no samples.
+  static double? _newest(TrueNasReportingGraph? g, String label) {
+    if (g == null || g.data.isEmpty) return null;
+    final labels = g.seriesLabels;
+    for (var i = 0; i < labels.length; i++) {
+      if (labels[i].toLowerCase() != label) continue;
+      final last = g.data.last;
+      return (i + 1) < last.length ? last[i + 1] : null;
+    }
+    return null;
+  }
 
   static double? _busyFraction(
     TrueNasReportingGraph? g, {
@@ -100,6 +194,28 @@ class TrueNasDashboardMetrics {
   }
 }
 
+/// The machine's memory split three ways, in bytes, summing to [total].
+class TrueNasMemoryBreakdown {
+  final int total;
+
+  /// What the system and its apps hold: neither free nor ZFS cache.
+  final int services;
+
+  /// The ZFS ARC, which gives memory back when something else needs it.
+  final int zfsCache;
+  final int free;
+
+  const TrueNasMemoryBreakdown({
+    required this.total,
+    required this.services,
+    required this.zfsCache,
+    required this.free,
+  });
+
+  /// The share of [total] in use: services, without the cache.
+  double get usedFraction => services / total;
+}
+
 /// Network interfaces. Split off the live metrics because addresses change on
 /// a human timescale, not a 3-second one. This rides the slow refresh tick.
 final truenasDashboardInterfacesProvider = FutureProvider.autoDispose((
@@ -118,12 +234,17 @@ final truenasDashboardMetricsProvider =
       ref.watch(truenasClientProvider);
       final reporting = ref.watch(truenasReportingApiProvider);
 
-      // One WS round-trip for all three graphs, over the shortest window that
+      // One WS round-trip for all four graphs, over the shortest window that
       // still feeds a sparkline; the gauges only ever read the last sample.
       List<TrueNasReportingGraph> graphs;
       var answered = true;
       try {
-        graphs = await reporting.getLiveGraphs(['cpu', 'memory', 'interface']);
+        graphs = await reporting.getLiveGraphs([
+          'cpu',
+          'memory',
+          'arcsize',
+          'interface',
+        ]);
       } catch (_) {
         graphs = const [];
         answered = false;
@@ -140,6 +261,7 @@ final truenasDashboardMetricsProvider =
       return TrueNasDashboardMetrics(
         cpu: byName('cpu'),
         memory: byName('memory'),
+        arc: byName('arcsize'),
         network: network,
         networkSeries: (network == null || network.seriesLabels.isEmpty)
             ? const []
@@ -298,34 +420,32 @@ class _DashboardBody extends ConsumerWidget {
                     ? formatDuration(system.uptimeSeconds!)
                     : null,
               ),
-              TrueNasInfoRow(
-                label: 'CPU cores',
-                value: system.cores?.toString(),
-              ),
-              TrueNasInfoRow(
-                label: 'Total memory',
-                value: system.physmemBytes != null
-                    ? formatSize(system.physmemBytes!)
-                    : null,
-              ),
             ],
           ),
         ),
         const SizedBox(height: AppSpacing.md),
 
-        // CPU + memory gauges.
-        Row(
-          children: [
-            Expanded(
-              child: _CpuCard(system: system, metrics: metrics),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: _MemoryCard(system: system, metrics: metrics),
-            ),
-          ],
+        // CPU + memory gauges, the same height whichever has more to say.
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _CpuCard(system: system, metrics: metrics),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: _MemoryCard(system: system, metrics: metrics),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: AppSpacing.md),
+        if (metrics.value?.memoryBreakdown(totalBytes: system.physmemBytes)
+            case final split?) ...[
+          _MemoryBreakdownCard(split: split),
+          const SizedBox(height: AppSpacing.md),
+        ],
 
         const SectionHeader.flush(title: 'Network', showChevron: false),
         const SizedBox(height: AppSpacing.sm),
@@ -372,29 +492,26 @@ class _CpuCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final usage = metrics.value?.cpuUsage;
-    final cores = system.cores ?? 1;
+    final cores = system.cores;
     final load = system.loadAvg1m;
     // Prefer measured CPU %, fall back to a load-per-core proxy.
     final fraction =
-        usage ?? (load != null ? (load / cores).clamp(0, 1).toDouble() : null);
-    final label = usage != null
-        ? formatPercent(usage * 100)
-        : (load != null ? load.toStringAsFixed(2) : '—');
+        usage ??
+        (load != null ? (load / (cores ?? 1)).clamp(0, 1).toDouble() : null);
+    final showsLoad = usage == null && load != null;
 
-    return AppCard.surfaceOutlined(
-      child: Column(
-        children: [
-          RadialGauge(
-            value: fraction ?? 0,
-            valueLabel: label,
-            caption: usage != null ? 'CPU' : 'load 1m',
-            color: ServiceKey.truenas.accent,
-            size: 108,
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text('CPU', style: Theme.of(context).textTheme.labelMedium),
-        ],
+    return _GaugeCard(
+      gauge: RadialGauge(
+        value: fraction ?? 0,
+        valueLabel: usage != null
+            ? formatPercent(usage * 100)
+            : (load != null ? load.toStringAsFixed(2) : '—'),
+        caption: showsLoad ? 'load 1m' : 'used',
+        color: ServiceKey.truenas.accent,
+        size: 108,
       ),
+      title: 'CPU',
+      detail: cores != null ? countLabel(cores, 'core') : null,
     );
   }
 }
@@ -407,29 +524,163 @@ class _MemoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final usage = metrics.value?.memoryUsage;
     final total = system.physmemBytes;
-    final label = usage != null ? formatPercent(usage * 100) : '—';
-    final caption = (usage != null && total != null)
-        ? formatSize((usage * total).round())
-        : (total != null ? formatSize(total) : 'memory');
+    final usage = metrics.value?.memoryUsage(totalBytes: total);
 
+    return _GaugeCard(
+      gauge: RadialGauge(
+        value: usage ?? 0,
+        valueLabel: usage != null ? formatPercent(usage * 100) : '—',
+        caption: 'used',
+        color: _memoryInUse(context),
+        size: 108,
+      ),
+      title: 'Memory',
+      detail: total != null ? '${formatSize(total)} total' : null,
+    );
+  }
+}
+
+/// The paint of memory in use: the gauge's arc and the services segment.
+Color _memoryInUse(BuildContext context) =>
+    statusToneColor(Theme.of(context).colorScheme, StatusTone.info);
+
+/// A gauge over its name and one line about the whole: core count, total.
+class _GaugeCard extends StatelessWidget {
+  final Widget gauge;
+  final String title;
+  final String? detail;
+
+  const _GaugeCard({required this.gauge, required this.title, this.detail});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return AppCard.surfaceOutlined(
       child: Column(
         children: [
-          RadialGauge(
-            value: usage ?? 0,
-            valueLabel: label,
-            caption: caption,
-            color: statusToneColor(
-              Theme.of(context).colorScheme,
-              StatusTone.info,
-            ),
-            size: 108,
-          ),
+          gauge,
           const SizedBox(height: AppSpacing.xs),
-          Text('Memory', style: Theme.of(context).textTheme.labelMedium),
+          Text(title, style: theme.textTheme.labelMedium),
+          if (detail != null)
+            Text(
+              detail!,
+              style: theme.textTheme.labelSmall!.tabular.copyWith(
+                color: CupolaThemeColors.of(context).dimText,
+              ),
+            ),
         ],
+      ),
+    );
+  }
+}
+
+/// Where the memory is: services, ZFS cache, free, as one bar and a legend.
+class _MemoryBreakdownCard extends StatelessWidget {
+  final TrueNasMemoryBreakdown split;
+
+  const _MemoryBreakdownCard({required this.split});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final inUse = _memoryInUse(context);
+    final parts = [
+      (label: 'Services', bytes: split.services, color: inUse, rim: false),
+      (
+        label: 'ZFS cache',
+        bytes: split.zfsCache,
+        color: inUse.withValues(alpha: 0.4),
+        rim: false,
+      ),
+      (
+        label: 'Free',
+        bytes: split.free,
+        color: theme.colorScheme.surfaceContainerHighest,
+        // The track's colour, which a dot on the card would lose.
+        rim: true,
+      ),
+    ];
+
+    return Semantics(
+      container: true,
+      excludeSemantics: true,
+      label:
+          'Memory: ${formatBytes(split.services)} services, '
+          '${formatBytes(split.zfsCache)} ZFS cache, '
+          '${formatBytes(split.free)} free, of ${formatBytes(split.total)}',
+      child: AppCard.surfaceOutlined(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: SizedBox(
+                height: 8,
+                child: Row(
+                  // Stretched: an empty ColoredBox takes the smallest height
+                  // it is allowed, which a loose cross axis makes zero.
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final part in parts)
+                      if (part.bytes > 0)
+                        Expanded(
+                          // Thousandths: a flex is an int, and a cache of a
+                          // few hundred megabytes must still show.
+                          flex: (part.bytes * 1000 / split.total).ceil(),
+                          child: ColoredBox(color: part.color),
+                        ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              children: [
+                for (final part in parts)
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: part.color,
+                                shape: BoxShape.circle,
+                                border: part.rim
+                                    ? Border.all(
+                                        color: CupolaThemeColors.of(
+                                          context,
+                                        ).dimText,
+                                      )
+                                    : null,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            Text(
+                              part.label,
+                              style: theme.textTheme.labelSmall!.copyWith(
+                                color: CupolaThemeColors.of(context).dimText,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          formatBytes(part.bytes),
+                          style: theme.textTheme.labelMedium!
+                              .weight(FontWeight.w600)
+                              .tabular,
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
