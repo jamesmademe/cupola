@@ -59,6 +59,12 @@
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Cupola talks to the services running on your own network: Radarr, Sonarr, Plex, your NAS. Without this, it cannot reach them.</string>
+	<!-- file_picker links DKImagePickerController, which references the photo
+	     library, so App Store Connect refuses a build without this string. Cupola
+	     only picks .torrent files through the document picker: the prompt never
+	     shows. -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Cupola opens only the files you choose to add, such as a .torrent file. It never browses your photos.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
