@@ -125,16 +125,25 @@ void main() {
   });
 
   group('the calendar\'s band', () {
-    testWidgets('a tablet\'s: the week beside the words, at its measure', (
-      tester,
-    ) async {
-      await _band(tester, 1100);
+    testWidgets('a tablet upright beside a title\'s list: the week beside the '
+        'words, at its measure', (tester) async {
+      await _band(tester, 860);
 
       final words = tester.getRect(find.text('Calendar'));
       final week = tester.getRect(find.byType(CalendarWeekStrip));
       expect(week.width, CalendarBand.weekMeasure);
       expect(week.left, greaterThan(words.right));
       expect(week.top, lessThan(words.bottom));
+    });
+
+    testWidgets('a tablet on its side: the days with their posters in place '
+        'of the dots, beside the words', (tester) async {
+      await _band(tester, 1100);
+
+      expect(find.byType(CalendarWeekStrip), findsNothing);
+      final words = tester.getRect(find.text('Calendar'));
+      final today = tester.getRect(find.textContaining('Today\u00A0·'));
+      expect(today.left, greaterThan(words.right));
     });
 
     testWidgets('a phone\'s: the week under the words, the band\'s width', (

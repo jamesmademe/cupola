@@ -75,8 +75,22 @@ void main() {
         width: 390,
       ),
       CatalogScene(
-        'A tablet on its side · the week beside the words, at the widest '
-        'phone\'s measure, the band one line tall',
+        'A tablet upright with the list beside a title, 860 · the week of '
+        'dots beside the words, at the widest phone\'s measure, the band one '
+        'line tall',
+        (_) => CalendarBand(
+          events: CalendarWorld.events,
+          window: CalendarWorld.window,
+          now: CalendarWorld.now,
+          onTap: () {},
+        ),
+        width: 860,
+      ),
+      CatalogScene(
+        'A tablet on its side, 1100 · from 940 inside the band the week is '
+        'seven days from today with their posters in them: today lit, a day '
+        'of one thing names it, a fuller day ends on +N; the words in a 220 '
+        'column, and still one link',
         (_) => CalendarBand(
           events: CalendarWorld.events,
           window: CalendarWorld.window,
@@ -84,6 +98,48 @@ void main() {
           onTap: () {},
         ),
         width: 1100,
+      ),
+      CatalogScene(
+        'A desktop window · the same week, the requester\'s',
+        (_) => CalendarBand(
+          events: CalendarWorld.requester,
+          window: CalendarWorld.window,
+          now: CalendarWorld.now,
+          onTap: () {},
+        ),
+        width: 1160,
+        platform: CatalogPlatform.desktop,
+      ),
+      CatalogScene(
+        'A desktop window, one source down · the silent one named under the '
+        'words',
+        (_) => CalendarBand(
+          events: CalendarWorld.events,
+          window: CalendarWorld.window,
+          now: CalendarWorld.now,
+          onTap: () {},
+          silent: const [
+            (
+              words: 'Lidarr did not answer at 20:53',
+              error: ClassifiedFailure(ServiceFailureReason.unreachable),
+            ),
+          ],
+        ),
+        width: 1160,
+        platform: CatalogPlatform.desktop,
+      ),
+      CatalogScene(
+        'Text at 200%, a desktop window · the days grow to the compact '
+        'ceiling with their words',
+        (_) => CalendarBand(
+          events: CalendarWorld.events,
+          window: CalendarWorld.window,
+          now: CalendarWorld.now,
+          onTap: () {},
+        ),
+        width: 1160,
+        platform: CatalogPlatform.desktop,
+        textScale: catalogTextScale,
       ),
       CatalogScene(
         'Text at 200% · the line wraps, the strip scales its dates',

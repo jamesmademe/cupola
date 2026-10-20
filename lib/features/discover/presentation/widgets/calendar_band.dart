@@ -6,7 +6,10 @@ import 'package:cupola/core/app_elevation.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/date_format.dart' show shortWeekdayName;
+import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/title_light.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
@@ -77,6 +80,18 @@ class CalendarBand extends ConsumerStatefulWidget {
   /// draws one, no phone and no tablet's list beside a title does.
   static const double besideFrom = 2 * weekMeasure + AppSpacing.xl;
 
+  /// The words' column where the week is drawn in posters.
+  static const double postersHead = 220;
+
+  /// The narrowest day of the posters' week: two posters side by side.
+  static const double postersDay = 92;
+
+  /// The width inside the band from which the week is seven days with their
+  /// posters in them, beside the words (`W-Desk-Discover`): a desktop window,
+  /// a tablet on its side. Narrower, the days are dots.
+  static const double postersFrom =
+      postersHead + AppSpacing.xl + 7 * postersDay + 6 * AppSpacing.sm;
+
   @override
   ConsumerState<CalendarBand> createState() => _CalendarBandState();
 }
@@ -124,8 +139,8 @@ class _CalendarBandState extends ConsumerState<CalendarBand> {
     final empty = lead == null && !widget._loading && !unknown;
 
     // What the band says: the next thing, and its poster at the end of the
-    // line.
-    final head = Row(
+    // line; where the days carry their posters, the words alone.
+    Widget headOf({required bool poster}) => Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
@@ -183,7 +198,7 @@ class _CalendarBandState extends ConsumerState<CalendarBand> {
             ],
           ),
         ),
-        if (art != null) ...[
+        if (poster && art != null) ...[
           const SizedBox(width: AppSpacing.md),
           DecoratedBox(
             decoration: BoxDecoration(
@@ -207,6 +222,8 @@ class _CalendarBandState extends ConsumerState<CalendarBand> {
         ],
       ],
     );
+    final head = headOf(poster: true);
+    final wordsHead = headOf(poster: false);
     final silentLines = [
       for (final silence in widget.silent) ...[
         const SizedBox(height: AppSpacing.sm),
@@ -250,6 +267,29 @@ class _CalendarBandState extends ConsumerState<CalendarBand> {
       // instead, at the end of the band, and the band is one line tall.
       child: LayoutBuilder(
         builder: (context, box) {
+          if (box.maxWidth >= CalendarBand.postersFrom && !widget._loading) {
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: CalendarBand.postersHead,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [wordsHead, ...silentLines],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xl),
+                Expanded(
+                  child: _PostersWeek(
+                    events: widget.events,
+                    now: widget.now,
+                    window: widget.window,
+                  ),
+                ),
+              ],
+            );
+          }
           if (box.maxWidth >= CalendarBand.besideFrom) {
             return Row(
               children: [
@@ -342,6 +382,230 @@ class _SilentLine extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// The week where there is room for it: seven days from today, each a cell
+/// with its day over the posters of what comes out on it; a day with one
+/// thing names it under its poster, a day with more than its cell holds ends
+/// on `+2`. Today's cell is lit. A picture, as the band's dots are: the band
+/// is the one link and the one sentence.
+class _PostersWeek extends StatelessWidget {
+  const _PostersWeek({
+    required this.events,
+    required this.now,
+    required this.window,
+  });
+
+  final List<CalendarEvent> events;
+  final DateTime now;
+  final CalendarWindow window;
+
+  static const Size _poster = Size(34, 51);
+
+  /// A day's cell at the default reading size: its day, a poster and two
+  /// lines of a title under it. It grows with the words.
+  static const double _height = 136;
+
+  /// The cell from which a lone thing's title goes beside its poster.
+  static const double _besideFrom = 120;
+
+  @override
+  Widget build(BuildContext context) {
+    final today = DateTime(now.year, now.month, now.day);
+    final days = [
+      for (var i = 0; i < 7; i++)
+        DateTime(today.year, today.month, today.day + i),
+    ];
+    return ExcludeSemantics(
+      // Seven days cannot reflow: their words follow the reading size to the
+      // single-line ceiling, as the week of dots does, and lay out on the
+      // same clamp the cells grew by.
+      child: MediaQuery(
+        data: MediaQuery.of(context).copyWith(
+          textScaler: TextScaleMetrics.clampedScalerOf(
+            context,
+            maxScaleFactor: TextScaleMetrics.singleLineChromeMaxScaleFactor,
+          ),
+        ),
+        child: SizedBox(
+          height: TextScaleMetrics.boxHeight(
+            context,
+            base: _height,
+            textHeight: 52,
+            maxScaleFactor: TextScaleMetrics.singleLineChromeMaxScaleFactor,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final (index, day) in days.indexed) ...[
+                if (index > 0) const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: _DayCell(
+                    day: day,
+                    today: index == 0,
+                    known: window.contains(day),
+                    events: [
+                      for (final event in events)
+                        if (event.day == day) event,
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DayCell extends StatelessWidget {
+  const _DayCell({
+    required this.day,
+    required this.today,
+    required this.known,
+    required this.events,
+  });
+
+  final DateTime day;
+  final bool today;
+
+  /// Inside the calendar's thirty days: past them nothing was read.
+  final bool known;
+  final List<CalendarEvent> events;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = CupolaRoom.of(context);
+    final label = today
+        ? 'Today$dotSeparator${day.day}'
+        : '${shortWeekdayName(day)} ${day.day}';
+    final quiet = events.isEmpty || !known;
+    return Container(
+      key: ValueKey('calendar-band-day-${day.day}'),
+      padding: const EdgeInsets.all(AppSpacing.row),
+      decoration: BoxDecoration(
+        color: today ? room.fillControl : room.fillQuiet,
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        border: today ? Border.all(color: room.edge) : null,
+      ),
+      // A last line that does not fit is cut at the cell's edge, never
+      // drawn past it.
+      clipBehavior: Clip.hardEdge,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppType.meta
+                .weight(FontWeight.w600)
+                .copyWith(color: quiet ? room.inkSecondary : room.ink),
+          ),
+          if (known && events.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xs),
+            if (events.length == 1)
+              // Its title beside the poster where the cell is wide, under
+              // it where it is not: a title squeezed beside a poster broke
+              // inside its words.
+              LayoutBuilder(
+                builder: (context, box) {
+                  final beside = box.maxWidth >= _PostersWeek._besideFrom;
+                  final style = AppType.meta
+                      .weight(FontWeight.w600)
+                      .copyWith(color: room.ink);
+                  final title = events.single.title;
+                  final words = Text(
+                    title,
+                    maxLines: beside ? 3 : 2,
+                    overflow: TextOverflow.ellipsis,
+                    textScaler: TextScaleMetrics.wholeWordScaler(
+                      MediaQuery.textScalerOf(context),
+                      text: title,
+                      style: style,
+                      width: beside
+                          ? box.maxWidth -
+                                _PostersWeek._poster.width -
+                                AppSpacing.sm
+                          : box.maxWidth,
+                      maxLines: beside ? 3 : 2,
+                    ),
+                    style: style,
+                  );
+                  return beside
+                      ? Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _poster(context, events.single),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(child: words),
+                          ],
+                        )
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _poster(context, events.single),
+                            const SizedBox(height: AppSpacing.xs),
+                            words,
+                          ],
+                        );
+                },
+              )
+            else
+              LayoutBuilder(
+                builder: (context, box) {
+                  final step = _PostersWeek._poster.width + AppSpacing.xs;
+                  final fits = ((box.maxWidth + AppSpacing.xs) / step)
+                      .floor()
+                      .clamp(1, events.length);
+                  final shown = fits < events.length ? fits - 1 : fits;
+                  final more = events.length - shown;
+                  return Row(
+                    children: [
+                      for (final (index, event)
+                          in events.take(shown).indexed) ...[
+                        if (index > 0) const SizedBox(width: AppSpacing.xs),
+                        _poster(context, event),
+                      ],
+                      if (more > 0) ...[
+                        if (shown > 0) const SizedBox(width: AppSpacing.xs),
+                        SizedBox.fromSize(
+                          size: _PostersWeek._poster,
+                          child: Center(
+                            child: Text(
+                              '+$more',
+                              style: AppType.meta
+                                  .weight(FontWeight.w600)
+                                  .copyWith(color: room.inkSecondary),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  );
+                },
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _poster(BuildContext context, CalendarEvent event) {
+    final room = CupolaRoom.of(context);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadius.thumb),
+      child: SizedBox.fromSize(
+        size: _PostersWeek._poster,
+        child: ShelfArtwork(
+          art: event.poster,
+          box: _PostersWeek._poster,
+          fallback: ColoredBox(color: room.raised),
+        ),
+      ),
     );
   }
 }
