@@ -16,7 +16,9 @@ import '../../test_helpers/settings_scope.dart';
 
 /// The fixtures here are transcribed from the middleware source
 /// (`plugins/auth.py` `me`, `plugins/account_/privilege.py`), not captured
-/// from a live server: they prove Cupola reads the shape as transcribed.
+/// from a live server: they prove Cupola reads the shape as transcribed. The
+/// roles carry the `{"$set": [...]}` envelope the middleware's JSON encoder
+/// writes for a set, as the TrueNAS web UI reads them.
 class _FakeNas extends TrueNasWsClient {
   _FakeNas(this.answers) : super(baseUrl: 'https://nas.local', apiKey: 'k');
 
@@ -97,6 +99,24 @@ void main() {
         );
       },
     );
+
+    test('roles arrive in the {"\$set": [...]} envelope or as a list', () {
+      // A real 25.10 server wraps the set; the parser must not read that as
+      // "no roles", which held every write back behind the unanswered banner.
+      Map<String, Object?> me(Object roles) => {
+        'privilege': {'roles': roles},
+      };
+      expect(
+        trueNasRolesFromMe(
+          me({
+            r'$set': ['full_admin'],
+          }),
+        ),
+        {trueNasFullAdmin},
+      );
+      expect(trueNasRolesFromMe(me(['FULL_ADMIN'])), {trueNasFullAdmin});
+      expect(trueNasRolesFromMe(me({'other': 1})), isNull);
+    });
 
     test('an answer with no privilege is unanswered', () async {
       expect(
