@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cupola/features/activity/data/selected_download.dart';
 import 'package:cupola/features/activity/data/activity_live.dart';
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/network/connection_failure.dart'
@@ -91,12 +92,17 @@ void main() {
         expect(activitySemantics.hasAction(SemanticsAction.tap), isTrue);
         // The strip's own key: the sidebar does not repeat it.
         expect(find.bySemanticsLabel('Jump to anything, ⌘K'), findsOneWidget);
-        // The inspector's switch says its key and whether the pane is open.
+        // With nothing chosen the inspector's switch says so, and does not
+        // offer a tap.
         expect(
-          tester.getSemantics(find.bySemanticsLabel('Inspector, ⌥I')),
+          tester.getSemantics(
+            find.bySemanticsLabel('Inspector, nothing chosen'),
+          ),
           containsSemantics(
             isButton: true,
-            hasTapAction: true,
+            hasEnabledState: true,
+            isEnabled: false,
+            hasTapAction: false,
             hasToggledState: true,
             isToggled: false,
           ),
@@ -177,7 +183,10 @@ void main() {
         find.descendant(of: chrome, matching: find.text('Jump to…')),
         findsOneWidget,
       );
-      expect(find.byTooltip('Inspector  ⌥I'), findsOneWidget);
+      expect(
+        find.byTooltip('Inspector: choose a download in Activity'),
+        findsOneWidget,
+      );
       // The stack's health is the sidebar's and Stack's, not the strip's.
       expect(find.textContaining('/ 1'), findsNothing);
     });
@@ -203,11 +212,16 @@ void main() {
     });
   });
 
-  testWidgets('the switch opens the inspector and lights while it is open', (
-    tester,
-  ) async {
+  testWidgets('with a download chosen, the switch opens the inspector and '
+      'closes it', (tester) async {
     await onPlatform(TargetPlatform.macOS, () async {
-      await _pumpShell(tester, overrides: await _world());
+      await _pumpShell(
+        tester,
+        overrides: [
+          ...await _world(),
+          selectedDownloadProvider.overrideWith(_Chosen.new),
+        ],
+      );
 
       await tester.tap(find.byTooltip('Inspector  ⌥I'));
       await tester.pumpAndSettle();
@@ -221,9 +235,26 @@ void main() {
     });
   });
 
-  testWidgets('⌥I opens the inspector and closes it again', (tester) async {
+  testWidgets('⌥I does nothing with nothing chosen', (tester) async {
     await onPlatform(TargetPlatform.macOS, () async {
       await _pumpShell(tester, overrides: await _world());
+
+      await _press(tester, LogicalKeyboardKey.keyI, alt: true);
+      expect(find.byType(InspectorPane), findsNothing);
+      expect(find.byType(InspectorSplitHandle), findsNothing);
+    });
+  });
+
+  testWidgets('⌥I opens the inspector on the chosen download and closes it '
+      'again', (tester) async {
+    await onPlatform(TargetPlatform.macOS, () async {
+      await _pumpShell(
+        tester,
+        overrides: [
+          ...await _world(),
+          selectedDownloadProvider.overrideWith(_Chosen.new),
+        ],
+      );
 
       expect(find.byType(InspectorPane), findsNothing);
 
@@ -916,4 +947,10 @@ Future<_Harness> _pumpShell(
   await tester.pumpAndSettle();
 
   return _Harness(router.routerDelegate);
+}
+
+/// A download chosen in Activity's table, as the inspector receives it.
+class _Chosen extends SelectedDownload {
+  @override
+  DownloadSelection? build() => (instanceId: 'radarr', key: 'q-1');
 }

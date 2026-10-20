@@ -54,6 +54,7 @@ class WindowChrome extends ConsumerWidget {
     required this.inspectorOpen,
     this.onCommandDeck,
     this.sidebarFolded = false,
+    this.inspectorAvailable = false,
   });
 
   /// Drives the inspector switch's tone. Passed rather than watched so the
@@ -63,6 +64,10 @@ class WindowChrome extends ConsumerWidget {
   /// Whether the person folded the sidebar: the switch's name says the way
   /// back. Passed, as [inspectorOpen] is, so the strip reads no setting.
   final bool sidebarFolded;
+
+  /// Whether there is a choice for the inspector to show: without one its
+  /// switch is dimmed and inert.
+  final bool inspectorAvailable;
 
   /// Opens the command deck; null for the requester's window, which has none.
   final VoidCallback? onCommandDeck;
@@ -207,7 +212,10 @@ class WindowChrome extends ConsumerWidget {
                   // it in a compact one would do nothing anyone could see.
                   if (!requester && !compact) ...[
                     const SizedBox(width: AppSpacing.sm),
-                    _InspectorSwitch(on: inspectorOpen),
+                    _InspectorSwitch(
+                      on: inspectorOpen,
+                      enabled: inspectorAvailable,
+                    ),
                   ],
                   if (DesktopWindow.drawsOwnButtons) ...[
                     const SizedBox(width: AppSpacing.md),
@@ -547,9 +555,10 @@ class _StripButtonState extends State<_StripButton> {
 /// The inspector's switch: the pane's own glyph, on the room's strong fill
 /// while the pane is open, monochrome like every chip of the strip.
 class _InspectorSwitch extends StatefulWidget {
-  const _InspectorSwitch({required this.on});
+  const _InspectorSwitch({required this.on, required this.enabled});
 
   final bool on;
+  final bool enabled;
 
   @override
   State<_InspectorSwitch> createState() => _InspectorSwitchState();
@@ -562,55 +571,70 @@ class _InspectorSwitchState extends State<_InspectorSwitch> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final on = widget.on;
-    final label = 'Inspector, ${ShellShortcuts.inspector}';
-    return Tooltip(
-      message: 'Inspector  ${ShellShortcuts.inspector}',
-      waitDuration: const Duration(milliseconds: 500),
-      excludeFromSemantics: true,
-      child: Semantics(
-        button: true,
-        toggled: on,
-        label: label,
-        excludeSemantics: true,
-        onTap: _toggle,
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          onEnter: (_) => setState(() => _hovered = true),
-          onExit: (_) => setState(() => _hovered = false),
-          child: GestureDetector(
-            onTap: _toggle,
-            behavior: HitTestBehavior.opaque,
-            // The strip's full height and 44 wide: the target, around the
-            // drawn 34 × 28.
-            child: SizedBox(
-              width: 44,
-              height: WindowChrome.height,
-              child: Center(
-                child: Container(
-                  width: 34,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: on
-                        ? CupolaRoom.of(context).fillStrong
-                        : (_hovered
-                              ? colorScheme.onSurface.withValues(alpha: 0.06)
-                              : null),
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    border: Border.all(color: colorScheme.outline),
+    final enabled = widget.enabled;
+    // Nothing chosen, nothing to inspect: the switch says so, dimmed and
+    // inert, rather than opening an empty column.
+    final label = enabled
+        ? 'Inspector, ${ShellShortcuts.inspector}'
+        : 'Inspector, nothing chosen';
+    final switchControl = Semantics(
+      button: true,
+      enabled: enabled,
+      toggled: on,
+      label: label,
+      excludeSemantics: true,
+      onTap: enabled ? _toggle : null,
+      child: MouseRegion(
+        cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: GestureDetector(
+          onTap: enabled ? _toggle : null,
+          behavior: HitTestBehavior.opaque,
+          // The strip's full height and 44 wide: the target, around the
+          // drawn 34 × 28.
+          child: SizedBox(
+            width: 44,
+            height: WindowChrome.height,
+            child: Center(
+              child: Container(
+                width: 34,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: on
+                      ? CupolaRoom.of(context).fillStrong
+                      : (enabled && _hovered
+                            ? colorScheme.onSurface.withValues(alpha: 0.06)
+                            : null),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(
+                    color: enabled
+                        ? colorScheme.outline
+                        : colorScheme.outlineVariant.withValues(alpha: 0.6),
                   ),
-                  child: Icon(
-                    Icons.view_sidebar_outlined,
-                    size: 16,
-                    color: on
-                        ? colorScheme.onSurface
-                        : colorScheme.onSurfaceVariant,
-                  ),
+                ),
+                child: Icon(
+                  Icons.view_sidebar_outlined,
+                  size: 16,
+                  color: on
+                      ? colorScheme.onSurface
+                      : enabled
+                      ? colorScheme.onSurfaceVariant
+                      : colorScheme.onSurface.withValues(alpha: 0.28),
                 ),
               ),
             ),
           ),
         ),
       ),
+    );
+    return Tooltip(
+      message: enabled
+          ? 'Inspector  ${ShellShortcuts.inspector}'
+          : 'Inspector: choose a download in Activity',
+      waitDuration: const Duration(milliseconds: 500),
+      excludeFromSemantics: true,
+      child: switchControl,
     );
   }
 

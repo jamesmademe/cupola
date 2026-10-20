@@ -10,6 +10,7 @@ import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/features/activity/data/selected_download.dart';
 import 'package:cupola/features/settings/data/connection_test_command.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
@@ -200,7 +201,10 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
     final uri = GoRouterState.of(context).uri;
     final location = uri.path;
     final room = requester ? null : _roomOf(location);
-    final inspectorShown = !requester && inspector.open && !narrow;
+    // The pane opens on a choice and on nothing else: with no download chosen
+    // there is nothing for it to show, and its switch is dimmed.
+    final chosen = ref.watch(selectedDownloadProvider) != null;
+    final inspectorShown = !requester && chosen && inspector.open && !narrow;
     if (_lastLocation != location) {
       _lastLocation = location;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -222,7 +226,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
           ),
           ToggleInspectorIntent: CallbackAction<ToggleInspectorIntent>(
             onInvoke: (_) {
-              if (requester) return null;
+              if (requester || !chosen) return null;
               ref.read(inspectorStateProvider.notifier).toggle();
               return null;
             },
@@ -293,13 +297,6 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
               return null;
             },
           ),
-          OpenInInspectorIntent: CallbackAction<OpenInInspectorIntent>(
-            onInvoke: (_) {
-              if (requester) return null;
-              ref.read(inspectorStateProvider.notifier).setOpen(true);
-              return null;
-            },
-          ),
         },
         child: Semantics(
           // The desktop shell is a composite control surface. Without an
@@ -347,6 +344,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
                     height: chromeHeight,
                     child: WindowChrome(
                       inspectorOpen: inspectorShown,
+                      inspectorAvailable: chosen,
                       sidebarFolded: compact && !narrow,
                       onCommandDeck: requester ? null : _openDeck,
                     ),

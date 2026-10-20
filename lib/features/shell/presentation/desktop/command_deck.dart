@@ -13,7 +13,6 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/shell/domain/command_deck_entry.dart';
-import 'package:cupola/features/shell/domain/inspector_state.dart';
 import 'package:cupola/features/shell/domain/shell_shortcuts.dart';
 import 'package:cupola/features/shell/domain/stack_health.dart';
 import 'package:cupola/features/search/presentation/global_search_provider.dart';
@@ -86,12 +85,8 @@ class _CommandDeckState extends ConsumerState<CommandDeck> {
     setState(() => _selected = (_selected + delta) % length);
   }
 
-  /// Enter: go there. Alt-Enter: send it to the inspector instead.
-  ///
-  /// The second one is the whole reason the panel bothers with a keyboard map:
-  /// looking something up without losing the page you were on is what a second
-  /// column is *for*.
-  void _open(CommandDeckEntry entry, {bool inInspector = false}) {
+  /// Enter: go there.
+  void _open(CommandDeckEntry entry) {
     final instanceId = entry.instanceId;
     final service = entry.service;
     if (instanceId != null && service != null) {
@@ -101,11 +96,7 @@ class _CommandDeckState extends ConsumerState<CommandDeck> {
     }
     final searchQuery = entry.searchQuery;
     if (searchQuery != null) searchEverythingFor(ref, searchQuery);
-    if (inInspector && searchQuery == null) {
-      ref.read(inspectorStateProvider.notifier).setOpen(true);
-    } else {
-      GoRouter.of(context).go(entry.location);
-    }
+    GoRouter.of(context).go(entry.location);
     widget.onClose();
   }
 
@@ -126,9 +117,6 @@ class _CommandDeckState extends ConsumerState<CommandDeck> {
         const SingleActivator(LogicalKeyboardKey.escape): widget.onClose,
         const SingleActivator(LogicalKeyboardKey.enter): () {
           if (selected != null) _open(selected);
-        },
-        const SingleActivator(LogicalKeyboardKey.enter, alt: true): () {
-          if (selected != null) _open(selected, inInspector: true);
         },
       },
       child: Focus(
@@ -407,7 +395,6 @@ class _DeckFooter extends ConsumerWidget {
     final hints = <({String key, String does})>[
       (key: '↑↓', does: 'move'),
       (key: '⏎', does: 'open'),
-      (key: ShellShortcuts.openInInspector, does: 'open in inspector'),
       (
         key: '${ShellShortcuts.section(0)}–${ShellShortcuts.section(3)}',
         does: 'sections',

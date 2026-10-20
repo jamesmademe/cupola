@@ -1,307 +1,139 @@
 @Tags(['catalog'])
 library;
 
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:cupola/core/widgets/status_badge.dart';
-import 'package:cupola/features/activity/domain/service_type.dart';
-import 'package:cupola/features/activity/presentation/activity_provider.dart';
-import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
+import 'package:cupola/core/status/media_names.dart';
+import 'package:cupola/core/title_light.dart';
+import 'package:cupola/features/activity/data/activity_live.dart';
+import 'package:cupola/features/activity/data/selected_download.dart';
+import 'package:cupola/features/activity/presentation/activity_page.dart'
+    show downloadAskersProvider;
+import 'package:cupola/features/media/presentation/media_sources_provider.dart'
+    show mediaRadarrProfilesProvider;
+import 'package:cupola/features/services/domain/in_flight.dart';
+import 'package:cupola/features/services/domain/queue_title.dart';
+import 'package:cupola/features/services/domain/source_coverage.dart';
+import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
-import 'package:cupola/features/settings/domain/settings_model.dart';
-import 'package:cupola/features/shell/domain/stack_health.dart';
 import 'package:cupola/features/shell/presentation/desktop/inspector_pane.dart';
 
-import '../test_helpers/fake_secure_settings_store.dart';
+import '../test_helpers/settings_scope.dart';
 import 'catalog.dart';
 
-GlobalActivityItem _transfer(
-  ServiceKey service,
-  String title,
-  String subtitle,
-  double progress, {
-  bool stalled = false,
-}) => GlobalActivityItem(
-  kind: GlobalActivityKind.queue,
-  service: service,
-  serviceType: ServiceType.movies,
-  title: title,
-  subtitle: subtitle,
-  status: MediaStatusInfo(
-    labelOverride: stalled ? 'Stuck' : 'Downloading',
-    toneOverride: stalled ? StatusTone.warning : StatusTone.info,
-    hasWarning: stalled,
-    progress: progress,
+/// The inspector beside its split handle, on the download chosen in
+/// Activity's table: the only thing it ever shows. Its page is the
+/// DownloadDetail card's; this sheet is the pane around it.
+final _now = DateTime(2026, 10, 9, 20, 53);
+
+const _hash = 'a1f0c3d4e5f60718293a4b5c6d7e8f9012345601';
+
+final _settings = settingsWithServices(const [
+  ServiceKey.radarr,
+  ServiceKey.qbittorrent,
+  ServiceKey.jellyfin,
+]);
+
+String get _radarr => _settings.primaryOf(ServiceKey.radarr)!.id;
+String get _qbittorrent => _settings.primaryOf(ServiceKey.qbittorrent)!.id;
+
+/// Sprite Fright, stuck at 47% for three hours.
+final _stuck = ServiceQueueItem(
+  service: ServiceKey.radarr,
+  id: '1',
+  title: 'Sprite Fright',
+  progress: 0.47,
+  clientLabel: 'qBittorrent',
+  doneBytes: 1009254400,
+  totalBytes: 2147483648,
+  fault: InFlightFault.stalled,
+  stalledSince: _now.subtract(const Duration(hours: 3)),
+  downloadId: _hash,
+  clientService: ServiceKey.qbittorrent,
+  instanceId: _radarr,
+  clientInstanceId: _qbittorrent,
+  mediaId: 3,
+  tmdbId: 811631,
+  posterUrl: CatalogArt.poster,
+  names: const MediaNames(
+    title: 'Sprite Fright',
+    machineName: 'Sprite.Fright.2021.1080p.WEB',
+    machineKind: MachineNameKind.release,
+  ),
+  queueTitle: QueueTitle(
+    name: 'Sprite Fright',
+    year: 2021,
+    qualityProfileId: 1,
+    folder: '/mnt/tank/media/movies',
+    digitalRelease: _now.subtract(const Duration(hours: 6)),
   ),
 );
 
-// What the pane draws under a title is `GlobalActivityItem.subtitle`: the
-// release a movie came as, and for an episode its code, its title and the
-// release. The size, rate and time left live on the Activity table's Details
-// cell and never in this pane.
-final _queue = [
-  _transfer(
-    ServiceKey.radarr,
-    'Nosferatu (1922)',
-    'Nosferatu.1922.1080p.BluRay.x264-GROUP',
-    0.71,
-  ),
-  _transfer(
-    ServiceKey.radarr,
-    'Metropolis (1927)',
-    'Metropolis.1927.1080p.BluRay.x264-GROUP',
-    0.18,
-    stalled: true,
-  ),
-  _transfer(
-    ServiceKey.sonarr,
-    'Severance',
-    "S2 E5 · Trojan's Horse · Severance.S02E05.1080p.WEB-DL-GROUP",
-    0.54,
-  ),
-  _transfer(ServiceKey.lidarr, 'Diamond Jubilee', 'Cindy Lee', 0),
-];
+class _Chosen extends SelectedDownload {
+  @override
+  DownloadSelection? build() => (instanceId: _radarr, key: _hash);
+}
 
-GlobalActivityItem _finished(String title, StatusTone tone) =>
-    GlobalActivityItem(
-      kind: GlobalActivityKind.history,
-      service: ServiceKey.radarr,
-      serviceType: ServiceType.movies,
-      title: title,
-      subtitle: '',
-      status: MediaStatusInfo(labelOverride: title, toneOverride: tone),
-      sortDate: DateTime.now(),
-    );
+Future<List<Override>> _overrides() async {
+  SharedPreferences.setMockInitialValues({});
+  final prefs = await SharedPreferences.getInstance();
+  return [
+    sharedPreferencesProvider.overrideWithValue(prefs),
+    initialSettingsProvider.overrideWithValue(_settings),
+    currentSettingsProvider.overrideWith((ref) => _settings),
+    titleLightProvider.overrideWith((ref, url) async => null),
+    servicesQueueProvider.overrideWith(
+      (ref) async => (items: [_stuck], coverage: SourceCoverage.none),
+    ),
+    activityLivePollProvider.overrideWith((ref, tab) {}),
+    downloadAskersProvider.overrideWith((ref) => const []),
+    mediaRadarrProfilesProvider(
+      _radarr,
+    ).overrideWith((ref) async => {1: 'HD-1080p'}),
+    stallClockProvider.overrideWithValue(() => _now),
+    dashboardDecisionsProvider.overrideWithValue((
+      decisions: const [],
+      coverage: SourceCoverage.none,
+    )),
+    selectedDownloadProvider.overrideWith(_Chosen.new),
+  ];
+}
 
-final _today = PagedArrFeedState(
-  feed: ActivityFeed(
-    items: [
-      _finished('Nosferatu · imported', StatusTone.success),
-      _finished(
-        'The Cabinet of Dr. Caligari · import failed',
-        StatusTone.warning,
-      ),
-      _finished('Metropolis · grabbed', StatusTone.neutral),
+Widget _pane() => const SizedBox(
+  height: 1100,
+  child: Row(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      InspectorSplitHandle(),
+      Expanded(child: InspectorPane()),
     ],
-    results: const [],
   ),
 );
-
-class _FixedFeed extends PagedArrFeedNotifier {
-  _FixedFeed(this.fixed) : super(kinds: const [GlobalActivityKind.history]);
-
-  final PagedArrFeedState fixed;
-
-  @override
-  PagedArrFeedState build() => fixed;
-}
-
-late SharedPreferences _prefs;
-
-/// The pane with the Activity providers answered, in a container and a router
-/// of its own (a nested `ProviderScope` would leave derived providers reading
-/// the sheet's root, and the header's links need a router).
-class _Pane extends StatefulWidget {
-  const _Pane({
-    required this.queue,
-    this.offline = const [],
-    this.history = const PagedArrFeedState(),
-  });
-
-  final Future<ActivityFeed> Function() queue;
-  final List<ServiceKey> offline;
-  final PagedArrFeedState history;
-
-  @override
-  State<_Pane> createState() => _PaneState();
-}
-
-class _PaneState extends State<_Pane> {
-  late final _container = ProviderContainer(
-    overrides: [
-      sharedPreferencesProvider.overrideWithValue(_prefs),
-      secureSettingsStoreProvider.overrideWithValue(FakeSecureSettingsStore()),
-      initialSettingsProvider.overrideWithValue(const SettingsModel()),
-      initialOnboardingCompletedProvider.overrideWithValue(true),
-      globalNowItemsProvider.overrideWith((ref) => widget.queue()),
-      unreachableServicesProvider.overrideWithValue(widget.offline),
-      globalHistoryFeedProvider.overrideWith(() => _FixedFeed(widget.history)),
-    ],
-    retry: (_, _) => null,
-  );
-
-  late final _router = GoRouter(
-    initialLocation: '/stack',
-    routes: [
-      GoRoute(
-        path: '/stack',
-        builder: (_, _) => const Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            InspectorSplitHandle(),
-            SizedBox(width: 360, child: InspectorPane()),
-          ],
-        ),
-      ),
-    ],
-  );
-
-  @override
-  void dispose() {
-    _router.dispose();
-    _container.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => UncontrolledProviderScope(
-    container: _container,
-    child: Router.withConfig(config: _router),
-  );
-}
 
 void main() {
-  setUpAll(() async {
-    SharedPreferences.setMockInitialValues({});
-    _prefs = await SharedPreferences.getInstance();
-  });
-
   const width = InspectorSplitHandle.width + 360;
 
   catalogCard(
     'InspectorPane',
-    width: 1328,
+    overrides: _overrides,
     scenes: [
       CatalogScene(
-        'InspectorPane beside InspectorSplitHandle · the live queue, two '
-        'services that did not answer, finished today · a stuck transfer spends '
-        'its amber on the bar; the red line is only for what did not answer',
-        (_) => _Pane(
-          queue: () async => ActivityFeed(items: _queue, results: const []),
-          offline: const [ServiceKey.sonarr, ServiceKey.prowlarr],
-          history: _today,
-        ),
+        'InspectorPane beside InspectorSplitHandle · a stuck download chosen '
+        'in the desktop\'s table: Selected download, Open its page and Close, '
+        'which puts the choice down and the pane with it',
+        (_) => _pane(),
         width: width,
-        height: 600,
         platform: CatalogPlatform.desktop,
       ),
       CatalogScene(
-        'InspectorPane · nothing downloading · a note, not an empty well; '
-        'finished today still lists what landed',
-        (_) => _Pane(
-          queue: () async => const ActivityFeed.empty(),
-          history: _today,
-        ),
+        'Text at 200% · InspectorPane on the chosen download, its header and '
+        'its page at twice the reading size',
+        (_) => _pane(),
         width: width,
-        height: 260,
-        platform: CatalogPlatform.desktop,
-      ),
-      CatalogScene(
-        'InspectorPane · nothing downloading from what answered · the note '
-        'names the connection it could not count',
-        (_) => _Pane(
-          queue: () async => const ActivityFeed(
-            items: [],
-            results: [
-              ActivityServiceResult(
-                service: ServiceKey.radarr,
-                items: [],
-                total: 0,
-                configured: true,
-              ),
-              ActivityServiceResult(
-                service: ServiceKey.sonarr,
-                instanceId: 'anime',
-                label: 'Anime',
-                items: [],
-                configured: true,
-                error: 'refused',
-              ),
-            ],
-          ),
-        ),
-        width: width,
-        height: 130,
-        platform: CatalogPlatform.desktop,
-      ),
-      CatalogScene(
-        'InspectorPane · loading · Reading the queue…; finished today waits '
-        'until the history feed has something',
-        (_) => _Pane(queue: () => Completer<ActivityFeed>().future),
-        width: width,
-        height: 130,
-        platform: CatalogPlatform.desktop,
-      ),
-      CatalogScene(
-        'InspectorPane · the queue could not be read · no *arr answered; the '
-        'note sends you to Activity, which owns the retry',
-        (_) => _Pane(
-          queue: () async => const ActivityFeed(
-            items: [],
-            results: [
-              ActivityServiceResult(
-                service: ServiceKey.radarr,
-                items: [],
-                configured: true,
-                error: 'silent',
-              ),
-              ActivityServiceResult(
-                service: ServiceKey.sonarr,
-                items: [],
-                configured: true,
-                error: 'silent',
-              ),
-            ],
-          ),
-        ),
-        width: width,
-        height: 130,
-        platform: CatalogPlatform.desktop,
-      ),
-      CatalogScene(
-        'Text at 200% · InspectorPane, the live queue with two services that '
-        'did not answer and finished today, at twice the reading size',
-        (_) => _Pane(
-          queue: () async => ActivityFeed(items: _queue, results: const []),
-          offline: const [ServiceKey.sonarr, ServiceKey.prowlarr],
-          history: _today,
-        ),
-        width: width,
-        height: 1000,
-        platform: CatalogPlatform.desktop,
-        textScale: catalogTextScale,
-      ),
-      CatalogScene(
-        'Text at 200% · InspectorPane, the queue could not be read: the note '
-        'that sends you to Activity',
-        (_) => _Pane(
-          queue: () async => const ActivityFeed(
-            items: [],
-            results: [
-              ActivityServiceResult(
-                service: ServiceKey.radarr,
-                items: [],
-                configured: true,
-                error: 'silent',
-              ),
-              ActivityServiceResult(
-                service: ServiceKey.sonarr,
-                items: [],
-                configured: true,
-                error: 'silent',
-              ),
-            ],
-          ),
-        ),
-        width: width,
-        height: 300,
         platform: CatalogPlatform.desktop,
         textScale: catalogTextScale,
       ),

@@ -119,11 +119,6 @@ class CloseOverlayIntent extends Intent {
   const CloseOverlayIntent();
 }
 
-/// Send the focused row or card to the inspector instead of opening it.
-class OpenInInspectorIntent extends Intent {
-  const OpenInInspectorIntent();
-}
-
 /// Back and forward through where this window has been: the toolbar's two
 /// arrows, `⌘[` and `⌘]` on a Mac, `Alt+←` and `Alt+→` elsewhere, and a
 /// mouse's own back and forward buttons.
@@ -167,7 +162,6 @@ abstract final class ShellShortcuts {
         const CycleServiceIntent(-1),
     AppModifier.cmd(LogicalKeyboardKey.keyR): const RefreshAllIntent(),
     AppModifier.cmd(LogicalKeyboardKey.keyF): const SearchThisScreenIntent(),
-    AppModifier.opt(LogicalKeyboardKey.enter): const OpenInInspectorIntent(),
     if (AppModifier.isApple) ...{
       AppModifier.cmd(LogicalKeyboardKey.bracketLeft): const GoBackIntent(),
       AppModifier.cmd(LogicalKeyboardKey.bracketRight): const GoForwardIntent(),
@@ -189,7 +183,6 @@ abstract final class ShellShortcuts {
   static String get inspector => AppModifier.alt('I');
   static String get refreshAll => AppModifier.command('R');
   static String get searchScreen => AppModifier.command('F');
-  static String get openInInspector => AppModifier.isApple ? '⌥⏎' : 'Alt+Enter';
   static String section(int index) => AppModifier.command('${index + 1}');
   static String get settings => AppModifier.command(',');
   static String get back => AppModifier.isApple ? '⌘[' : 'Alt+←';
@@ -215,7 +208,6 @@ abstract final class ShellShortcuts {
     (does: 'Previous or next service', keys: cycleService, operatorOnly: true),
     (does: 'Refresh everything', keys: refreshAll, operatorOnly: false),
     (does: 'Show or hide the inspector', keys: inspector, operatorOnly: true),
-    (does: 'Open in the inspector', keys: openInInspector, operatorOnly: true),
     (does: 'Show or hide the sidebar', keys: sidebar, operatorOnly: false),
     (does: 'Settings', keys: settings, operatorOnly: false),
     (does: 'These keys', keys: shortcuts, operatorOnly: false),

@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/features/shell/domain/shell_shortcuts.dart';
 import 'package:cupola/core/router.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
@@ -283,16 +284,18 @@ void main() {
   }, variant: _macOS);
 
   testWidgets(
-    "the inspector's close goes back to the queue, and Escape on the row "
-    'lets go too',
+    "the inspector's close puts the choice down and the pane with it, and "
+    'Escape on the row lets go too',
     (tester) async {
       final (harness, _, container) = await _app(tester);
 
       await _tap(tester, _inTable(find.text('Sprite Fright')));
-      await _tap(tester, find.byTooltip('Back to the queue'));
-      expect(container.read(selectedDownloadProvider), isNull);
-      expect(find.text('Selected download'), findsNothing);
       expect(find.byType(InspectorPane), findsOneWidget);
+      await _tap(tester, find.byTooltip('Close  ${ShellShortcuts.inspector}'));
+      expect(container.read(selectedDownloadProvider), isNull);
+      // Nothing chosen, nothing to inspect: the pane is not laid out.
+      expect(find.text('Selected download'), findsNothing);
+      expect(find.byType(InspectorPane), findsNothing);
 
       await _tap(tester, _inTable(find.text('Elephants Dream')));
       expect(find.text('Selected download'), findsOneWidget);

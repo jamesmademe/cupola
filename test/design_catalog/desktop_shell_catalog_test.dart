@@ -414,7 +414,8 @@ class _WindowState extends State<_Window> {
 
 void main() {
   setUpAll(() async {
-    // The inspector's persisted state: open.
+    // The inspector switched on, as a person who uses it leaves it: with no
+    // download chosen it is still not laid out.
     SharedPreferences.setMockInitialValues({'inspector_open': true});
     _prefs = await SharedPreferences.getInstance();
   });
@@ -424,18 +425,18 @@ void main() {
     width: 1328,
     scenes: [
       CatalogScene(
-        'DesktopShell · a 1280 × 800 window on Radarr Overview, inspector open '
-        '· chrome, rail, deck, the page under its lit service header, the '
-        'split handle and the inspector; the deck drops its chip because the '
-        'header names the room',
+        'DesktopShell · a 1280 × 800 window on Radarr Overview, nothing chosen '
+        '· chrome, sidebar with In flight at its foot, the page under its lit '
+        'service header and no inspector: its switch is dimmed until a '
+        'download is chosen in Activity',
         (_) => const _Window(),
         width: 1280,
         height: 800,
         platform: CatalogPlatform.desktop,
       ),
       CatalogScene(
-        'DesktopShell · a 960 × 640 window, same page, inspector still switched '
-        'on · compact: 38pt chrome, 40pt deck, and no inspector under 1100',
+        'DesktopShell · a 960 × 640 window, same page · compact: 38pt chrome, '
+        'the folded rail, and no inspector under 1100',
         (_) => const _Window(),
         width: 960,
         height: 640,
@@ -452,7 +453,7 @@ void main() {
       ),
       CatalogScene(
         'DesktopShell · a 1280 × 800 window at 200% reading size: the chrome, '
-        'rail, deck, page header and inspector with their text doubled',
+        'sidebar and page header with their text doubled',
         (_) => const _Window(),
         width: 1280,
         height: 800,

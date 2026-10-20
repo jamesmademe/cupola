@@ -25,7 +25,7 @@ On Activity's All and Downloads (Downloads also lists the downloads stopped on p
 ## Choosing
 
 - In a full window a click chooses the download: the row sits on the room's strong fill, as a selected row does on a tablet, and the inspector opens on it (`Selected download`, [InspectorPane](../InspectorPane/README.md)). A second click on the chosen row within the double-click time, or Return, opens its page ([DownloadDetail](../DownloadDetail/README.md)).
-- The arrow keys walk the rows, choosing as they go; Escape lets go, and the inspector shows the queue again.
+- The arrow keys walk the rows, choosing as they go; Escape lets go, and the inspector closes with the choice.
 - In a compact window, where the inspector is never laid out, a click opens the page, as on a phone.
 - `⋯` and a secondary click offer `Open download`, `Stop` (`Resume`) while a connected client moves it, and `Remove` while an \*arr asked for it and nothing is wrong with it (a fault's Remove is its remedy's, in Needs you). Remove asks the neutral question Needs you asks; a removed chosen download lets go.
 - A Stop or a Resume holds the order the rows were drawn in while the pointer stays on the table, so the row under it stays put when the queue would move it (a resumed row is not sent to the top under the pointer); a sort click or the pointer leaving the table ends the hold. The queued table takes no hold.

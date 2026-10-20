@@ -333,7 +333,7 @@ const _monoUses = <({String file, int uses, String prints})>[
     file: 'lib/features/shell/presentation/desktop/command_deck.dart',
     uses: 1,
     prints:
-        'the key legend of a hint (`⌘1–⌘4`, `⌥⏎`, `↑↓`): the legend of a '
+        'the key legend of a hint (`⌘1–⌘4`, `⌘/`, `↑↓`): the legend of a '
         'physical key, not a figure; the words after it are the text face',
   ),
   (
