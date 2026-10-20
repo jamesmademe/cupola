@@ -11,30 +11,32 @@ import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 
 /// A tile as the rails draw it: the poster over its caption, one control.
-Widget _tile({VoidCallback? onTap}) => MaterialApp(
-  home: Scaffold(
-    body: Center(
-      child: SizedBox(
-        width: 104,
-        child: PressableScale(
-          onTap: onTap,
-          semanticLabel: 'Sprite Fright',
-          child: const Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: 104,
-                height: 156,
-                child: ContentCard(imageUrl: null),
+Widget _tile({VoidCallback? onTap, void Function(Offset? at)? onMenu}) =>
+    MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: SizedBox(
+            width: 104,
+            child: PressableScale(
+              onTap: onTap,
+              onMenu: onMenu,
+              semanticLabel: 'Sprite Fright',
+              child: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 104,
+                    height: 156,
+                    child: ContentCard(imageUrl: null),
+                  ),
+                  Text('Sprite Fright'),
+                ],
               ),
-              Text('Sprite Fright'),
-            ],
+            ),
           ),
         ),
       ),
-    ),
-  ),
-);
+    );
 
 /// How far the poster stands off its place.
 double _lift(WidgetTester tester) => tester
@@ -165,6 +167,79 @@ void main() {
     expect(opened, 1);
     expect(_rings(tester), isNot(contains('_FocusRing')));
     expect(_lift(tester), 0);
+  });
+
+  group('a tile with a menu', () {
+    testWidgets('a right click opens it where the pointer is', (tester) async {
+      final asked = <Offset?>[];
+      var opened = 0;
+      await tester.pumpWidget(_tile(onTap: () => opened++, onMenu: asked.add));
+      final at = tester.getCenter(find.byType(ContentCard));
+      await tester.tapAt(at, buttons: kSecondaryMouseButton);
+      await tester.pumpAndSettle();
+
+      expect(asked, [at]);
+      expect(opened, 0);
+    });
+
+    testWidgets('a long press opens it where the finger is', (tester) async {
+      final asked = <Offset?>[];
+      await tester.pumpWidget(_tile(onTap: () {}, onMenu: asked.add));
+      final at = tester.getCenter(find.byType(ContentCard));
+      await tester.longPressAt(at);
+      await tester.pumpAndSettle();
+
+      expect(asked, [at]);
+    });
+
+    testWidgets('Shift+F10 and the menu key open it by the tile', (
+      tester,
+    ) async {
+      final asked = <Offset?>[];
+      await tester.pumpWidget(_tile(onTap: () {}, onMenu: asked.add));
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.f10);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.contextMenu);
+      await tester.pump();
+
+      expect(asked, [null, null]);
+    });
+
+    testWidgets('the pointer finds a ⋯ on the poster, which opens it and '
+        'not the title', (tester) async {
+      final asked = <Offset?>[];
+      var opened = 0;
+      await tester.pumpWidget(_tile(onTap: () => opened++, onMenu: asked.add));
+      final more = find.byKey(const ValueKey('content-card-more'));
+      expect(more, findsNothing);
+
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: Offset.zero);
+      addTearDown(mouse.removePointer);
+      await mouse.moveTo(tester.getCenter(find.byType(ContentCard)));
+      await tester.pumpAndSettle();
+      expect(more, findsOneWidget);
+
+      await tester.tap(more);
+      await tester.pumpAndSettle();
+      expect(asked, hasLength(1));
+      expect(opened, 0);
+    });
+
+    testWidgets('a tile without a menu has no ⋯', (tester) async {
+      await tester.pumpWidget(_tile(onTap: () {}));
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: Offset.zero);
+      addTearDown(mouse.removePointer);
+      await mouse.moveTo(tester.getCenter(find.byType(ContentCard)));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('content-card-more')), findsNothing);
+    });
   });
 }
 

@@ -54,7 +54,7 @@ import 'package:cupola/features/media/domain/media_collection.dart';
 import 'package:cupola/features/discover/domain/seerr_request_gate.dart';
 import 'package:cupola/features/discover/presentation/seerr_request_words.dart';
 import 'package:cupola/features/discover/presentation/discover_detail_view_model.dart';
-import 'package:cupola/features/discover/presentation/widgets/catalog_title_row.dart'
+import 'package:cupola/features/discover/presentation/catalog_title_actions.dart'
     show seerrSendsToProvider;
 import 'package:cupola/features/home/presentation/widgets/downloads_module.dart';
 import 'package:cupola/features/discover/presentation/widgets/request_bottom_sheet.dart';

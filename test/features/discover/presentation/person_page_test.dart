@@ -10,7 +10,7 @@ import 'package:cupola/features/discover/domain/models/person_credits.dart';
 import 'package:cupola/features/discover/domain/models/person_detail.dart';
 import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
 import 'package:cupola/features/discover/presentation/person_page.dart';
-import 'package:cupola/features/discover/presentation/widgets/catalog_title_row.dart';
+import 'package:cupola/features/discover/presentation/catalog_title_actions.dart';
 import 'package:cupola/features/media/domain/operator_adds_via.dart';
 import 'package:cupola/features/settings/data/operator_adds_via_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';

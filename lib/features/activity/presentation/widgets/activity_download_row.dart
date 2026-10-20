@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/widgets/row_actions.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/utils/percent_format.dart';
@@ -21,6 +22,9 @@ import 'package:cupola/features/home/presentation/widgets/home_module_parts.dart
 import 'package:cupola/features/media/presentation/open_media.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+
+export 'package:cupola/core/widgets/row_actions.dart'
+    show RowAction, showRowActions;
 
 /// One download on Activity: its art, its title and the release it is, which
 /// way its bytes travel, how far it got and how fast, and who asked for it;
@@ -340,45 +344,6 @@ class SelectedRowPainter extends CustomPainter {
   @override
   bool shouldRepaint(SelectedRowPainter oldDelegate) =>
       color != oldDelegate.color;
-}
-
-/// One thing a row offers beside opening it: `Delete request`.
-typedef RowAction = ({String label, IconData icon, VoidCallback onSelected});
-
-/// The menu of [actions] under [at] (the row's own corner when the press
-/// left no point), the theme's menu as every ⋯ draws it.
-Future<void> showRowActions(
-  BuildContext context,
-  Offset? at,
-  List<RowAction> actions,
-) async {
-  if (actions.isEmpty) return;
-  final overlay = Overlay.of(context).context.findRenderObject()! as RenderBox;
-  final row = context.findRenderObject() as RenderBox?;
-  final point =
-      at ?? row?.localToGlobal(row.size.centerLeft(Offset.zero)) ?? Offset.zero;
-  final local = overlay.globalToLocal(point);
-  final chosen = await showMenu<int>(
-    context: context,
-    position: RelativeRect.fromRect(
-      local & const Size(1, 1),
-      Offset.zero & overlay.size,
-    ),
-    items: [
-      for (final (index, action) in actions.indexed)
-        PopupMenuItem(
-          value: index,
-          child: Row(
-            children: [
-              Icon(action.icon, size: 18),
-              const SizedBox(width: AppSpacing.sm),
-              Flexible(child: Text(action.label)),
-            ],
-          ),
-        ),
-    ],
-  );
-  if (chosen != null) actions[chosen].onSelected();
 }
 
 /// Opens the page of [mediaId] in [service], on the connection

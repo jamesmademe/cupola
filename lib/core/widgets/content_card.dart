@@ -264,6 +264,8 @@ class _PosterPressState extends State<_PosterPress> {
     final lifted = press?.hovered ?? false;
     final focused = press?.focused ?? false;
     final animate = !MediaQuery.disableAnimationsOf(context);
+    final menu = press?.menu;
+    final poster = widget.builder(context, lifted, animate);
     return TweenAnimationBuilder<double>(
       tween: Tween(end: lifted ? -AppAnimation.hoverLift : 0),
       duration: animate ? AppAnimation.hover : Duration.zero,
@@ -274,7 +276,70 @@ class _PosterPressState extends State<_PosterPress> {
         foregroundPainter: focused
             ? _FocusRing(color: CupolaRoom.of(context).focus)
             : null,
-        child: widget.builder(context, lifted, animate),
+        // The ⋯ of a tile that offers a menu, while the pointer is over it
+        // or it holds the focus: on the poster's corner, never on its badge.
+        child: menu == null || !(lifted || focused)
+            ? poster
+            : Stack(
+                fit: StackFit.passthrough,
+                children: [
+                  poster,
+                  Positioned(
+                    right: AppSpacing.xs,
+                    bottom: AppSpacing.xs,
+                    child: _MoreButton(onMenu: menu),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+/// The ⋯ on a poster under the pointer: the tile's menu, opened under it.
+/// Silent: a screen reader reaches the menu as the tile's long press.
+class _MoreButton extends StatelessWidget {
+  const _MoreButton({required this.onMenu});
+
+  final void Function(Offset? at) onMenu;
+
+  /// The disc; its target is 44 around it.
+  static const double size = 28;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = CupolaThemeColors.of(context);
+    return ExcludeSemantics(
+      child: GestureDetector(
+        key: const ValueKey('content-card-more'),
+        behavior: HitTestBehavior.opaque,
+        onTapUp: (details) {
+          final box = context.findRenderObject()! as RenderBox;
+          onMenu(box.localToGlobal(box.size.bottomLeft(Offset.zero)));
+        },
+        child: SizedBox.square(
+          dimension: 44,
+          child: Align(
+            alignment: Alignment.bottomRight,
+            child: Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                // The badge's plate: legible on any artwork.
+                color: colors.statusBadgeBackground,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: colors.statusBadgeForeground.withValues(alpha: 0.12),
+                ),
+              ),
+              child: Icon(
+                Icons.more_horiz_rounded,
+                size: 18,
+                color: colors.statusBadgeForeground,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

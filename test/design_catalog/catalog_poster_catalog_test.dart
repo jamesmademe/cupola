@@ -2,14 +2,27 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/capability/audience.dart';
+import 'package:cupola/core/capability/role_gate.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/models/media_preview.dart';
+import 'package:cupola/features/discover/domain/seerr_grant.dart';
+import 'package:cupola/features/discover/presentation/catalog_title_actions.dart';
 import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
 import 'package:cupola/features/discover/presentation/widgets/catalog_poster.dart';
 
+import 'package:cupola/features/media/domain/operator_adds_via.dart';
+import 'package:cupola/features/movies/presentation/movies_provider.dart';
+import 'package:cupola/features/settings/data/operator_adds_via_provider.dart';
+import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+
+import '../test_helpers/model_builders.dart';
+import '../test_helpers/settings_scope.dart';
 import 'catalog.dart';
 
 /// Four titles as Seerr's catalogue answers them: one on the server, one
@@ -58,8 +71,9 @@ const _row = [
   ),
 ];
 
-/// The four in a row; with [pointed], the second under a mouse and the
-/// third holding the keyboard's focus.
+/// The four in a row; with [pointed], the second under a mouse. (The
+/// keyboard's focus is shown on the ContentCard card: the menus on this
+/// sheet take the focus when they open.)
 Widget _rail({bool pointed = false}) => Builder(
   builder: (context) => SizedBox(
     height: CatalogPoster.heightFor(context, 104),
@@ -69,7 +83,6 @@ Widget _rail({bool pointed = false}) => Builder(
         for (final (index, item) in _row.indexed) ...[
           switch ((pointed, index)) {
             (true, 1) => CatalogPointer.hover(child: _poster(item)),
-            (true, 2) => CatalogPointer.focus(child: _poster(item)),
             _ => _poster(item),
           },
           const SizedBox(width: 12),
@@ -81,6 +94,88 @@ Widget _rail({bool pointed = false}) => Builder(
 
 Widget _poster(MediaPreview item) =>
     CatalogPoster(item: item, heroTag: 'poster_${item.id}', width: 104);
+
+/// The tile under a mouse with its menu open at the ⋯, on a navigator of
+/// the scene's own so the menu lands on the sheet.
+Widget _menuOpen(MediaPreview item) => SizedBox(
+  height: 330,
+  child: Navigator(
+    onGenerateRoute: (_) => PageRouteBuilder<void>(
+      pageBuilder: (_, _, _) => Align(
+        alignment: Alignment.topLeft,
+        child: CatalogPointer.hover(child: _MenuAtMore(item: item)),
+      ),
+    ),
+  ),
+);
+
+class _MenuAtMore extends ConsumerStatefulWidget {
+  const _MenuAtMore({required this.item});
+
+  final MediaPreview item;
+
+  @override
+  ConsumerState<_MenuAtMore> createState() => _MenuAtMoreState();
+}
+
+class _MenuAtMoreState extends ConsumerState<_MenuAtMore> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final box = context.findRenderObject()! as RenderBox;
+      showCatalogTitleMenu(
+        context,
+        ref,
+        widget.item,
+        mediaType: widget.item.mediaType,
+        onOpen: () {},
+        at: box.localToGlobal(Offset(box.size.width - 8, 148)),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => _poster(widget.item);
+}
+
+final _radarrSettings = settingsWithServices(const [
+  ServiceKey.seerr,
+  ServiceKey.radarr,
+]);
+
+class _AddsViaArr extends OperatorAddsViaNotifier {
+  @override
+  OperatorAddsVia build() => OperatorAddsVia.arr;
+}
+
+/// The operator whose Radarr holds Sintel and not The Cabinet.
+final List<Override> _operator = [
+  currentSettingsProvider.overrideWith((ref) => _radarrSettings),
+  audienceProvider.overrideWithValue(Audience.operator),
+  roleGateProvider('').overrideWithValue(
+    const RoleGate(audience: Audience.operator, grant: SeerrGrant.apiKey()),
+  ),
+  operatorAddsViaProvider.overrideWith(_AddsViaArr.new),
+  moviesForProvider(
+    _radarrSettings.primaryOf(ServiceKey.radarr)!.id,
+  ).overrideWith((ref) async => [buildMovie(id: 7, tmdbId: 1)]),
+];
+
+/// The requester, who may ask.
+final List<Override> _requester = [
+  currentSettingsProvider.overrideWith(
+    (ref) => settingsWithServices(const [ServiceKey.seerr]),
+  ),
+  audienceProvider.overrideWithValue(Audience.requester),
+  roleGateProvider('').overrideWithValue(
+    const RoleGate(
+      audience: Audience.requester,
+      grant: SeerrGrant.account(permissions: 32),
+    ),
+  ),
+];
 
 void main() {
   catalogCard(
@@ -116,14 +211,37 @@ void main() {
         overrides: [audienceProvider.overrideWithValue(Audience.operator)],
       ),
       CatalogScene(
-        'CatalogPoster · with a pointer and a keyboard · Charge under a mouse: '
-        'its poster rises 2 pt and glows stronger, the caption stays; Sprite '
-        "Fright holding the keyboard's focus: the ring on the poster's corner, "
-        'not around the caption',
+        'CatalogPoster · with a pointer · Charge under a mouse: its poster '
+        'rises 2 pt and glows stronger, the caption stays, and the ⋯ that '
+        'opens its menu sits on the corner',
         (_) => _rail(pointed: true),
         width: 500,
         platform: CatalogPlatform.desktop,
         overrides: [audienceProvider.overrideWithValue(Audience.operator)],
+      ),
+      CatalogScene(
+        'The menu · the operator, Sintel held by Radarr (a right click, a long '
+        'press, the menu key, or the ⋯): Open, Open in Radarr, Copy TMDB link',
+        (_) => _menuOpen(_row[0]),
+        width: 500,
+        platform: CatalogPlatform.desktop,
+        overrides: _operator,
+      ),
+      CatalogScene(
+        'The menu · the operator, The Cabinet held by no library: Open, Add to '
+        'Radarr, Copy TMDB link',
+        (_) => _menuOpen(_row[3]),
+        width: 500,
+        platform: CatalogPlatform.desktop,
+        overrides: _operator,
+      ),
+      CatalogScene(
+        'The menu · the requester, a title nobody asked for: Open, Request, '
+        'Copy TMDB link',
+        (_) => _menuOpen(_row[3]),
+        width: 500,
+        platform: CatalogPlatform.desktop,
+        overrides: _requester,
       ),
     ],
   );

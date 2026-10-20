@@ -13,6 +13,7 @@ import 'package:cupola/core/widgets/media_poster_card.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/discover/domain/seerr_status.dart';
+import 'package:cupola/features/discover/presentation/catalog_title_actions.dart';
 import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
 import 'package:cupola/features/media/presentation/open_media.dart';
 
@@ -24,6 +25,10 @@ import 'package:cupola/features/media/presentation/open_media.dart';
 /// words of whoever reads it (`seerrCatalogStatus`): nothing at all for a
 /// title Seerr holds no record of. The tile speaks one sentence, the title
 /// with its state and score, and silences its parts.
+///
+/// Its menu (a right click, a long press, the menu key, the ⋯ a pointer
+/// finds on the poster) offers what can be done for the title without
+/// opening it (`showCatalogTitleMenu`).
 class CatalogPoster extends ConsumerWidget {
   const CatalogPoster({
     super.key,
@@ -94,14 +99,27 @@ class CatalogPoster extends ConsumerWidget {
         meta ??
         (vote == null ? null : 'TMDB$unitSpace${vote.toStringAsFixed(1)}');
 
+    final type = mediaType ?? item.mediaType;
+    void open() => context.openSeerrTitle(
+      mediaType: type,
+      id: item.id,
+      heroTag: heroTag,
+      posterUrl: imageUrl,
+    );
+
     return SizedBox(
       width: width,
       child: PressableScale(
-        onTap: () => context.openSeerrTitle(
-          mediaType: mediaType ?? item.mediaType,
-          id: item.id,
-          heroTag: heroTag,
-          posterUrl: imageUrl,
+        onTap: open,
+        // A right click, a long press, the menu key, or the ⋯ under the
+        // pointer: what can be done for the title without opening it.
+        onMenu: (at) => showCatalogTitleMenu(
+          context,
+          ref,
+          item,
+          mediaType: type,
+          onOpen: open,
+          at: at,
         ),
         semanticLabel: item.title,
         semanticValue: status == null && score == null

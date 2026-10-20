@@ -18,7 +18,7 @@ import 'package:cupola/features/discover/presentation/collection_page.dart';
 import 'package:cupola/features/discover/presentation/discover_details_provider.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/presentation/person_page.dart';
-import 'package:cupola/features/discover/presentation/widgets/catalog_title_row.dart';
+import 'package:cupola/features/discover/presentation/catalog_title_actions.dart';
 import 'package:cupola/features/media/presentation/media_parts.dart';
 import 'package:cupola/features/media/presentation/media_split.dart';
 import 'package:cupola/features/media/presentation/shelf_page.dart';

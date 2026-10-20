@@ -32,6 +32,13 @@ class PressableScale extends StatefulWidget {
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
+  /// What the control offers beside opening it, as a menu at [at] (null
+  /// when the keyboard asked, so the menu sits by the control): a right
+  /// click, a long press when there is no [onLongPress], the keyboard's menu
+  /// key or Shift+F10, and the ⋯ a poster inside draws under the pointer
+  /// ([PressFeedback.menu]). A screen reader reaches it as the long press.
+  final void Function(Offset? at)? onMenu;
+
   /// Scale applied while pressed. Defaults to the press role's 0.96.
   final double pressedScale;
 
@@ -74,6 +81,7 @@ class PressableScale extends StatefulWidget {
     required this.child,
     this.onTap,
     this.onLongPress,
+    this.onMenu,
     this.pressedScale = AppAnimation.pressScale,
     this.haptic = true,
     this.semanticLabel,
@@ -118,7 +126,11 @@ class _PressableScaleState extends State<PressableScale> {
 
   @override
   Widget build(BuildContext context) {
-    final enabled = widget.onTap != null || widget.onLongPress != null;
+    final menu = widget.onMenu;
+    final onLongPress =
+        widget.onLongPress ?? (menu == null ? null : () => menu(null));
+    final enabled =
+        widget.onTap != null || widget.onLongPress != null || menu != null;
     // Honour Reduce Motion: the press-down scale is decoration, so drop it
     // rather than animate it.
     final animate = !MediaQuery.disableAnimationsOf(context);
@@ -131,6 +143,7 @@ class _PressableScaleState extends State<PressableScale> {
         hovered: _hovered,
         focused: _focused,
         claims: _claims,
+        menu: menu,
         child: widget.child,
       ),
     );
@@ -141,6 +154,13 @@ class _PressableScaleState extends State<PressableScale> {
       onTapCancel: enabled ? () => _setPressed(false) : null,
       onTap: enabled ? _handleTap : null,
       onLongPress: widget.onLongPress,
+      // A finger's long press opens the menu where it was pressed.
+      onLongPressStart: widget.onLongPress == null && menu != null
+          ? (details) => menu(details.globalPosition)
+          : null,
+      onSecondaryTapUp: menu == null
+          ? null
+          : (details) => menu(details.globalPosition),
       behavior: HitTestBehavior.opaque,
       child: CustomPaint(
         foregroundPainter: _focused
@@ -160,7 +180,15 @@ class _PressableScaleState extends State<PressableScale> {
       enabled: widget.onTap != null,
       includeFocusSemantics: false,
       onShowFocusHighlight: _setFocused,
+      shortcuts: menu == null ? null : _menuKeys,
       actions: {
+        if (menu != null)
+          _MenuIntent: CallbackAction<_MenuIntent>(
+            onInvoke: (_) {
+              menu(null);
+              return null;
+            },
+          ),
         ActivateIntent: CallbackAction<ActivateIntent>(
           onInvoke: (_) {
             _handleTap();
@@ -211,10 +239,21 @@ class _PressableScaleState extends State<PressableScale> {
       customSemanticsActions: widget.customSemanticsActions,
       excludeSemantics: widget.excludeChildSemantics,
       onTap: enabled ? _handleTap : null,
-      onLongPress: widget.onLongPress,
+      onLongPress: onLongPress,
       child: pointed,
     );
   }
+}
+
+/// The keys that open a control's menu: the menu key, and Shift+F10 where
+/// the keyboard has none.
+const _menuKeys = <ShortcutActivator, Intent>{
+  SingleActivator(LogicalKeyboardKey.contextMenu): _MenuIntent(),
+  SingleActivator(LogicalKeyboardKey.f10, shift: true): _MenuIntent(),
+};
+
+class _MenuIntent extends Intent {
+  const _MenuIntent();
 }
 
 /// What the pointer and the keyboard are doing to the nearest
@@ -228,6 +267,7 @@ class PressFeedback extends InheritedWidget {
     required this.hovered,
     required this.focused,
     required _RingClaims claims,
+    required this.menu,
     required super.child,
   }) : _claims = claims;
 
@@ -238,6 +278,10 @@ class PressFeedback extends InheritedWidget {
   final bool focused;
 
   final _RingClaims _claims;
+
+  /// The control's menu, when it offers one ([PressableScale.onMenu]): a
+  /// poster draws its ⋯ under the pointer and opens it there.
+  final void Function(Offset? at)? menu;
 
   /// The feedback of the [PressableScale] above [context], or null outside
   /// one.
@@ -264,6 +308,7 @@ class PressFeedback extends InheritedWidget {
   bool updateShouldNotify(PressFeedback oldWidget) =>
       hovered != oldWidget.hovered ||
       focused != oldWidget.focused ||
+      menu != oldWidget.menu ||
       _claims != oldWidget._claims;
 }
 
