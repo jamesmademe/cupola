@@ -436,7 +436,8 @@ void main() {
         platform: CatalogPlatform.desktop,
       ),
       CatalogScene(
-        'DesktopShell · a 960 × 640 window, same page · compact: 38pt chrome, '
+        'DesktopShell · a 960 × 640 window, same page · compact: the toolbar '
+        'over the whole window again (a Mac\'s 52, 38 elsewhere), '
         'the folded rail, and no inspector under 1100',
         (_) => const _Window(),
         width: 960,

@@ -55,6 +55,7 @@ class WindowChrome extends ConsumerWidget {
     this.onCommandDeck,
     this.sidebarFolded = false,
     this.inspectorAvailable = false,
+    this.besideSidebar = false,
   });
 
   /// Drives the inspector switch's tone. Passed rather than watched so the
@@ -72,9 +73,18 @@ class WindowChrome extends ConsumerWidget {
   /// Opens the command deck; null for the requester's window, which has none.
   final VoidCallback? onCommandDeck;
 
-  /// The drawn height. Same on all three platforms: the OS decides where its
-  /// buttons sit, not how much room our chrome takes.
+  /// Whether the strip starts at the sidebar's edge rather than the window's:
+  /// a Mac's full sidebar runs the window's height and holds the traffic
+  /// lights and its own switch ([SidebarHead]), so the strip leaves no room
+  /// for either.
+  final bool besideSidebar;
+
+  /// The drawn height on Windows and Linux.
   static const double height = 44;
+
+  /// The drawn height on a Mac, compact or not: the unified toolbar's band the
+  /// runner sets up (`MainFlutterWindow`), the traffic lights centred in it.
+  static const double macosHeight = 52;
 
   /// The compact window's strip. Six points shorter, and its chips lose their
   /// labels rather than their tone; the shortcut stays, because the strip is
@@ -83,7 +93,11 @@ class WindowChrome extends ConsumerWidget {
   static const double compactHeight = 38;
 
   static double heightFor({required bool compact}) =>
-      compact ? compactHeight : height;
+      DesktopWindow.style == WindowChromeStyle.macos
+      ? macosHeight
+      : compact
+      ? compactHeight
+      : height;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -117,6 +131,7 @@ class WindowChrome extends ConsumerWidget {
         requester,
         history: history,
         folded: sidebarFolded,
+        beside: besideSidebar,
       ),
     );
   }
@@ -130,6 +145,7 @@ class WindowChrome extends ConsumerWidget {
     bool requester, {
     required WindowHistory history,
     required bool folded,
+    required bool beside,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
     return Semantics(
@@ -151,10 +167,12 @@ class WindowChrome extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
               child: Row(
                 children: [
-                  SizedBox(width: DesktopWindow.leadingButtonGutter),
+                  if (!beside)
+                    SizedBox(width: DesktopWindow.leadingButtonGutter),
                   // The sidebar's switch, in a window wide enough to choose:
-                  // a narrow one folds it by its width.
-                  if (!compact)
+                  // a narrow one folds it by its width. Beside a full sidebar
+                  // the switch is at the sidebar's head.
+                  if (!compact && !beside)
                     _StripButton(
                       key: const ValueKey('strip-sidebar'),
                       icon: Symbols.dock_to_left,
@@ -686,7 +704,7 @@ class WindowDragStrip extends StatelessWidget {
 
     return SizedBox(
       // The shell's own heights, through the shell's own helper: 44 full, 38
-      // compact. A strip that agreed with the shell by coincidence would stop
+      // compact, a Mac's 52 at any width. A strip that agreed with the shell by coincidence would stop
       // agreeing the first time one of the two numbers moved.
       height: WindowChrome.heightFor(compact: compact),
       child: _DragSurface(
@@ -731,6 +749,36 @@ class WindowDragStrip extends StatelessWidget {
 /// the button have it. What in [child] takes no pointer (the title, the gaps
 /// between the controls) lets the press through to the ground, so the window
 /// drags from there.
+/// The head of a Mac's full sidebar, as tall as the window's toolbar: the
+/// traffic lights sit in it, and the switch that hides the sidebar at its end.
+/// The window is dragged by it, as by the strip.
+class SidebarHead extends StatelessWidget {
+  const SidebarHead({super.key});
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: WindowChrome.macosHeight,
+    child: _DragSurface(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+        child: Row(
+          children: [
+            SizedBox(width: DesktopWindow.leadingButtonGutter),
+            const Spacer(),
+            _StripButton(
+              key: const ValueKey('strip-sidebar'),
+              icon: Symbols.dock_to_left,
+              label: 'Hide the sidebar',
+              shortcut: ShellShortcuts.sidebar,
+              intent: const ToggleSidebarIntent(),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 class _DragSurface extends StatelessWidget {
   const _DragSurface({required this.child});
 

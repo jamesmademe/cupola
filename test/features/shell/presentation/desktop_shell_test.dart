@@ -66,7 +66,7 @@ void main() {
       expect(find.byType(DesktopNavRail), findsOneWidget);
       // The page starts under the one strip and reaches the window's foot.
       final page = tester.getRect(find.byType(Placeholder).first);
-      expect(page.top, WindowChrome.height);
+      expect(page.top, WindowChrome.heightFor(compact: false));
       expect(page.bottom, 900, reason: 'no status bar at the foot');
 
       // And none of the touch navigation, at the same size.
@@ -711,6 +711,45 @@ void main() {
       await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
       await tester.pumpAndSettle();
       expect(railWidth(), DesktopNavRail.fullWidth);
+    });
+  });
+
+  testWidgets('on a Mac the full sidebar runs the window\'s height, the '
+      'toolbar starting at its edge; folded, the toolbar spans the window', (
+    tester,
+  ) async {
+    await onPlatform(TargetPlatform.macOS, () async {
+      await _pumpShell(tester, overrides: await _world());
+
+      final rail = tester.getRect(find.byType(DesktopNavRail));
+      final strip = tester.getRect(find.byType(WindowChrome));
+      expect(rail.top, 0);
+      expect(strip.left, DesktopNavRail.fullWidth);
+      expect(strip.height, WindowChrome.macosHeight);
+      expect(find.byType(SidebarHead), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('strip-sidebar')));
+      await tester.pumpAndSettle();
+      expect(
+        tester.getRect(find.byType(DesktopNavRail)).top,
+        WindowChrome.macosHeight,
+      );
+      expect(tester.getRect(find.byType(WindowChrome)).left, 0);
+      expect(find.byType(SidebarHead), findsNothing);
+    });
+  });
+
+  testWidgets('on Windows the strip spans the window over the sidebar, as it '
+      'did', (tester) async {
+    await onPlatform(TargetPlatform.windows, () async {
+      await _pumpShell(tester, overrides: await _world());
+
+      expect(
+        tester.getRect(find.byType(DesktopNavRail)).top,
+        WindowChrome.height,
+      );
+      expect(tester.getRect(find.byType(WindowChrome)).left, 0);
+      expect(find.byType(SidebarHead), findsNothing);
     });
   });
 

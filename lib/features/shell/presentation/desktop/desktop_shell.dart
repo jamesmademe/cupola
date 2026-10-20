@@ -27,6 +27,7 @@ import 'package:cupola/features/shell/presentation/desktop/desktop_rail_services
 import 'package:cupola/features/shell/presentation/desktop/in_flight_glance.dart';
 import 'package:cupola/features/shell/presentation/desktop/inspector_pane.dart';
 import 'package:cupola/features/shell/presentation/desktop/shortcuts_sheet.dart';
+import 'package:cupola/core/platform/desktop_window.dart';
 import 'package:cupola/features/shell/presentation/desktop/window_chrome.dart';
 
 /// The window: chrome, sidebar, content, inspector.
@@ -195,6 +196,11 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
     // room and connection by name.
     final requester = ref.watch(shellAudienceProvider) == Audience.requester;
     final railWidth = DesktopNavRail.widthFor(compact: compact);
+    // A Mac's full sidebar runs the window's height, the traffic lights in
+    // its head, and the toolbar starts at its edge. Folded, the sidebar is too
+    // narrow for the lights: the toolbar spans the window again.
+    final tallSidebar =
+        DesktopWindow.style == WindowChromeStyle.macos && !compact;
 
     // Recents for the deck, recorded here because this is the one widget that
     // sees every location change in the window.
@@ -339,23 +345,25 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
                   ),
                   Positioned(
                     top: 0,
-                    left: 0,
+                    left: tallSidebar ? railWidth : 0,
                     right: 0,
                     height: chromeHeight,
                     child: WindowChrome(
                       inspectorOpen: inspectorShown,
                       inspectorAvailable: chosen,
                       sidebarFolded: compact && !narrow,
+                      besideSidebar: tallSidebar,
                       onCommandDeck: requester ? null : _openDeck,
                     ),
                   ),
                   Positioned(
-                    top: chromeHeight,
+                    top: tallSidebar ? 0 : chromeHeight,
                     left: 0,
                     width: railWidth,
                     bottom: 0,
                     child: DesktopNavRail(
                       compact: compact,
+                      header: tallSidebar ? const SidebarHead() : null,
                       selectedIndex: widget.selectedIndex,
                       destinations: widget.destinations,
                       onDestinationSelected: widget.onDestinationSelected,

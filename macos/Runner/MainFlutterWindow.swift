@@ -28,6 +28,15 @@ class MainFlutterWindow: NSWindow {
     self.titlebarAppearsTransparent = true
     self.styleMask.insert(.fullSizeContentView)
 
+    // An empty unified toolbar: it makes the title bar the 52pt band Flutter
+    // draws its toolbar in (`WindowChrome.macosHeight`), and centres the
+    // traffic lights in it, as a Mac's own windows with a sidebar have them.
+    // It holds no item: every control in the band is Flutter's.
+    let toolbar = NSToolbar(identifier: "CupolaWindowToolbar")
+    toolbar.showsBaselineSeparator = false
+    self.toolbar = toolbar
+    self.toolbarStyle = .unified
+
     let autosaveName = "CupolaMainWindow"
     let isFirstLaunch =
       UserDefaults.standard.object(forKey: "NSWindow Frame \(autosaveName)") == nil

@@ -125,7 +125,7 @@ void main() {
     // agreed with the shell by coincidence would stop agreeing the first time
     // one of the two numbers moved.
     testWidgets('is 44pt full and 38pt compact', (tester) async {
-      await _onPlatform(TargetPlatform.macOS, () async {
+      await _onPlatform(TargetPlatform.linux, () async {
         await _pump(tester);
         expect(
           tester.getSize(find.byType(WindowDragStrip)).height,
@@ -136,6 +136,26 @@ void main() {
         expect(
           tester.getSize(find.byType(WindowDragStrip)).height,
           WindowChrome.compactHeight,
+        );
+      });
+    });
+
+    // The runner's unified toolbar makes every Mac window's title bar 52pt,
+    // the lights centred in it: the strip is that band at any width.
+    testWidgets('is the toolbar\'s 52pt on a Mac, full and compact', (
+      tester,
+    ) async {
+      await _onPlatform(TargetPlatform.macOS, () async {
+        await _pump(tester);
+        expect(
+          tester.getSize(find.byType(WindowDragStrip)).height,
+          WindowChrome.macosHeight,
+        );
+
+        await _pump(tester, size: const Size(720, 450));
+        expect(
+          tester.getSize(find.byType(WindowDragStrip)).height,
+          WindowChrome.macosHeight,
         );
       });
     });

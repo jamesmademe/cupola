@@ -49,6 +49,7 @@ class DesktopNavRail extends StatelessWidget {
     this.onService,
     this.stackFigure,
     this.footer,
+    this.header,
   });
 
   final int selectedIndex;
@@ -77,6 +78,11 @@ class DesktopNavRail extends StatelessWidget {
 
   /// Above Settings on the full sidebar: what is in flight.
   final Widget? footer;
+
+  /// Above the sections on the full sidebar: a Mac's sidebar runs the
+  /// window's height, and its head holds the traffic lights and the switch
+  /// that hides it ([SidebarHead]).
+  final Widget? header;
 
   static const double fullWidth = 240;
   static const double compactWidth = 56;
@@ -130,48 +136,53 @@ class DesktopNavRail extends StatelessWidget {
                   ],
                 ),
               )
-            : Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.row,
-                  vertical: AppSpacing.sm,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (var i = 0; i < destinations.length; i++)
-                      _destinationItem(i),
-                    Expanded(
-                      child: services.isEmpty
-                          ? const SizedBox.shrink()
-                          : ListView(
-                              padding: const EdgeInsets.only(
-                                top: AppSpacing.sm,
-                              ),
-                              children: [
-                                for (final domain in ServiceDomain.values)
-                                  ..._domainRows(context, domain, dim),
-                              ],
-                            ),
-                    ),
-                    if (footer case final footer?) ...[
-                      const SizedBox(height: AppSpacing.sm),
-                      footer,
-                      const SizedBox(height: AppSpacing.xs),
-                    ],
-                    _SidebarItem(
-                      glyph: _destinationGlyph(settings),
-                      label: settings.label,
-                      spoken: settings.label,
-                      shortcut: ShellShortcuts.settings,
-                      selected: settingsSelected,
-                      onPressed: onSettings,
-                    ),
-                  ],
-                ),
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ?header,
+                  Expanded(child: _full(context, dim)),
+                ],
               ),
       ),
     );
   }
+
+  Widget _full(BuildContext context, Color dim) => Padding(
+    padding: const EdgeInsets.symmetric(
+      horizontal: AppSpacing.row,
+      vertical: AppSpacing.sm,
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < destinations.length; i++) _destinationItem(i),
+        Expanded(
+          child: services.isEmpty
+              ? const SizedBox.shrink()
+              : ListView(
+                  padding: const EdgeInsets.only(top: AppSpacing.sm),
+                  children: [
+                    for (final domain in ServiceDomain.values)
+                      ..._domainRows(context, domain, dim),
+                  ],
+                ),
+        ),
+        if (footer case final footer?) ...[
+          const SizedBox(height: AppSpacing.sm),
+          footer,
+          const SizedBox(height: AppSpacing.xs),
+        ],
+        _SidebarItem(
+          glyph: _destinationGlyph(settings),
+          label: settings.label,
+          spoken: settings.label,
+          shortcut: ShellShortcuts.settings,
+          selected: settingsSelected,
+          onPressed: onSettings,
+        ),
+      ],
+    ),
+  );
 
   Widget _destinationItem(int i) {
     final destination = destinations[i];

@@ -194,7 +194,8 @@ void main() {
         platform: CatalogPlatform.desktop,
       ),
       CatalogScene(
-        'WindowChrome · compact (a 960 window) · 38 tall; the lens keeps only '
+        'WindowChrome · compact (a 960 window) · a Mac\'s 52 still (38 on '
+        'Windows and Linux); the lens keeps only '
         'its glyph, the way to anything reads Jump, and no switch for a pane '
         'a compact window never lays out',
         (_) => _Scene(
