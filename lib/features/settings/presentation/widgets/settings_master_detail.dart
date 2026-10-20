@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoRouteTransitionMixin;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -42,15 +43,23 @@ class SettingsMasterDetail extends ConsumerWidget {
   /// ("16 of 17 set up · 14 answering"), and 232 truncated every one of them.
   static const double _listWidth = 300;
 
-  /// Whether this build and this window are showing the rail.
+  /// Whether this build and this window are showing the rail: a desktop
+  /// window from [AppBreakpoints.desktopCompact], a touch build from
+  /// [AppBreakpoints.touchSplit] (a tablet on its side, where the rail of the
+  /// shell leaves the page about 1080 wide: 300 for the list, the rest for a
+  /// form that is still wider than a phone's).
   ///
   /// Public because the root pane has to ask: below the threshold `/settings`
   /// *is* the index list, and above it the same route is the summary beside the
   /// rail. Two screens reading one predicate, so they cannot disagree about
   /// which of the two the user is looking at.
-  static bool showsRail(BuildContext context) =>
-      AppBreakpoints.isDesktopShell(context) &&
-      MediaQuery.sizeOf(context).width >= AppBreakpoints.desktopCompact;
+  static bool showsRail(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    return AppBreakpoints.isDesktopPlatform
+        ? AppBreakpoints.isDesktopShell(context) &&
+              width >= AppBreakpoints.desktopCompact
+        : width >= AppBreakpoints.touchSplit;
+  }
 
   static const List<SettingsSection> sections = [
     // Overview, not "Settings": the rail already sits under a Settings eyebrow,
@@ -298,4 +307,75 @@ class _SectionRowState extends State<_SectionRow> {
       ),
     );
   }
+}
+
+/// A section of Settings, the page a row of the list opens.
+///
+/// Beside the list ([SettingsMasterDetail.showsRail]) one section takes the
+/// place of the other where it stands: no slide, which carried the list away
+/// with the page, and no back button, since the list beside it is the way
+/// between sections (Overview is its first row). Where the list is not drawn
+/// it is the drill-down every other page is.
+class SettingsSectionPage extends Page<void> {
+  const SettingsSectionPage({
+    required LocalKey super.key,
+    super.name,
+    required this.child,
+  });
+
+  final Widget child;
+
+  @override
+  Route<void> createRoute(BuildContext context) =>
+      SettingsMasterDetail.showsRail(context)
+      ? _BesideTheList(settings: this)
+      : _DrillDown(settings: this);
+}
+
+/// The page every other settings page is: the platform's slide. Built from
+/// the page as `CupertinoPage` builds it, so a new location (another
+/// account's `?i=`) redraws it.
+class _DrillDown extends PageRoute<void>
+    with CupertinoRouteTransitionMixin<void> {
+  _DrillDown({required SettingsSectionPage super.settings});
+
+  @override
+  Widget buildContent(BuildContext context) =>
+      (settings as SettingsSectionPage).child;
+
+  @override
+  String? get title => null;
+
+  @override
+  bool get maintainState => true;
+}
+
+class _BesideTheList extends PageRoute<void> {
+  _BesideTheList({required SettingsSectionPage super.settings});
+
+  @override
+  Duration get transitionDuration => Duration.zero;
+
+  @override
+  Duration get reverseTransitionDuration => Duration.zero;
+
+  /// The list is the way back, not a button.
+  @override
+  bool get impliesAppBarDismissal => false;
+
+  @override
+  bool get maintainState => true;
+
+  @override
+  Color? get barrierColor => null;
+
+  @override
+  String? get barrierLabel => null;
+
+  @override
+  Widget buildPage(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+  ) => (settings as SettingsSectionPage).child;
 }

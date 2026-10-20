@@ -57,6 +57,7 @@ import 'package:cupola/features/discover/presentation/calendar_page.dart';
 import 'package:cupola/features/discover/presentation/catalog_page.dart';
 import 'package:cupola/features/discover/presentation/discover_page.dart';
 import 'package:cupola/features/release_search/presentation/release_search_settings_screen.dart';
+import 'package:cupola/features/settings/presentation/widgets/settings_master_detail.dart';
 import 'package:cupola/features/settings/presentation/settings_appearance_screen.dart';
 import 'package:cupola/features/settings/presentation/settings_hints_screen.dart';
 import 'package:cupola/features/outside/domain/outside_link.dart';
@@ -229,6 +230,19 @@ GoRoute _page(
     child: child(state),
   ),
 );
+
+/// A row of Settings' list (`SettingsMasterDetail.sections`): beside the list
+/// it takes the place of the section before it, with no slide and no back
+/// button; without the list it is a [_page] (`SettingsSectionPage`).
+GoRoute _section(String path, Widget Function(GoRouterState state) child) =>
+    GoRoute(
+      path: path,
+      pageBuilder: (context, state) => SettingsSectionPage(
+        key: state.pageKey,
+        name: state.matchedLocation,
+        child: child(state),
+      ),
+    );
 
 /// The one page a title has, at the title's own location (`MediaKey.location`)
 /// under a mount. `ServiceRoutes.mediaMountServices` says where it hangs, and
@@ -3067,17 +3081,17 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
       // section owned by another feature was also the one that transitioned
       // differently and lost the rail. Nothing else about the route changes:
       // same path, same screen, same location in the rail's `sections` list.
-      _page(
+      _section(
         'background-search',
         (state) => const ReleaseSearchSettingsScreen(),
       ),
-      _page('appearance', (state) => const SettingsAppearanceScreen()),
+      _section('appearance', (state) => const SettingsAppearanceScreen()),
       // Edit Home, from Settings: the page the Home's own row opens, whose
       // way back here is Settings.
-      _page('home', (state) => const EditHomePage()),
-      _page('hints', (state) => const SettingsHintsScreen()),
+      _section('home', (state) => const EditHomePage()),
+      _section('hints', (state) => const SettingsHintsScreen()),
       _page('notifications', (state) => const SettingsNotificationsScreen()),
-      _page('connections', (state) => const SettingsConnectionsScreen()),
+      _section('connections', (state) => const SettingsConnectionsScreen()),
       // The code another device copies this one's connections from: the
       // operator's, since the requester has no connection to hand over.
       _page('another-device', (state) => const PairOfferScreen()),
@@ -3087,16 +3101,16 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
         path: 'services',
         redirect: (context, state) => '/settings/connections',
       ),
-      _page('region', (state) => const SettingsRegionScreen()),
+      _section('region', (state) => const SettingsRegionScreen()),
       // The requester's account. The operator's lives in the connection's
       // form, where `_audienceRedirect` sends him.
-      _page(
+      _section(
         'account',
         (state) => RequesterAccountPage(
           instanceId: state.uri.queryParameters['i'] ?? '',
         ),
       ),
-      _page('certificates', (state) => const TrustedCertificatesScreen()),
+      _section('certificates', (state) => const TrustedCertificatesScreen()),
       _page(
         'service/:service',
         (state) {
