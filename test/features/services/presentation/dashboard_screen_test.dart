@@ -38,6 +38,7 @@ import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/discover/domain/library_calendar.dart';
 import 'package:cupola/features/discover/presentation/library_calendar_provider.dart';
 import 'package:cupola/features/home/data/resume.dart';
+import 'package:cupola/features/home/presentation/widgets/balanced_columns.dart';
 import 'package:cupola/features/home/presentation/widgets/downloads_module.dart';
 import 'package:cupola/features/home/presentation/widgets/home_module_parts.dart';
 import 'package:cupola/features/home/presentation/widgets/requests_module.dart';
@@ -1236,9 +1237,21 @@ List<String> _regionsOnPage(WidgetTester tester) {
   final list = tester.widget<ListView>(find.byType(ListView));
   final children = (list.childrenDelegate as SliverChildListDelegate).children;
   // Wider than the reading well, the Home sets each module in its column.
+  // At the test's 800pt the short modules pair up: a pair reads as its two
+  // modules, left then right, so the list still says the person's order.
   Widget region(Widget child) =>
       child is Padding && child.child != null ? child.child! : child;
-  return [for (final child in children) region(child).runtimeType.toString()];
+  Iterable<Widget> modules(Widget child) => switch (region(child)) {
+    Row(:final children) => [
+      for (final half in children) half is Expanded ? half.child : half,
+    ],
+    BalancedColumns(:final children) => children,
+    final one => [one],
+  };
+  return [
+    for (final child in children)
+      for (final module in modules(child)) module.runtimeType.toString(),
+  ];
 }
 
 /// Pumps [page] with every source overridden.

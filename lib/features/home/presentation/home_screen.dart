@@ -57,6 +57,8 @@ import 'package:cupola/features/services/presentation/nothing_set_up.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/home/domain/home_arrangement.dart';
+import 'package:cupola/features/home/presentation/widgets/balanced_columns.dart';
 import 'package:cupola/features/shell/domain/settings_return.dart';
 import 'package:cupola/features/shell/domain/shell_audience.dart';
 import 'package:cupola/features/stream/presentation/stream_activity_provider.dart';
@@ -123,44 +125,50 @@ class HomeScreen extends ConsumerWidget {
                 children: [
                   RefreshIndicator(
                     onRefresh: () => _refreshHome(ref),
-                    // One column, in the reading well on a tablet and in a
-                    // window: Featured as wide as the well, every module
-                    // under it at its phone's measure grown to the well's,
-                    // and the shelves across the page (`HomeWell`).
+                    // The phone's column on a phone, in the reading well on a
+                    // page a little wider; short modules in pairs where two
+                    // fit at the phone's measure; two columns where they fit
+                    // as columns (`HomeMode`). The shelves span the page in
+                    // every mode (`HomeWell`).
                     child: LayoutBuilder(
-                      builder: (context, box) => HomeWell(
-                        inset: AppBreakpoints.wellInset(box.maxWidth),
-                        child: Builder(
-                          builder: (context) {
-                            Widget column(Widget child) =>
-                                HomeWell.column(context, child);
-                            return ListView(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              padding: EdgeInsets.only(bottom: bottomPadding),
-                              children: [
-                                column(
-                                  HomeHeader(
-                                    showsHealth: !requester,
-                                    trailing: requester
-                                        ? const _AccountButton()
-                                        : null,
+                      builder: (context, box) {
+                        final mode = HomeMode.at(box.maxWidth);
+                        return HomeWell(
+                          inset: mode == HomeMode.single
+                              ? AppBreakpoints.wellInset(box.maxWidth)
+                              : 0,
+                          child: Builder(
+                            builder: (context) {
+                              Widget column(Widget child) =>
+                                  HomeWell.column(context, child);
+                              return ListView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                padding: EdgeInsets.only(bottom: bottomPadding),
+                                children: [
+                                  column(
+                                    HomeHeader(
+                                      showsHealth: !requester,
+                                      trailing: requester
+                                          ? const _AccountButton()
+                                          : null,
+                                    ),
                                   ),
-                                ),
-                                column(const HomeAsOfLine()),
-                                if (requester)
-                                  column(const _RequesterFailureLine()),
-                                for (final module in layout.shown)
-                                  if (_shelves.contains(module))
-                                    homeModuleView(module)
-                                  else
-                                    column(homeModuleView(module)),
-                                if (!requester) column(const EditHomeRow()),
-                                const SizedBox(height: AppSpacing.lg),
-                              ],
-                            );
-                          },
-                        ),
-                      ),
+                                  column(const HomeAsOfLine()),
+                                  if (requester)
+                                    column(const _RequesterFailureLine()),
+                                  for (final row in homeRowsOf(
+                                    layout.shown,
+                                    mode,
+                                  ))
+                                    _homeRow(row, column),
+                                  if (!requester) column(const EditHomeRow()),
+                                  const SizedBox(height: AppSpacing.lg),
+                                ],
+                              );
+                            },
+                          ),
+                        );
+                      },
                     ),
                   ),
                   const Positioned(
@@ -174,6 +182,33 @@ class HomeScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// One row of the Home as drawn: a module, two side by side, or the two
+/// columns, each module keeping its own gutters so the columns need no gap of
+/// their own.
+Widget _homeRow(HomeRow row, Widget Function(Widget) column) {
+  Widget one(HomeModule module) => _shelves.contains(module)
+      ? homeModuleView(module)
+      : column(homeModuleView(module));
+  return switch (row) {
+    HomeRowPair(:final module, :final second) => column(
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: homeModuleView(module)),
+          Expanded(child: homeModuleView(second)),
+        ],
+      ),
+    ),
+    HomeRowOne(:final module) => one(module),
+    HomeRowColumns(:final main, :final side) => column(
+      BalancedColumns(
+        main: [for (final module in main) homeModuleView(module)],
+        side: [for (final module in side) homeModuleView(module)],
+      ),
+    ),
+  };
 }
 
 /// The modules that are a shelf of posters: they span the page and keep

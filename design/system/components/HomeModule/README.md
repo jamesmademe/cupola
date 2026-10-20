@@ -32,12 +32,25 @@ words in `lib/features/home/domain/now_playing.dart`), `continue_watching_module
 `HomeModule` (`lib/features/home/domain/home_module.dart`) read through the person's saved layout; see
 [EditHome](../EditHome/README.md).
 
-The Home is drawn at 390 and is one column everywhere: on a tablet and in a desktop window it stops at the reading
-well, 720 (`AppBreakpoints.wellInset`), centred, Featured as wide as the well and every module under it at the well's
-measure. A shelf of posters (Trending this week, Coming soon, the Discover shelf) runs across the page instead, its
-heading and first poster on the well's line (`HomeWell`), so its posters scroll to the page's edge: cut at the well's
-edge with the page empty beside it, a shelf reads as broken. Beside a title open on a tablet it keeps the phone's 440
-column.
+The Home is drawn at 390, and what a wider page does with its modules is decided by the page's width alone, never by
+the platform (`HomeMode`, `lib/features/home/domain/home_arrangement.dart`):
+
+- **One column** under 780: the phone's, and wider than the reading well, 720 (`AppBreakpoints.wellInset`), the well
+  centred, Featured as wide as the well and every module under it at the well's measure. Beside a title open on a
+  tablet it keeps the phone's 440 column.
+- **Pairs** from 780, two modules at the phone's measure (an iPad upright, a 1100 window): the page's whole width; two
+  short modules next to each other in the person's order (Coming up, Downloads, Requests, Stack health, Storage, Set up
+  next) share a row, halves of the width; every other module keeps the width.
+- **Two columns** from 960 (a tablet on its side, a window from about 1200): Needs you across the top, then what is
+  happening on the left (7 parts: Featured, Continue watching, Arrived, Now playing, Ready to watch, Your requests) and
+  what waits on the right (5 parts: the short modules above), each in the person's order, the shelves across the page
+  under them. `BalancedColumns` lays the two out and evens them by what each module drew: a module with nothing to say
+  draws nothing, so while the taller column's last module, moved to the end of the shorter one, brings their heights
+  closer, it moves; a column keeps one of its own. The modules keep their own gutters, so the columns need no gap.
+
+A shelf of posters (Trending this week, Coming soon, the Discover shelf) runs across the page in every mode, its
+heading and first poster on the column's line (`HomeWell`), so its posters scroll to the page's edge: cut at the well's
+edge with the page empty beside it, a shelf reads as broken.
 
 ## The five states
 
