@@ -197,7 +197,7 @@ class _AuthorPageState extends ConsumerState<AuthorPage>
       light: light,
       heroTag: widget.heroTag,
       moreLabel: 'More actions for ${author.authorName}',
-      onMore: () => _more(author, name: name, shelf: shelf),
+      onMore: (plate) => _more(author, name: name, shelf: shelf, plate: plate),
       onRefresh: () async => _readAgain(),
       slivers: [
         const SliverToBoxAdapter(
@@ -425,9 +425,11 @@ class _AuthorPageState extends ConsumerState<AuthorPage>
     ReadarrAuthor author, {
     required String name,
     required AuthorShelf? shelf,
+    required BuildContext plate,
   }) {
     showMediaDetailActions(
       context,
+      anchor: plate,
       accent: ServiceKey.readarr.accent,
       title: author.authorName,
       actions: [

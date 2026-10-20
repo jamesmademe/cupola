@@ -134,6 +134,24 @@ abstract final class AppBreakpoints {
   /// that keeps the OS window buttons. The window stays frameless either way.
   static const double desktopMobile = DesignTokens.breakpointDesktopMobile;
 
+  /// From this width a sheet is a dialog (`AppBottomSheet`): a form or a
+  /// picker centred at 520, a long list in a tall one. The width a desktop
+  /// window keeps its own shell from, on a tablet as on a desktop.
+  static const double sheetDialog = desktopMobile;
+
+  /// The short side a window needs as well: a phone on its side is 900 wide
+  /// and 430 tall, and a dialog there would be a strip. The largest phones
+  /// stop short of it; a tablet, a folded-out phone and a desktop window pass.
+  static const double sheetDialogShortest = 500;
+
+  /// Whether a sheet shown in [context] is drawn as a dialog: see
+  /// [sheetDialog]. The width alone, never the platform.
+  static bool sheetsAreDialogs(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    return size.width >= sheetDialog &&
+        size.shortestSide >= sheetDialogShortest;
+  }
+
   /// Narrowest a desktop window may be dragged: a small phone's width. Height
   /// stays the compact artboard's, so the 720x450 frame remains reachable.
   static const Size desktopMinimumWindow = Size(

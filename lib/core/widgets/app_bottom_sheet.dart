@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/app_elevation.dart';
 import 'package:cupola/core/app_gradients.dart';
 import 'package:cupola/core/app_radius.dart';
@@ -134,6 +135,13 @@ class AppSheetHeader extends StatelessWidget {
 ///
 /// Use [AppBottomSheet.show] for min-content forms/pickers, or
 /// [AppBottomSheet.showScrollable] for large, drag-to-resize lists.
+///
+/// Where there is room ([AppBreakpoints.sheetsAreDialogs]: 720 wide, on a
+/// tablet as on a desktop) neither rises from the bottom: a form or a picker
+/// is a dialog centred at [SheetUtils.formWidth], a long list a tall one at
+/// [SheetUtils.listWidth], with the same header, always with its close
+/// button, and closed by Esc or a click outside ([SheetInDialog]). The
+/// caller's body is the same.
 class AppBottomSheet extends StatelessWidget {
   final String? title;
   final String? subtitle;
@@ -177,6 +185,10 @@ class AppBottomSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final draggable = scrollController != null;
+    final inDialog = SheetInDialog.of(context);
+    final showHandle = this.showHandle && !inDialog;
+    // A pointer has no edge to swipe a dialog away from.
+    final showClose = this.showClose || inDialog;
 
     final header = _hasHeader
         ? Padding(
@@ -211,6 +223,22 @@ class AppBottomSheet extends StatelessWidget {
       children: [if (showHandle) const AppSheetHandle(), ?header, body],
     );
 
+    // The dialog is the panel: its corners, its edge, its scrim and its own
+    // way out of the keyboard's way. The glow stays the sheet's.
+    if (inDialog) {
+      return Stack(
+        children: [
+          if (accent != null) _glow(accent!),
+          Padding(
+            padding: EdgeInsets.only(
+              top: _hasHeader ? AppSpacing.sm : AppSpacing.lg,
+            ),
+            child: column,
+          ),
+        ],
+      );
+    }
+
     final content = draggable
         ? column
         : ConstrainedBox(
@@ -242,24 +270,7 @@ class AppBottomSheet extends StatelessWidget {
           ),
           child: Stack(
             children: [
-              if (accent != null)
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: 140,
-                  child: IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: AppGradients.serviceGlow(
-                          accent!,
-                          center: Alignment.topCenter,
-                          radius: 1.1,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+              if (accent != null) _glow(accent!),
               SafeArea(top: false, child: content),
             ],
           ),
@@ -267,6 +278,25 @@ class AppBottomSheet extends StatelessWidget {
       ),
     );
   }
+
+  /// The service's glow behind the header.
+  static Widget _glow(Color accent) => Positioned(
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 140,
+    child: IgnorePointer(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: AppGradients.serviceGlow(
+            accent,
+            center: Alignment.topCenter,
+            radius: 1.1,
+          ),
+        ),
+      ),
+    ),
+  );
 
   /// Shows a min-content bottom sheet (forms, pickers). The [builder] result is
   /// scrolled internally so it can never overflow with the keyboard open.
@@ -284,6 +314,14 @@ class AppBottomSheet extends StatelessWidget {
     bool enableDrag = true,
     EdgeInsetsGeometry? bodyPadding,
   }) {
+    final padding =
+        bodyPadding ??
+        const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          0,
+          AppSpacing.lg,
+          AppSpacing.lg,
+        );
     return SheetUtils.showCupolaModalSheet<T>(
       context: context,
       isDismissible: isDismissible,
@@ -297,14 +335,7 @@ class AppBottomSheet extends StatelessWidget {
         headerTrailing: headerTrailing,
         showClose: showClose,
         showHandle: showHandle,
-        bodyPadding:
-            bodyPadding ??
-            const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              0,
-              AppSpacing.lg,
-              AppSpacing.lg,
-            ),
+        bodyPadding: padding,
         child: Builder(builder: builder),
       ),
     );
@@ -330,6 +361,29 @@ class AppBottomSheet extends StatelessWidget {
     bool enableDrag = true,
     EdgeInsetsGeometry? bodyPadding,
   }) {
+    // A dialog has no drag: the list is given a scroll of its own, at the
+    // dialog's full height.
+    if (AppBreakpoints.sheetsAreDialogs(context)) {
+      return SheetUtils.showCupolaModalSheet<T>(
+        context: context,
+        isDismissible: isDismissible,
+        dialogWidth: SheetUtils.listWidth,
+        tall: true,
+        builder: (context) => _OwnScroll(
+          builder: (context, scrollController) => AppBottomSheet(
+            title: title,
+            subtitle: subtitle,
+            icon: icon,
+            accent: accent,
+            headerTrailing: headerTrailing,
+            showClose: showClose,
+            scrollController: scrollController,
+            bodyPadding: bodyPadding ?? EdgeInsets.zero,
+            child: builder(context, scrollController),
+          ),
+        ),
+      );
+    }
     return SheetUtils.showCupolaModalSheet<T>(
       context: context,
       isDismissible: isDismissible,
@@ -354,4 +408,28 @@ class AppBottomSheet extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Owns the scroll a dialog gives a sheet's list in place of the drag.
+class _OwnScroll extends StatefulWidget {
+  const _OwnScroll({required this.builder});
+
+  final Widget Function(BuildContext context, ScrollController controller)
+  builder;
+
+  @override
+  State<_OwnScroll> createState() => _OwnScrollState();
+}
+
+class _OwnScrollState extends State<_OwnScroll> {
+  final _controller = ScrollController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.builder(context, _controller);
 }

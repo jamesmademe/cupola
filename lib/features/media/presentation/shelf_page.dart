@@ -115,9 +115,10 @@ class ShelfPage extends StatelessWidget {
   final String? heroTag;
 
   /// The page's other actions, behind the plate at the top right, and what
-  /// that plate says to a screen reader.
+  /// that plate says to a screen reader. [onMore] is handed the plate, so a
+  /// wide window can open the actions as a menu under it.
   final String? moreLabel;
-  final VoidCallback? onMore;
+  final void Function(BuildContext plate)? onMore;
 
   /// A pull reads the page again.
   final Future<void> Function()? onRefresh;
@@ -191,10 +192,12 @@ class ShelfPage extends StatelessWidget {
         return MediaPinnedPlates(
           inset: gutter,
           trailing: switch (onMore) {
-            final onMore? => MediaPlate(
-              label: moreLabel ?? 'More actions',
-              icon: Icons.more_horiz_rounded,
-              onTap: onMore,
+            final onMore? => Builder(
+              builder: (plate) => MediaPlate(
+                label: moreLabel ?? 'More actions',
+                icon: Icons.more_horiz_rounded,
+                onTap: () => onMore(plate),
+              ),
             ),
             null => null,
           },

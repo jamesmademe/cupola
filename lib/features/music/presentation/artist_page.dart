@@ -249,7 +249,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
       light: light,
       heroTag: widget.heroTag,
       moreLabel: 'More actions for ${artist.artistName}',
-      onMore: () => _more(artist, name: name),
+      onMore: (plate) => _more(artist, name: name, plate: plate),
       onRefresh: () async => _readAgain(),
       slivers: [
         if (covers.isNotEmpty)
@@ -568,7 +568,11 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
     ).stampedWith(_instanceId),
   );
 
-  void _more(LidarrArtist artist, {required String name}) {
+  void _more(
+    LidarrArtist artist, {
+    required String name,
+    required BuildContext plate,
+  }) {
     final import = openManualImportCallback(
       context,
       ServiceKey.lidarr,
@@ -577,6 +581,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
     );
     showMediaDetailActions(
       context,
+      anchor: plate,
       accent: ServiceKey.lidarr.accent,
       title: artist.artistName,
       actions: [

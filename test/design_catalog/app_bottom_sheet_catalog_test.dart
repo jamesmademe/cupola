@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/sheet_utils.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/media_value_sheet.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -167,6 +168,52 @@ class _ScrollableSheetState extends State<_ScrollableSheet> {
   );
 }
 
+/// The sheet where there is room: the theme's dialog over the room's scrim,
+/// as `SheetUtils.showCupolaModalSheet` opens it, [width] wide and, for a
+/// list, [tall] at its share of the window.
+Widget _asDialog(
+  Widget sheet, {
+  double width = SheetUtils.formWidth,
+  double? tall,
+}) => Builder(
+  builder: (context) => Stack(
+    fit: StackFit.expand,
+    children: [
+      ColoredBox(color: Theme.of(context).colorScheme.surface),
+      ColoredBox(color: CupolaRoom.of(context).scrim),
+      Center(
+        child: Dialog(
+          insetPadding: const EdgeInsets.all(AppSpacing.xl),
+          clipBehavior: Clip.antiAlias,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: width),
+            child: SizedBox(
+              height: tall,
+              child: SheetInDialog(child: sheet),
+            ),
+          ),
+        ),
+      ),
+    ],
+  ),
+);
+
+CatalogScene _dialog(
+  String caption,
+  Widget sheet, {
+  double width = SheetUtils.formWidth,
+  double? tall,
+  double height = 520,
+  double textScale = 1,
+}) => CatalogScene(
+  caption,
+  (_) => _asDialog(sheet, width: width, tall: tall),
+  width: 880,
+  height: height,
+  platform: CatalogPlatform.desktop,
+  textScale: textScale,
+);
+
 CatalogScene _scene(
   String caption,
   Widget Function() sheet, {
@@ -244,12 +291,41 @@ void main() {
         height: 240,
       ),
       _scene(
-        'On a desktop window · the modal sheet caps at 640pt wide, centred',
+        'A desktop window under 720 wide or 500 tall · still a sheet, capped '
+        'at 640pt and centred',
         _qualityPicker,
-        width: 832,
+        width: 700,
         height: 440,
         maxWidth: 640,
         platform: CatalogPlatform.desktop,
+      ),
+      _dialog(
+        'Where there is room (720 wide and 500 tall: a tablet, a desktop '
+        'window) · AppBottomSheet.show is a dialog: 520 wide, centred, the '
+        'same header with its close button, no handle; Esc or a click outside '
+        'closes it',
+        _qualityPicker(),
+        height: 480,
+      ),
+      _dialog(
+        'A form as a dialog · qBittorrent\'s Add torrent, its fields at 520',
+        _addTorrent(),
+        height: 620,
+      ),
+      _dialog(
+        'AppBottomSheet.showScrollable as a dialog · a long list at 680 wide '
+        'and 85% of the window tall, on a scroll of its own in place of the '
+        'drag',
+        const _ScrollableSheet(),
+        width: SheetUtils.listWidth,
+        tall: 520,
+        height: 620,
+      ),
+      _dialog(
+        'Text at 200% · the picker as a dialog',
+        _qualityPicker(),
+        height: 800,
+        textScale: catalogTextScale,
       ),
       _scene(
         'Text at 200% · a picker with icon, accent and subtitle: the header '

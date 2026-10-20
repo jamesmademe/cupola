@@ -41,7 +41,12 @@ Future<void> _show(BuildContext context, Widget sheet) =>
     SheetUtils.showCupolaModalSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (_) => FractionallySizedBox(heightFactor: 0.86, child: sheet),
+      // Where it is a dialog, a list's: wide, and at the dialog's height.
+      dialogWidth: SheetUtils.listWidth,
+      tall: true,
+      builder: (context) => SheetInDialog.of(context)
+          ? sheet
+          : FractionallySizedBox(heightFactor: 0.86, child: sheet),
     );
 
 /// Where the sheet is: the title, then (a series, an album) the part of it.

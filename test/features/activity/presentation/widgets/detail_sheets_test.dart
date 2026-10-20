@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/widgets/app_bottom_sheet.dart';
+
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/widgets/detail_sheets.dart';
 
@@ -309,10 +311,14 @@ Future<void> _scrollSheetUntilVisible(
   await tester.scrollUntilVisible(
     finder,
     200,
-    scrollable: find.descendant(
-      of: find.byType(DraggableScrollableSheet),
-      matching: find.byType(Scrollable),
-    ),
+    // The sheet's list, risen from the bottom or, at the test's 800 wide, in
+    // its dialog.
+    scrollable: find
+        .descendant(
+          of: find.byType(AppBottomSheet),
+          matching: find.byType(Scrollable),
+        )
+        .first,
   );
   await tester.pumpAndSettle();
 }
