@@ -102,6 +102,20 @@ final inspectorPollProvider = Provider.autoDispose<void>((ref) {
   );
 });
 
+/// What the desktop sidebar's "In flight" reads again while it is on screen,
+/// to watch with `watchWhileLive`.
+///
+/// The same sources as the Home's Downloads, on the Home's clock: the glance
+/// is that module folded to two lines, and it must not disagree with it, nor
+/// go stale on a window that never visits the Home.
+final sidebarInFlightPollProvider = Provider.autoDispose<void>((ref) {
+  ref.gatedPoll(
+    id: 'sidebar.inflight',
+    interval: homeLiveInterval,
+    onTick: () => ref.readAgainUnlessInFlight(homeDownloadsSources),
+  );
+});
+
 /// Drops what [tab] draws, so it is read again: a pull, a second tap on the
 /// tab, a return after a while.
 void invalidateActivity(WidgetRef ref, ActivityTab tab) {

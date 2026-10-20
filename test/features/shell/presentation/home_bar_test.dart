@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cupola/features/activity/data/activity_live.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/features/home/data/featured.dart';
 import 'package:cupola/features/home/data/home_live.dart';
@@ -324,12 +325,17 @@ void main() {
           matching: find.text('Settings'),
         );
         expect(settings, findsOneWidget);
+        // The key is the row's hint, printed only under the pointer.
         expect(
-          find.descendant(
-            of: find.byType(DesktopNavRail),
-            matching: find.text('⌘,'),
-          ),
-          findsOneWidget,
+          tester
+              .widget<Semantics>(
+                find
+                    .ancestor(of: settings, matching: find.byType(Semantics))
+                    .first,
+              )
+              .properties
+              .hint,
+          '⌘,',
         );
 
         await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
@@ -448,6 +454,7 @@ Future<ProviderContainer> _pump(
       // container that holds its timer is disposed.
       homeLivePollProvider.overrideWith((ref) {}),
       homeRecoveryPollProvider.overrideWith((ref) {}),
+      sidebarInFlightPollProvider.overrideWith((ref) {}),
       featuredAdvancesProvider.overrideWithValue(false),
     ],
   );

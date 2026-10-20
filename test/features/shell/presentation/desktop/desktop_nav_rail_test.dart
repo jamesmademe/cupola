@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -85,37 +86,98 @@ void main() {
         service: ServiceKey.seerr,
         tone: StatusTone.info,
         state: '2 requests wait for approval',
+        count: '2',
       ),
-      (service: ServiceKey.radarr, tone: null, state: null),
-      (service: ServiceKey.sonarr, tone: StatusTone.warning, state: 'a fault'),
+      (service: ServiceKey.radarr, tone: null, state: null, count: null),
+      (
+        service: ServiceKey.sonarr,
+        tone: StatusTone.warning,
+        state: 'a fault',
+        count: null,
+      ),
+      (
+        service: ServiceKey.qbittorrent,
+        tone: StatusTone.warning,
+        state: '18 need you',
+        count: '18',
+      ),
       (
         service: ServiceKey.truenas,
         tone: StatusTone.error,
         state: 'did not answer',
+        count: null,
       ),
     ];
 
-    testWidgets('names each section with its key, then the services, then '
-        'Settings', (tester) async {
+    testWidgets('names each section, then the services under their domains, '
+        'then Settings', (tester) async {
       await pumpRail(tester, compact: false, services: services, height: 800);
 
       expect(
         tester.getSize(find.byType(DesktopNavRail)).width,
         DesktopNavRail.fullWidth,
       );
-      for (final (index, tab) in bar.indexed) {
+      for (final tab in bar) {
         expect(find.text(tab.label), findsOne, reason: tab.label);
-        expect(find.text(ShellShortcuts.section(index)), findsOne);
       }
-      expect(find.text('Services'), findsOne);
-      expect(find.text(ShellShortcuts.settings), findsOne);
+      // A heading for each domain that has a service, and none for the rest.
+      expect(find.text('Media'), findsOne);
+      expect(find.text('Downloads'), findsOne);
+      expect(find.text('Infrastructure'), findsOne);
+      expect(find.text('Stream'), findsNothing);
       final stack = tester.getTopLeft(find.text('Stack')).dy;
-      final heading = tester.getTopLeft(find.text('Services')).dy;
+      final media = tester.getTopLeft(find.text('Media')).dy;
       final seerr = tester.getTopLeft(find.text('Seerr')).dy;
+      final downloads = tester.getTopLeft(find.text('Downloads')).dy;
+      final qbit = tester.getTopLeft(find.text('qBittorrent')).dy;
       final settings = tester.getTopLeft(find.text('Settings')).dy;
-      expect(stack < heading && heading < seerr && seerr < settings, isTrue);
+      expect(
+        stack < media &&
+            media < seerr &&
+            seerr < downloads &&
+            downloads < qbit &&
+            qbit < settings,
+        isTrue,
+      );
       // The deck carries its own key; the sidebar does not repeat it.
       expect(find.text(ShellShortcuts.commandDeck), findsNothing);
+    });
+
+    testWidgets('a key shows while the pointer is on its row, and is always '
+        'its hint', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpRail(tester, compact: false, services: services, height: 800);
+
+      for (final (index, _) in bar.indexed) {
+        expect(find.text(ShellShortcuts.section(index)), findsNothing);
+      }
+      expect(find.text(ShellShortcuts.settings), findsNothing);
+      expect(
+        tester.getSemantics(item('Home')),
+        matchesSemantics(
+          isButton: true,
+          isEnabled: true,
+          hasEnabledState: true,
+          hasSelectedState: true,
+          hasTapAction: true,
+          label: 'Home',
+          hint: ShellShortcuts.section(bar.indexOf(NavTab.home)),
+        ),
+      );
+
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(mouse.removePointer);
+      await mouse.addPointer(location: tester.getCenter(find.text('Home')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(ShellShortcuts.section(bar.indexOf(NavTab.home))),
+        findsOne,
+      );
+      expect(
+        find.text(ShellShortcuts.section(bar.indexOf(NavTab.stack))),
+        findsNothing,
+      );
+      handle.dispose();
     });
 
     testWidgets('a light only where a service needs a look, and it says so', (
@@ -126,11 +188,30 @@ void main() {
 
       Finder light(String title) =>
           find.byKey(ValueKey('desktop-rail-light-$title'));
-      expect(light('Seerr'), findsOne);
+      Finder count(String title) =>
+          find.byKey(ValueKey('desktop-rail-count-$title'));
+      Finder silent(String title) =>
+          find.byKey(ValueKey('desktop-rail-silent-$title'));
+      // A number where there is one, a light where a fault has none, words
+      // where the service is silent, and nothing where it is calm.
+      expect(
+        find.descendant(of: count('Seerr'), matching: find.text('2')),
+        findsOne,
+      );
+      expect(
+        find.descendant(of: count('qBittorrent'), matching: find.text('18')),
+        findsOne,
+      );
       expect(light('Sonarr'), findsOne);
-      expect(light('TrueNAS'), findsOne);
-      expect(light('Radarr'), findsNothing);
+      expect(count('Sonarr'), findsNothing);
+      expect(silent('TrueNAS'), findsOne);
+      expect(light('TrueNAS'), findsNothing);
+      for (final title in ['Radarr']) {
+        expect(light(title), findsNothing);
+        expect(count(title), findsNothing);
+      }
       expect(item('Seerr, 2 requests wait for approval'), findsOne);
+      expect(item('qBittorrent, 18 need you'), findsOne);
       expect(item('Sonarr, a fault'), findsOne);
       expect(item('TrueNAS, did not answer'), findsOne);
       expect(item('Radarr'), findsOne);
@@ -176,7 +257,7 @@ void main() {
     testWidgets('the requester\'s sidebar has no services', (tester) async {
       await pumpRail(tester, compact: false, height: 800);
 
-      expect(find.text('Services'), findsNothing);
+      expect(find.text('Media'), findsNothing);
       expect(find.text('Settings'), findsOne);
     });
 
@@ -189,7 +270,7 @@ void main() {
         tester.getSize(find.byType(DesktopNavRail)).width,
         DesktopNavRail.compactWidth,
       );
-      expect(find.text('Services'), findsNothing);
+      expect(find.text('Media'), findsNothing);
       expect(find.text('Seerr'), findsNothing);
       expect(railItem('Settings'), findsOne);
     });

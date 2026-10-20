@@ -21,6 +21,7 @@ import 'package:cupola/features/shell/domain/shell_shortcuts.dart';
 import 'package:cupola/features/shell/presentation/desktop/command_deck.dart';
 import 'package:cupola/features/shell/presentation/desktop/desktop_nav_rail.dart';
 import 'package:cupola/features/shell/presentation/desktop/desktop_rail_services.dart';
+import 'package:cupola/features/shell/presentation/desktop/in_flight_glance.dart';
 import 'package:cupola/features/shell/presentation/desktop/inspector_pane.dart';
 import 'package:cupola/features/shell/presentation/desktop/window_chrome.dart';
 
@@ -313,6 +314,18 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
                     services: requester
                         ? const []
                         : ref.watch(desktopRailServicesProvider),
+                    stackFigure: requester
+                        ? null
+                        : ref.watch(desktopStackFigureProvider),
+                    // What is in flight, except on Activity, where the page
+                    // is the whole of it.
+                    footer: requester || widget.currentTab == NavTab.activity
+                        ? null
+                        : InFlightGlance(
+                            onOpen: () => GoRouter.of(
+                              context,
+                            ).go(NavTab.activity.routePath),
+                          ),
                     selectedService: room,
                     onService: (service) => GoRouter.of(
                       context,

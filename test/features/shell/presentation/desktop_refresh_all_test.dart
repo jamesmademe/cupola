@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cupola/features/activity/data/activity_live.dart';
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/providers/navigation_refresh_provider.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
@@ -121,6 +122,9 @@ Future<ProviderContainer> _container() async {
   final prefs = await SharedPreferences.getInstance();
   return ProviderContainer(
     overrides: [
+      // The sidebar's "In flight" poll outlives a test that ends before its
+      // container is disposed.
+      sidebarInFlightPollProvider.overrideWith((ref) {}),
       sharedPreferencesProvider.overrideWithValue(prefs),
       initialSettingsProvider.overrideWithValue(
         const SettingsModel(

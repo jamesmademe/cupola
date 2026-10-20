@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cupola/features/activity/data/activity_live.dart';
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/network/connection_failure.dart'
     show ServiceFailureReason;
@@ -575,12 +576,27 @@ void main() {
               .selected ??
           false;
 
+      // Its key is in its hint, and printed only under the pointer.
       expect(
         find.descendant(
           of: find.byType(DesktopNavRail),
-          matching: find.text(ShellShortcuts.settings),
+          matching: find.bySemanticsLabel('Settings'),
         ),
         findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<Semantics>(
+              find
+                  .ancestor(
+                    of: railButton('Settings'),
+                    matching: find.byType(Semantics),
+                  )
+                  .first,
+            )
+            .properties
+            .hint,
+        ShellShortcuts.settings,
       );
       expect(lit('Settings'), isFalse);
       expect(lit('Home'), isTrue, reason: 'the window opens on the Home');
@@ -703,6 +719,9 @@ Future<_Harness> _pumpShell(
     overrides: [
       // The shell reads who it is drawn for, which waits on onboarding.
       initialOnboardingCompletedProvider.overrideWithValue(true),
+      // The sidebar's "In flight" thirty-second poll: a test about the shell
+      // ends before the container that holds its timer is disposed.
+      sidebarInFlightPollProvider.overrideWith((ref) {}),
       ...overrides,
     ],
   );

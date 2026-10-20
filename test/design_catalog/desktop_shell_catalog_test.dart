@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cupola/features/activity/data/activity_live.dart';
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/capability/audience.dart';
@@ -259,21 +260,28 @@ const _railServices = <DesktopRailService>[
     service: ServiceKey.seerr,
     tone: StatusTone.info,
     state: '2 requests wait for approval',
+    count: '2',
   ),
-  (service: ServiceKey.jellyfin, tone: null, state: null),
-  (service: ServiceKey.radarr, tone: null, state: null),
-  (service: ServiceKey.sonarr, tone: StatusTone.error, state: 'did not answer'),
-  (service: ServiceKey.lidarr, tone: null, state: null),
-  (service: ServiceKey.bazarr, tone: null, state: null),
+  (service: ServiceKey.jellyfin, tone: null, state: null, count: null),
+  (service: ServiceKey.radarr, tone: null, state: null, count: null),
+  (
+    service: ServiceKey.sonarr,
+    tone: StatusTone.error,
+    state: 'did not answer',
+    count: null,
+  ),
+  (service: ServiceKey.lidarr, tone: null, state: null, count: null),
+  (service: ServiceKey.bazarr, tone: null, state: null, count: null),
   (
     service: ServiceKey.prowlarr,
     tone: StatusTone.error,
     state: 'did not answer',
+    count: null,
   ),
-  (service: ServiceKey.qbittorrent, tone: null, state: null),
-  (service: ServiceKey.sabnzbd, tone: null, state: null),
-  (service: ServiceKey.truenas, tone: null, state: null),
-  (service: ServiceKey.dockge, tone: null, state: null),
+  (service: ServiceKey.qbittorrent, tone: null, state: null, count: null),
+  (service: ServiceKey.sabnzbd, tone: null, state: null, count: null),
+  (service: ServiceKey.truenas, tone: null, state: null, count: null),
+  (service: ServiceKey.dockge, tone: null, state: null, count: null),
 ];
 
 class _Requester extends ShellAudienceNotifier {
@@ -304,6 +312,8 @@ class _WindowState extends State<_Window> {
         widget.requester ? _herSettings : _settings,
       ),
       desktopRailServicesProvider.overrideWithValue(_railServices),
+      // The sidebar's "In flight" poll: the sheet is a still.
+      sidebarInFlightPollProvider.overrideWith((ref) {}),
       if (widget.requester) ...[
         shellAudienceProvider.overrideWith(_Requester.new),
         requestsProvider.overrideWith((ref) async => const []),

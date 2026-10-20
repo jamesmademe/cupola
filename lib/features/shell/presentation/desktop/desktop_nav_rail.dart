@@ -6,23 +6,30 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
+import 'package:cupola/features/settings/domain/nav_tab.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/shell/domain/shell_shortcuts.dart';
 
-/// The window's sidebar: the person's sections with their keys, the services
-/// with what each needs, and Settings at the foot.
+/// The window's sidebar: the person's sections, the services with what each
+/// needs, what is in flight, and Settings at the foot.
 ///
 /// Takes the *same* [FloatingNavDestination] list the phone's bar does rather
 /// than rebuilding one from `NavTab`. That is the whole point: badge counts and
 /// their spoken labels are set in one place, so a desktop window cannot end up
 /// as the one form factor where a finished search is never announced.
 ///
-/// At full width each item is its glyph, its name and its key (`⌘1`), so the
-/// sidebar is where the keyboard map is learnt. The services follow under
-/// their heading, each a way into its room with a light only where it needs a
-/// look: amber for a fault, red for one that did not answer, blue for
-/// requests that wait. A calm service carries no light, so the one that does
-/// is seen. The requester's sidebar has no services: she reads no service.
+/// At full width each item is its glyph and its name; its key (`⌘1`) shows
+/// while the pointer is on it and is always in its hint, so the keys are there
+/// to learn without a column of them on every row. Stack says how many of the
+/// services answer. The services follow in Stack's domains, each a way into
+/// its room, with a number where something waits on the person (amber: things
+/// to fix; blue: requests to answer), a light where a fault has no count, and
+/// `Did not answer` in red under a service that is silent. A calm service
+/// carries nothing, so the one that does is seen. The requester's sidebar has
+/// no services: she reads no service.
+///
+/// [footer] sits above Settings: the shell puts what is in flight there, so
+/// the downloads stay one glance away without a column of their own.
 ///
 /// Narrower than [AppBreakpoints.desktopCompact] the sidebar folds to its
 /// 56pt rail: the sections and Settings as glyphs, each with a tooltip that
@@ -40,6 +47,8 @@ class DesktopNavRail extends StatelessWidget {
     this.services = const [],
     this.selectedService,
     this.onService,
+    this.stackFigure,
+    this.footer,
   });
 
   final int selectedIndex;
@@ -63,7 +72,13 @@ class DesktopNavRail extends StatelessWidget {
   final ServiceKey? selectedService;
   final ValueChanged<ServiceKey>? onService;
 
-  static const double fullWidth = 232;
+  /// Beside Stack: how many services answer (`12/12`), and how that is heard.
+  final ({String text, String spoken})? stackFigure;
+
+  /// Above Settings on the full sidebar: what is in flight.
+  final Widget? footer;
+
+  static const double fullWidth = 240;
   static const double compactWidth = 56;
 
   static double widthFor({required bool compact}) =>
@@ -124,66 +139,25 @@ class DesktopNavRail extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     for (var i = 0; i < destinations.length; i++)
-                      _SidebarItem(
-                        glyph: _destinationGlyph(destinations[i]),
-                        label: destinations[i].label,
-                        spoken: destinations[i].badgeSemanticLabel == null
-                            ? destinations[i].label
-                            : '${destinations[i].label}, '
-                                  '${destinations[i].badgeSemanticLabel}',
-                        badge: destinations[i].badgeCount > 0
-                            ? destinations[i].badgeLabel
-                            : null,
-                        shortcut: ShellShortcuts.section(i),
-                        selected: i == selectedIndex && selectedService == null,
-                        onPressed: () => onDestinationSelected(i),
-                      ),
+                      _destinationItem(i),
                     Expanded(
                       child: services.isEmpty
                           ? const SizedBox.shrink()
                           : ListView(
                               padding: const EdgeInsets.only(
-                                top: AppSpacing.md,
+                                top: AppSpacing.sm,
                               ),
                               children: [
-                                Padding(
-                                  padding: const EdgeInsets.fromLTRB(
-                                    AppSpacing.row,
-                                    0,
-                                    AppSpacing.row,
-                                    AppSpacing.xs,
-                                  ),
-                                  child: Semantics(
-                                    header: true,
-                                    child: Text(
-                                      'Services',
-                                      textScaler: _SidebarItem.scalerOf(
-                                        context,
-                                      ),
-                                      style: AppType.meta.copyWith(color: dim),
-                                    ),
-                                  ),
-                                ),
-                                for (final row in services)
-                                  _SidebarItem(
-                                    glyph: Icon(
-                                      row.service.icon,
-                                      size: 20,
-                                      weight: 300,
-                                      opticalSize: 20,
-                                    ),
-                                    label: row.service.title,
-                                    spoken: row.state == null
-                                        ? row.service.title
-                                        : '${row.service.title}, ${row.state}',
-                                    light: row.tone,
-                                    selected: row.service == selectedService,
-                                    onPressed: () =>
-                                        onService?.call(row.service),
-                                  ),
+                                for (final domain in ServiceDomain.values)
+                                  ..._domainRows(context, domain, dim),
                               ],
                             ),
                     ),
+                    if (footer case final footer?) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      footer,
+                      const SizedBox(height: AppSpacing.xs),
+                    ],
                     _SidebarItem(
                       glyph: _destinationGlyph(settings),
                       label: settings.label,
@@ -199,6 +173,79 @@ class DesktopNavRail extends StatelessWidget {
     );
   }
 
+  Widget _destinationItem(int i) {
+    final destination = destinations[i];
+    final badge = destination.badgeCount > 0 ? destination.badgeLabel : null;
+    // Stack's figure only where no badge speaks for the row.
+    final figure = badge == null && destination.label == NavTab.stack.label
+        ? stackFigure
+        : null;
+    final spoken = [
+      destination.label,
+      ?destination.badgeSemanticLabel,
+      ?figure?.spoken,
+    ].join(', ');
+    return _SidebarItem(
+      glyph: _destinationGlyph(destination),
+      label: destination.label,
+      spoken: spoken,
+      badge: badge,
+      figure: figure?.text,
+      shortcut: ShellShortcuts.section(i),
+      selected: i == selectedIndex && selectedService == null,
+      onPressed: () => onDestinationSelected(i),
+    );
+  }
+
+  /// One domain's heading and its services, or nothing when none of its
+  /// services is set up: a heading over no row is a promise of a room.
+  List<Widget> _domainRows(
+    BuildContext context,
+    ServiceDomain domain,
+    Color dim,
+  ) {
+    final rows = [
+      for (final row in services)
+        if (row.service.domain == domain) row,
+    ];
+    if (rows.isEmpty) return const [];
+    return [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.row,
+          AppSpacing.md,
+          AppSpacing.row,
+          AppSpacing.xs,
+        ),
+        child: Semantics(
+          header: true,
+          child: Text(
+            domain.label,
+            textScaler: _SidebarItem.scalerOf(context),
+            style: AppType.meta.copyWith(color: dim),
+          ),
+        ),
+      ),
+      for (final row in rows)
+        _SidebarItem(
+          glyph: Icon(row.service.icon, size: 20, weight: 300, opticalSize: 20),
+          label: row.service.title,
+          spoken: row.state == null
+              ? row.service.title
+              : '${row.service.title}, ${row.state}',
+          count: row.count,
+          // A silent service says so in words; a counted one in its number.
+          light: row.tone == StatusTone.error || row.count != null
+              ? null
+              : row.tone,
+          countTone: row.tone,
+          silent: row.tone == StatusTone.error,
+          selected: row.service == selectedService,
+          onPressed: () => onService?.call(row.service),
+        ),
+    ];
+  }
+
   static Widget _destinationGlyph(FloatingNavDestination destination) => Icon(
     destination.railIcon ?? destination.icon,
     size: 20,
@@ -208,16 +255,18 @@ class DesktopNavRail extends StatelessWidget {
   );
 }
 
-/// A service of the sidebar: its light, if it needs a look, and what the
-/// light says aloud.
+/// A service of the sidebar: its tone, if it needs a look, what that says
+/// aloud, and the number it prints, when there is one to print.
 typedef DesktopRailService = ({
   ServiceKey service,
   StatusTone? tone,
   String? state,
+  String? count,
 });
 
-/// One row of the full sidebar: the glyph, the name, then the key or the
-/// light at its end.
+/// One row of the full sidebar: the glyph, the name, then what it has to say
+/// at its end: a count, a figure, a light, or its key while the pointer is on
+/// it.
 class _SidebarItem extends StatefulWidget {
   const _SidebarItem({
     required this.glyph,
@@ -227,7 +276,11 @@ class _SidebarItem extends StatefulWidget {
     required this.onPressed,
     this.shortcut,
     this.badge,
+    this.figure,
     this.light,
+    this.count,
+    this.countTone,
+    this.silent = false,
   });
 
   final Widget glyph;
@@ -235,13 +288,25 @@ class _SidebarItem extends StatefulWidget {
   final String spoken;
   final bool selected;
   final VoidCallback onPressed;
+
+  /// The row's key, shown while the pointer is on it and always in its hint.
   final String? shortcut;
 
-  /// The count of the section's badge, in ink, before its key.
+  /// The count of the section's badge, in ink.
   final String? badge;
 
-  /// The service's light, or null when it is calm.
+  /// A quiet figure at the end: Stack's `12/12`.
+  final String? figure;
+
+  /// The service's light, or null when it is calm or says it in a number.
   final StatusTone? light;
+
+  /// The things waiting on the person in this service, in [countTone].
+  final String? count;
+  final StatusTone? countTone;
+
+  /// Whether the service did not answer: said under its name, in red.
+  final bool silent;
 
   /// A row: the 44pt target of every control in the window.
   static const double height = 44;
@@ -269,8 +334,22 @@ class _SidebarItemState extends State<_SidebarItem> {
         ? colorScheme.onSurface
         : colorScheme.onSurfaceVariant;
     final light = widget.light;
-    final shortcut = widget.shortcut;
+    // The key while the pointer is on the row, and only then: a column of
+    // `⌘1`…`⌘4` on every row was a keyboard map nobody had asked to read.
+    final shortcut = _hovered ? widget.shortcut : null;
     final badge = widget.badge;
+    final count = widget.count;
+    final countTone = widget.countTone ?? StatusTone.warning;
+    final figure = shortcut == null ? widget.figure : null;
+    final name = Text(
+      widget.label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      textScaler: _SidebarItem.scalerOf(context),
+      style: AppType.row.copyWith(
+        color: widget.silent && !widget.selected && !_hovered ? dim : ink,
+      ),
+    );
 
     return Semantics(
       button: true,
@@ -278,7 +357,7 @@ class _SidebarItemState extends State<_SidebarItem> {
       enabled: true,
       selected: widget.selected,
       label: widget.spoken,
-      hint: shortcut,
+      hint: widget.shortcut,
       onTap: widget.onPressed,
       child: ExcludeSemantics(
         child: MouseRegion(
@@ -306,17 +385,54 @@ class _SidebarItemState extends State<_SidebarItem> {
                   ),
                   const SizedBox(width: AppSpacing.row),
                   Expanded(
-                    child: Text(
-                      widget.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textScaler: _SidebarItem.scalerOf(context),
-                      style: AppType.row.copyWith(color: ink),
-                    ),
+                    child: widget.silent
+                        ? Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              name,
+                              Text(
+                                'Did not answer',
+                                key: ValueKey(
+                                  'desktop-rail-silent-${widget.label}',
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textScaler: _SidebarItem.scalerOf(context),
+                                style: AppType.meta.copyWith(
+                                  color: statusToneColor(
+                                    colorScheme,
+                                    StatusTone.error,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : name,
                   ),
                   if (badge != null) ...[
                     const SizedBox(width: AppSpacing.sm),
                     _RailBadge(label: badge),
+                  ],
+                  if (count != null) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    _CountPill(
+                      key: ValueKey('desktop-rail-count-${widget.label}'),
+                      label: count,
+                      tone: countTone,
+                    ),
+                  ],
+                  if (figure != null) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(
+                      figure,
+                      textScaler: _SidebarItem.scalerOf(context),
+                      style: AppTheme.chrome(
+                        context,
+                        size: 12,
+                        color: dim,
+                      ).tabular,
+                    ),
                   ],
                   if (shortcut != null) ...[
                     const SizedBox(width: AppSpacing.sm),
@@ -468,6 +584,47 @@ class _RailItemState extends State<_RailItem> {
             icon: icon,
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// A service's count: the number in its tone, on a quiet wash of the same.
+///
+/// The tone is the five-arm rule's (amber things to fix, blue requests to
+/// answer), painted through [statusToneColor] like every tone in the window;
+/// the wash keeps the number legible without a solid disc that would outweigh
+/// the section badges above it.
+class _CountPill extends StatelessWidget {
+  const _CountPill({super.key, required this.label, required this.tone});
+
+  final String label;
+  final StatusTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final color = statusToneColor(colorScheme, tone);
+    return Container(
+      constraints: const BoxConstraints(minWidth: 22, minHeight: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(AppRadius.full),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        label,
+        textScaler: MediaQuery.textScalerOf(
+          context,
+        ).clamp(maxScaleFactor: _RailBadge.maxScale),
+        style: AppTheme.chrome(
+          context,
+          size: 11,
+          weight: FontWeight.w600,
+          color: color,
+          height: 1,
+        ).tabular,
       ),
     );
   }
