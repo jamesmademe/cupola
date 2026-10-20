@@ -342,6 +342,11 @@ const _monoUses = <({String file, int uses, String prints})>[
     prints: 'the `⌘K` legend at the foot of the rail',
   ),
   (
+    file: 'lib/features/shell/presentation/desktop/shortcuts_sheet.dart',
+    uses: 1,
+    prints: 'the key legend beside each line of the shortcuts sheet (`⌘[  ⌘]`)',
+  ),
+  (
     file: 'lib/features/shell/presentation/desktop/window_chrome.dart',
     uses: 1,
     prints: 'the `⌘K` legend on the way to anything (`Ctrl+K` elsewhere)',

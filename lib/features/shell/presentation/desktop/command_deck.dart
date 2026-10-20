@@ -412,6 +412,7 @@ class _DeckFooter extends ConsumerWidget {
         key: '${ShellShortcuts.section(0)}–${ShellShortcuts.section(3)}',
         does: 'sections',
       ),
+      (key: ShellShortcuts.shortcuts, does: 'every key'),
     ];
     final dim = CupolaThemeColors.of(context).dimText;
     return Container(

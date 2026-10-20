@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'package:cupola/core/app_breakpoints.dart';
@@ -29,6 +30,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/shell/domain/shell_breadcrumb.dart';
 import 'package:cupola/features/shell/domain/shell_shortcuts.dart';
+import 'package:cupola/features/shell/domain/window_history.dart';
 
 /// The window's top strip: one interior, three shells.
 ///
@@ -51,11 +53,16 @@ class WindowChrome extends ConsumerWidget {
     super.key,
     required this.inspectorOpen,
     this.onCommandDeck,
+    this.sidebarFolded = false,
   });
 
   /// Drives the inspector switch's tone. Passed rather than watched so the
   /// strip has exactly one reason to rebuild that is not its own.
   final bool inspectorOpen;
+
+  /// Whether the person folded the sidebar: the switch's name says the way
+  /// back. Passed, as [inspectorOpen] is, so the strip reads no setting.
+  final bool sidebarFolded;
 
   /// Opens the command deck; null for the requester's window, which has none.
   final VoidCallback? onCommandDeck;
@@ -93,9 +100,19 @@ class WindowChrome extends ConsumerWidget {
     final scaler = MediaQuery.textScalerOf(
       context,
     ).clamp(maxScaleFactor: FloatingNavBarMetrics.maxTextScaleFactor);
+    final history = ref.watch(windowHistoryProvider);
     return MediaQuery(
       data: MediaQuery.of(context).copyWith(textScaler: scaler),
-      child: _strip(context, compact, crumbs, lens, location, requester),
+      child: _strip(
+        context,
+        compact,
+        crumbs,
+        lens,
+        location,
+        requester,
+        history: history,
+        folded: sidebarFolded,
+      ),
     );
   }
 
@@ -105,8 +122,10 @@ class WindowChrome extends ConsumerWidget {
     List<Crumb> crumbs,
     ({ServiceKey service, String label})? lens,
     String location,
-    bool requester,
-  ) {
+    bool requester, {
+    required WindowHistory history,
+    required bool folded,
+  }) {
     final colorScheme = Theme.of(context).colorScheme;
     return Semantics(
       container: true,
@@ -128,6 +147,33 @@ class WindowChrome extends ConsumerWidget {
               child: Row(
                 children: [
                   SizedBox(width: DesktopWindow.leadingButtonGutter),
+                  // The sidebar's switch, in a window wide enough to choose:
+                  // a narrow one folds it by its width.
+                  if (!compact)
+                    _StripButton(
+                      key: const ValueKey('strip-sidebar'),
+                      icon: Symbols.dock_to_left,
+                      label: folded ? 'Show the sidebar' : 'Hide the sidebar',
+                      shortcut: ShellShortcuts.sidebar,
+                      intent: const ToggleSidebarIntent(),
+                    ),
+                  _StripButton(
+                    key: const ValueKey('strip-back'),
+                    icon: Icons.chevron_left_rounded,
+                    label: 'Back',
+                    shortcut: ShellShortcuts.back,
+                    intent: const GoBackIntent(),
+                    enabled: history.canGoBack,
+                  ),
+                  _StripButton(
+                    key: const ValueKey('strip-forward'),
+                    icon: Icons.chevron_right_rounded,
+                    label: 'Forward',
+                    shortcut: ShellShortcuts.forward,
+                    intent: const GoForwardIntent(),
+                    enabled: history.canGoForward,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
                   Expanded(child: _Breadcrumb(crumbs: crumbs)),
                   if (lens != null) ...[
                     const SizedBox(width: AppSpacing.sm),
@@ -139,10 +185,20 @@ class WindowChrome extends ConsumerWidget {
                           'Change it from the deck.',
                     ),
                   ],
+                  // On Activity the answer line is the way to ask again, and
+                  // says who answered; elsewhere a mouse has no pull to
+                  // refresh, so the strip offers ⌘R as a button.
                   if (!requester && _readsActivity(location)) ...[
                     const SizedBox(width: AppSpacing.md),
                     const _AnswerLine(),
-                  ],
+                  ] else
+                    _StripButton(
+                      key: const ValueKey('strip-refresh'),
+                      icon: Icons.refresh_rounded,
+                      label: 'Refresh',
+                      shortcut: ShellShortcuts.refreshAll,
+                      intent: const RefreshAllIntent(),
+                    ),
                   if (onCommandDeck case final open?) ...[
                     SizedBox(width: compact ? AppSpacing.sm : AppSpacing.md),
                     _JumpField(compact: compact, onPressed: open),
@@ -403,6 +459,89 @@ class _JumpFieldState extends State<_JumpField> {
       ),
     );
   }
+}
+
+/// One of the strip's glyph buttons: back, forward, the sidebar's switch,
+/// refresh. The strip's full height and 44 wide, around a drawn 30 × 28; a
+/// tooltip of its name and key; dimmed and inert while it has nothing to do,
+/// as back is at the first page of a window.
+///
+/// It fires its [intent] rather than a callback, so the button and the key are
+/// one action, bound once in the shell.
+class _StripButton extends StatefulWidget {
+  const _StripButton({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.shortcut,
+    required this.intent,
+    this.enabled = true,
+  });
+
+  final IconData icon;
+  final String label;
+  final String shortcut;
+  final Intent intent;
+  final bool enabled;
+
+  @override
+  State<_StripButton> createState() => _StripButtonState();
+}
+
+class _StripButtonState extends State<_StripButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final enabled = widget.enabled;
+    final glyph = enabled
+        ? (_hovered ? colorScheme.onSurface : colorScheme.onSurfaceVariant)
+        : colorScheme.onSurface.withValues(alpha: 0.28);
+    final button = Semantics(
+      button: true,
+      enabled: enabled,
+      label: widget.label,
+      hint: widget.shortcut,
+      excludeSemantics: true,
+      onTap: enabled ? _fire : null,
+      child: MouseRegion(
+        cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: GestureDetector(
+          onTap: enabled ? _fire : null,
+          behavior: HitTestBehavior.opaque,
+          child: SizedBox(
+            width: 44,
+            height: WindowChrome.height,
+            child: Center(
+              child: Container(
+                width: 30,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: enabled && _hovered
+                      ? colorScheme.onSurface.withValues(alpha: 0.06)
+                      : null,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: Icon(widget.icon, size: 20, color: glyph),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    if (!enabled) return button;
+    return Tooltip(
+      message: '${widget.label}  ${widget.shortcut}',
+      waitDuration: const Duration(milliseconds: 500),
+      excludeFromSemantics: true,
+      child: button,
+    );
+  }
+
+  void _fire() => Actions.maybeInvoke(context, widget.intent);
 }
 
 /// The inspector's switch: the pane's own glyph, on the room's strong fill

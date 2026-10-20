@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -18,11 +19,13 @@ import 'package:cupola/features/shell/domain/inspector_state.dart';
 import 'package:cupola/features/shell/domain/screen_search.dart';
 import 'package:cupola/features/shell/domain/shell_audience.dart';
 import 'package:cupola/features/shell/domain/shell_shortcuts.dart';
+import 'package:cupola/features/shell/domain/window_history.dart';
 import 'package:cupola/features/shell/presentation/desktop/command_deck.dart';
 import 'package:cupola/features/shell/presentation/desktop/desktop_nav_rail.dart';
 import 'package:cupola/features/shell/presentation/desktop/desktop_rail_services.dart';
 import 'package:cupola/features/shell/presentation/desktop/in_flight_glance.dart';
 import 'package:cupola/features/shell/presentation/desktop/inspector_pane.dart';
+import 'package:cupola/features/shell/presentation/desktop/shortcuts_sheet.dart';
 import 'package:cupola/features/shell/presentation/desktop/window_chrome.dart';
 
 /// The window: chrome, sidebar, content, inspector.
@@ -150,6 +153,25 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
     }
   }
 
+  /// `⌘[`, the toolbar's back arrow, a mouse's back button: one step back
+  /// through where this window has been.
+  void _goBack() {
+    final target = ref.read(windowHistoryProvider.notifier).back();
+    if (target != null) GoRouter.of(context).go(target);
+  }
+
+  void _goForward() {
+    final target = ref.read(windowHistoryProvider.notifier).forward();
+    if (target != null) GoRouter.of(context).go(target);
+  }
+
+  /// The mouse's own back and forward buttons, wherever the pointer is.
+  void _onPointerDown(PointerDownEvent event) {
+    if (event.kind != PointerDeviceKind.mouse) return;
+    if (event.buttons & kBackMouseButton != 0) _goBack();
+    if (event.buttons & kForwardMouseButton != 0) _goForward();
+  }
+
   void _searchThisScreen() {
     final node = ref.read(screenSearchFocusProvider);
     // No field on this screen means the shortcut does nothing, deliberately.
@@ -161,8 +183,11 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final compact = AppBreakpoints.isCompactDesktop(context);
-    final chromeHeight = WindowChrome.heightFor(compact: compact);
+    // A narrow window folds the sidebar and closes the inspector, whatever
+    // the person chose; a wide one folds the sidebar only if they did.
+    final narrow = AppBreakpoints.isCompactDesktop(context);
+    final compact = narrow || ref.watch(sidebarFoldedProvider);
+    final chromeHeight = WindowChrome.heightFor(compact: narrow);
     final inspector = ref.watch(inspectorStateProvider);
     // The requester's window: her sections, no services, no inspector, whose
     // activity is the operator's, and no command deck, which reaches every
@@ -172,13 +197,16 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
 
     // Recents for the deck, recorded here because this is the one widget that
     // sees every location change in the window.
-    final location = GoRouterState.of(context).uri.path;
+    final uri = GoRouterState.of(context).uri;
+    final location = uri.path;
     final room = requester ? null : _roomOf(location);
-    final inspectorShown = !requester && inspector.open && !compact;
+    final inspectorShown = !requester && inspector.open && !narrow;
     if (_lastLocation != location) {
       _lastLocation = location;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) noteVisit(ref, location);
+        if (!mounted) return;
+        noteVisit(ref, location);
+        ref.read(windowHistoryProvider.notifier).visit(uri.toString());
       });
     }
 
@@ -238,6 +266,33 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
             enabled: _deckOpen,
             onClose: _closeDeck,
           ),
+          GoBackIntent: CallbackAction<GoBackIntent>(
+            onInvoke: (_) {
+              _goBack();
+              return null;
+            },
+          ),
+          GoForwardIntent: CallbackAction<GoForwardIntent>(
+            onInvoke: (_) {
+              _goForward();
+              return null;
+            },
+          ),
+          ToggleSidebarIntent: CallbackAction<ToggleSidebarIntent>(
+            onInvoke: (_) {
+              // In a narrow window the sidebar is folded by the width, and a
+              // toggle that changed nothing on screen would only store a
+              // surprise for the day the window is widened.
+              if (!narrow) ref.read(sidebarFoldedProvider.notifier).toggle();
+              return null;
+            },
+          ),
+          ShowShortcutsIntent: CallbackAction<ShowShortcutsIntent>(
+            onInvoke: (_) {
+              showShortcutsSheet(context, requester: requester);
+              return null;
+            },
+          ),
           OpenInInspectorIntent: CallbackAction<OpenInInspectorIntent>(
             onInvoke: (_) {
               if (requester) return null;
@@ -262,89 +317,93 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
             // therefore painted first and the chrome is overlaid afterwards;
             // the screen does not move, but every desktop control is now after
             // the active route in semantics order as well as on screen.
-            body: Stack(
-              fit: StackFit.expand,
-              children: [
-                Positioned(
-                  top: chromeHeight,
-                  left: railWidth,
-                  right: 0,
-                  bottom: 0,
-                  child: Row(
-                    children: [
-                      Expanded(child: widget.navigationShell),
-                      if (inspectorShown) ...[
-                        const InspectorSplitHandle(),
-                        SizedBox(
-                          width: inspector.width,
-                          child: const InspectorPane(),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: chromeHeight,
-                  child: WindowChrome(
-                    inspectorOpen: inspectorShown,
-                    onCommandDeck: requester ? null : _openDeck,
-                  ),
-                ),
-                Positioned(
-                  top: chromeHeight,
-                  left: 0,
-                  width: railWidth,
-                  bottom: 0,
-                  child: DesktopNavRail(
-                    compact: compact,
-                    selectedIndex: widget.selectedIndex,
-                    destinations: widget.destinations,
-                    onDestinationSelected: widget.onDestinationSelected,
-                    settings: FloatingNavDestination(
-                      icon: NavTab.settings.icon,
-                      selectedIcon: NavTab.settings.selectedIcon,
-                      railIcon: NavTab.settings.railIcon,
-                      label: NavTab.settings.label,
-                    ),
-                    settingsSelected: widget.currentTab == NavTab.settings,
-                    onSettings: widget.onSettings,
-                    services: requester
-                        ? const []
-                        : ref.watch(desktopRailServicesProvider),
-                    stackFigure: requester
-                        ? null
-                        : ref.watch(desktopStackFigureProvider),
-                    // What is in flight, except on Activity, where the page
-                    // is the whole of it.
-                    footer: requester || widget.currentTab == NavTab.activity
-                        ? null
-                        : InFlightGlance(
-                            onOpen: () => GoRouter.of(
-                              context,
-                            ).go(NavTab.activity.routePath),
-                          ),
-                    selectedService: room,
-                    onService: (service) => GoRouter.of(
-                      context,
-                    ).go(ServiceRoutes.forService(service)),
-                  ),
-                ),
-                if (_deckOpen)
+            body: Listener(
+              onPointerDown: _onPointerDown,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
                   Positioned(
                     top: chromeHeight,
                     left: railWidth,
                     right: 0,
                     bottom: 0,
-                    child: _DeckOverlay(
-                      animation: _deck,
-                      onClose: _closeDeck,
-                      scrim: colorScheme.surfaceContainerLowest,
+                    child: Row(
+                      children: [
+                        Expanded(child: widget.navigationShell),
+                        if (inspectorShown) ...[
+                          const InspectorSplitHandle(),
+                          SizedBox(
+                            width: inspector.width,
+                            child: const InspectorPane(),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-              ],
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: chromeHeight,
+                    child: WindowChrome(
+                      inspectorOpen: inspectorShown,
+                      sidebarFolded: compact && !narrow,
+                      onCommandDeck: requester ? null : _openDeck,
+                    ),
+                  ),
+                  Positioned(
+                    top: chromeHeight,
+                    left: 0,
+                    width: railWidth,
+                    bottom: 0,
+                    child: DesktopNavRail(
+                      compact: compact,
+                      selectedIndex: widget.selectedIndex,
+                      destinations: widget.destinations,
+                      onDestinationSelected: widget.onDestinationSelected,
+                      settings: FloatingNavDestination(
+                        icon: NavTab.settings.icon,
+                        selectedIcon: NavTab.settings.selectedIcon,
+                        railIcon: NavTab.settings.railIcon,
+                        label: NavTab.settings.label,
+                      ),
+                      settingsSelected: widget.currentTab == NavTab.settings,
+                      onSettings: widget.onSettings,
+                      services: requester
+                          ? const []
+                          : ref.watch(desktopRailServicesProvider),
+                      stackFigure: requester
+                          ? null
+                          : ref.watch(desktopStackFigureProvider),
+                      // What is in flight, except on Activity, where the page
+                      // is the whole of it.
+                      footer: requester || widget.currentTab == NavTab.activity
+                          ? null
+                          : InFlightGlance(
+                              onOpen: () => GoRouter.of(
+                                context,
+                              ).go(NavTab.activity.routePath),
+                            ),
+                      selectedService: room,
+                      onService: (service) => GoRouter.of(
+                        context,
+                      ).go(ServiceRoutes.forService(service)),
+                    ),
+                  ),
+                  if (_deckOpen)
+                    Positioned(
+                      top: chromeHeight,
+                      left: railWidth,
+                      right: 0,
+                      bottom: 0,
+                      child: _DeckOverlay(
+                        animation: _deck,
+                        onClose: _closeDeck,
+                        scrim: colorScheme.surfaceContainerLowest,
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),

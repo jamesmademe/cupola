@@ -21,6 +21,7 @@ import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/shell/domain/shell_audience.dart';
+import 'package:cupola/features/shell/presentation/desktop/shortcuts_sheet.dart';
 import 'package:cupola/features/shell/presentation/desktop/window_chrome.dart';
 
 import '../test_helpers/fake_secure_settings_store.dart';
@@ -156,7 +157,8 @@ void main() {
     scenes: [
       CatalogScene(
         'WindowChrome · full, inside Radarr on its 4K connection · the 72pt '
-        'gutter AppKit draws the traffic lights in, the breadcrumb that is the '
+        'gutter AppKit draws the traffic lights in, the sidebar\'s switch, back '
+        'and forward, the breadcrumb that is the '
         "window title, the lens readout, the way to anything and the "
         "inspector's switch",
         (_) => _Scene(
@@ -204,8 +206,8 @@ void main() {
         platform: CatalogPlatform.desktop,
       ),
       CatalogScene(
-        "WindowChrome · the requester's window · the breadcrumb alone: no "
-        'command deck and no inspector',
+        "WindowChrome · the requester's window · the arrows, the breadcrumb "
+        'and refresh: no command deck and no inspector',
         (_) => _Scene(
           location: '/home',
           requester: true,
@@ -221,6 +223,14 @@ void main() {
         (_) => const WindowDragStrip(),
         width: 1280,
         height: WindowChrome.height,
+        platform: CatalogPlatform.desktop,
+      ),
+      CatalogScene(
+        'ShortcutsSheet · ⌘/ · every key of the window in the order a person '
+        'reaches for them, from the one map the bindings read',
+        (_) => const Center(child: ShortcutsSheet(requester: false)),
+        width: 560,
+        height: 620,
         platform: CatalogPlatform.desktop,
       ),
       CatalogScene(

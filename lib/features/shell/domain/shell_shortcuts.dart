@@ -124,6 +124,27 @@ class OpenInInspectorIntent extends Intent {
   const OpenInInspectorIntent();
 }
 
+/// Back and forward through where this window has been: the toolbar's two
+/// arrows, `⌘[` and `⌘]` on a Mac, `Alt+←` and `Alt+→` elsewhere, and a
+/// mouse's own back and forward buttons.
+class GoBackIntent extends Intent {
+  const GoBackIntent();
+}
+
+class GoForwardIntent extends Intent {
+  const GoForwardIntent();
+}
+
+/// Fold the sidebar to its rail of glyphs, or open it again.
+class ToggleSidebarIntent extends Intent {
+  const ToggleSidebarIntent();
+}
+
+/// Show every key of the window, in one sheet.
+class ShowShortcutsIntent extends Intent {
+  const ShowShortcutsIntent();
+}
+
 /// The complete keyboard map, exactly as the design sheet prints it.
 ///
 /// One map, built once per platform, and the only source for both the bindings
@@ -147,6 +168,18 @@ abstract final class ShellShortcuts {
     AppModifier.cmd(LogicalKeyboardKey.keyR): const RefreshAllIntent(),
     AppModifier.cmd(LogicalKeyboardKey.keyF): const SearchThisScreenIntent(),
     AppModifier.opt(LogicalKeyboardKey.enter): const OpenInInspectorIntent(),
+    if (AppModifier.isApple) ...{
+      AppModifier.cmd(LogicalKeyboardKey.bracketLeft): const GoBackIntent(),
+      AppModifier.cmd(LogicalKeyboardKey.bracketRight): const GoForwardIntent(),
+      const SingleActivator(LogicalKeyboardKey.keyS, meta: true, control: true):
+          const ToggleSidebarIntent(),
+    } else ...{
+      AppModifier.opt(LogicalKeyboardKey.arrowLeft): const GoBackIntent(),
+      AppModifier.opt(LogicalKeyboardKey.arrowRight): const GoForwardIntent(),
+      AppModifier.cmd(LogicalKeyboardKey.keyS, shift: true):
+          const ToggleSidebarIntent(),
+    },
+    AppModifier.cmd(LogicalKeyboardKey.slash): const ShowShortcutsIntent(),
     const SingleActivator(LogicalKeyboardKey.escape):
         const CloseOverlayIntent(),
   };
@@ -159,4 +192,32 @@ abstract final class ShellShortcuts {
   static String get openInInspector => AppModifier.isApple ? '⌥⏎' : 'Alt+Enter';
   static String section(int index) => AppModifier.command('${index + 1}');
   static String get settings => AppModifier.command(',');
+  static String get back => AppModifier.isApple ? '⌘[' : 'Alt+←';
+  static String get forward => AppModifier.isApple ? '⌘]' : 'Alt+→';
+  static String get sidebar => AppModifier.isApple ? '⌃⌘S' : 'Ctrl+Shift+S';
+  static String get shortcuts => AppModifier.command('/');
+  static String get cycleService =>
+      AppModifier.isApple ? '⌘⌥← →' : 'Ctrl+Alt+← →';
+
+  /// Every key, as the shortcuts sheet lists them: what it does, then the key.
+  ///
+  /// The [operatorOnly] ones reach the stack (the deck, the services, the
+  /// inspector), which the requester's window has none of.
+  static List<({String does, String keys, bool operatorOnly})> get legend => [
+    (does: 'Jump to anything', keys: commandDeck, operatorOnly: true),
+    (does: 'Search this screen', keys: searchScreen, operatorOnly: false),
+    (
+      does: 'Go to a section',
+      keys: '${section(0)}–${AppModifier.isApple ? '4' : section(3)}',
+      operatorOnly: false,
+    ),
+    (does: 'Back, forward', keys: '$back  $forward', operatorOnly: false),
+    (does: 'Previous or next service', keys: cycleService, operatorOnly: true),
+    (does: 'Refresh everything', keys: refreshAll, operatorOnly: false),
+    (does: 'Show or hide the inspector', keys: inspector, operatorOnly: true),
+    (does: 'Open in the inspector', keys: openInInspector, operatorOnly: true),
+    (does: 'Show or hide the sidebar', keys: sidebar, operatorOnly: false),
+    (does: 'Settings', keys: settings, operatorOnly: false),
+    (does: 'These keys', keys: shortcuts, operatorOnly: false),
+  ];
 }

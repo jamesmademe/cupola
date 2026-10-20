@@ -31,6 +31,7 @@ import 'package:cupola/features/shell/domain/shell_shortcuts.dart';
 import 'package:cupola/features/shell/presentation/branch_transition.dart';
 import 'package:cupola/features/shell/presentation/desktop/command_deck.dart';
 import 'package:cupola/features/shell/presentation/desktop/desktop_nav_rail.dart';
+import 'package:cupola/features/shell/presentation/desktop/shortcuts_sheet.dart';
 import 'package:cupola/features/shell/presentation/desktop/inspector_pane.dart';
 import 'package:cupola/features/shell/presentation/desktop/window_chrome.dart';
 import 'package:cupola/features/shell/presentation/shell_screen.dart';
@@ -613,6 +614,95 @@ void main() {
       for (final tab in NavTab.barFor(Audience.operator)) {
         expect(lit(tab.label), isFalse, reason: tab.label);
       }
+    });
+  });
+
+  testWidgets('back and forward walk where the window has been, across '
+      'sections, by key and by the strip\'s arrows', (tester) async {
+    await onPlatform(TargetPlatform.macOS, () async {
+      final harness = await _pumpShell(tester, overrides: await _world());
+      String path() => harness.routerDelegate.currentConfiguration.uri.path;
+      Finder arrow(String key) => find.byKey(ValueKey(key));
+      bool enabled(String key) =>
+          tester
+              .widget<GestureDetector>(
+                find.descendant(
+                  of: arrow(key),
+                  matching: find.byType(GestureDetector),
+                ),
+              )
+              .onTap !=
+          null;
+
+      // The first page of a window has nowhere back to go.
+      expect(enabled('strip-back'), isFalse);
+      expect(enabled('strip-forward'), isFalse);
+
+      await _press(tester, LogicalKeyboardKey.digit2, meta: true);
+      await _press(tester, LogicalKeyboardKey.digit3, meta: true);
+      expect(path(), NavTab.activity.routePath);
+
+      await _press(tester, LogicalKeyboardKey.bracketLeft, meta: true);
+      expect(path(), NavTab.discover.routePath);
+      await tester.tap(arrow('strip-back'));
+      await tester.pumpAndSettle();
+      expect(path(), '/home');
+      expect(enabled('strip-back'), isFalse);
+      expect(enabled('strip-forward'), isTrue);
+
+      await tester.tap(arrow('strip-forward'));
+      await tester.pumpAndSettle();
+      expect(path(), NavTab.discover.routePath);
+
+      // A new visit from the middle drops what lay ahead.
+      await _press(tester, LogicalKeyboardKey.digit4, meta: true);
+      expect(enabled('strip-forward'), isFalse);
+      await _press(tester, LogicalKeyboardKey.bracketRight, meta: true);
+      expect(path(), NavTab.stack.routePath);
+    });
+  });
+
+  testWidgets('the sidebar folds to its rail and back, by key and by the '
+      'strip\'s switch, and a narrow window has no switch', (tester) async {
+    await onPlatform(TargetPlatform.macOS, () async {
+      await _pumpShell(tester, overrides: await _world());
+      double railWidth() => tester.getSize(find.byType(DesktopNavRail)).width;
+
+      expect(railWidth(), DesktopNavRail.fullWidth);
+      await tester.tap(find.byKey(const ValueKey('strip-sidebar')));
+      await tester.pumpAndSettle();
+      expect(railWidth(), DesktopNavRail.compactWidth);
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyS);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+      await tester.pumpAndSettle();
+      expect(railWidth(), DesktopNavRail.fullWidth);
+    });
+  });
+
+  testWidgets('⌘/ lists every key, and Escape puts it away', (tester) async {
+    await onPlatform(TargetPlatform.macOS, () async {
+      await _pumpShell(tester, overrides: await _world());
+
+      await _press(tester, LogicalKeyboardKey.slash, meta: true);
+      expect(find.text('Keyboard shortcuts'), findsOne);
+      for (final entry in ShellShortcuts.legend) {
+        expect(
+          find.descendant(
+            of: find.byType(ShortcutsSheet),
+            matching: find.text(entry.does),
+          ),
+          findsOne,
+          reason: entry.does,
+        );
+      }
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.text('Keyboard shortcuts'), findsNothing);
     });
   });
 }
