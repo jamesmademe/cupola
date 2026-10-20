@@ -8,8 +8,10 @@ import 'package:cupola/core/app_breakpoints.dart';
 import 'package:cupola/core/generated/design_tokens.g.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/front_room.dart';
+import 'package:cupola/core/widgets/status_badge.dart' show statusToneColor;
 
 /// A destination for the [FloatingBottomNavBar].
 class FloatingNavDestination {
@@ -27,12 +29,18 @@ class FloatingNavDestination {
 
   /// Count of things waiting on this destination, or zero for none.
   ///
-  /// Painted in **ink**, never a status tone and never a colour of the
-  /// section's own: a green or amber pill living in permanent chrome reads as
-  /// stack health, and the chrome is monochrome: colour comes from the content
-  /// and the five tones, nothing else. An ink disc with the on-ink numeral is
-  /// the loudest thing the room can draw without a hue.
+  /// Painted in its [badgeTone] (`W-counts`): amber when something needs the
+  /// person, blue when only answers and finished work wait; a destination
+  /// with nothing waiting has no mark at all, so the colour only ever says
+  /// what the number counts. Without a tone it is the ink disc.
   final int badgeCount;
+
+  /// The count's tone: [StatusTone.warning] or [StatusTone.info]; null for
+  /// the ink disc.
+  final StatusTone? badgeTone;
+
+  /// The count is the least there is: it prints `5+`.
+  final bool badgeFloor;
 
   /// Spoken alongside the label, because a number drawn on an icon is invisible
   /// to a screen reader.
@@ -52,16 +60,23 @@ class FloatingNavDestination {
     this.railIcon,
     required this.label,
     this.badgeCount = 0,
+    this.badgeTone,
+    this.badgeFloor = false,
     this.badgeSemanticLabel,
     this.customSemanticsActions,
   });
 
-  /// What the badge prints: the count, or `9+` past nine.
+  /// What the badge prints: the count, `5+` when that is the least there is,
+  /// or `9+` past nine.
   ///
   /// One rule for every surface that draws [badgeCount]: the phone's bar and
   /// the desktop rail, because both badges sit on a 20pt glyph, and a third
   /// digit is wider than the glyph it annotates.
-  String get badgeLabel => badgeCount > 9 ? '9+' : '$badgeCount';
+  String get badgeLabel => badgeCount > 9
+      ? '9+'
+      : badgeFloor
+      ? '$badgeCount+'
+      : '$badgeCount';
 }
 
 /// Constants for FloatingBottomNavBar dimensions.
@@ -560,6 +575,7 @@ class _NavBarItem extends StatelessWidget {
             NavBadgedIcon(
               count: destination.badgeCount,
               label: destination.badgeLabel,
+              tone: destination.badgeTone,
               child: AnimatedSwitcher(
                 duration: AppAnimation.durationSm,
                 child: Icon(
@@ -605,20 +621,28 @@ class NavBadgedIcon extends StatelessWidget {
     required this.count,
     required this.label,
     required this.child,
+    this.tone,
   });
 
   final int count;
   final String label;
   final Widget child;
 
+  /// The disc's tone ([navBadgeColors]); null for the ink disc.
+  final StatusTone? tone;
+
   /// The badge's height at the default reading size.
   static const double _minSize = 15.0;
-  static const double _collarWidth = 1.5;
+
+  /// A collar in the bar's own ground, so the number stands off the glyph
+  /// in either room.
+  static const double _collarWidth = 2;
 
   @override
   Widget build(BuildContext context) {
     if (count <= 0) return child;
     final colorScheme = Theme.of(context).colorScheme;
+    final colors = navBadgeColors(context, tone);
     return ExcludeSemantics(
       child: Stack(
         clipBehavior: Clip.none,
@@ -639,8 +663,7 @@ class NavBadgedIcon extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 4),
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                // The ink disc: the primary ink, the fill of the ink button.
-                color: colorScheme.primary,
+                color: colors.fill,
                 borderRadius: BorderRadius.circular(AppRadius.full),
                 border: Border.all(
                   color: colorScheme.surface,
@@ -655,12 +678,7 @@ class NavBadgedIcon extends StatelessWidget {
                 style: Theme.of(context).textTheme.labelSmall
                     ?.weight(FontWeight.w600)
                     .tabular
-                    .copyWith(
-                      // The on-ink numeral: the ink button's own label colour,
-                      // spaced against the ink by the theme in both rooms.
-                      color: colorScheme.onPrimary,
-                      height: 1,
-                    ),
+                    .copyWith(color: colors.ink, height: 1),
               ),
             ),
           ),
@@ -668,4 +686,24 @@ class NavBadgedIcon extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The fill and the numeral of a destination's count in [tone]: amber is the
+/// fault's own fill and ink (`tone.amber.fill`, the amber remedy's); blue is
+/// the info tone under the on-ink numeral; no tone is the ink disc, the ink
+/// button's fill and label.
+({Color fill, Color ink}) navBadgeColors(
+  BuildContext context,
+  StatusTone? tone,
+) {
+  final colorScheme = Theme.of(context).colorScheme;
+  final room = CupolaRoom.of(context);
+  return switch (tone) {
+    StatusTone.warning => (fill: room.toneAmberFill, ink: room.toneAmberInk),
+    StatusTone.info => (
+      fill: statusToneColor(colorScheme, StatusTone.info),
+      ink: room.onInk,
+    ),
+    _ => (fill: colorScheme.primary, ink: colorScheme.onPrimary),
+  };
 }

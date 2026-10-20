@@ -7,12 +7,27 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
+import 'package:cupola/features/shell/presentation/activity_badge.dart';
 
 import 'catalog.dart';
 
 /// The shell's destinations for [audience]; only Activity carries a count.
+/// Activity's number as the shell sets it: [faults] amber, else [requests]
+/// and [searches] blue; nothing on the page it counts.
+ActivityBadge? _activity({
+  int faults = 0,
+  int requests = 0,
+  int searches = 0,
+}) => activityBadgeOf(
+  faults: faults,
+  faultsFloor: false,
+  requests: requests,
+  requestsFloor: false,
+  searches: searches,
+);
+
 List<FloatingNavDestination> _destinations({
-  int searchesWaiting = 0,
+  ActivityBadge? activity,
   Audience audience = Audience.operator,
 }) => [
   for (final tab in NavTab.barFor(audience))
@@ -21,10 +36,9 @@ List<FloatingNavDestination> _destinations({
       selectedIcon: tab.selectedIcon,
       railIcon: tab.railIcon,
       label: tab.label,
-      badgeCount: tab == NavTab.activity ? searchesWaiting : 0,
-      badgeSemanticLabel: tab == NavTab.activity && searchesWaiting > 0
-          ? '$searchesWaiting finished searches to look at'
-          : null,
+      badgeCount: tab == NavTab.activity ? activity?.count ?? 0 : 0,
+      badgeTone: tab == NavTab.activity ? activity?.tone : null,
+      badgeSemanticLabel: tab == NavTab.activity ? activity?.spoken : null,
     ),
 ];
 
@@ -33,25 +47,22 @@ final _operatorBar = NavTab.barFor(Audience.operator);
 
 Widget _bar(
   int selected, {
-  int searchesWaiting = 0,
+  ActivityBadge? activity,
   Audience audience = Audience.operator,
 }) => FloatingBottomNavBar(
   selectedIndex: selected,
   onDestinationSelected: (_) {},
-  destinations: _destinations(
-    searchesWaiting: searchesWaiting,
-    audience: audience,
-  ),
+  destinations: _destinations(activity: activity, audience: audience),
 );
 
 CatalogScene _scene(
   String caption,
   int selected, {
-  int searchesWaiting = 0,
+  ActivityBadge? activity,
   double width = 390,
 }) => CatalogScene(
   caption,
-  (_) => _bar(selected, searchesWaiting: searchesWaiting),
+  (_) => _bar(selected, activity: activity),
   width: width,
 );
 
@@ -67,15 +78,25 @@ void main() {
         _operatorBar.indexOf(NavTab.home),
       ),
       _scene(
-        'Activity selected, 3 finished searches · the count on the ink disc, '
-        'never a status tone and never a section colour',
-        _operatorBar.indexOf(NavTab.activity),
-        searchesWaiting: 3,
+        'Something needs you · Activity carries the faults Needs you counts, '
+        'on the amber fill with its ink, a 2pt collar in the bar\'s ground; '
+        'heard as "Activity, 3 need you"',
+        _operatorBar.indexOf(NavTab.home),
+        activity: _activity(faults: 3, requests: 2),
       ),
       _scene(
-        'Discover selected, badge on Activity · a count past nine reads 9+',
+        'Only answers wait · blue: 2 requests and a finished search',
         _operatorBar.indexOf(NavTab.discover),
-        searchesWaiting: 12,
+        activity: _activity(requests: 2, searches: 1),
+      ),
+      _scene(
+        'A count past nine reads 9+',
+        _operatorBar.indexOf(NavTab.discover),
+        activity: _activity(faults: 18),
+      ),
+      _scene(
+        'On Activity itself · no number: the page says it, larger',
+        _operatorBar.indexOf(NavTab.activity),
       ),
       _scene('Stack selected', _operatorBar.indexOf(NavTab.stack)),
       _scene(
@@ -94,7 +115,7 @@ void main() {
       _scene(
         '320pt window · the columns narrow and every name still fits',
         0,
-        searchesWaiting: 3,
+        activity: _activity(faults: 3),
         width: 320,
       ),
       CatalogScene(
@@ -114,13 +135,13 @@ void main() {
       CatalogScene(
         'At 2× reading size · the names and the badge clamp at 1.3×, the bar '
         'keeps its height and the badge grows to fit its count',
-        (_) => _bar(1, searchesWaiting: 3),
+        (_) => _bar(1, activity: _activity(faults: 3)),
         width: 390,
         textScale: catalogTextScale,
       ),
       CatalogScene(
-        'At 2× reading size, Activity selected · 9+ over its name',
-        (_) => _bar(2, searchesWaiting: 12),
+        'At 2× reading size, blue · 9+ over its name',
+        (_) => _bar(0, activity: _activity(requests: 12)),
         width: 390,
         textScale: catalogTextScale,
       ),

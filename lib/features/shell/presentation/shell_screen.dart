@@ -18,7 +18,6 @@ import 'package:cupola/core/widgets/front_room.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/ambient_background.dart';
 import 'package:cupola/core/widgets/floating_nav_rail.dart';
-import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
 import 'package:cupola/features/release_search/presentation/release_search_lifecycle.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/nav_tab.dart';
@@ -27,6 +26,7 @@ import 'package:cupola/features/shell/domain/portal_hints.dart';
 import 'package:cupola/features/shell/domain/shell_audience.dart';
 import 'package:cupola/features/shell/domain/shell_branches.dart';
 import 'package:cupola/features/shell/domain/shell_shortcuts.dart';
+import 'package:cupola/features/shell/presentation/activity_badge.dart';
 import 'package:cupola/features/shell/presentation/desktop/desktop_shell.dart';
 import 'package:cupola/features/shell/presentation/desktop/window_chrome.dart';
 import 'package:cupola/features/shell/presentation/portal_announcement.dart';
@@ -286,9 +286,12 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     // `NavigationRailDestination`s, which is how it ended up as the one surface
     // where a finished search never showed a badge: the channel that has to
     // keep working when notifications are denied, off, or missed.
-    final searchesWaiting = ref.watch(unseenReleaseSearchCountProvider);
+    // On the page it counts, the number goes: the page says it larger.
+    final activity = currentTab == NavTab.activity
+        ? null
+        : ref.watch(activityBadgeProvider);
     final destinations = barTabs
-        .map((tab) => _destinationFor(tab, searchesWaiting))
+        .map((tab) => _destinationFor(tab, activity))
         .toList(growable: false);
     void select(int barIndex) =>
         _onItemTapped(barTabs[barIndex], context, currentTab);
@@ -539,6 +542,8 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
       railIcon: destination.railIcon,
       label: destination.label,
       badgeCount: destination.badgeCount,
+      badgeTone: destination.badgeTone,
+      badgeFloor: destination.badgeFloor,
       badgeSemanticLabel: destination.badgeSemanticLabel,
       customSemanticsActions: {
         ShellScreen.openPortalAction: _portal.openFromUi,
@@ -546,20 +551,21 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     );
   }
 
-  FloatingNavDestination _destinationFor(NavTab tab, int searchesWaiting) {
-    // Only Activity carries a count, and only for finished searches nobody has
-    // opened: the channel that has to keep working when notifications are
-    // denied, off, or missed.
-    final badge = tab == NavTab.activity ? searchesWaiting : 0;
+  FloatingNavDestination _destinationFor(NavTab tab, ActivityBadge? activity) {
+    // Only Activity carries a number (`activityBadgeProvider`): amber for what
+    // needs the person, blue for answers and finished searches waiting. The
+    // finished searches are the channel that has to keep working when
+    // notifications are denied, off, or missed.
+    final badge = tab == NavTab.activity ? activity : null;
     return FloatingNavDestination(
       icon: tab.icon,
       selectedIcon: tab.selectedIcon,
       railIcon: tab.railIcon,
       label: tab.label,
-      badgeCount: badge,
-      badgeSemanticLabel: badge == 0
-          ? null
-          : '$badge finished search${badge == 1 ? '' : 'es'} to look at',
+      badgeCount: badge?.count ?? 0,
+      badgeTone: badge?.tone,
+      badgeFloor: badge?.floor ?? false,
+      badgeSemanticLabel: badge?.spoken,
     );
   }
 

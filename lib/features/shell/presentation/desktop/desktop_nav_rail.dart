@@ -189,7 +189,15 @@ class DesktopNavRail extends StatelessWidget {
       glyph: _destinationGlyph(destination),
       label: destination.label,
       spoken: spoken,
-      badge: badge,
+      // A count in a tone is the services' pill, whole as theirs (`18`): the
+      // 9+ cap is the disc's, on a 20pt glyph. The ink disc otherwise.
+      badge: destination.badgeTone == null ? badge : null,
+      count: destination.badgeTone == null || badge == null
+          ? null
+          : destination.badgeFloor
+          ? '${destination.badgeCount}+'
+          : '${destination.badgeCount}',
+      countTone: destination.badgeTone,
       figure: figure?.text,
       shortcut: ShellShortcuts.section(i),
       selected: i == selectedIndex && selectedService == null,
@@ -535,7 +543,10 @@ class _RailItemState extends State<_RailItem> {
               Positioned(
                 top: _RailBadge.top,
                 left: _RailBadge.left,
-                child: _RailBadge(label: destination.badgeLabel),
+                child: _RailBadge(
+                  label: destination.badgeLabel,
+                  tone: destination.badgeTone,
+                ),
               ),
             ],
           );
@@ -632,7 +643,10 @@ class _CountPill extends StatelessWidget {
 
 /// The count, on the ink disc: never a status tone, never a section's colour.
 class _RailBadge extends StatelessWidget {
-  const _RailBadge({required this.label});
+  const _RailBadge({required this.label, this.tone});
+
+  /// The disc's tone (`navBadgeColors`); null for the ink disc.
+  final StatusTone? tone;
 
   /// The count as [FloatingNavDestination.badgeLabel] prints it.
   final String label;
@@ -653,6 +667,7 @@ class _RailBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final colors = navBadgeColors(context, tone);
     return Container(
       key: const ValueKey('desktop-rail-badge'),
       // 18, not the 15 this was. DESIGN.md's type floor is enforced rather than
@@ -666,7 +681,7 @@ class _RailBadge extends StatelessWidget {
       constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
       padding: const EdgeInsets.symmetric(horizontal: 3),
       decoration: BoxDecoration(
-        color: colorScheme.primary,
+        color: colors.fill,
         borderRadius: BorderRadius.circular(AppRadius.full),
         // A collar in the rail's own ground, so the badge reads as sitting on
         // top of the glyph rather than merging into it.
@@ -685,7 +700,7 @@ class _RailBadge extends StatelessWidget {
             context,
             size: 11,
             weight: FontWeight.w600,
-            color: colorScheme.onPrimary,
+            color: colors.ink,
             height: 1,
           ).tabular,
         ),

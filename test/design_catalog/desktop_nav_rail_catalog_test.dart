@@ -18,18 +18,19 @@ import 'catalog.dart';
 final _bar = NavTab.barFor(Audience.operator);
 
 /// The destinations exactly as the shell builds them for the phone bar and
-/// the rail alike: only Activity ever carries a count.
-List<FloatingNavDestination> _destinations({int searchesWaiting = 0}) => [
+/// the rail alike: only Activity ever carries a count, here [needYou] faults
+/// in amber.
+List<FloatingNavDestination> _destinations({int needYou = 0}) => [
   for (final tab in _bar)
     FloatingNavDestination(
       icon: tab.icon,
       selectedIcon: tab.selectedIcon,
       railIcon: tab.railIcon,
       label: tab.label,
-      badgeCount: tab == NavTab.activity ? searchesWaiting : 0,
-      badgeSemanticLabel: tab == NavTab.activity && searchesWaiting > 0
-          ? '$searchesWaiting finished search'
-                '${searchesWaiting == 1 ? '' : 'es'} to look at'
+      badgeCount: tab == NavTab.activity ? needYou : 0,
+      badgeTone: tab == NavTab.activity ? StatusTone.warning : null,
+      badgeSemanticLabel: tab == NavTab.activity && needYou > 0
+          ? '$needYou need you'
           : null,
     ),
 ];
@@ -88,7 +89,7 @@ const _inFlight = InFlightGlanceData(
 /// lit at the foot ([settingsSelected]) and none of them.
 Widget _rail(
   int selected, {
-  int searchesWaiting = 0,
+  int needYou = 0,
   bool settingsSelected = false,
   bool compact = false,
   bool requester = false,
@@ -101,7 +102,7 @@ Widget _rail(
     selectedIndex: selected,
     destinations: requester
         ? _requesterDestinations()
-        : _destinations(searchesWaiting: searchesWaiting),
+        : _destinations(needYou: needYou),
     onDestinationSelected: (_) {},
     settings: FloatingNavDestination(
       icon: NavTab.settings.icon,
@@ -141,18 +142,20 @@ void main() {
       CatalogScene(
         'DesktopNavRail · the operator on the Home · the sections, Stack\'s '
         'figure, the services in their domains with a number where something '
-        'waits on the person, In flight and Settings at the foot',
-        (_) => _rail(_bar.indexOf(NavTab.home)),
+        'waits on the person, Activity with all of them (Sonarr\'s 18), In '
+        'flight and Settings at the foot',
+        (_) => _rail(_bar.indexOf(NavTab.home), needYou: 18),
         width: DesktopNavRail.fullWidth,
         height: 856,
         platform: CatalogPlatform.desktop,
       ),
       CatalogScene(
-        'DesktopNavRail · in Sonarr\'s room, two finished searches · the room '
-        'is lit in Stack\'s place; the count is the ink disc',
+        'DesktopNavRail · in Sonarr\'s room, two things need you · the room '
+        'is lit in Stack\'s place; Activity\'s count is the services\' amber '
+        'pill',
         (_) => _rail(
           _bar.indexOf(NavTab.stack),
-          searchesWaiting: 2,
+          needYou: 2,
           room: ServiceKey.sonarr,
         ),
         width: DesktopNavRail.fullWidth,
@@ -207,44 +210,32 @@ void main() {
         platform: CatalogPlatform.desktop,
       ),
       CatalogScene(
-        'DesktopNavRail folded, under 1100pt · Activity selected, two finished '
-        'searches · glyphs with their tooltips, the badge never a status tone',
-        (_) => _rail(
-          _bar.indexOf(NavTab.activity),
-          searchesWaiting: 2,
-          compact: true,
-        ),
+        'DesktopNavRail folded, under 1100pt · Home selected, two things need '
+        'you · glyphs with their tooltips, Activity\'s number on the amber '
+        'disc',
+        (_) => _rail(_bar.indexOf(NavTab.home), needYou: 2, compact: true),
         width: DesktopNavRail.compactWidth,
         height: 360,
         platform: CatalogPlatform.desktop,
       ),
       CatalogScene(
-        'DesktopNavRail folded · Settings selected at the foot, twelve '
-        'searches waiting · past nine the badge reads 9+ and grows away from '
-        'the glyph, not across it',
-        (_) => _rail(
-          -1,
-          searchesWaiting: 12,
-          settingsSelected: true,
-          compact: true,
-        ),
+        'DesktopNavRail folded · Settings selected at the foot, twelve things '
+        'need you · past nine the badge reads 9+ and grows away from the '
+        'glyph, not across it',
+        (_) => _rail(-1, needYou: 12, settingsSelected: true, compact: true),
         width: DesktopNavRail.compactWidth,
         height: 360,
         platform: CatalogPlatform.desktop,
       ),
       CatalogScene(
-        'Text at 200% · the sidebar on Activity with twelve searches waiting, '
+        'Text at 200% · the sidebar on Home with twelve things needing you, '
         'and folded',
         (_) => Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _rail(_bar.indexOf(NavTab.activity), searchesWaiting: 12),
+            _rail(_bar.indexOf(NavTab.home), needYou: 12),
             const SizedBox(width: 24),
-            _rail(
-              _bar.indexOf(NavTab.activity),
-              searchesWaiting: 12,
-              compact: true,
-            ),
+            _rail(_bar.indexOf(NavTab.home), needYou: 12, compact: true),
           ],
         ),
         width: DesktopNavRail.fullWidth + 24 + DesktopNavRail.compactWidth,

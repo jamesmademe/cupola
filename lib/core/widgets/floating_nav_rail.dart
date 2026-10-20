@@ -240,6 +240,7 @@ class _RailItem extends StatelessWidget {
             NavBadgedIcon(
               count: destination.badgeCount,
               label: destination.badgeLabel,
+              tone: destination.badgeTone,
               child: AnimatedSwitcher(
                 duration: AppAnimation.durationSm,
                 child: Icon(
