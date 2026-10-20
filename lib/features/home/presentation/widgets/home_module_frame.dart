@@ -45,6 +45,7 @@ class HomeModuleFrame extends StatelessWidget {
     this.action,
     this.semanticLabel,
     this.light,
+    this.rail,
   }) : _state = _FrameState.ready,
        coverage = null,
        onRetry = null,
@@ -63,6 +64,7 @@ class HomeModuleFrame extends StatelessWidget {
   }) : child = skeleton,
        _state = _FrameState.loading,
        subtitle = null,
+       rail = null,
        light = null,
        action = null,
        semanticLabel = null,
@@ -86,6 +88,7 @@ class HomeModuleFrame extends StatelessWidget {
     this.child,
   }) : _state = _FrameState.silent,
        subtitle = null,
+       rail = null,
        light = null,
        action = null,
        semanticLabel = null,
@@ -106,6 +109,7 @@ class HomeModuleFrame extends StatelessWidget {
     required VoidCallback this.onSetUp,
   }) : _state = _FrameState.needsService,
        child = null,
+       rail = null,
        light = null,
        subtitle = null,
        action = null,
@@ -123,6 +127,11 @@ class HomeModuleFrame extends StatelessWidget {
 
   /// The way on, at the end of the heading: `Calendar`, `See all`.
   final HomeModuleAction? action;
+
+  /// Back and forward for a module whose rows are a rail of cards
+  /// (`RailArrows`), at the heading's end. Silent to a screen reader, as the
+  /// heading's parts are.
+  final Widget? rail;
 
   /// The rows; for [HomeModuleFrame.silent], what was last known.
   final Widget? child;
@@ -250,6 +259,7 @@ class HomeModuleFrame extends StatelessWidget {
                   ),
                 ),
                 if (action != null) _ActionLink(action: action),
+                ?rail,
               ],
             ),
             if (subtitle case final line?)

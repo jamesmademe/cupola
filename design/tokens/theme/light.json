@@ -397,6 +397,11 @@
         "$type": "number",
         "$value": 0.35,
         "$description": "A poster's glow (derived: the day room's light opacity)."
+      },
+      "lifted": {
+        "$type": "number",
+        "$value": 0.5,
+        "$description": "A poster under the pointer (derived: the poster's glow, half again)."
       }
     },
     "hero": {

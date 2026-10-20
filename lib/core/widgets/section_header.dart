@@ -49,6 +49,13 @@ class SectionHeader extends StatelessWidget {
   /// where the button leads. Read out after the label, as a hint.
   final String? semanticHint;
 
+  /// Back and forward for the row of posters under the heading
+  /// (`RailArrows.of`), at the row's end, with the chevron moving beside the
+  /// title. They are the pointer's: a mouse cannot swipe. A screen reader
+  /// walks the row's tiles, and Tab reaches them and scrolls them into view,
+  /// so the arrows are silent and never take the focus.
+  final Widget? rail;
+
   /// Whether [trailing] is a control in its own right.
   ///
   /// Set by the constructors rather than by callers: [SectionHeader.action] is
@@ -72,6 +79,7 @@ class SectionHeader extends StatelessWidget {
     this.subtitle,
     this.semanticLabel,
     this.semanticHint,
+    this.rail,
   }) : trailingIsInteractive = false,
        _carriesInset = true;
 
@@ -89,6 +97,7 @@ class SectionHeader extends StatelessWidget {
   }) : onTap = null,
        showChevron = false,
        semanticHint = null,
+       rail = null,
        trailingIsInteractive = true,
        _carriesInset = true,
        assert(
@@ -110,6 +119,7 @@ class SectionHeader extends StatelessWidget {
     this.subtitle,
     this.semanticLabel,
     this.semanticHint,
+    this.rail,
   }) : trailingIsInteractive = false,
        _carriesInset = false;
 
@@ -124,6 +134,7 @@ class SectionHeader extends StatelessWidget {
   }) : onTap = null,
        showChevron = false,
        semanticHint = null,
+       rail = null,
        trailingIsInteractive = true,
        _carriesInset = false,
        assert(
@@ -215,6 +226,28 @@ class SectionHeader extends StatelessWidget {
                 // Full width now, so a trailing that wraps internally has room
                 // to do it.
                 SizedBox(width: double.infinity, child: end),
+              ],
+            )
+          : rail != null
+          // The row's arrows take its end. A link keeps its place before
+          // them; the bare chevron that says the heading opens the rest steps
+          // in beside the title.
+          ? Row(
+              children: [
+                if (trailing == null)
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Flexible(child: titleBlock),
+                        ?end,
+                      ],
+                    ),
+                  )
+                else ...[
+                  Expanded(child: titleBlock),
+                  ?end,
+                ],
+                ExcludeSemantics(child: rail),
               ],
             )
           : Row(

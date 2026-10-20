@@ -15,6 +15,7 @@ import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/inline_error_retry.dart';
+import 'package:cupola/core/widgets/rail_arrows.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
@@ -189,35 +190,38 @@ class ServiceOverviewSection extends StatelessWidget {
         ? null
         : () => goToServiceTab(context, service, tab);
     // Inside the slab the slab carries the inset.
-    final header = padBody
-        ? SectionHeader.flush(
-            title: title,
-            subtitle: subtitle,
-            showChevron: false,
-            trailing: link,
-            semanticHint: hint,
-            onTap: open,
-          )
-        : SectionHeader(
-            title: title,
-            subtitle: subtitle,
-            showChevron: false,
-            trailing: link,
-            semanticHint: hint,
-            onTap: open,
-          );
+    final header = SectionHeader.flush(
+      title: title,
+      subtitle: subtitle,
+      showChevron: false,
+      trailing: link,
+      semanticHint: hint,
+      onTap: open,
+    );
 
     // A rail runs off the page with its heading above it; every other region
     // is a slab of the room, its heading inside.
+    // Its heading carries the rail's arrows, and the rail below takes their
+    // scroll (`RailArrows.controllerOf`).
     if (!padBody) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          header,
-          const SizedBox(height: AppSpacing.sm),
-          child,
-          const SizedBox(height: AppSpacing.lg),
-        ],
+      return RailArrows(
+        builder: (context, controller, arrows) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SectionHeader(
+              title: title,
+              subtitle: subtitle,
+              showChevron: false,
+              trailing: link,
+              semanticHint: hint,
+              onTap: open,
+              rail: arrows,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            child,
+            const SizedBox(height: AppSpacing.lg),
+          ],
+        ),
       );
     }
     final room = CupolaRoom.of(context);

@@ -9,7 +9,7 @@ Rendered from `lib/features/discover/presentation/widgets/catalog_poster.dart` b
 - **Title**: the body role at 600 in `on-surface`, two lines then an ellipsis. Its words grow with the reading size to the compact ceiling (1.6), and a word wider than the tile steps the title down until it fits whole, never under the default size (`TextScaleMetrics.wholeWordScaler`): a word broken inside reads worse than the same word a little smaller. The line under it (the score, or the day on a shelf ordered by it) keeps its one line whole the same way: `Thu 29 O…` loses its month.
 - **Score**: `TMDB 7.4` in the caption role (`bodySmall`) and `dimText`, the source glued to its figure (`unitSpace`). TMDB's zero is a title nobody rated, and an average over fewer than 20 votes is a handful of opinions: no score is drawn for either (`MediaPreview.tmdbScore`). A shelf ordered by when its titles come out passes `meta` instead, drawn the same way: the calendar's `Out 14 Oct` for a movie, `From 1 Oct` for a new series.
 - **Reading size**: the words follow the reading size up to the compact tile's ceiling (`TextScaleMetrics.defaultMaxScaleFactor`, 1.6x) and the tile grows with them (`CatalogPoster.heightFor`, which a rail uses for its height and a grid for its row); past it they ellipsise, never breaking inside a word.
-- **Tap**: `PressableScale`; it opens the title's page under the tab it is in (`openSeerrTitle`).
+- **Tap**: `PressableScale`; it opens the title's page under the tab it is in (`openSeerrTitle`). With a mouse the tile shows the pointing hand and its poster rises 2 with a stronger glow, the caption staying put; Tab reaches it and Enter or Space opens it, the ring on the poster's corner rather than around the caption (see [ContentCard](../ContentCard/README.md)).
 
 The consumer provides the `MediaPreview`, the hero tag, the tile's width, the kind when the row fixes it (a movie rail), and the `meta` line when a shelf says something else than the score.
 
@@ -22,5 +22,6 @@ Each sheet is drawn in the dark and the light room.
 - The operator: on the server, waiting for approval, downloading at 62%, and a title Seerr holds nothing of.
 - The requester: the same four in her words.
 - Text at 200%: the words at the ceiling, the long title ellipsised, a long word kept whole.
+- With a pointer and a keyboard (desktop): Charge under a mouse, Sprite Fright holding the focus.
 
 Do: give a rail or a grid the height `heightFor` answers; lay a grid out with `MediaGrid.columnsFor`. Don't: put a badge on every poster to say it can be requested, or draw a 0 for an unrated title.

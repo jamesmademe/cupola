@@ -317,6 +317,7 @@ class _PosterRail extends ConsumerWidget {
           context,
         ).copyWith(textScaler: TextScaleMetrics.clampedScalerOf(context)),
         child: ListView.separated(
+          controller: RailArrows.controllerOf(context),
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           itemCount: artists.length,

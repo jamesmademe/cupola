@@ -58,20 +58,29 @@ const _row = [
   ),
 ];
 
-Widget _rail() => Builder(
+/// The four in a row; with [pointed], the second under a mouse and the
+/// third holding the keyboard's focus.
+Widget _rail({bool pointed = false}) => Builder(
   builder: (context) => SizedBox(
     height: CatalogPoster.heightFor(context, 104),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (final item in _row) ...[
-          CatalogPoster(item: item, heroTag: 'poster_${item.id}', width: 104),
+        for (final (index, item) in _row.indexed) ...[
+          switch ((pointed, index)) {
+            (true, 1) => CatalogPointer.hover(child: _poster(item)),
+            (true, 2) => CatalogPointer.focus(child: _poster(item)),
+            _ => _poster(item),
+          },
           const SizedBox(width: 12),
         ],
       ],
     ),
   ),
 );
+
+Widget _poster(MediaPreview item) =>
+    CatalogPoster(item: item, heroTag: 'poster_${item.id}', width: 104);
 
 void main() {
   catalogCard(
@@ -104,6 +113,16 @@ void main() {
         (_) => _rail(),
         width: 500,
         textScale: catalogTextScale,
+        overrides: [audienceProvider.overrideWithValue(Audience.operator)],
+      ),
+      CatalogScene(
+        'CatalogPoster · with a pointer and a keyboard · Charge under a mouse: '
+        'its poster rises 2 pt and glows stronger, the caption stays; Sprite '
+        "Fright holding the keyboard's focus: the ring on the poster's corner, "
+        'not around the caption',
+        (_) => _rail(pointed: true),
+        width: 500,
+        platform: CatalogPlatform.desktop,
         overrides: [audienceProvider.overrideWithValue(Audience.operator)],
       ),
     ],

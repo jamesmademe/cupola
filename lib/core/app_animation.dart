@@ -56,6 +56,12 @@ class AppAnimation {
   /// The scale a pressed target dips to.
   static const double pressScale = DesignTokens.motionPressScale;
 
+  /// 180ms - A poster rising under the pointer, and settling back.
+  static const Duration hover = DesignTokens.motionHoverDuration;
+
+  /// How far a poster rises under the pointer.
+  static const double hoverLift = DesignTokens.motionHoverLift;
+
   /// 320ms - State changes, expand, select.
   static const Duration standard = DesignTokens.motionStandardDuration;
 

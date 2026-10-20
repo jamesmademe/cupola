@@ -3,6 +3,9 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 
 import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/app_radius.dart';
+import 'package:cupola/core/focus_ring.dart';
+import 'package:cupola/core/theme.dart';
 
 /// Wraps a tappable child with a subtle press-down scale + optional haptic,
 /// giving the app a tactile, "alive" feel on touch.
@@ -16,6 +19,14 @@ import 'package:cupola/core/app_animation.dart';
 /// pass [semanticLabel] and VoiceOver/TalkBack announce the tile as a button
 /// with a name instead of an unlabelled image. Set [excludeChildSemantics] when
 /// the child's own text would otherwise be read out twice.
+///
+/// It is also where a pointer and a keyboard meet the control. A mouse gets the
+/// pointing hand; Tab reaches it, Enter or Space activate it, and while it has
+/// the keyboard's focus a ring ([CupolaRoom.focus]) is drawn [ringRadius]
+/// around it. A finger never sees the ring: a tap does not focus. What the
+/// pointer and keyboard are doing is published below as [PressFeedback], so a
+/// poster inside can rise under the pointer and draw the ring on its own
+/// corner instead ([PressFeedback.claimRing]).
 class PressableScale extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
@@ -55,6 +66,9 @@ class PressableScale extends StatefulWidget {
   /// page the pane shows), for a screen reader; null says nothing.
   final bool? semanticSelected;
 
+  /// The corner the focus ring follows, a hair outside the control.
+  final BorderRadius ringRadius;
+
   const PressableScale({
     super.key,
     required this.child,
@@ -68,6 +82,7 @@ class PressableScale extends StatefulWidget {
     this.customSemanticsActions,
     this.excludeChildSemantics = false,
     this.semanticSelected,
+    this.ringRadius = const BorderRadius.all(Radius.circular(AppRadius.md)),
   });
 
   @override
@@ -76,10 +91,23 @@ class PressableScale extends StatefulWidget {
 
 class _PressableScaleState extends State<PressableScale> {
   bool _pressed = false;
+  bool _hovered = false;
+  bool _focused = false;
+  final _claims = _RingClaims();
 
   void _setPressed(bool value) {
     if (_pressed == value) return;
     setState(() => _pressed = value);
+  }
+
+  void _setHovered(bool value) {
+    if (_hovered == value) return;
+    setState(() => _hovered = value);
+  }
+
+  void _setFocused(bool value) {
+    if (_focused == value) return;
+    setState(() => _focused = value);
   }
 
   void _handleTap() {
@@ -99,7 +127,12 @@ class _PressableScaleState extends State<PressableScale> {
       scale: _pressed && animate ? widget.pressedScale : 1.0,
       duration: animate ? AppAnimation.press : Duration.zero,
       curve: AppAnimation.standardCurve,
-      child: widget.child,
+      child: PressFeedback._(
+        hovered: _hovered,
+        focused: _focused,
+        claims: _claims,
+        child: widget.child,
+      ),
     );
 
     final Widget detector = GestureDetector(
@@ -109,8 +142,46 @@ class _PressableScaleState extends State<PressableScale> {
       onTap: enabled ? _handleTap : null,
       onLongPress: widget.onLongPress,
       behavior: HitTestBehavior.opaque,
-      child: scaled,
+      child: CustomPaint(
+        foregroundPainter: _focused
+            ? _ControlRing(
+                color: CupolaRoom.of(context).focus,
+                radius: widget.ringRadius,
+                claims: _claims,
+              )
+            : null,
+        child: scaled,
+      ),
     );
+
+    // The keyboard's way in. Its own focus semantics stay out: the node
+    // below already says button and carries the tap.
+    final Widget focusable = FocusableActionDetector(
+      enabled: widget.onTap != null,
+      includeFocusSemantics: false,
+      onShowFocusHighlight: _setFocused,
+      actions: {
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (_) {
+            _handleTap();
+            return null;
+          },
+        ),
+      },
+      child: detector,
+    );
+
+    // The pointer's hand, and the hover a poster rises on. Its own region
+    // rather than the detector's hover highlight, which waits for a key on a
+    // touch platform: a tablet with a trackpad has a pointer all the same.
+    final Widget pointed = widget.onTap == null
+        ? focusable
+        : MouseRegion(
+            cursor: SystemMouseCursors.click,
+            onEnter: (_) => _setHovered(true),
+            onExit: (_) => _setHovered(false),
+            child: focusable,
+          );
 
     // A hint counts as something to publish: the dimmed-but-tappable cell is
     // named by its own child text and carries only a hint, so bailing out on a
@@ -119,7 +190,7 @@ class _PressableScaleState extends State<PressableScale> {
         widget.semanticLabel == null &&
         widget.semanticHint == null &&
         widget.customSemanticsActions == null) {
-      return detector;
+      return pointed;
     }
 
     return Semantics(
@@ -141,7 +212,85 @@ class _PressableScaleState extends State<PressableScale> {
       excludeSemantics: widget.excludeChildSemantics,
       onTap: enabled ? _handleTap : null,
       onLongPress: widget.onLongPress,
-      child: detector,
+      child: pointed,
     );
   }
+}
+
+/// What the pointer and the keyboard are doing to the nearest
+/// [PressableScale]: whether a mouse is over it and whether it holds the
+/// keyboard's focus with the ring showing.
+///
+/// Both are false on a touch screen: hover needs a pointer, and the ring is
+/// shown only once a key or a mouse was last used ([FocusHighlightMode]).
+class PressFeedback extends InheritedWidget {
+  const PressFeedback._({
+    required this.hovered,
+    required this.focused,
+    required _RingClaims claims,
+    required super.child,
+  }) : _claims = claims;
+
+  /// A mouse or a trackpad's pointer is over the control.
+  final bool hovered;
+
+  /// The control holds the keyboard's focus, and the ring should show.
+  final bool focused;
+
+  final _RingClaims _claims;
+
+  /// The feedback of the [PressableScale] above [context], or null outside
+  /// one.
+  static PressFeedback? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<PressFeedback>();
+
+  /// Says that a descendant draws the focus ring itself, on its own shape (a
+  /// poster, on its corner), so the control does not draw a second one around
+  /// the whole tile. Hand the returned callback back when the descendant goes.
+  VoidCallback claimRing() {
+    _claims.count++;
+    var released = false;
+    return () {
+      if (released) return;
+      released = true;
+      _claims.count--;
+    };
+  }
+
+  /// Whether this and [other] are the feedback of the same control.
+  bool sameControlAs(PressFeedback? other) => other?._claims == _claims;
+
+  @override
+  bool updateShouldNotify(PressFeedback oldWidget) =>
+      hovered != oldWidget.hovered ||
+      focused != oldWidget.focused ||
+      _claims != oldWidget._claims;
+}
+
+/// How many descendants draw the ring themselves. Read at paint time, after
+/// every descendant has built.
+class _RingClaims {
+  int count = 0;
+}
+
+/// The focus ring around the whole control, unless a descendant claimed it.
+class _ControlRing extends CustomPainter {
+  const _ControlRing({
+    required this.color,
+    required this.radius,
+    required this.claims,
+  });
+
+  final Color color;
+  final BorderRadius radius;
+  final _RingClaims claims;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (claims.count > 0) return;
+    paintFocusRing(canvas, Offset.zero & size, radius: radius, color: color);
+  }
+
+  @override
+  bool shouldRepaint(_ControlRing oldDelegate) => true;
 }

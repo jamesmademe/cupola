@@ -50,7 +50,8 @@ the platform (`HomeMode`, `lib/features/home/domain/home_arrangement.dart`):
 
 A shelf of posters (Trending this week, Coming soon, the Discover shelf) runs across the page in every mode, its
 heading and first poster on the column's line (`HomeWell`), so its posters scroll to the page's edge: cut at the well's
-edge with the page empty beside it, a shelf reads as broken.
+edge with the page empty beside it, a shelf reads as broken. Where a pointer reaches the page, a shelf's heading and
+Arrived's carry back and forward at their end while the row runs past the window (`RailArrows`, `HomeModuleFrame.rail`).
 
 ## The five states
 

@@ -5,6 +5,7 @@ import 'package:cupola/core/app_elevation.dart';
 import 'package:cupola/core/app_gradients.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/focus_ring.dart';
 import 'package:cupola/core/network/pinned_image_cache.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/side_pane_route.dart';
@@ -79,65 +80,82 @@ class ContentCard extends StatelessWidget {
   Widget _card(BuildContext context, Color? light, VoidCallback? drawn) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    final card = Container(
-      // A poster glows with its light (brand book, `shadow.poster`; the lamp
-      // until the light is derived). It cast the older `level2` shadow ink.
-      decoration: BoxDecoration(
-        borderRadius: AppRadius.borderRadiusMd,
-        boxShadow: AppElevation.poster(colorScheme, light: light),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Image
-          _buildImage(drawn),
-
-          // Shadow ink behind the badge, so it stays legible over bright
-          // artwork. Painted across the whole card and fading to nothing
-          // well inside it, never in a box the size of the badge: that box
-          // clipped the radial while it was still a third of its strength,
-          // which drew a hard-edged grey rectangle around the badge wherever
-          // the ground was not dark artwork (a placeholder, a light poster).
-          if (badge != null) ...[
-            Positioned.fill(
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  key: const ValueKey('content-card-badge-glow'),
-                  decoration: BoxDecoration(
-                    gradient: AppGradients.serviceGlow(
-                      colorScheme.shadow,
-                      radius: badgeGlowRadius,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            // Held to the card's width, at its top right: a badge whose
-            // word is longer than the poster is wide wraps inside it rather
-            // than running off the card's other edge.
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: Align(
-                alignment: Alignment.topRight,
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.sm),
-                  child: badge!,
-                ),
-              ),
-            ),
-          ],
-        ],
+    final face = _PosterPress(
+      builder: (context, lifted, animate) => AnimatedContainer(
+        duration: animate ? AppAnimation.hover : Duration.zero,
+        curve: AppAnimation.standardCurve,
+        // A poster glows with its light (brand book, `shadow.poster`; the lamp
+        // until the light is derived). It cast the older `level2` shadow ink.
+        // Under the pointer the light strengthens as the poster rises.
+        decoration: BoxDecoration(
+          borderRadius: AppRadius.borderRadiusMd,
+          boxShadow: AppElevation.poster(
+            colorScheme,
+            light: light,
+            lifted: lifted,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: _face(context, colorScheme, drawn),
       ),
     );
 
     final tile = onTap == null
-        ? card
-        : PressableScale(onTap: onTap, child: card);
+        ? face
+        : PressableScale(onTap: onTap, child: face);
     if (paneTag == null) return tile;
     return _PaneRing(tag: paneTag, radius: AppRadius.md, child: tile);
+  }
+
+  Widget _face(
+    BuildContext context,
+    ColorScheme colorScheme,
+    VoidCallback? drawn,
+  ) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Image
+        _buildImage(drawn),
+
+        // Shadow ink behind the badge, so it stays legible over bright
+        // artwork. Painted across the whole card and fading to nothing
+        // well inside it, never in a box the size of the badge: that box
+        // clipped the radial while it was still a third of its strength,
+        // which drew a hard-edged grey rectangle around the badge wherever
+        // the ground was not dark artwork (a placeholder, a light poster).
+        if (badge != null) ...[
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                key: const ValueKey('content-card-badge-glow'),
+                decoration: BoxDecoration(
+                  gradient: AppGradients.serviceGlow(
+                    colorScheme.shadow,
+                    radius: badgeGlowRadius,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Held to the card's width, at its top right: a badge whose
+          // word is longer than the poster is wide wraps inside it rather
+          // than running off the card's other edge.
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                child: badge!,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
   }
 
   Widget _buildImage(VoidCallback? drawn) {
@@ -195,6 +213,88 @@ class ContentCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The poster under a pointer and under the keyboard's focus: it rises
+/// [AppAnimation.hoverLift] while a mouse is over the tile it belongs to
+/// ([PressFeedback.hovered]), and while the tile holds the focus the ring is
+/// drawn on the poster's corner rather than around the tile and its caption
+/// ([PressFeedback.claimRing]). Outside a [PressableScale] it is the poster at
+/// rest.
+class _PosterPress extends StatefulWidget {
+  const _PosterPress({required this.builder});
+
+  /// The poster, [lifted] or at rest; [animate] is false under Reduce Motion.
+  final Widget Function(BuildContext context, bool lifted, bool animate)
+  builder;
+
+  @override
+  State<_PosterPress> createState() => _PosterPressState();
+}
+
+class _PosterPressState extends State<_PosterPress> {
+  PressFeedback? _press;
+  VoidCallback? _release;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final press = PressFeedback.maybeOf(context);
+    // The claim belongs to the control, not to one frame's feedback: claim
+    // again only when the poster moved under another control.
+    if (press == null) {
+      _release?.call();
+      _release = null;
+    } else if (_release == null || !press.sameControlAs(_press)) {
+      _release?.call();
+      _release = press.claimRing();
+    }
+    _press = press;
+  }
+
+  @override
+  void dispose() {
+    _release?.call();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final press = _press;
+    final lifted = press?.hovered ?? false;
+    final focused = press?.focused ?? false;
+    final animate = !MediaQuery.disableAnimationsOf(context);
+    return TweenAnimationBuilder<double>(
+      tween: Tween(end: lifted ? -AppAnimation.hoverLift : 0),
+      duration: animate ? AppAnimation.hover : Duration.zero,
+      curve: AppAnimation.standardCurve,
+      builder: (context, dy, child) =>
+          Transform.translate(offset: Offset(0, dy), child: child),
+      child: CustomPaint(
+        foregroundPainter: focused
+            ? _FocusRing(color: CupolaRoom.of(context).focus)
+            : null,
+        child: widget.builder(context, lifted, animate),
+      ),
+    );
+  }
+}
+
+class _FocusRing extends CustomPainter {
+  const _FocusRing({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) => paintFocusRing(
+    canvas,
+    Offset.zero & size,
+    radius: AppRadius.borderRadiusMd,
+    color: color,
+  );
+
+  @override
+  bool shouldRepaint(_FocusRing oldDelegate) => color != oldDelegate.color;
 }
 
 /// Rings the poster whose title a tablet's pane is showing.

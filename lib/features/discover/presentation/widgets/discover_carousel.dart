@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/widgets/rail_arrows.dart';
 import 'package:cupola/core/models/media_preview.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/network/connection_failure.dart';
@@ -128,17 +129,21 @@ class DiscoverCarousel extends StatelessWidget {
       },
       data: (list) {
         if (list.isEmpty) return const SizedBox.shrink();
-        return _shell(
-          child: SizedBox(
-            height: CatalogPoster.heightFor(context, _posterWidth),
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(horizontal: inset),
-              itemCount: list.length,
-              separatorBuilder: (_, _) =>
-                  const SizedBox(width: AppSpacing.carouselGap),
-              itemBuilder: (context, index) =>
-                  _tile(context, list[index], index),
+        return RailArrows(
+          builder: (context, controller, arrows) => _shell(
+            rail: arrows,
+            child: SizedBox(
+              height: CatalogPoster.heightFor(context, _posterWidth),
+              child: ListView.separated(
+                controller: controller,
+                scrollDirection: Axis.horizontal,
+                padding: EdgeInsets.symmetric(horizontal: inset),
+                itemCount: list.length,
+                separatorBuilder: (_, _) =>
+                    const SizedBox(width: AppSpacing.carouselGap),
+                itemBuilder: (context, index) =>
+                    _tile(context, list[index], index),
+              ),
             ),
           ),
         );
@@ -146,7 +151,7 @@ class DiscoverCarousel extends StatelessWidget {
     );
   }
 
-  Widget _shell({required Widget child, bool compact = false}) {
+  Widget _shell({required Widget child, bool compact = false, Widget? rail}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -159,6 +164,7 @@ class DiscoverCarousel extends StatelessWidget {
             // Nothing to see all of when the row failed.
             showChevron: onSeeAll != null && !compact,
             onTap: compact ? null : onSeeAll,
+            rail: rail,
           ),
         ),
         SizedBox(height: compact ? 0 : AppSpacing.md),

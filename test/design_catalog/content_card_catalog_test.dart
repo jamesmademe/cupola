@@ -224,6 +224,29 @@ void main() {
         ),
         textScale: catalogTextScale,
       ),
+      CatalogScene(
+        'With a pointer and a keyboard · at rest; a mouse over it: the '
+        'poster rises 2 pt and its light strengthens; Tab on it: the ring '
+        "in line.focus, on the poster's corner",
+        (_) => Wrap(
+          spacing: 24,
+          children: [
+            _cell(ContentCard(imageUrl: CatalogArt.poster, onTap: () {})),
+            CatalogPointer.hover(
+              child: _cell(
+                ContentCard(imageUrl: CatalogArt.poster, onTap: () {}),
+              ),
+            ),
+            CatalogPointer.focus(
+              child: _cell(
+                ContentCard(imageUrl: CatalogArt.poster, onTap: () {}),
+              ),
+            ),
+          ],
+        ),
+        width: 500,
+        platform: CatalogPlatform.desktop,
+      ),
     ],
   );
 }

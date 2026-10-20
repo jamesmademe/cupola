@@ -24,6 +24,7 @@ cards live in [`../motion/`](../motion/).
 | Navigation | [PageTabs](PageTabs/README.md) | `lib/core/widgets/page_tabs.dart`, `lib/features/activity/domain/activity_tab.dart` |
 | Navigation | [SearchBarHeader](SearchBarHeader/README.md) | `lib/core/widgets/search_bar_header.dart` |
 | Navigation | [SelectionPills](SelectionPills/README.md) | `lib/core/widgets/selection_pills.dart` |
+| Navigation | [RailArrows](RailArrows/README.md) | `lib/core/widgets/rail_arrows.dart`, `lib/core/widgets/section_header.dart` |
 | Navigation | [ServiceTabBar](ServiceTabBar/README.md) | `lib/core/widgets/service_tab_bar.dart`, `lib/features/services/domain/service_tab.dart` |
 | Structure | [SectionHeader](SectionHeader/README.md) | `lib/core/widgets/section_header.dart` |
 | Structure | [ActivitySection](ActivitySection/README.md) | `lib/features/activity/presentation/widgets/activity_section.dart` |

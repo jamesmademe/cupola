@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/widgets/rail_arrows.dart';
 import 'package:cupola/core/text_scale.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
@@ -147,22 +148,26 @@ class HomeArrivedModule extends ConsumerWidget {
     return LastKnownMark(
       asOf: known,
       checking: true,
-      child: HomeModuleFrame(
-        title: _title,
-        subtitle: subtitle,
-        semanticLabel: joinSpokenParts([
-          _title,
-          spokenFromDotted(subtitle),
-          ?note,
-        ]),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (note != null) HomeCoverageNote(note: note, coverage: coverage),
-            const SizedBox(height: AppSpacing.xs),
-            rail,
-            const SizedBox(height: AppSpacing.sm),
-          ],
+      child: RailArrows(
+        builder: (context, controller, arrows) => HomeModuleFrame(
+          title: _title,
+          subtitle: subtitle,
+          semanticLabel: joinSpokenParts([
+            _title,
+            spokenFromDotted(subtitle),
+            ?note,
+          ]),
+          rail: arrows,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (note != null)
+                HomeCoverageNote(note: note, coverage: coverage),
+              const SizedBox(height: AppSpacing.xs),
+              rail.withController(controller),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+          ),
         ),
       ),
     );
@@ -183,10 +188,19 @@ String arrivedWhen(DateTime at, {required DateTime now}) {
 
 /// The cards, side by side, the rail running off the edge of the slab.
 class _ArrivedRail extends StatelessWidget {
-  const _ArrivedRail({required this.cards, required this.now});
+  const _ArrivedRail({required this.cards, required this.now})
+    : controller = null;
+
+  const _ArrivedRail._(this.cards, this.now, this.controller);
 
   final List<ArrHistoryEntry> cards;
   final DateTime now;
+
+  /// The rail's scroll, when its heading carries the arrows.
+  final ScrollController? controller;
+
+  _ArrivedRail withController(ScrollController controller) =>
+      _ArrivedRail._(cards, now, controller);
 
   @override
   Widget build(BuildContext context) {
@@ -201,6 +215,7 @@ class _ArrivedRail extends StatelessWidget {
           context,
         ).copyWith(textScaler: TextScaleMetrics.clampedScalerOf(context)),
         child: ListView.separated(
+          controller: controller,
           scrollDirection: Axis.horizontal,
           itemCount: cards.length,
           separatorBuilder: (_, _) =>

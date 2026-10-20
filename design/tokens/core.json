@@ -625,6 +625,18 @@
         "$description": "The scale a pressed target dips to."
       }
     },
+    "hover": {
+      "duration": {
+        "$type": "duration",
+        "$value": "180ms",
+        "$description": "A poster rising under the pointer, and settling back. Instant under Reduce Motion."
+      },
+      "lift": {
+        "$type": "dimension",
+        "$value": "2px",
+        "$description": "How far a poster rises under the pointer: a mouse or a trackpad, never a finger."
+      }
+    },
     "standard": {
       "duration": {
         "$type": "duration",

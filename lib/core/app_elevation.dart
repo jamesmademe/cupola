@@ -164,21 +164,31 @@ class AppElevation {
   /// A poster's shadow: its own light, cast down and pulled in.
   ///
   /// [light] is the title's light; until it is derived from the artwork, a
-  /// poster casts the neutral lamp.
-  static List<BoxShadow> poster(ColorScheme scheme, {Color? light}) {
+  /// poster casts the neutral lamp. A [lifted] poster, risen under the
+  /// pointer, casts it stronger and the lift further down.
+  static List<BoxShadow> poster(
+    ColorScheme scheme, {
+    Color? light,
+    bool lifted = false,
+  }) {
     final dark = _isDark(scheme);
+    final alpha = switch ((dark, lifted)) {
+      (true, false) => DesignTokensDark.elevationPosterGlow,
+      (true, true) => DesignTokensDark.elevationPosterLifted,
+      (false, false) => DesignTokensLight.elevationPosterGlow,
+      (false, true) => DesignTokensLight.elevationPosterLifted,
+    };
     return [
       BoxShadow(
         color: (light ?? DesignTokens.shadowPosterGlowColor).withValues(
-          alpha: dark
-              ? DesignTokensDark.elevationPosterGlow
-              : DesignTokensLight.elevationPosterGlow,
+          alpha: alpha,
         ),
         blurRadius: DesignTokens.shadowPosterGlowBlur,
         spreadRadius: DesignTokens.shadowPosterGlowSpread,
-        offset: const Offset(
+        offset: Offset(
           DesignTokens.shadowPosterGlowOffsetX,
-          DesignTokens.shadowPosterGlowOffsetY,
+          DesignTokens.shadowPosterGlowOffsetY +
+              (lifted ? DesignTokens.motionHoverLift : 0),
         ),
       ),
     ];

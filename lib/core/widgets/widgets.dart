@@ -11,6 +11,7 @@ export 'app_skeleton.dart';
 export 'list_rows_shimmer.dart';
 export 'staggered_entrance.dart';
 export 'pressable_scale.dart';
+export 'rail_arrows.dart';
 export 'reel_line.dart';
 export 'reel_command_button.dart';
 

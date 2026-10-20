@@ -109,3 +109,27 @@ WidgetStateProperty<OutlinedBorder> focusRingShape(
       ? FocusRingBorder(shape, color: ring)
       : shape,
 );
+
+/// The same ring around a shape that is not a button's: [rect] with corners
+/// [radius], the ring [gap] outside it with its curve concentric. For a tile
+/// or a poster that takes the keyboard's focus without a button theme.
+void paintFocusRing(
+  Canvas canvas,
+  Rect rect, {
+  required BorderRadius radius,
+  required Color color,
+  double gap = 2,
+  double width = 2,
+}) {
+  final out = gap + width / 2;
+  canvas.drawRRect(
+    radius
+        .add(BorderRadius.circular(out))
+        .resolve(TextDirection.ltr)
+        .toRRect(rect.inflate(out)),
+    Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = width
+      ..color = color,
+  );
+}

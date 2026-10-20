@@ -26,7 +26,10 @@
 /// What a sheet cannot show, and how the cards deal with it:
 /// - a modal opened on the root navigator: open it on a scene-local
 ///   `Navigator`, or draw its public parts; otherwise the README describes it;
-/// - hover, and any other pointer-only state;
+/// - hover and the keyboard's focus, unless the scene asks for them: wrap
+///   the part in [CatalogPointer.hover] or [CatalogPointer.focus] and the
+///   sheet puts a mouse over it, or Tab on it, before it is drawn; any other
+///   pointer-only state the README describes;
 /// - a frame in the middle of a motion: the sheet is pumped in 400ms steps,
 ///   so it lands before or after; motion has its own cards in
 ///   `design/system/motion/`;
@@ -41,6 +44,7 @@ import 'dart:ui' as ui;
 
 import 'package:file/local.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -568,4 +572,81 @@ class _SceneScopeState extends State<_SceneScope> {
         ? widget.child
         : UncontrolledProviderScope(container: container, child: widget.child);
   }
+}
+
+/// A part of a scene in the state a pointer or a keyboard puts it in, which a
+/// still sheet cannot otherwise show.
+///
+/// [CatalogPointer.hover] puts a mouse over the middle of [child] once it is
+/// laid out, a mouse of its own, so a sheet can hover several parts at once.
+/// [CatalogPointer.focus] gives [child]'s first control the keyboard's focus
+/// with the ring showing, as Tab would; one per sheet, since one control holds
+/// the focus.
+class CatalogPointer extends StatefulWidget {
+  const CatalogPointer.hover({super.key, required this.child}) : _focus = false;
+
+  const CatalogPointer.focus({super.key, required this.child}) : _focus = true;
+
+  final Widget child;
+  final bool _focus;
+
+  @override
+  State<CatalogPointer> createState() => _CatalogPointerState();
+}
+
+class _CatalogPointerState extends State<CatalogPointer> {
+  static int _nextDevice = 100;
+
+  final _scope = FocusScopeNode(debugLabel: 'catalog focus');
+  int? _device;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _act());
+  }
+
+  void _act() {
+    if (!mounted) return;
+    if (widget._focus) {
+      FocusManager.instance.highlightStrategy =
+          FocusHighlightStrategy.alwaysTraditional;
+      _scope.nextFocus();
+      return;
+    }
+    final box = context.findRenderObject()! as RenderBox;
+    final at = box.localToGlobal(box.size.center(Offset.zero));
+    final device = _device = _nextDevice++;
+    final binding = GestureBinding.instance;
+    binding.handlePointerEvent(
+      PointerAddedEvent(kind: PointerDeviceKind.mouse, device: device),
+    );
+    binding.handlePointerEvent(
+      PointerHoverEvent(
+        kind: PointerDeviceKind.mouse,
+        device: device,
+        position: at,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    if (_device case final device?) {
+      GestureBinding.instance.handlePointerEvent(
+        PointerRemovedEvent(kind: PointerDeviceKind.mouse, device: device),
+      );
+    }
+    if (widget._focus) {
+      FocusManager.instance.highlightStrategy =
+          FocusHighlightStrategy.automatic;
+    }
+    _scope.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget._focus
+      ? FocusScope(node: _scope, child: widget.child)
+      : widget.child;
 }

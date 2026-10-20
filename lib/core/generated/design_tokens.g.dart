@@ -382,6 +382,15 @@ abstract final class DesignTokens {
   /// The scale a pressed target dips to.
   static const double motionPressScale = 0.96;
 
+  // motion.hover
+  /// A poster rising under the pointer, and settling back. Instant under Reduce
+  /// Motion.
+  static const Duration motionHoverDuration = Duration(milliseconds: 180);
+
+  /// How far a poster rises under the pointer: a mouse or a trackpad, never a
+  /// finger.
+  static const double motionHoverLift = 2;
+
   // motion.standard
   /// State changes, expand, select. Reduce Motion: a 150 ms fade.
   static const Duration motionStandardDuration = Duration(milliseconds: 320);
@@ -1395,6 +1404,9 @@ abstract final class DesignTokensDark {
   /// A poster's glow: its light at 80%.
   static const double elevationPosterGlow = 0.8;
 
+  /// A poster under the pointer: its light at full strength.
+  static const double elevationPosterLifted = 1;
+
   // elevation.hero
   /// The hero's glow: its light at 48%.
   static const double elevationHeroGlow = 0.48;
@@ -1661,6 +1673,9 @@ abstract final class DesignTokensLight {
   // elevation.poster
   /// A poster's glow (derived: the day room's light opacity).
   static const double elevationPosterGlow = 0.35;
+
+  /// A poster under the pointer (derived: the poster's glow, half again).
+  static const double elevationPosterLifted = 0.5;
 
   // elevation.hero
   /// The hero's glow (derived).

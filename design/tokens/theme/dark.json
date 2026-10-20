@@ -397,6 +397,11 @@
         "$type": "number",
         "$value": 0.8,
         "$description": "A poster's glow: its light at 80%."
+      },
+      "lifted": {
+        "$type": "number",
+        "$value": 1.0,
+        "$description": "A poster under the pointer: its light at full strength."
       }
     },
     "hero": {
