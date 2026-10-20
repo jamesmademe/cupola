@@ -141,16 +141,18 @@ fi
 
 # TestFlight is never part of `all`: it uploads a build to App Store Connect,
 # signed for the store by the team in ios/ExportOptions-testflight.plist with
-# the Apple ID signed in to Xcode. The build number in pubspec.yaml has to be
-# higher than the last one uploaded.
+# the Apple ID signed in to Xcode. Each upload needs a build number higher than
+# the last one, so it defaults to the UTC minute (CUPOLA_BUILD_NUMBER overrides
+# it); the version stays the one in pubspec.yaml.
 if [[ "$TARGET" == "testflight" ]]; then
   if [[ "$(uname -s)" != "Darwin" ]]; then
     printf 'TestFlight uploads can only be made on macOS\n' >&2
     exit 1
   fi
 
-  printf '==> Archiving iOS for App Store Connect...\n'
-  flutter build ios --release --config-only
+  BUILD_NUMBER="${CUPOLA_BUILD_NUMBER:-$(date -u +%Y%m%d%H%M)}"
+  printf '==> Archiving iOS %s (%s) for App Store Connect...\n' "$VERSION" "$BUILD_NUMBER"
+  flutter build ios --release --config-only --build-number "$BUILD_NUMBER"
   IOS_ARCHIVE="build/ios/${APP_NAME}.xcarchive"
   rm -rf "$IOS_ARCHIVE"
   xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release \
