@@ -145,8 +145,23 @@ def build() -> Path:
         (OUT / sub).mkdir(parents=True)
 
     sections, nav, missing = [], [], []
-    sections.append(f'<section id="brand-book" class="doc">{markdown((SYSTEM / "README.md").read_text())}</section>')
+    book = (SYSTEM / "README.md").read_text()
+    # The brand book reads by section: the files beside it that it links, in
+    # the order it links them, each a section of its own.
+    beside = list(dict.fromkeys(re.findall(r"\]\(([a-z][\w-]*)\.md(?:#[\w-]*)?\)", book)))
+
+    def local(page: str) -> str:
+        page = re.sub(r'href="README\.md(?:#[\w-]*)?"', 'href="#brand-book"', page)
+        return re.sub(r'href="([a-z][\w-]*)\.md(?:#[\w-]*)?"', r'href="#guide-\1"', page)
+
+    sections.append(f'<section id="brand-book" class="doc">{local(markdown(book))}</section>')
     nav.append('<li class="group">Guidelines</li><li><a href="#brand-book">Brand book</a></li>')
+    for stem in beside:
+        source = (SYSTEM / f"{stem}.md").read_text()
+        title = re.search(r"^# (.+)$", source, re.M)
+        label = title.group(1) if title else stem
+        sections.append(f'<section id="guide-{stem}" class="doc">{local(markdown(source))}</section>')
+        nav.append(f'<li><a href="#guide-{stem}">{html.escape(label)}</a></li>')
 
     group = None
     for card_group, card in card_index():

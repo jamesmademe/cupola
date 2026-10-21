@@ -5,7 +5,7 @@
 /// units. Plain space is for words: `12 min ago` breaks before `ago` and
 /// nowhere inside `12 min`.
 ///
-/// The rule (the brand book's, `design/system/README.md`, formats) is held by
+/// The rule (the brand book's, `design/system/words.md`, *Formats*) is held by
 /// `test/core/utils/unit_space_guard_test.dart`: a literal that puts a plain
 /// space between a figure and a unit symbol fails there. It covers unit
 /// *symbols* (B, KB/s, Mbps, ms, s, min, h, d, °C). A unit spelled out as a word
