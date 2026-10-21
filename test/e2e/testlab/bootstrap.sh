@@ -230,6 +230,9 @@ new_password() {
 }
 seerr_requester_password="$(new_password)"
 jellyfin_requester_password="$(new_password)"
+# The journeys run inside the app sandbox and cannot start processes. This
+# token authorises the loopback control API that moves the lab for them.
+control_token="$("$python_bin" -c 'import secrets; print(secrets.token_urlsafe(32))')"
 
 # A Plex server nobody claimed runs with local authentication off and takes
 # any token; once someone claims it, only the server's own token reads its
@@ -269,6 +272,9 @@ umask 077
   printf 'CUPOLA_TESTLAB_DOCKGE_PASSWORD=cupola-pass\n'
   printf 'CUPOLA_TESTLAB_PLEX_TOKEN=%s\n' "$plex_token"
   printf 'CUPOLA_TESTLAB_TRUENAS_CERT_FINGERPRINT=%s\n' "$truenas_cert_fingerprint"
+  printf 'CUPOLA_TESTLAB_CONTROL_TOKEN=%s\n' "$control_token"
+  printf 'CUPOLA_TESTLAB_CONTROL_URL=http://127.0.0.1:8799\n'
+  printf 'CUPOLA_TESTLAB_TOXIPROXY_URL=http://127.0.0.1:8474\n'
 } >"$credentials"
 chmod 600 "$credentials"
 

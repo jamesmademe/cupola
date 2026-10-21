@@ -1,6 +1,8 @@
 @Tags(['catalog'])
 library;
 
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -187,6 +189,23 @@ void main() {
         ),
         width: 320,
         textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'ServiceOfflineState.failure · a connection closed before the first '
+        'header: the host did not answer, so red and Radarr did not answer',
+        (_) => ServiceOfflineState.failure(
+          service: ServiceKey.radarr,
+          error: DioException(
+            requestOptions: RequestOptions(path: '/api/v3/movie'),
+            type: DioExceptionType.unknown,
+            error: HttpException(
+              'Connection closed before full header was received',
+              uri: Uri.parse('http://nas.home.arpa:7878/api/v3/movie'),
+            ),
+          ),
+          onRetry: () {},
+        ),
+        width: 320,
       ),
     ],
   );

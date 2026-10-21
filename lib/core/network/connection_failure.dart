@@ -656,6 +656,16 @@ ServiceFailureReason _fromDio(
       if (inner is TlsException) return _fromTls(inner);
       if (inner is SocketException) return ServiceFailureReason.unreachable;
       if (inner is TimeoutException) return ServiceFailureReason.unreachable;
+      // A host that accepted the TCP connection and closed it before sending
+      // a single response header answered nothing, which is the same silence
+      // as a refused connection. Docker publishes every lab port through a
+      // host proxy that behaves exactly this way when the container behind it
+      // is gone, and a reverse proxy can do the same in front of a stopped
+      // service. Anything else Dart's HttpException reports (a truncated body,
+      // a malformed header) is an answer nobody could read, and stays below.
+      if (inner is HttpException && _closedBeforeAnyHeader(inner)) {
+        return ServiceFailureReason.unreachable;
+      }
       // Dio decodes the body after the reply arrived, so a decode failure is
       // an answer nobody could read: a proxy's HTML page, most often.
       if (inner is FormatException) return ServiceFailureReason.invalidResponse;
@@ -664,6 +674,15 @@ ServiceFailureReason _fromDio(
           : fallback;
   }
 }
+
+/// Whether [error] is the socket closing before the first response header.
+///
+/// Dart's HTTP client reports a TCP peer that accepts and immediately closes
+/// as `Connection closed before full header was received`. That is the one
+/// [HttpException] that means *nothing answered*, and it must not be confused
+/// with the others, which mean an answer arrived and could not be read.
+bool _closedBeforeAnyHeader(HttpException error) =>
+    error.message.contains('Connection closed before full header was received');
 
 /// Whether [reason] means nothing replied at all, at one address or at both:
 /// the one state painted red.

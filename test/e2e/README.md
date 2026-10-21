@@ -78,7 +78,96 @@ one digit off, and no pin at all, are each refused as an untrusted certificate
 `unreachable`. The certificate probe the trust prompt uses must read the
 recorded fingerprint, which is what ties the bootstrap's text to the app's.
 
+## Control plane
+
+`test/e2e/testlab/testlab.py` owns the lab's states. It never mounts the
+OrbStack socket into a container, and it never writes a vendor database while
+its container runs.
+
+~~~bash
+python3 test/e2e/testlab/testlab.py up          # containers plus proxies
+python3 test/e2e/testlab/testlab.py status
+python3 test/e2e/testlab/testlab.py seed
+python3 test/e2e/testlab/testlab.py doctor
+~~~
+
+A snapshot stops the containers, archives every bind-mounted state directory
+under `.ai/scratch/zz_testlab/state`, starts them again, and leaves out only
+Dockge's disposable `docker:dind` store. A reset restores the archive, checks
+it byte for byte before starting anything, and brings the lab back. A full
+round trip is under a minute on this Mac.
+
+~~~bash
+python3 test/e2e/testlab/testlab.py snapshot golden
+python3 test/e2e/testlab/testlab.py reset golden
+~~~
+
+Scenarios live in `test/e2e/testlab/scenarios/`, declare the Compose profiles
+they need, and are idempotent. `apply` changes state through the services' APIs
+and verifies it; `teardown` removes it and verifies its absence.
+
+~~~bash
+python3 test/e2e/testlab/testlab.py scenario list
+python3 test/e2e/testlab/testlab.py scenario apply smoke
+python3 test/e2e/testlab/testlab.py scenario teardown smoke
+~~~
+
+## Faults through Toxiproxy
+
+The app reaches services through their Toxiproxy ports; the direct ports stay
+for the transport harness, which must not depend on the fault layer. The
+control plane creates one proxy per service and writes the map to
+`.ai/scratch/zz_testlab/ports.json`.
+
+| Service | App port | Direct port |
+|---|---|---|
+| Seerr | 25055 | 5055 |
+| Radarr | 27878 | 7878 |
+| Sonarr | 28989 | 8989 |
+| Lidarr | 28686 | 8686 |
+| Readarr | 28787 | 8787 |
+| Prowlarr | 29696 | 9696 |
+| Bazarr | 26767 | 6767 |
+| qBittorrent | 28080 | 8080 |
+| Transmission | 29091 | 9091 |
+| SABnzbd | 28082 | 8082 |
+| NZBGet | 26789 | 6789 |
+| Jellyfin | 28096 | 8096 |
+| Plex | 23240 | 32400 |
+| Dockge | 25001 | 5001 |
+| Nginx Proxy Manager | 28181 | 8181 |
+| TrueNAS | 28460 | 8460 (TLS) |
+| Unraid | 28480 | 8480 |
+
+~~~bash
+python3 test/e2e/testlab/testlab.py fault radarr down
+python3 test/e2e/testlab/testlab.py fault radarr slow 1500
+python3 test/e2e/testlab/testlab.py fault radarr timeout
+python3 test/e2e/testlab/testlab.py fault radarr flap
+python3 test/e2e/testlab/testlab.py fault radarr clear
+~~~
+
+`down` resets the connection, which the app reads as a host that did not
+answer. `timeout` stops the bytes without closing the socket, `slow` adds the
+given latency, `flap` times out half the connections, and `clear` removes every
+toxic and enables the proxy again. The real client test is
+`test/e2e/testlab_fault_e2e_test.dart`: it turns Radarr off, proves the app
+classifies the failure as `unreachable` and says `Radarr did not answer`, then
+clears the fault and reads the library again.
+
+The same commands are available to a journey inside the app sandbox on
+`127.0.0.1:8799`, authorised by `CUPOLA_TESTLAB_CONTROL_TOKEN` from the
+chmod-600 credentials file. The server never prints the token, and the request
+body names only the whitelisted commands.
+
+~~~bash
+python3 test/e2e/testlab/testlab.py serve
+curl -H "Authorization: Bearer $CUPOLA_TESTLAB_CONTROL_TOKEN" \
+  http://127.0.0.1:8799/status
+~~~
+
 ## Published endpoint map
+
 
 | Service | Native endpoint | Auth in the lab | Transport |
 |---|---|---|---|

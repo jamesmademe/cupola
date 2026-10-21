@@ -165,6 +165,36 @@ void main() {
       );
     });
 
+    test('a socket closed before the first header did not answer', () {
+      expect(
+        classifyConnectionFailure(
+          _wrapping(
+            HttpException(
+              'Connection closed before full header was received',
+              uri: Uri.parse('http://nas.home.arpa:7878/api/v3/movie'),
+            ),
+            DioExceptionType.unknown,
+          ),
+        ),
+        ServiceFailureReason.unreachable,
+      );
+    });
+
+    test('an HttpException about a truncated answer stays unknown', () {
+      expect(
+        classifyConnectionFailure(
+          _wrapping(
+            HttpException(
+              'Content size below specified contentLength',
+              uri: Uri.parse('http://nas.home.arpa:7878/api/v3/movie'),
+            ),
+            DioExceptionType.unknown,
+          ),
+        ),
+        ServiceFailureReason.unknown,
+      );
+    });
+
     test('bare socket, TLS and timeout errors are classified', () {
       expect(
         classifyConnectionFailure(const SocketException('no route')),

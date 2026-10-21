@@ -353,3 +353,29 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+
+  toxiproxy:
+    # Toxiproxy 2.12.0. The app reaches services through these ports; the
+    # direct ports stay for the transport harness, which must not depend on the
+    # fault layer. Proxies are created by testlab.py proxies/up, not here.
+    image: ghcr.io/shopify/toxiproxy:2.12.0@sha256:9378ed52a28bc50edc1350f936f518f31fa95f0d15917d6eb40b8e376d1a214e
+    profiles: [core, infra, faults]
+    ports:
+      - "127.0.0.1:8474:8474"
+      - "127.0.0.1:25001:25001"
+      - "127.0.0.1:25055:25055"
+      - "127.0.0.1:23240:23240"
+      - "127.0.0.1:26767:26767"
+      - "127.0.0.1:26789:26789"
+      - "127.0.0.1:27878:27878"
+      - "127.0.0.1:28080:28080"
+      - "127.0.0.1:28082:28082"
+      - "127.0.0.1:28096:28096"
+      - "127.0.0.1:28181:28181"
+      - "127.0.0.1:28460:28460"
+      - "127.0.0.1:28480:28480"
+      - "127.0.0.1:28686:28686"
+      - "127.0.0.1:28787:28787"
+      - "127.0.0.1:28989:28989"
+      - "127.0.0.1:29091:29091"
+      - "127.0.0.1:29696:29696"
