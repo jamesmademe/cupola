@@ -374,7 +374,7 @@ List<MediaRow> _askedFor() => [
                 'status': 1,
                 'type': 'movie',
                 'is4k': false,
-                'createdAt': DateTime.now()
+                'createdAt': catalogNow
                     .subtract(const Duration(hours: 2))
                     .toUtc()
                     .toIso8601String(),
@@ -555,7 +555,7 @@ CatalogScene _episodeScene() {
               seasons: mediaSeasonsOf(
                 rows,
                 audience: Audience.operator,
-                now: DateTime.now(),
+                now: catalogNow,
               ),
               season: 2,
               number: 3,
@@ -605,7 +605,7 @@ CatalogScene _episodeScene() {
             relativePath:
                 'Cosmos Laundromat - S02E03 - The Second Cycle WEBDL-720p.mkv',
             qualityName: 'WEBDL-720p',
-            dateAdded: DateTime.now().subtract(const Duration(hours: 2)),
+            dateAdded: catalogNow.subtract(const Duration(hours: 2)),
             cutoffNotMet: true,
           ),
         },
@@ -636,7 +636,7 @@ final _sonarr = _connection(ServiceKey.sonarr, 'sonarr');
 /// and missing, ten upgrades waiting on an import, and a third season
 /// starting in three days.
 List<MediaRow> _series() {
-  final now = DateTime.now();
+  final now = catalogNow;
   var id = 1000;
   final episodes = [
     for (final (season, count) in [(1, 10), (2, 10), (3, 8)])
@@ -839,7 +839,7 @@ CatalogScene _graphScene({
               seasons: mediaSeasonsOf(
                 rows,
                 audience: Audience.operator,
-                now: DateTime.now(),
+                now: catalogNow,
               ),
               light: _lights[CatalogArt.backdrop],
               onOpenEpisode: (_, _) {},

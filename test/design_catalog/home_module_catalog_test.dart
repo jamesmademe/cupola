@@ -182,7 +182,7 @@ DashboardDecision _request(String title, int id, String detail, int hours) =>
       title: title,
       detail: detail,
       // The row says when against the clock it is drawn on.
-      occurredAt: DateTime.now().subtract(Duration(hours: hours)),
+      occurredAt: catalogNow.subtract(Duration(hours: hours)),
       actionId: id,
       posterUrl: CatalogArt.poster,
     );
@@ -661,7 +661,7 @@ void main() {
                   detail: '',
                   posterUrl: '',
                   outcome: ArrImportOutcome.imported,
-                  at: DateTime.now().subtract(const Duration(days: 1)),
+                  at: catalogNow.subtract(const Duration(days: 1)),
                   reason: null,
                 ),
               ],

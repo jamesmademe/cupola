@@ -70,7 +70,7 @@ class _FixedHealth extends StackHealthNotifier {
   StackHealth build() => _health;
 }
 
-final _now = DateTime.now();
+final _now = catalogNow;
 String _earlierToday(Duration ago) {
   final start = DateTime(_now.year, _now.month, _now.day);
   final at = _now.subtract(ago);

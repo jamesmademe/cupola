@@ -26,7 +26,9 @@
 /// `tool/design_system/board.py` crops the same scene out of two revisions.
 ///
 /// Rendering is deterministic on one machine (byte-identical across runs) but
-/// not across hosts, which is why the images are built, not committed.
+/// not across hosts, which is why the images are built, not committed. Within
+/// the hour, that is: a scene dates its records from [catalogNow], and the app
+/// reads the real clock to word them.
 ///
 /// What a sheet cannot show, and how the cards deal with it:
 /// - a modal opened on the root navigator: open it on a scene-local
@@ -64,6 +66,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' show Client;
 
 import 'package:cupola/core/network/pinned_image_cache.dart';
+import 'package:cupola/core/status/read_clock.dart';
 import 'package:cupola/core/theme.dart';
 
 /// Where the sheets land. `build/` is ignored, and the catalog is rebuilt, not
@@ -149,6 +152,17 @@ String catalogSlug(String caption) {
   return slug.length <= 60
       ? slug
       : slug.substring(0, 60).replaceAll(RegExp(r'-$'), '');
+}
+
+/// The moment a scene dates its records from: now, to the hour. The app words
+/// a time against the real clock (`Today · 14:00`, `2 h ago`), so a record
+/// dated from `DateTime.now()` would draw a new minute on every render, and
+/// two renders of one revision would differ. The app's own clock
+/// (`readClockProvider`, which stamps when a service last answered) reads it
+/// too, on every card.
+DateTime get catalogNow {
+  final now = DateTime.now();
+  return DateTime(now.year, now.month, now.day, now.hour);
 }
 
 /// The reading size every card has to be seen at at least once: twice the
@@ -326,7 +340,10 @@ void catalogCard(
         CertTrustRegistry.reset();
       });
 
-      final shared = await overrides?.call() ?? const <Override>[];
+      final shared = [
+        readClockProvider.overrideWithValue(ReadClock(now: () => catalogNow)),
+        ...?await overrides?.call(),
+      ];
       debugDefaultTargetPlatformOverride = platform.target;
       try {
         // Built after the override: ThemeData reads the platform for its
@@ -514,8 +531,10 @@ Future<void> _paint(
     for (final (index, scene) in scenes.indexed) {
       await scene.act?.call(tester, find.byKey(_sceneKey(index)));
     }
-    await settle();
   }
+  // Every sheet, acted or not, is drawn after the same stretch of time, so a
+  // spinner stands at the same turn whether or not a scene beside it acted.
+  await settle();
 
   final origin = tester.getTopLeft(find.byKey(sheet));
   final manifest = [

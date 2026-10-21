@@ -67,7 +67,7 @@ const _instances = [
   ),
 ];
 
-final _now = DateTime.now();
+final _now = catalogNow;
 
 RadarrMovie _movie(int id, String title, int year, {bool poster = false}) =>
     RadarrMovie(
