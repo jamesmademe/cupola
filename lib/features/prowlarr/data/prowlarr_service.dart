@@ -81,7 +81,7 @@ class ProwlarrService {
         'pageSize': pageSize,
         'sortKey': sortKey,
         'sortDirection': sortDirection,
-        'eventType': ?eventType,
+        'eventType': ?_historyEventType(eventType),
       },
     );
     // A page is as long as asked for (20 on the overview, 50 on the History
@@ -110,7 +110,7 @@ class ProwlarrService {
       queryParameters: {
         'indexerId': indexerId,
         'limit': limit,
-        'eventType': ?eventType,
+        'eventType': ?_historyEventType(eventType),
       },
     );
     return jsonObjects(response.data, ProwlarrHistoryItem.fromJson);
@@ -517,4 +517,19 @@ class ProwlarrService {
 
   static bool _isHeavySchemaKey(String key, dynamic _) =>
       key == 'capabilities' || key == 'presets';
+}
+
+/// Prowlarr's history endpoint binds `eventType` to its numeric
+/// `HistoryEventType` enum, while the app names the events. Sending a name is a
+/// 400 ("The value 'indexerQuery' is not valid"), so the app's words are
+/// translated here. A numeric value passes through, for callers that already
+/// hold the server's own value.
+String? _historyEventType(String? eventType) {
+  return switch (eventType) {
+    'releaseGrabbed' => '1',
+    'indexerQuery' => '2',
+    'indexerRss' => '3',
+    'indexerAuth' => '4',
+    _ => eventType,
+  };
 }

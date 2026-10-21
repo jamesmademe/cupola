@@ -201,13 +201,30 @@ void main() {
       },
     );
 
-    test('forwards the optional eventType filter', () async {
+    test('translates the app event names to the server enum', () async {
       final client = FakeApiClient()..getResponseData = {'records': []};
       final service = ProwlarrService(client);
 
-      await service.getHistory(eventType: 'releaseGrabbed');
+      for (final (name, value) in [
+        ('releaseGrabbed', '1'),
+        ('indexerQuery', '2'),
+        ('indexerRss', '3'),
+        ('indexerAuth', '4'),
+      ]) {
+        await service.getHistory(eventType: name);
+        expect(client.lastGetQueryParameters?['eventType'], value);
+      }
+    });
 
-      expect(client.lastGetQueryParameters?['eventType'], 'releaseGrabbed');
+    test('passes a numeric eventType through, and omits null', () async {
+      final client = FakeApiClient()..getResponseData = {'records': []};
+      final service = ProwlarrService(client);
+
+      await service.getHistory(eventType: '2');
+      expect(client.lastGetQueryParameters?['eventType'], '2');
+
+      await service.getHistory();
+      expect(client.lastGetQueryParameters, isNot(contains('eventType')));
     });
   });
 
