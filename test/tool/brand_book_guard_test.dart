@@ -153,11 +153,7 @@ final d = '\$name did not answer since \$time';
 
 /// Words the table names that no screen says yet. Each one is a promise of
 /// the brand book the app does not keep; the list can only shrink.
-const notYetInCode = <String>{
-  // Nginx Proxy Manager's host row says its own status; the book's word for
-  // a loaded configuration has no screen yet.
-  'Config loaded',
-};
+const notYetInCode = <String>{};
 
 /// The backticked words of the first column of the lexicon's table.
 List<String> tableWords(String markdown) {

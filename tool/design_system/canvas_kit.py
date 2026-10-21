@@ -22,8 +22,8 @@ The CupolaServices face is not on Google Fonts: upload the .otf to the canvas
 as an asset and pass the address it is given; without one the kit has no
 @font-face for it.
 
-Publish both files to the canvas with the Artifact tool (`root` = <out>), and
-check a board with lint_boards.py before publishing it.
+Publish both files to the canvas from <out>, and check a board with
+lint_boards.py before publishing it.
 """
 
 from __future__ import annotations
