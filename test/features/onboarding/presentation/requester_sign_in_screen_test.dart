@@ -332,14 +332,23 @@ void main() {
   group('with an invite', () {
     const away = 'https://seerr.example.net';
 
-    testWidgets('its link reads the server at once: no address to type, and '
-        'the connection keeps both addresses', (tester) async {
+    testWidgets('its link fills the address and waits for Continue, and the '
+        'connection keeps both addresses', (tester) async {
       const anna = WorldSeerrUsers.annaLocal;
       final (harness, container, _) = await _atSignIn(
         tester,
         Profiles.p2,
         invite: const SeerrInvite(home: WorldHosts.seerr, away: away),
       );
+
+      // A link is not signed: the person sees the host and confirms before
+      // anything is sent to it.
+      expect(find.text('Sign in with email'), findsNothing);
+      expect(
+        find.textContaining('Check the address above before continuing'),
+        findsOneWidget,
+      );
+      await _tap(tester, harness, find.text('Continue'));
 
       expect(find.text('Sign in with email'), findsOneWidget);
 
@@ -402,6 +411,7 @@ void main() {
         Profiles.p2,
         invite: const SeerrInvite(home: 'http://seerr.home.arpa:5055'),
       );
+      await _tap(tester, harness, find.text('Continue'));
       expect(find.text('Seerr did not answer'), findsOneWidget);
 
       final router = GoRouter.of(tester.element(find.byType(Scaffold).first));
@@ -414,6 +424,7 @@ void main() {
         ).toString(),
       );
       await harness.settle(tester);
+      await _tap(tester, harness, find.text('Continue'));
 
       expect(find.text('Sign in with email'), findsOneWidget);
 
@@ -466,6 +477,7 @@ void main() {
           away: WorldHosts.seerr,
         ),
       );
+      await _tap(tester, harness, find.text('Continue'));
 
       expect(find.text('Sign in with email'), findsOneWidget);
       expect(
@@ -514,6 +526,41 @@ void main() {
       await _tap(tester, harness, find.text('Trust this certificate'));
 
       expect(find.text('Sign in with email'), findsOneWidget);
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('a link pasted over an invite shown in person asks about the '
+        'certificate its pin names', (tester) async {
+      final pin = probe.certificate.fingerprint;
+      final (harness, container, _) = await _atSignIn(
+        tester,
+        Profiles.p2,
+        // Sealed, and for another address: what made the flow sealed must
+        // not carry over to the link pasted after it.
+        held: const SeerrInvite(home: 'http://seerr.home.arpa:5055'),
+        certificateProber: (url, {pinnedFingerprint = ''}) async =>
+            url.contains(Uri.parse(WorldHosts.seerr).host)
+            ? UntrustedCertificate(probe)
+            : neverFindsACertificate(url),
+      );
+      harness.network.behave(WorldIds.seerr, ConnectionBehaviour.untrustedTls);
+
+      // A link anyone can compose, carrying the pin of the certificate shown.
+      // Over https, the only scheme an invite keeps a pin for.
+      final home = WorldHosts.seerr.replaceFirst('http:', 'https:');
+      final link = SeerrInvite(home: home, homePin: pin);
+      await tester.enterText(_address(), link.toLink());
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+
+      expect(find.text('Self-signed certificate'), findsOneWidget);
+      expect(
+        container.read(currentSettingsProvider).trustedCertificates,
+        isEmpty,
+        reason: 'the link pin is asked about, never written on its own word',
+      );
 
       await harness.unmount(tester);
     });

@@ -104,15 +104,22 @@ void main() {
   });
 
   group('pinnedImageCacheFor', () {
-    test('is null when nothing is pinned for the origin', () {
+    test('returns the guarded default when nothing is pinned for the origin', () {
       CertTrustRegistry.update(const {'https://nas.local:443': 'aa'});
 
       expect(pinnedImageCacheFor(null), isNull);
       expect(pinnedImageCacheFor(''), isNull);
-      // A different origin, and a cleartext URL that cannot carry a cert.
-      expect(pinnedImageCacheFor('https://tmdb.org/poster.jpg'), isNull);
-      expect(pinnedImageCacheFor('http://nas.local/poster.jpg'), isNull);
-      expect(built, isEmpty);
+
+      // A different origin, and a cleartext URL that cannot carry a cert, both
+      // still get a manager: the redirect guard is not only for pinned images.
+      final first = pinnedImageCacheFor('https://tmdb.org/poster.jpg');
+      final second = pinnedImageCacheFor('http://nas.local/poster.jpg');
+
+      expect(first, isNotNull);
+      expect(identical(first, second), isTrue);
+      expect(built, hasLength(1));
+      expect(built.single.cacheKey, 'cupola_images_guarded');
+      expect(built.single.fingerprint, isEmpty);
     });
 
     test('builds one cache per pinned origin and reuses it', () {

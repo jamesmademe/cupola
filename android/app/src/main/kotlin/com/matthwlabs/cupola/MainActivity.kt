@@ -16,6 +16,7 @@ import android.os.PersistableBundle
 import android.provider.Settings
 import android.view.View
 import android.view.ViewTreeObserver
+import android.view.WindowManager
 import androidx.work.WorkManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -108,6 +109,22 @@ class MainActivity : FlutterActivity() {
                         } else {
                             result.success(copySecret(secret))
                         }
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SECURE_SCREEN_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "setSecure" -> {
+                        val secure = call.argument<Boolean>("secure") ?: false
+                        if (secure) {
+                            window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                        } else {
+                            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                        }
+                        result.success(null)
                     }
                     else -> result.notImplemented()
                 }
@@ -286,6 +303,7 @@ class MainActivity : FlutterActivity() {
         const val LAUNCH_HOLD_LIMIT_MS = 8_000L
 
         const val SECURE_CLIPBOARD_CHANNEL = "com.matthwlabs.cupola/secure_clipboard"
+        const val SECURE_SCREEN_CHANNEL = "com.matthwlabs.cupola/secure_screen"
         const val LOCAL_NETWORK_CHANNEL = "com.matthwlabs.cupola/local_network"
         const val TASK_HYGIENE_CHANNEL = "com.matthwlabs.cupola/background_task_hygiene"
 

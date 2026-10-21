@@ -23,6 +23,15 @@ if [[ -z "$VERSION" ]]; then
   exit 1
 fi
 
+# The version reaches an AppleScript heredoc and `rm -rf "$DIST_DIR"`. A branch
+# whose `version:` was edited to carry quotes or `..` must fail here, before
+# either interpreter sees it.
+if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]] ||
+  [[ "$VERSION" == *..* ]]; then
+  printf 'Refusing a version that is not a release version: %s\n' "$VERSION" >&2
+  exit 1
+fi
+
 cd "$ROOT_DIR"
 
 # The macOS app ships exported for Developer ID (macos/ExportOptions.plist):
@@ -72,7 +81,12 @@ if [[ "$TARGET" == "android" || "$TARGET" == "all" ]]; then
   cp build/app/outputs/flutter-apk/app-release.apk "$DIST_DIR/${APP_SLUG}-${VERSION}.apk"
 fi
 
-if [[ "$TARGET" == "web" || "$TARGET" == "all" ]]; then
+# `web` is a compile check, not a shipped target: the README says there is no
+# web client, and a browser build would keep the app's wrapping key beside its
+# ciphertext in `localStorage` and lose `badCertificateCallback` entirely.
+# `all` therefore packages the five native targets only; `release.sh web`
+# remains for a deliberate local build.
+if [[ "$TARGET" == "web" ]]; then
   printf '==> Building web release...\n'
   flutter build web --release
   cp -R build/web "$DIST_DIR/web"

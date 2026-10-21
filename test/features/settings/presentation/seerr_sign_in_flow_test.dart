@@ -11,25 +11,57 @@ void main() {
   group('a certificate trusted on an invite\'s word', () {
     test('is the one the invite vouched for, where nothing was trusted', () {
       expect(
-        trustedOnInvite(trusted: null, invited: _shown, shown: _shown),
+        trustedOnInvite(
+          trusted: null,
+          invited: _shown,
+          shown: _shown,
+          fromSealedPackage: true,
+        ),
         isTrue,
+      );
+    });
+
+    test('never on the word of a link anyone can compose', () {
+      expect(
+        trustedOnInvite(
+          trusted: null,
+          invited: _shown,
+          shown: _shown,
+          fromSealedPackage: false,
+        ),
+        isFalse,
       );
     });
 
     test('is never another one', () {
       expect(
-        trustedOnInvite(trusted: null, invited: _other, shown: _shown),
+        trustedOnInvite(
+          trusted: null,
+          invited: _other,
+          shown: _shown,
+          fromSealedPackage: true,
+        ),
         isFalse,
       );
       expect(
-        trustedOnInvite(trusted: null, invited: null, shown: _shown),
+        trustedOnInvite(
+          trusted: null,
+          invited: null,
+          shown: _shown,
+          fromSealedPackage: true,
+        ),
         isFalse,
       );
     });
 
     test('never replaces one this device already trusted', () {
       expect(
-        trustedOnInvite(trusted: _other, invited: _shown, shown: _shown),
+        trustedOnInvite(
+          trusted: _other,
+          invited: _shown,
+          shown: _shown,
+          fromSealedPackage: true,
+        ),
         isFalse,
       );
     });

@@ -4,6 +4,7 @@ import 'package:cupola/core/capability/capability_scope.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
+import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
@@ -358,6 +359,25 @@ void main() {
         ),
         isNull,
       );
+    });
+  });
+
+  group('jellyfinKeyTravelsInQuery', () {
+    test('is true only for Jellyfin behind an Authorization proxy', () {
+      const proxy = ProxyPassword(username: 'user', password: 'secret');
+      expect(jellyfinKeyTravelsInQuery(ServiceKey.jellyfin, proxy), isTrue);
+      expect(
+        jellyfinKeyTravelsInQuery(
+          ServiceKey.jellyfin,
+          const CustomHeaders([(name: 'authorization', value: 'Bearer token')]),
+        ),
+        isTrue,
+      );
+      expect(
+        jellyfinKeyTravelsInQuery(ServiceKey.jellyfin, const NoAccess()),
+        isFalse,
+      );
+      expect(jellyfinKeyTravelsInQuery(ServiceKey.radarr, proxy), isFalse);
     });
   });
 }

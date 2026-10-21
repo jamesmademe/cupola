@@ -31,13 +31,14 @@ import 'package:cupola/features/shell/domain/shell_audience.dart';
 /// Signed in, the connection is saved with the account, the way in is over,
 /// and the app opens on the Home of whoever the account makes them.
 ///
-/// An invite ([SeerrInvite]) fills it: opened by the invite's link, or the
-/// link pasted in the address, the server is read at once at whichever of
-/// its addresses answers, and the certificate the invite vouches for is
-/// trusted without a question. An invite shown in person comes the same way
-/// from [pendingInviteProvider], where the receiving screen left it: it
-/// carries what a gateway in front of Seerr asks for, so it is never in the
-/// location, and the draft reaches the server through that gateway.
+/// An invite ([SeerrInvite]) fills it. A link opened by the system fills the
+/// address and waits: a link is not signed, so the person checks the host and
+/// taps Continue before anything is sent. A link pasted into the field is an
+/// action of the person's own and is read at once, as before. An invite shown
+/// in person comes from [pendingInviteProvider], where the receiving screen
+/// left it: it carries what a gateway in front of Seerr asks for, so it is
+/// never in the location, and the draft reaches the server through that
+/// gateway at once.
 class RequesterSignInScreen extends ConsumerStatefulWidget {
   const RequesterSignInScreen({
     super.key,
@@ -90,6 +91,7 @@ class _RequesterSignInScreenState extends ConsumerState<RequesterSignInScreen> {
     connection: _draft,
     certificateProber: widget.certificateProber,
     invitedPin: (url) => _invite?.pinFor(url),
+    inviteIsSealed: () => _invite != null && identical(_invite, _sealedInvite),
     consent:
         ({
           required origin,
@@ -117,6 +119,13 @@ class _RequesterSignInScreenState extends ConsumerState<RequesterSignInScreen> {
   /// own: changed by hand, it is an address like any other.
   SeerrInvite? _invite;
 
+  /// The invite the sealed package shown in person handed over, if one did.
+  ///
+  /// [_invite] is trusted as sealed only while it is this very invite: a link
+  /// pasted into the address later replaces [_invite] and is not signed, so
+  /// its pin is a hint for the dialog, never a reason to skip it.
+  SeerrInvite? _sealedInvite;
+
   static const _brokenInvite = "This invite isn't whole. Ask for a new one.";
 
   @override
@@ -131,12 +140,19 @@ class _RequesterSignInScreenState extends ConsumerState<RequesterSignInScreen> {
         _problemOf = '';
         _addressProblem = _brokenInvite;
       } else {
+        _sealedInvite = held;
         _take(invite);
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          if (held != null) ref.read(pendingInviteProvider.notifier).take();
-          _flow.readServer();
-        });
+        // A link opened by the system waits for Continue: the person has not
+        // seen the host yet, and a link anyone can compose must not make the
+        // app dial it on its own. The sealed package shown in person is the
+        // one arrival that is already a deliberate act, and it goes at once.
+        if (held != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            ref.read(pendingInviteProvider.notifier).take();
+            _flow.readServer();
+          });
+        }
       }
     }
     _address.addListener(_onAddress);
@@ -331,6 +347,16 @@ class _RequesterSignInScreenState extends ConsumerState<RequesterSignInScreen> {
         action: TextInputAction.go,
         onSubmitted: (_) => _continue(),
       ),
+      if (_invite != null && !identical(_invite, _sealedInvite)) ...[
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          'Check the address above before continuing. A link is not signed: '
+          'continue only if you trust whoever sent it.',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
       const SizedBox(height: AppSpacing.xl),
       SeerrSignInPrimary(label: 'Continue', onPressed: _continue),
     ];

@@ -8,6 +8,7 @@ import 'package:http/http.dart' show Client;
 import 'package:http/io_client.dart';
 
 import 'package:cupola/core/network/cert_trust.dart';
+import 'package:cupola/core/network/same_origin_http_client.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 
 /// Bridges the Riverpod-held trust map to the leaf image widgets
@@ -74,11 +75,13 @@ PinnedImageCache defaultPinnedImageCacheBuilder({
   required String host,
   required int port,
 }) {
-  final transport = IOClient(
-    buildPinnedHttpClient(
-      pinnedFingerprint: fingerprint,
-      pinnedHost: host,
-      pinnedPort: port,
+  final transport = SameOriginHttpClient(
+    IOClient(
+      buildPinnedHttpClient(
+        pinnedFingerprint: fingerprint,
+        pinnedHost: host,
+        pinnedPort: port,
+      ),
     ),
   );
   return (
@@ -103,28 +106,40 @@ PinnedImageCacheBuilder pinnedImageCacheBuilder =
 final Map<String, ({PinnedImageCache cache, String fingerprint})>
 _pinnedCaches = {};
 
+/// The cache every image without a pin uses.
+///
+/// It is not `CachedNetworkImage`'s own `DefaultCacheManager`, because that
+/// manager's `HttpFileService` follows redirects with the request's headers
+/// intact (`SameOriginHttpClient` explains why that is a credential leak). One
+/// shared manager keeps the cache key, and therefore the on-disk store, stable
+/// for every unpinned image.
+PinnedImageCache? _guardedDefaultCache;
+
 /// Test-only: retires every memoised cache so one test cannot see another's.
 @visibleForTesting
 void resetPinnedImageCaches() {
-  final entries = _pinnedCaches.values.toList();
+  final entries = <PinnedImageCache>[
+    ..._pinnedCaches.values.map((entry) => entry.cache),
+    ?_guardedDefaultCache,
+  ];
   _pinnedCaches.clear();
-  for (final entry in entries) {
-    unawaited(_retire(entry.cache));
+  _guardedDefaultCache = null;
+  for (final cache in entries) {
+    unawaited(_retire(cache));
   }
 }
 
-/// A [CacheManager] pinned to [imageUrl]'s trusted certificate, or null when
-/// nothing is pinned for it.
+/// The guarded [CacheManager] for [imageUrl]: pinned to its origin's trusted
+/// certificate when one is stored, and backed by the redirect guard either way.
 ///
-/// Null is the answer for the overwhelming majority of images: anything on
-/// a certificate the OS already trusts, a plain `http://` LAN address, or a
-/// public host like TMDB, and it means exactly "use `CachedNetworkImage`'s
-/// own default manager", so passing this straight through as `cacheManager:`
-/// is safe everywhere, pinned or not.
+/// Null is the answer only for an absent URL. Every real image gets a manager,
+/// including one on a certificate the OS already trusts, a plain `http://` LAN
+/// address or a public host like TMDB: those use the shared unpinned cache,
+/// which still refuses to replay a credential to another origin.
 BaseCacheManager? pinnedImageCacheFor(String? imageUrl) {
   if (imageUrl == null || imageUrl.isEmpty) return null;
   final pin = CertTrustRegistry.pinFor(imageUrl);
-  if (pin == null) return null;
+  if (pin == null) return _guardedDefaultImageCache().manager;
   final origin = UrlUtils.certOrigin(imageUrl)!;
 
   final cached = _pinnedCaches[origin];
@@ -149,6 +164,26 @@ BaseCacheManager? pinnedImageCacheFor(String? imageUrl) {
   );
   _pinnedCaches[origin] = (cache: cache, fingerprint: pin);
   return cache.manager;
+}
+
+/// The one unpinned cache, built on first use.
+///
+/// The key is deliberately stable: it names the sqflite store, so a new key
+/// would orphan every image already downloaded and re-fetch the lot. The
+/// empty fingerprint reaches [buildPinnedHttpClient] as "platform trust store
+/// only", exactly as the old default manager did; the difference is the
+/// redirect guard wrapped around it.
+PinnedImageCache _guardedDefaultImageCache() {
+  final cached = _guardedDefaultCache;
+  if (cached != null) return cached;
+  final cache = pinnedImageCacheBuilder(
+    cacheKey: 'cupola_images_guarded',
+    fingerprint: '',
+    host: '',
+    port: 443,
+  );
+  _guardedDefaultCache = cache;
+  return cache;
 }
 
 Future<void> _retire(PinnedImageCache cache) async {

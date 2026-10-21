@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [main]
 
+# The workflow only reads the repository. The default token is read-only on
+# newer repositories, but that is an organisation setting, not a guarantee:
+# stating it here makes the least privilege part of the repository.
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -14,9 +20,13 @@ jobs:
   analyze-and-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # Pinned to the commit behind the `v4` tag. A moving tag on a checkout
+      # that runs pull-request code is a supply-chain hole, not a convenience.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: stable
           flutter-version: 3.38.7
@@ -39,3 +49,21 @@ jobs:
 
       - name: Build web
         run: flutter build web --release
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      # Full history: a secret removed in a later commit is still in the
+      # repository, and the local pre-commit hook is not there for a
+      # contributor or a fresh clone.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

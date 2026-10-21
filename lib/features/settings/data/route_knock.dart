@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/host_reach.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
 import 'package:cupola/core/utils/url_utils.dart';
@@ -160,10 +161,63 @@ Future<bool> knockAt(
     return hostReach(uri).timeout(timeout, onTimeout: () => false);
   }
 
+  // Two phases, because a private address at home can belong to somebody else
+  // on another network (the hotel that also uses 192.168.1.0/24). The first
+  // knock carries no access header: a service that answers directly is proved
+  // without the gateway credential ever leaving the app, and a gateway answers
+  // with a challenge. A challenge alone proves nothing, though: the hotel's
+  // router answers 401 too, and so does anyone who wants the credential. The
+  // access layer is sent only where TLS has already said who the host is
+  // ([mayCarryAccessAfterChallenge]).
+  final first = await _knockOnce(
+    plan,
+    base: base,
+    reach: reach,
+    timeout: timeout,
+    withAccess: false,
+  );
+  if (first == _KnockOutcome.service) return true;
+  if (reach.access.isEmpty ||
+      first != _KnockOutcome.gateway ||
+      !mayCarryAccessAfterChallenge(uri)) {
+    return false;
+  }
+
+  final second = await _knockOnce(
+    plan,
+    base: base,
+    reach: reach,
+    timeout: timeout,
+    withAccess: true,
+  );
+  return second == _KnockOutcome.service;
+}
+
+/// Whether a knock on [base] may answer a challenge with the access layer.
+///
+/// Only over `https`: the handshake has checked the host against the platform
+/// trust store or the connection's pin before any header leaves, so the
+/// credential goes to the server the person configured and to nobody else
+/// holding the same address. Over `http` nothing identifies the host, so a
+/// challenge ends the knock as not reached: the route goes away rather than
+/// hand the gateway credential to whoever answered.
+bool mayCarryAccessAfterChallenge(Uri base) => base.scheme == 'https';
+
+enum _KnockOutcome { service, gateway, other }
+
+/// One knock. [withAccess] is false for the first phase, which is the one that
+/// must not carry a gateway credential.
+Future<_KnockOutcome> _knockOnce(
+  KnockPlan plan, {
+  required String base,
+  required ConnectionReach reach,
+  required Duration timeout,
+  required bool withAccess,
+}) async {
   final dio = guardedDio(
     baseUrl: base,
     certFingerprint: reach.pin,
-    accessHeaders: reach.access.headers(),
+    accessHeaders: withAccess ? reach.access.headers() : const {},
     reportUnreached: false,
   );
   dio.options
@@ -184,18 +238,94 @@ Future<bool> knockAt(
         .timeout(timeout);
     final status = response.statusCode ?? 0;
     // A redirect is a gateway's sign-in page or a captive portal, never the
-    // service's own answer to these routes.
-    if (status >= 300 && status < 400) return false;
-    return plan.answers((
+    // service's own answer to these routes. A cross-origin one only earns the
+    // second phase when it goes to a known access gateway; anything else
+    // could be any host on the network.
+    if (status >= 300 && status < 400) {
+      return _redirectLooksLikeGateway(response.headers.map, base)
+          ? _KnockOutcome.gateway
+          : _KnockOutcome.other;
+    }
+    final answer = (
       status: status,
       headers: response.headers.map,
       body: response.data ?? '',
-    ));
+    );
+    if (plan.answers(answer)) return _KnockOutcome.service;
+    if (!withAccess && (status == 401 || status == 403)) {
+      return _KnockOutcome.gateway;
+    }
+    return _KnockOutcome.other;
+  } on DioException catch (e) {
+    final response = e.response;
+    // The redirect guard throws before the answer guard sees the page, and a
+    // captive portal's redirect is exactly what must not earn the second
+    // phase. Check where the redirect goes before treating the exception as a
+    // gateway.
+    if (response != null) {
+      final status = response.statusCode ?? 0;
+      if (status >= 300 && status < 400) {
+        return _redirectLooksLikeGateway(response.headers.map, base)
+            ? _KnockOutcome.gateway
+            : _KnockOutcome.other;
+      }
+    }
+    // A sign-in page or a password prompt carries the host that answered. It
+    // may be a gateway in front of the service, or a captive portal on the
+    // hotel's network; only the service's own host or Cloudflare Access earns
+    // the second phase.
+    final gateway = accessGatewayOf(e);
+    if (gateway != null) {
+      return _gatewayHostIsLocalOrCloudflare(gateway, base)
+          ? _KnockOutcome.gateway
+          : _KnockOutcome.other;
+    }
+    if (response != null) {
+      final status = response.statusCode ?? 0;
+      if (status == 401 || status == 403) return _KnockOutcome.gateway;
+    }
+    return _KnockOutcome.other;
   } catch (_) {
-    return false;
+    return _KnockOutcome.other;
   } finally {
     dio.close(force: true);
   }
+}
+
+/// Whether the host that answered is the service's own or Cloudflare Access.
+///
+/// A captive portal's sign-in page is a gateway too, but sending the access
+/// layer to it would hand the hotel the household's gateway credential.
+bool _gatewayHostIsLocalOrCloudflare(AccessGatewayAnswer gateway, String base) {
+  final origin = Uri.tryParse(base);
+  if (origin == null) return false;
+  final host = gateway.gatewayHost.toLowerCase();
+  if (host == origin.host.toLowerCase()) return true;
+  return host == 'cloudflareaccess.com' ||
+      host.endsWith('.cloudflareaccess.com');
+}
+
+/// Whether a redirect from [base] is a gateway sign-in rather than a captive
+/// portal on somebody else's network.
+///
+/// A same-origin redirect is the common reverse-proxy shape and stays inside
+/// the address the person configured. The one cross-origin host allowed is
+/// Cloudflare Access's own sign-in domain: the service token is going there
+/// anyway when the gateway is Cloudflare, so the second phase cannot hand it
+/// to a third party. Any other host stays refused.
+bool _redirectLooksLikeGateway(Map<String, List<String>> headers, String base) {
+  final location = _header((status: 0, headers: headers, body: ''), 'location');
+  final origin = Uri.tryParse(base);
+  if (location == null || origin == null) return false;
+  final target = origin.resolve(location);
+  final sameOrigin =
+      target.scheme == origin.scheme &&
+      target.host == origin.host &&
+      target.port == origin.port;
+  if (sameOrigin) return true;
+  final host = target.host.toLowerCase();
+  return host == 'cloudflareaccess.com' ||
+      host.endsWith('.cloudflareaccess.com');
 }
 
 bool _statusOk(KnockAnswer answer) {

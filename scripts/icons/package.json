@@ -1,0 +1,8 @@
+{
+  "name": "cupola-icon-tools",
+  "private": true,
+  "description": "Pinned rasteriser for scripts/generate_icons.sh --write",
+  "devDependencies": {
+    "@resvg/resvg-js-cli": "2.6.2-beta.1"
+  }
+}

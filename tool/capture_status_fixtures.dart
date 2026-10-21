@@ -42,7 +42,6 @@ const _verbatimKeys = <String>{
   'seriesType',
   'monitorNewItems',
   // Quality / language shape.
-  'name',
   'source',
   'modifier',
   // Timings, needed to keep date parsing honest.

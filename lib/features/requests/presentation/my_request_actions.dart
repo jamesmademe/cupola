@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/data/seerr_session.dart';
@@ -29,6 +30,10 @@ void openMyRequest(BuildContext context, MyRequest mine) {
 
 /// Opens [at], Seerr's link to the title in the player it is set up with.
 Future<void> watchMyRequest(BuildContext context, Uri at) async {
+  // The row already filters, and this is the second half of the same rule: a
+  // caller that ever hands this a server-controlled URI cannot turn it into
+  // an `intent:` or `file:` launch.
+  if (!UrlUtils.isLaunchableWebUri(at)) return;
   final opened = await launchUrl(at, mode: LaunchMode.externalApplication);
   if (!opened && context.mounted) {
     SnackBarHelper.error(context, 'Could not open it');

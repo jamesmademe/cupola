@@ -4,6 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/release_search/presentation/release_search_entry.dart';
+import 'package:cupola/features/settings/domain/connection_access.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/release_search/presentation/release_search_jobs_provider.dart';
 import 'package:cupola/features/release_search/presentation/release_search_settings_provider.dart';
 import 'package:cupola/features/release_search/presentation/release_search_settings_screen.dart';
@@ -17,13 +20,18 @@ void main() {
     WidgetTester tester, {
     TargetPlatform? platform,
     bool backgroundEnabled = false,
+    List<ServiceKey> configured = const [],
+    SettingsModel Function(SettingsModel settings)? customize,
     // Null is the honest default here: without a plugin behind it the OS has no
     // answer, which is exactly what an unconfigured host reports.
     bool? permission,
   }) async {
     final container = ProviderContainer(
       overrides: [
-        ...await settingsScopeOverrides(),
+        ...await settingsScopeOverrides(
+          configured: configured,
+          customize: customize,
+        ),
         releaseSearchPlatformProvider.overrideWith((ref) => platform),
         notificationPermissionProvider.overrideWith((ref) async => permission),
       ],
@@ -56,6 +64,33 @@ void main() {
   }
 
   group('on a phone', () {
+    testWidgets(
+      'a gateway connection names the background risk and the way out',
+      (tester) async {
+        await pumpScreen(
+          tester,
+          platform: TargetPlatform.iOS,
+          backgroundEnabled: true,
+          configured: [ServiceKey.radarr],
+          customize: (settings) => settings.copyWithInstance(
+            settings
+                .primaryOf(ServiceKey.radarr)!
+                .copyWith(
+                  access: const CustomHeaders([
+                    (name: 'CF-Access-Client-Id', value: 'gateway-id'),
+                  ]),
+                ),
+          ),
+        );
+
+        expect(find.textContaining('behind a gateway'), findsOneWidget);
+        expect(
+          find.textContaining('Turning Background search off'),
+          findsOneWidget,
+        );
+      },
+    );
+
     testWidgets('the master switch is off and says what off means', (
       tester,
     ) async {

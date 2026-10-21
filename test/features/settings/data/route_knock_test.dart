@@ -184,6 +184,30 @@ void main() {
     });
   });
 
+  group('who may receive the access layer after a challenge', () {
+    test('a host TLS has authenticated', () {
+      expect(
+        mayCarryAccessAfterChallenge(Uri.parse('https://radarr.example.com')),
+        isTrue,
+      );
+      expect(
+        mayCarryAccessAfterChallenge(Uri.parse('https://192.168.1.10:7878')),
+        isTrue,
+      );
+    });
+
+    test('never a cleartext address, at home or away', () {
+      expect(
+        mayCarryAccessAfterChallenge(Uri.parse('http://192.168.1.10:7878')),
+        isFalse,
+      );
+      expect(
+        mayCarryAccessAfterChallenge(Uri.parse('http://radarr.example.com')),
+        isFalse,
+      );
+    });
+  });
+
   group('a knock on a server', () {
     late HttpServer server;
     late List<HttpHeaders> received;
@@ -222,18 +246,52 @@ void main() {
       expect(await knock(), isTrue);
     });
 
-    test('sends no key of the service, and the gateway access', () async {
-      await knock(
-        access: const CustomHeaders([
-          (name: 'X-Proxy-Key', value: 'gateway-value'),
-        ]),
-      );
+    test(
+      'sends no key and no access to a server that answered directly',
+      () async {
+        await knock(
+          access: const CustomHeaders([
+            (name: 'X-Proxy-Key', value: 'gateway-value'),
+          ]),
+        );
 
-      final headers = received.single;
-      expect(headers.value('x-api-key'), isNull);
-      expect(headers.value('authorization'), isNull);
-      expect(headers.value('x-proxy-key'), 'gateway-value');
-    });
+        final headers = received.single;
+        expect(headers.value('x-api-key'), isNull);
+        expect(headers.value('authorization'), isNull);
+        expect(headers.value('x-proxy-key'), isNull);
+      },
+    );
+
+    test(
+      'a challenge over http never gets the access: the host is unproved',
+      () async {
+        var calls = 0;
+        handle = (request) {
+          calls++;
+          if (request.headers.value('x-proxy-key') == null) {
+            request.response
+              ..statusCode = 401
+              ..headers.set('www-authenticate', 'Basic realm="gateway"');
+            return;
+          }
+          request.response
+            ..statusCode = 200
+            ..headers.contentType = ContentType.json
+            ..write('{"status": "OK"}');
+        };
+
+        expect(
+          await knock(
+            access: const CustomHeaders([
+              (name: 'X-Proxy-Key', value: 'gateway-value'),
+            ]),
+          ),
+          isFalse,
+        );
+        expect(calls, 1);
+        expect(received.single.value('x-proxy-key'), isNull);
+      },
+    );
 
     test('a redirect is not the service', () async {
       handle = (request) {
@@ -243,6 +301,26 @@ void main() {
       };
 
       expect(await knock(), isFalse);
+    });
+
+    test('a foreign redirect never gets the access on a retry', () async {
+      var calls = 0;
+      handle = (request) {
+        calls++;
+        request.response
+          ..statusCode = 302
+          ..headers.set('location', 'http://portal.example/login');
+      };
+
+      expect(
+        await knock(
+          access: const CustomHeaders([
+            (name: 'X-Proxy-Key', value: 'gateway-value'),
+          ]),
+        ),
+        isFalse,
+      );
+      expect(calls, 1);
     });
 
     test('a server that never answers is false within the time', () async {
