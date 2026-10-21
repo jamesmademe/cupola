@@ -144,6 +144,9 @@ services:
     # qBittorrent 5.1.2-r4-ls426.
     image: lscr.io/linuxserver/qbittorrent@sha256:7034f73a3c6fa4ea40fd67df462939d1665d765231b572523921c98c2db5362e
     profiles: [core, downloads]
+    depends_on:
+      testlab-indexer:
+        condition: service_healthy
     environment: *linuxserver-env
     ports:
       # qBittorrent 5.1 validates the WebUI Host/Origin port. Keep its
@@ -168,6 +171,9 @@ services:
     environment:
       <<: *linuxserver-env
       WEBUI_PORT: "8081"
+    depends_on:
+      testlab-indexer:
+        condition: service_healthy
     ports:
       - "127.0.0.1:8081:8081"
       - "6881:6881"

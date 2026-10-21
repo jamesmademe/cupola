@@ -368,6 +368,59 @@ def make_spike(spike_dir: Path) -> list[str]:
     return sorted(path.name for path in spike_dir.iterdir())
 
 
+def _release_catalogue(size: int, infohash_value: str) -> list[dict[str, Any]]:
+    """The many releases an interactive search sees for one title.
+
+    The entries share the one real torrent: the app's search and Radarr's
+    download decision are what this is for, and a grab of any accepted row
+    downloads the same release. The rejectable rows carry the words Radarr
+    itself judges: a quality below the profile, an Italian or multi language,
+    a hardcoded or CAM source, and sizes no one would take.
+    """
+    titles = [
+        "Big.Buck.Bunny.2008.1080p.WEB-DL.DDP5.1.H.264-CUPOLA",
+        "Big.Buck.Bunny.2008.1080p.BluRay.x264-CUPOLA",
+        "Big.Buck.Bunny.2008.2160p.WEB-DL.DDP5.1.H.265-CUPOLA",
+        "Big.Buck.Bunny.2008.720p.WEB-DL.DDP5.1.H.264-CUPOLA",
+        "Big.Buck.Bunny.2008.1080p.WEB-DL.ITA.DDP5.1.H.264-CUPOLA",
+        "Big.Buck.Bunny.2008.1080p.WEB-DL.iTALiAN.DDP5.1.H.264-CUPOLA",
+        "Big.Buck.Bunny.2008.1080p.WEB-DL.MULTi.DDP5.1.H.264-CUPOLA",
+        "Big.Buck.Bunny.2008.480p.WEB-DL.DDP5.1.H.264-CUPOLA",
+        "Big.Buck.Bunny.2008.480p.HC.WEB-DL.DDP5.1.H.264-CUPOLA",
+        "Big.Buck.Bunny.2008.1080p.CAM.x264-CUPOLA",
+        "Big.Buck.Bunny.2008.1080p.TS.x264-CUPOLA",
+        "Big.Buck.Bunny.2008.1080p.WEB-DL.BANNED.DDP5.1.H.264-CUPOLA",
+        "Big.Buck.Bunny.2008.1080p.WEB-DL.REPACK.DDP5.1.H.264-CUPOLA",
+        "Big.Buck.Bunny.2008.1080p.WEB-DL.PROPER.DDP5.1.H.264-CUPOLA",
+        "Big.Buck.Bunny.2008.1080p.WEB-DL.DDP5.1.H.264-OTHER",
+        "Big.Buck.Bunny.2008.1080p.WEB-DL.DDP5.1.H.264-NTb",
+        "Big.Buck.Bunny.2008.1080p.WEB-DL.DDP5.1.H.264-RARBG",
+        "Big.Buck.Bunny.2008.1080p.WEB-DL.DDP5.1.H.264-CMRG",
+        "Big.Buck.Bunny.2008.1080p.WEB-DL.DDP5.1.H.264-EVO",
+        "Big.Buck.Bunny.2008.1080p.WEB-DL.DDP5.1.H.264-FGT",
+        "Big.Buck.Bunny.2008.1080p.WEB-DL.DDP5.1.H.264-YIFY",
+        "Big.Buck.Bunny.2008.1080p.WEB-DL.DDP5.1.H.264-SPARKS",
+        "Big.Buck.Bunny.2008.1080p.WEB-DL.DDP5.1.H.264-DIMENSION",
+        "Big.Buck.Bunny.2008.1080p.WEB-DL.DDP5.1.H.264-Kogi",
+    ]
+    releases = []
+    for index, title in enumerate(titles):
+        huge = index in (3, 9, 10, 11, 22, 23)
+        releases.append(
+            {
+                "title": title,
+                "size": (500 * 1024**3) if huge else size,
+                "seeders": 1 + (index % 7),
+                "peers": 2 + (index % 5),
+                # A unique identity per row: Radarr collapses a search on the
+                # infohash, and these rows deliberately share one torrent.
+                "infohash": hashlib.sha1(title.encode()).hexdigest(),
+                "torrent": TORRENT,
+            }
+        )
+    return releases
+
+
 def forge(
     output_dir: Path,
     seed_dir: Path,
@@ -400,6 +453,9 @@ def forge(
         "infohash": infohash(torrent),
         "torrent": TORRENT,
         "tracker": tracker_url,
+        "releases": _release_catalogue(
+            media.stat().st_size, infohash(torrent)
+        ),
     }
     (output_dir / "release.json").write_text(
         json.dumps(record, indent=2, sort_keys=True) + "\n",

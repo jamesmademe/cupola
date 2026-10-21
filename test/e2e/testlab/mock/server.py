@@ -362,31 +362,38 @@ class IndexerHandler(BaseHTTPRequestHandler):
 
     def _search(self, query: dict[str, str]) -> bytes:
         release = self._release()
-        title = str(release.get("title", ""))
-        if not title:
+        if not release:
             return self._rss([])
-        # One release, and every search sees it. Radarr's "Test" button asks
-        # with a title of its own choosing; an empty answer would fail the
-        # indexer for the wrong reason. The lab never enables RSS, and the only
-        # search it triggers is the one for Big Buck Bunny.
+        catalogue = release.get("releases")
+        if not isinstance(catalogue, list) or not catalogue:
+            catalogue = [release]
         base = "http://testlab-indexer:8088"
-        torrent = str(release.get("torrent", ""))
-        item = f"""    <item>
+        items = []
+        for entry in catalogue:
+            if not isinstance(entry, dict):
+                continue
+            title = str(entry.get("title") or "")
+            torrent = str(entry.get("torrent") or "")
+            if not title or not torrent:
+                continue
+            items.append(
+                f"""    <item>
       <title>{escape(title)}</title>
-      <guid isPermaLink="false">{escape(str(release.get("infohash", "")))}</guid>
+      <guid isPermaLink="false">{escape(str(entry.get("infohash", "")))}</guid>
       <link>{base}/torrents/{escape(torrent)}</link>
-      <enclosure url="{base}/torrents/{escape(torrent)}" length="{release.get("size", 0)}" type="application/x-bittorrent"/>
-      <description>Synthetic release for the Cupola import slice.</description>
+      <enclosure url="{base}/torrents/{escape(torrent)}" length="{entry.get("size", 0)}" type="application/x-bittorrent"/>
+      <description>Synthetic release for the Cupola testlab.</description>
       <pubDate>Wed, 01 Jan 2025 00:00:00 +0000</pubDate>
       <category>2000</category>
-      <torznab:attr name="size" value="{release.get("size", 0)}"/>
-      <torznab:attr name="seeders" value="1"/>
-      <torznab:attr name="peers" value="2"/>
+      <torznab:attr name="size" value="{entry.get("size", 0)}"/>
+      <torznab:attr name="seeders" value="{entry.get("seeders", 1)}"/>
+      <torznab:attr name="peers" value="{entry.get("peers", 2)}"/>
       <torznab:attr name="category" value="2000"/>
-      <torznab:attr name="infohash" value="{escape(str(release.get("infohash", "")))}"/>
+      <torznab:attr name="infohash" value="{escape(str(entry.get("infohash", "")))}"/>
     </item>
 """
-        return self._rss([item])
+            )
+        return self._rss(items)
 
     def _rss(self, items: list[str]) -> bytes:
         body = "".join(items)

@@ -154,6 +154,7 @@ def compose_up(extra_profiles: Iterable[str] = ()) -> None:
     print("[testlab] starting the containers", file=sys.stderr)
     run(command, capture=True, timeout=600)
     ensure_proxies()
+    seeder_warm()
 
 
 def compose_down() -> None:
@@ -300,6 +301,90 @@ def clear_toxics(name: str) -> None:
     proxy = toxiproxy("GET", f"/proxies/{name}")
     for toxic in proxy.get("toxics", []):
         toxiproxy("DELETE", f"/proxies/{name}/toxics/{toxic['name']}")
+
+
+def seeder_warm() -> None:
+    """Make the local seeder announce to the tracker before it is needed.
+
+    qBittorrent persists the last tracker error in its resume data. A golden
+    snapshot can therefore carry a `Host not found` from the first start, when
+    the indexer was not up yet, and wait out its retry interval while a
+    download sits at zero. Reannouncing after the indexer is healthy clears it;
+    if it does not, one restart of the seeder does.
+    """
+    import http.cookiejar
+    import urllib.parse
+
+    env = credentials()
+    user = env.get("CUPOLA_TESTLAB_QBITTORRENT_USERNAME", "admin")
+    password = env.get("CUPOLA_TESTLAB_QBITTORRENT_PASSWORD", "")
+    if not password:
+        return
+
+    def announce() -> bool:
+        jar = http.cookiejar.CookieJar()
+        opener = urllib.request.build_opener(
+            urllib.request.HTTPCookieProcessor(jar)
+        )
+        try:
+            form = urllib.parse.urlencode(
+                {"username": user, "password": password}
+            ).encode()
+            login = urllib.request.Request(
+                "http://127.0.0.1:8081/api/v2/auth/login",
+                data=form,
+                headers={
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+            )
+            opener.open(login, timeout=5).read()
+            info = json.load(
+                opener.open(
+                    "http://127.0.0.1:8081/api/v2/torrents/info", timeout=5
+                )
+            )
+            hashes = "|".join(
+                str(item.get("hash")) for item in info if item.get("hash")
+            )
+            if not hashes:
+                return True
+            reannounce = urllib.request.Request(
+                "http://127.0.0.1:8081/api/v2/torrents/reannounce",
+                data=urllib.parse.urlencode({"hashes": hashes}).encode(),
+                headers={
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+            )
+            opener.open(reannounce, timeout=5).read()
+            time.sleep(2)
+            for item in info:
+                hash_value = item.get("hash")
+                if not hash_value:
+                    continue
+                trackers = json.load(
+                    opener.open(
+                        "http://127.0.0.1:8081/api/v2/torrents/trackers"
+                        f"?hash={hash_value}",
+                        timeout=5,
+                    )
+                )
+                for tracker in trackers:
+                    if "testlab-indexer" in str(tracker.get("url")):
+                        if tracker.get("status") != 2:
+                            return False
+            return True
+        except (OSError, ValueError):
+            return False
+
+    if announce():
+        return
+    run(
+        compose_command("restart", "qbittorrent-seed"),
+        capture=True,
+        timeout=60,
+    )
+    time.sleep(3)
+    announce()
 
 
 def fault(service: str, mode: str, milliseconds: int | None = None) -> dict[str, Any]:

@@ -505,6 +505,143 @@ def seed_seeder(env: dict[str, str], state_dir: Path) -> None:
     print("[testlab-seed] qBittorrent seeder: release added")
 
 
+def seed_prowlarr() -> None:
+    """Prowlarr owns the indexers; the apps receive them by sync.
+
+    The fake indexer answers every search with the release catalogue, so
+    Prowlarr's own test passes and the sync has something to push. The direct
+    Radarr indexer the S1 seed made is removed: two copies of the same
+    catalogue would double every search result.
+    """
+    base = f"{ROOT}:9696/api/v1"
+    headers = api_headers("v1")
+    indexers = list_value(json_request(f"{base}/indexer", headers=headers))
+    if not any(item.get("name") == "Cupola testlab" for item in indexers):
+        schema = list_value(
+            json_request(f"{base}/indexer/schema", headers=headers)
+        )
+        torznab = next(
+            item
+            for item in schema
+            if item.get("implementation") == "Torznab"
+        )
+        replace = {
+            "baseUrl": "http://testlab-indexer:8088",
+            "apiPath": "/api",
+            "apiKey": "test-key",
+        }
+        fields = [
+            {
+                "name": field.get("name"),
+                "value": replace.get(field.get("name"), field.get("value")),
+            }
+            for field in torznab.get("fields", [])
+            if isinstance(field, dict)
+        ]
+        profiles = list_value(
+            json_request(f"{base}/appprofile", headers=headers)
+        )
+        app_profile = next(
+            (
+                item.get("id")
+                for item in profiles
+                if item.get("name") == "Standard"
+            ),
+            profiles[0].get("id") if profiles else 1,
+        )
+        payload = {
+            "enable": True,
+            "name": "Cupola testlab",
+            "implementation": "Torznab",
+            "configContract": "TorznabSettings",
+            "protocol": "torrent",
+            "priority": 1,
+            "appProfileId": app_profile,
+            "fields": fields,
+            "tags": [],
+        }
+        json_request(f"{base}/indexer", method="POST", payload=payload, headers=headers)
+        print("[testlab-seed] Prowlarr: Torznab indexer")
+
+    applications = list_value(
+        json_request(f"{base}/applications", headers=headers)
+    )
+    apps = [
+        ("Radarr", "RadarrSettings", "http://radarr:7878", [2000, 2010, 2020, 2030, 2040, 2045, 2050, 2060]),
+        ("Sonarr", "SonarrSettings", "http://sonarr:8989", [5000, 5010, 5020, 5030, 5040, 5045, 5050, 5090]),
+        ("Lidarr", "LidarrSettings", "http://lidarr:8686", [3000, 3010, 3030, 3040, 3050, 3060]),
+        ("Readarr", "ReadarrSettings", "http://readarr:8787", [3030, 7000, 7010, 7020, 7030, 7040, 7050, 7060]),
+    ]
+    for name, contract, url, categories in apps:
+        if any(item.get("name") == name for item in applications):
+            continue
+        payload = {
+            "enable": True,
+            "name": name,
+            "implementation": name,
+            "configContract": contract,
+            "syncLevel": "fullSync",
+            "fields": [
+                {"name": "prowlarrUrl", "value": "http://prowlarr:9696"},
+                {"name": "baseUrl", "value": url},
+                {"name": "apiKey", "value": "test-key"},
+                {"name": "syncCategories", "value": categories},
+            ],
+            "tags": [],
+        }
+        json_request(
+            f"{base}/applications",
+            method="POST",
+            payload=payload,
+            headers=headers,
+        )
+        print(f"[testlab-seed] Prowlarr: {name} application")
+
+    json_request(
+        f"{base}/command",
+        method="POST",
+        payload={"name": "ApplicationIndexerSync"},
+        headers=headers,
+    )
+    time.sleep(5)
+    json_request(
+        f"{base}/indexer/test",
+        method="POST",
+        payload=next(
+            item
+            for item in list_value(
+                json_request(f"{base}/indexer", headers=headers)
+            )
+            if item.get("name") == "Cupola testlab"
+        ),
+        headers=headers,
+    )
+    print("[testlab-seed] Prowlarr: indexers synced and tested")
+
+    radarr = f"{ROOT}:7878/api/v3"
+    radarr_headers = api_headers("v3")
+    for indexer in list_value(json_request(f"{radarr}/indexer", headers=radarr_headers)):
+        fields = indexer.get("fields") or []
+        base_url = next(
+            (
+                field.get("value")
+                for field in fields
+                if isinstance(field, dict) and field.get("name") == "baseUrl"
+            ),
+            "",
+        )
+        if indexer.get("name") == "Cupola testlab" and base_url == (
+            "http://testlab-indexer:8088"
+        ):
+            request(
+                f"{radarr}/indexer/{indexer['id']}",
+                method="DELETE",
+                headers=radarr_headers,
+            )
+            print("[testlab-seed] Radarr: direct indexer removed, Prowlarr owns it")
+            break
+
+
 def seed_seerr(env: dict[str, str]) -> None:
     """Connect Seerr to the disposable Radarr and Sonarr applications."""
 
@@ -1116,6 +1253,7 @@ def main() -> None:
     world = load_world(args.state_dir)
     seed_arrs(world)
     ensure_radarr_s1(env, world)
+    seed_prowlarr()
     seed_seeder(env, args.state_dir)
     seed_seerr(env)
     seed_seerr_requesters(env)

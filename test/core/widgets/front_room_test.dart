@@ -177,4 +177,15 @@ void main() {
       expect(pill(tester), room.fillStrong);
     });
   });
+
+  testWidgets('a board disposed before the leave frame ignores the leave', (
+    tester,
+  ) async {
+    final board = FrontRoomLight();
+    await _pump(tester, board, _room(_teal));
+    await tester.pump();
+    board.dispose();
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+  });
 }

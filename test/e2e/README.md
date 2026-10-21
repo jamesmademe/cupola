@@ -184,6 +184,35 @@ name needs a match. The music files are generated from the Discovery album
 Lidarr knows, one file per track, with MusicBrainz's durations, so a partial
 album is not what the spike is measuring.
 
+## The release catalogue
+
+`testlab-forge` writes a catalogue of 24 releases for Big Buck Bunny. They share
+the one real torrent, but each has its own title, size and infohash: Radarr's
+search collapses a list on the infohash, and Prowlarr forwards them as separate
+rows. `testlab-indexer` answers with all of them; Prowlarr owns the indexer and
+syncs it to Radarr, Sonarr, Lidarr and Readarr, so the apps have a single
+Prowlarr indexer and the direct Radarr one is removed.
+
+The rows carry what Radarr judges: qualities above and below the profile,
+Italian and multi-language releases, CAM and TS sources, groups, and sizes no
+one would take. The app's `Search releases` sheet shows `24 releases` and a
+`Rejected` badge; the reason Radarr computes, for example `English is wanted,
+but found Italian`, is in the row's expanded content. The journey
+`integration_test/journeys/release_search_journey_test.dart` opens the movie
+page, scrolls to Manage, opens the sheet and checks the catalogue and the badge.
+`test/e2e/testlab_release_search_e2e_test.dart` grabs an accepted row, waits for
+the app's qBittorrent, and checks Radarr's `grabbed` and
+`downloadFolderImported` history.
+
+The seeder and the app's qBittorrent start after the tracker is healthy.
+qBittorrent keeps a negative DNS answer for a tracker in its process, and a
+golden snapshot can carry a `Host not found` from the first start; the control
+plane reannounces, and restarts the seeder if the answer is still stale.
+
+Not in L5: the local NNTP server and the full Usenet and torrent queue states.
+The lot's acceptance, a search with rejection reasons and a grab that completes,
+passes; the states are L6.
+
 ## A manual import slice
 
 `testlab-forge` makes a real 1080p MKV and a private torrent, `qbittorrent-seed`
@@ -309,9 +338,9 @@ the local Torznab indexer; Sonarr and Lidarr receive one resolved record each;
 Jellyfin and Plex receive a `Films` library; qBittorrent and Transmission
 receive paused zero-data magnets; SABnzbd and NZBGet receive a disposable NZB;
 and NPM receives `cupola.test`. Readarr gets its Books root but no author
-because metadata lookup would depend on the public internet. Prowlarr remains
-an empty indexer registry: the slice configures Radarr's own indexer, not
-Prowlarr. Bazarr is configured for the two arr services but has no subtitle
+because metadata lookup would depend on the public internet. Prowlarr owns
+the Torznab indexer and syncs it to the four arrs; the direct Radarr indexer the
+import slice used is removed once the sync has run. Bazarr is configured for the two arr services but has no subtitle
 records without a real media/subtitle provider. These are capability limits of
 the lab, not claims that the corresponding Cupola screens are unreachable.
 

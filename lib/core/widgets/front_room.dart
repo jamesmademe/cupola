@@ -21,6 +21,7 @@ class FrontRoomLight extends ChangeNotifier {
   final Map<Object, ({int depth, int order, Color? light})> _rooms = {};
   var _order = 0;
   Color? _light;
+  var _disposed = false;
 
   /// The light of the room in front, or null for the lamp.
   Color? get light => _light;
@@ -36,7 +37,10 @@ class FrontRoomLight extends ChangeNotifier {
   }
 
   void _settle() {
-    if (_rooms.isEmpty) return;
+    // A room's leave is posted after the frame, and the shell may have
+    // disposed the board in between. Notifying a disposed notifier is a debug
+    // assertion and, in release, a write into a dead listener list.
+    if (_disposed || _rooms.isEmpty) return;
     final front = _rooms.values.reduce(
       (a, b) => b.depth > a.depth || (b.depth == a.depth && b.order > a.order)
           ? b
@@ -45,6 +49,12 @@ class FrontRoomLight extends ChangeNotifier {
     if (front.light == _light) return;
     _light = front.light;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 }
 
