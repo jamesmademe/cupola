@@ -28,6 +28,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from tokens_css import tokens_css
+
 ROOT = Path(__file__).resolve().parents[2]
 SYSTEM = ROOT / "design" / "system"
 CATALOG = ROOT / "build" / "design_catalog"
@@ -121,53 +123,6 @@ def markdown(source: str) -> str:
             i += 1
         out.append(f"<p>{_inline(' '.join(para))}</p>")
     return "\n".join(out)
-
-
-# --- Tokens as CSS, for the motion frames ------------------------------------
-
-def _css_value(value: str) -> str:
-    alias = re.fullmatch(r"\{(.+)\}", value)
-    return f"var(--{alias.group(1)})" if alias else value
-
-
-def _per_theme(value, theme: str, first: str) -> str:
-    if isinstance(value, str):
-        return value
-    return value.get(theme, value[first])
-
-
-def tokens_css(tokens: dict) -> str:
-    themes = [t["id"] for t in tokens["color"]["themes"]]
-    first = themes[0]
-    blocks = []
-    for index, theme in enumerate(themes):
-        selector = f':root, [data-theme="{theme}"]' if index == 0 else f'[data-theme="{theme}"]'
-        props = [
-            f"--{t['name']}: {_css_value(_per_theme(t['value'], theme, first))};"
-            for t in tokens["color"]["tokens"]
-        ]
-        props += [
-            f"--{t['name']}: {_per_theme(t['value'], theme, first)};"
-            for t in tokens.get("shadow", {}).get("tokens", [])
-        ]
-        blocks.append(f"{selector} {{ {' '.join(props)} }}")
-    shared = []
-    for family in ("spacing", "radius", "size", "breakpoint"):
-        shared += [f"--{t['name']}: {t['value']};" for t in tokens.get(family, {}).get("tokens", [])]
-    for key, stack in tokens["type"]["families"].items():
-        shared.append(f"--font-{key}: {stack};")
-    blocks.append(f":root {{ {' '.join(shared)} }}")
-    for font in tokens["type"]["fonts"]:
-        source = FONTS.get(font["family"])
-        if source is None:
-            continue
-        stretch = f" font-stretch: {font['stretch']};" if font.get("stretch") else ""
-        blocks.append(
-            "@font-face { "
-            f"font-family: \"{font['family']}\"; src: url(\"fonts/{source.name}\"); "
-            f"font-weight: {font['weight']}; font-style: {font.get('style', 'normal')};{stretch} }}"
-        )
-    return "\n".join(blocks)
 
 
 # --- The page ----------------------------------------------------------------
@@ -280,7 +235,10 @@ def build() -> Path:
         shutil.copy(font, OUT / "fonts" / font.name)
     for path in ARTWORK.values():
         shutil.copy(path, OUT / "imagery" / path.name)
-    (OUT / "tokens.css").write_text(tokens_css(json.loads((SYSTEM / "tokens.json").read_text())))
+    (OUT / "tokens.css").write_text(tokens_css(
+        json.loads((SYSTEM / "tokens.json").read_text()),
+        lambda font: f"fonts/{FONTS[font['family']].name}" if font["family"] in FONTS else None,
+    ))
     shutil.copy(SYSTEM / "motion" / "motion.css", OUT / "motion.css")
     shutil.copy(SYSTEM / "motion" / "motion.js", OUT / "motion.js")
     (OUT / "index.html").write_text(page)

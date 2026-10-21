@@ -58,11 +58,27 @@ BASES = ROOT / ".ai" / "scratch" / "board-base"
 KEEP_BASES = 2
 FONT = ROOT / "assets" / "fonts" / "Onest.ttf"
 
-# The dark room's ground and ink (design/tokens), as the board is read.
-GROUND = (13, 13, 14)
-RAISED = (28, 28, 31)
-INK = (247, 246, 242)
-DIM = (150, 149, 145)
+
+
+def _dark(name: str) -> tuple[int, ...]:
+    """A dark-room colour token from design/system/tokens.json, as RGB over
+    the ground for a translucent one."""
+    tokens = json.loads((ROOT / "design" / "system" / "tokens.json").read_text())
+    value = next(t["value"] for t in tokens["color"]["tokens"] if t["name"] == name)
+    value = value["dark"] if isinstance(value, dict) else value
+    rgba = re.fullmatch(r"rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)", value)
+    if rgba:
+        *rgb, alpha = (float(c) for c in rgba.groups())
+        ground = _dark("room-ground")
+        return tuple(round(g + (c - g) * alpha) for c, g in zip(rgb, ground))
+    return tuple(int(value[i:i + 2], 16) for i in (1, 3, 5))
+
+
+# The dark room the board is read in.
+GROUND = _dark("room-ground")
+RAISED = _dark("room-raised")
+INK = _dark("ink-primary")
+DIM = _dark("ink-tertiary")
 PAD = 16  # shadows bleed past a scene's box
 GAP = 32
 MARGIN = 48
