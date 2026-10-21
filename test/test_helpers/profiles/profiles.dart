@@ -503,13 +503,15 @@ abstract final class Profiles {
   );
 
   /// P6, two of a kind (Plex instead of Jellyfin): two Radarr, two Sonarr,
-  /// Seerr with a default and a 4K server, Bazarr following Radarr only, a
+  /// Seerr with a default, a second standard (the archive, which Cupola has
+  /// no connection for) and a 4K Radarr, Bazarr following Radarr only, a
   /// shared (non-owner) Plex token, qBittorrent and SABnzbd.
   static final p6 = ConfigProfile(
     id: 'P6',
     title: 'Two of a kind, Plex',
     summary:
-        'Radarr + Radarr 4K, Sonarr + Sonarr Anime, Seerr (default and 4K), '
+        'Radarr + Radarr 4K, Sonarr + Sonarr Anime, Seerr (default, archive '
+        'and 4K), '
         'Bazarr on Radarr only, a non-owner Plex, qBittorrent and SABnzbd.',
     cases: const {
       ConfigCase.severalInstances,
@@ -544,6 +546,19 @@ abstract final class Profiles {
         WorldHosts.radarr4k,
         is4k: true,
         isDefault: true,
+      ),
+      SeerrKnownServer(
+        seerrId: 2,
+        service: ServiceKey.radarr,
+        name: 'Radarr Archive',
+        url: WorldHosts.radarrArchive,
+        apiKey: worldKey('radarr-archive'),
+        activeProfileId: 3,
+        activeProfileName: 'SD-720p',
+        activeDirectory: '/mnt/tank/media/archive',
+        rootFolders: const [
+          (path: '/mnt/tank/media/archive', freeSpace: 3100000000000),
+        ],
       ),
       _knows(
         0,

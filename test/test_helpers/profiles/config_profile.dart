@@ -538,7 +538,11 @@ class SeerrKnownServer {
     this.activeProfileId = 1,
     this.activeProfileName = 'HD-1080p',
     this.activeDirectory = '/mnt/tank/media/films',
-  }) : assert(
+    List<({int id, String name})>? profiles,
+    List<({String path, int? freeSpace})>? rootFolders,
+  }) : _profiles = profiles,
+       _rootFolders = rootFolders,
+       assert(
          service == ServiceKey.radarr || service == ServiceKey.sonarr,
          'Seerr only knows Radarr and Sonarr servers.',
        );
@@ -561,6 +565,29 @@ class SeerrKnownServer {
   final int activeProfileId;
   final String activeProfileName;
   final String activeDirectory;
+
+  final List<({int id, String name})>? _profiles;
+  final List<({String path, int? freeSpace})>? _rootFolders;
+
+  /// The quality profiles Seerr offers on the server
+  /// (`GET /api/v1/service/radarr|sonarr/{id}`): the ones given, or the
+  /// active one and `Any`, so every profile's approve and request sheets
+  /// have a choice to open.
+  List<({int id, String name})> get profiles =>
+      _profiles ??
+      [
+        (id: activeProfileId, name: activeProfileName),
+        (id: activeProfileId == 1 ? 2 : 1, name: 'Any'),
+      ];
+
+  /// Its root folders, likewise: the ones given, or the active one and the
+  /// archive beside it.
+  List<({String path, int? freeSpace})> get rootFolders =>
+      _rootFolders ??
+      [
+        (path: activeDirectory, freeSpace: 12400000000000),
+        (path: '/mnt/tank/media/archive', freeSpace: 3100000000000),
+      ];
 
   Uri get uri => Uri.parse(url);
 

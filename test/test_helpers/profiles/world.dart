@@ -42,6 +42,10 @@ abstract final class WorldHosts {
   /// The cabin's Plex, likewise in no profile: two of the other media server.
   static const plexCabin = 'http://cabin.home.arpa:32400';
 
+  /// A second standard Radarr that only Seerr knows, for the archive: P6's
+  /// Seerr offers it beside the default, so a request can be sent there.
+  static const radarrArchive = 'http://nas.home.arpa:7880';
+
   /// A second Lidarr beside the first, for the vinyl rips: in no profile, for
   /// a test that adds it.
   static const lidarrVinyl = 'http://nas.home.arpa:8687';

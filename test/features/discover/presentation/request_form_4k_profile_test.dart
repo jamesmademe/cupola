@@ -47,11 +47,15 @@ void main() {
     return (jsonDecode(posts.single.body) as Map).cast<String, Object?>();
   }
 
-  test('P6: both servers are offered, the 4K one named as such', () async {
+  test('P6: every server is offered, the 4K one named as such', () async {
     final (_, container) = await open();
     final state = container.read(requestFormProvider(args));
 
-    expect(state.servers.map((s) => s.choiceLabel), ['Radarr', 'Radarr 4K']);
+    expect(state.servers.map((s) => s.choiceLabel), [
+      'Radarr',
+      'Radarr 4K',
+      'Radarr Archive',
+    ]);
     expect(state.selectedServer?.name, 'Radarr');
   });
 

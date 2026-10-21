@@ -160,9 +160,12 @@ void main() {
       final seerrRadarr = p6.seerrKnows.where(
         (s) => s.service == ServiceKey.radarr,
       );
+      // The third, the archive, is a second standard server Cupola has no
+      // connection for: what the approve sheet's server pills choose from.
       expect(seerrRadarr.map((s) => (s.is4k, s.isDefault)), [
         (false, true),
         (true, true),
+        (false, false),
       ]);
     });
 

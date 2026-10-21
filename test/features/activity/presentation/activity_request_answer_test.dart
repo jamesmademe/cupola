@@ -122,6 +122,12 @@ void main() {
       await tester.tap(find.byTooltip('Approve Charge'));
       await harness.settle(tester);
       expect(find.text('Approve Charge'), findsOneWidget);
+      // The world's servers offer two profiles and two folders, so the sheet
+      // draws them as choices and the button can sit below the fold.
+      await tester.ensureVisible(
+        find.widgetWithText(FilledButton, 'Approve request'),
+      );
+      await tester.pump();
       await tester.tap(find.widgetWithText(FilledButton, 'Approve request'));
       await harness.settle(tester);
 
