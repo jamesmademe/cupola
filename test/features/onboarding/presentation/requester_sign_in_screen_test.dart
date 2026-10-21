@@ -332,14 +332,23 @@ void main() {
   group('with an invite', () {
     const away = 'https://seerr.example.net';
 
-    testWidgets('its link reads the server at once: no address to type, and '
-        'the connection keeps both addresses', (tester) async {
+    testWidgets('its link fills the address and waits for Continue, and the '
+        'connection keeps both addresses', (tester) async {
       const anna = WorldSeerrUsers.annaLocal;
       final (harness, container, _) = await _atSignIn(
         tester,
         Profiles.p2,
         invite: const SeerrInvite(home: WorldHosts.seerr, away: away),
       );
+
+      // A link is not signed: the person sees the host and confirms before
+      // anything is sent to it.
+      expect(find.text('Sign in with email'), findsNothing);
+      expect(
+        find.textContaining('Check the address above before continuing'),
+        findsOneWidget,
+      );
+      await _tap(tester, harness, find.text('Continue'));
 
       expect(find.text('Sign in with email'), findsOneWidget);
 
@@ -402,6 +411,7 @@ void main() {
         Profiles.p2,
         invite: const SeerrInvite(home: 'http://seerr.home.arpa:5055'),
       );
+      await _tap(tester, harness, find.text('Continue'));
       expect(find.text('Seerr did not answer'), findsOneWidget);
 
       final router = GoRouter.of(tester.element(find.byType(Scaffold).first));
@@ -414,6 +424,7 @@ void main() {
         ).toString(),
       );
       await harness.settle(tester);
+      await _tap(tester, harness, find.text('Continue'));
 
       expect(find.text('Sign in with email'), findsOneWidget);
 
@@ -466,6 +477,7 @@ void main() {
           away: WorldHosts.seerr,
         ),
       );
+      await _tap(tester, harness, find.text('Continue'));
 
       expect(find.text('Sign in with email'), findsOneWidget);
       expect(

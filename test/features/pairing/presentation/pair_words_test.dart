@@ -362,7 +362,7 @@ void main() {
       expect(pairAddLabel(plan), 'Add 1 service');
     });
 
-    test('with only certificates new, adds those', () {
+    test('a pin for a server already here is not applied', () {
       final package = PairPackage(
         from: PairDevice.iphone,
         connections: [
@@ -379,7 +379,8 @@ void main() {
         ),
       );
       expect(plan.toAdd, isEmpty);
-      expect(pairAddLabel(plan), 'Add 1 trusted certificate');
+      expect(plan.certificates, isEmpty);
+      expect(plan.addsAnything, isFalse);
     });
 
     test('notes only what applies, one for each secret that stayed behind', () {

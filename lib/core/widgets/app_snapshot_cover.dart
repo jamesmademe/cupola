@@ -3,13 +3,14 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/widgets/service_ring.dart';
 
-/// Covers the app while the OS is taking its app-switcher image.
+/// Covers the app while iOS is taking its app-switcher image.
 ///
-/// iOS and macOS have no `FLAG_SECURE`; the switcher snapshot is taken when the
-/// app stops being active, which is exactly when this cover is shown. On a
-/// desktop the window losing focus is normal and covering it would be wrong, so
-/// the cover is mobile-only; Android additionally gets the real flag from
-/// [SecureScreen].
+/// iOS has no `FLAG_SECURE`; the switcher snapshot is taken when the app stops
+/// being active, which is exactly when this cover is shown. Android does not
+/// need it: [SecureScreen] sets the platform flag on every screen that shows a
+/// credential or a pairing code, and the flag blanks the Recents snapshot by
+/// itself. A desktop window losing focus is normal and covering it would be
+/// wrong.
 class AppSnapshotCover extends StatefulWidget {
   const AppSnapshotCover({super.key, required this.child});
 
@@ -23,9 +24,9 @@ class _AppSnapshotCoverState extends State<AppSnapshotCover>
     with WidgetsBindingObserver {
   bool _covered = false;
 
-  static bool get _isMobile =>
-      defaultTargetPlatform == TargetPlatform.iOS ||
-      defaultTargetPlatform == TargetPlatform.android;
+  /// iOS alone: Android's half is the real flag, set per screen by
+  /// [SecureScreen].
+  static bool get _covers => defaultTargetPlatform == TargetPlatform.iOS;
 
   @override
   void initState() {
@@ -41,7 +42,7 @@ class _AppSnapshotCoverState extends State<AppSnapshotCover>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (!_isMobile) return;
+    if (!_covers) return;
     final covered = state != AppLifecycleState.resumed;
     if (covered != _covered && mounted) {
       setState(() => _covered = covered);

@@ -32,6 +32,25 @@ void main() {
     }
   });
 
+  testWidgets('does not cover Android, which has the real flag', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    try {
+      await tester.pumpWidget(
+        const MaterialApp(home: AppSnapshotCover(child: Text('the app'))),
+      );
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      await tester.pump();
+
+      expect(find.byType(CupolaMark), findsNothing);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    }
+  });
+
   testWidgets('does not cover a desktop window that merely lost focus', (
     tester,
   ) async {

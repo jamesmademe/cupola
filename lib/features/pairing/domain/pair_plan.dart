@@ -15,6 +15,10 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 /// origin stays, even when the package's differs. Nothing is removed. A device
 /// that copies twice gets nothing the second time.
 ///
+/// **A pin travels only with a connection the package adds.** A certificate
+/// for an origin the device already reaches, or for no connection at all, is
+/// not applied: trusting a server is a decision the device makes for itself.
+///
 /// The one thing it fills rather than adds to is a connection with no
 /// address: what a reinstalled app finds when the keychain kept a key and the
 /// address went with the app's preferences. That is no server, and left first
@@ -82,13 +86,23 @@ final class PairPlan {
       );
       if (incoming.unreadSecret case final missing?) sentWithout[id] = missing;
     }
+    // Only origins a connection being added actually uses: a pin for a server
+    // this device already reaches, or for no connection at all, is not this
+    // package's decision to make.
+    final addOrigins = <String>{
+      for (final connection in toAdd)
+        for (final address in connection.addresses)
+          ?UrlUtils.certOrigin(address),
+    };
     return PairPlan._(
       from: package.from,
       toAdd: toAdd,
       alreadyHere: alreadyHere,
       certificates: {
         for (final MapEntry(:key, :value) in package.certificates.entries)
-          if ((settings.trustedCertificates[key] ?? '').isEmpty) key: value,
+          if (addOrigins.contains(key) &&
+              (settings.trustedCertificates[key] ?? '').isEmpty)
+            key: value,
       },
       orphanCertificates: package.orphanCertificates,
       unknown: package.unknown,

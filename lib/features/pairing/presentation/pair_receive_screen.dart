@@ -379,8 +379,6 @@ class _PairReceiveScreenState extends ConsumerState<PairReceiveScreen> {
   }
 }
 
-/// One connection that arrives: its mark, its title (the label when it has
-/// one), and where it is, dim. Read as one sentence.
 /// One origin whose certificate the copy would trust.
 class _CertificateRow extends StatelessWidget {
   const _CertificateRow(this.origin);
@@ -401,6 +399,8 @@ class _CertificateRow extends StatelessWidget {
   }
 }
 
+/// One connection that arrives: its mark, its title (the label when it has
+/// one), and where it is, dim. Read as one sentence.
 class _ConnectionRow extends StatelessWidget {
   const _ConnectionRow(this.connection);
 
