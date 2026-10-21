@@ -243,6 +243,26 @@ def seed_arrs(world: dict[str, Any]) -> None:
                 },
             )
             print("[testlab-seed] Sonarr: series specimen")
+
+        series = list_value(json_request(url, headers=headers))
+        breaking = next(
+            (item for item in series if item.get("title") == breaking_bad["title"]),
+            None,
+        )
+        if breaking is not None:
+            statistics = breaking.get("statistics") or {}
+            if (
+                int(statistics.get("totalEpisodeCount") or 0) == 0
+                and int(statistics.get("episodeCount") or 0) == 0
+            ):
+                json_request(
+                    f"{ROOT}:8989/api/v3/command",
+                    method="POST",
+                    payload={"name": "RefreshSeries", "seriesId": breaking["id"]},
+                    headers=headers,
+                )
+                time.sleep(10)
+                print("[testlab-seed] Sonarr: series refreshed for episodes")
     except Exception as error:
         warn("Sonarr series", error)
 
@@ -270,6 +290,40 @@ def seed_arrs(world: dict[str, Any]) -> None:
                 },
             )
             print("[testlab-seed] Lidarr: artist specimen")
+
+        artists = list_value(json_request(url, headers=headers))
+        daft = next(
+            (item for item in artists if item.get("artistName") == daft_punk["name"]),
+            None,
+        )
+        if daft is not None:
+            albums_url = f"{ROOT}:8686/api/v1/album?artistId={daft['id']}"
+            albums = list_value(json_request(albums_url, headers=headers))
+            if not any(album.get("title") == "Discovery" for album in albums):
+                lookup = json_request(
+                    f"{ROOT}:8686/api/v1/album/lookup?term=daft%20punk%20discovery",
+                    headers=headers,
+                )
+                album = next(
+                    (
+                        item
+                        for item in list_value(lookup)
+                        if item.get("title") == "Discovery"
+                        and item.get("artistId") == daft["id"]
+                    ),
+                    None,
+                )
+                if album is not None:
+                    album["artistId"] = daft["id"]
+                    album["monitored"] = True
+                    album["addOptions"] = {"searchForNewAlbum": False}
+                    json_request(
+                        f"{ROOT}:8686/api/v1/album",
+                        method="POST",
+                        payload=album,
+                        headers=headers,
+                    )
+                    print("[testlab-seed] Lidarr: Discovery album")
     except Exception as error:
         warn("Lidarr artist", error)
 

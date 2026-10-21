@@ -556,6 +556,13 @@ def seed() -> dict[str, Any]:
     return {"seeded": True, "stateRoot": str(STATE_ROOT)}
 
 
+def spike() -> dict[str, Any]:
+    forge()
+    from spike_media import run as run_spike
+
+    return run_spike()
+
+
 def doctor() -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
 
@@ -660,6 +667,8 @@ def dispatch(command: str, arguments: list[str]) -> dict[str, Any]:
         return fault(arguments[0], arguments[1], milliseconds)
     if command == "doctor":
         return doctor()
+    if command == "spike":
+        return spike()
     if command == "proxies":
         ensure_proxies()
         return {"proxies": list(PROXIES), "portsFile": str(PORTS_FILE)}
@@ -756,6 +765,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     commands.add_parser("seed", help="run the deterministic seed")
     commands.add_parser("doctor", help="check the lab end to end")
     commands.add_parser("proxies", help="create or repair the toxiproxy proxies")
+    commands.add_parser("spike", help="parse the forge's files through the arrs")
 
     snapshot_parser = commands.add_parser("snapshot", help="archive the state")
     snapshot_parser.add_argument("name")
@@ -811,6 +821,13 @@ def main(argv: list[str] | None = None) -> int:
         elif arguments.command == "proxies":
             ensure_proxies()
             print(json.dumps({"proxies": list(PROXIES)}, indent=2))
+        elif arguments.command == "spike":
+            report = spike()
+            for item in report["checks"]:
+                mark = "ok" if item["ok"] else "FAIL"
+                print(f"[{mark}] {item['check']} {item['detail']}".rstrip())
+            print(json.dumps(report, indent=2))
+            return 0 if report["ok"] else 1
         elif arguments.command == "snapshot":
             print(json.dumps(snapshot(arguments.name, arguments.force), indent=2))
         elif arguments.command == "reset":

@@ -20,6 +20,7 @@ import os
 import shutil
 import subprocess
 import sys
+import urllib.request
 from pathlib import Path
 from typing import Any
 
@@ -101,10 +102,36 @@ def run(command: list[str]) -> None:
         )
 
 
-def make_media(target: Path, size: str, bitrate: str) -> None:
+def make_media(
+    target: Path,
+    size: str,
+    bitrate: str,
+    *,
+    duration: int = 120,
+    subtitles: bool = False,
+) -> None:
     if target.is_file() and target.stat().st_size > 20_480:
         return
     target.parent.mkdir(parents=True, exist_ok=True)
+    subtitle_input: list[str] = []
+    subtitle_output: list[str] = []
+    if subtitles:
+        srt = target.with_suffix(".srt")
+        srt.write_text(
+            "1\n00:00:00,000 --> 00:00:20,000\nA subtitle from the forge.\n",
+            encoding="utf-8",
+        )
+        subtitle_input = ["-i", str(srt)]
+        subtitle_output = [
+            "-map",
+            "0:v",
+            "-map",
+            "1:a",
+            "-map",
+            "2:s",
+            "-c:s",
+            "srt",
+        ]
     run(
         [
             "ffmpeg",
@@ -120,8 +147,10 @@ def make_media(target: Path, size: str, bitrate: str) -> None:
             "lavfi",
             "-i",
             "anullsrc=channel_layout=stereo:sample_rate=48000",
+            *subtitle_input,
             "-t",
-            "120",
+            str(duration),
+            *subtitle_output,
             "-c:v",
             "libx264",
             "-preset",
@@ -143,6 +172,200 @@ def make_media(target: Path, size: str, bitrate: str) -> None:
             f"{target.name} is {target.stat().st_size} bytes, below the "
             "subtitle and sample thresholds"
         )
+
+
+def make_music(
+    target: Path,
+    *,
+    title: str,
+    track: int,
+    album: str,
+    duration: int,
+) -> None:
+    if target.is_file() and target.stat().st_size > 20_480:
+        return
+    target.parent.mkdir(parents=True, exist_ok=True)
+    run(
+        [
+            "ffmpeg",
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "anullsrc=channel_layout=stereo:sample_rate=44100",
+            "-t",
+            str(duration),
+            "-c:a",
+            "flac",
+            "-metadata",
+            f"title={title}",
+            "-metadata",
+            "artist=Daft Punk",
+            "-metadata",
+            f"album={album}",
+            "-metadata",
+            f"track={track}",
+            str(target),
+        ]
+    )
+
+
+def lidarr_tracks() -> list[dict[str, Any]]:
+    """The album Lidarr knows, with MusicBrainz's titles and durations.
+
+    The forge reads them from Lidarr rather than inventing a second music
+    catalogue: the file's length is the track's length, which is what Lidarr
+    compares when it imports.
+    """
+    headers = {"X-Api-Key": "test-key", "Accept": "application/json"}
+    try:
+        with urllib.request.urlopen(
+            urllib.request.Request(
+                "http://lidarr:8686/api/v1/album?artistId=1", headers=headers
+            ),
+            timeout=10,
+        ) as answer:
+            albums = json.load(answer)
+        discovery = next(
+            (
+                album
+                for album in albums
+                if isinstance(album, dict) and album.get("title") == "Discovery"
+            ),
+            None,
+        )
+        if discovery is None:
+            return []
+        with urllib.request.urlopen(
+            urllib.request.Request(
+                f"http://lidarr:8686/api/v1/track?albumId={discovery['id']}",
+                headers=headers,
+            ),
+            timeout=10,
+        ) as answer:
+            tracks = json.load(answer)
+        return [track for track in tracks if isinstance(track, dict)]
+    except (OSError, ValueError):
+        return []
+
+
+def make_spike(spike_dir: Path) -> list[str]:
+    """The files the spike asks the three arrs to parse.
+
+    The short file without `sample` in its name is the one that matters: it is
+    how the arrs' duration-based sample detection is tested rather than the
+    name. The rar files are not archives, only names the arrs must refuse.
+    """
+    shutil.rmtree(spike_dir, ignore_errors=True)
+    spike_dir.mkdir(parents=True, exist_ok=True)
+    files = {
+        "1080p": (
+            "Big.Buck.Bunny.2008.1080p.WEB-DL.DDP5.1.H.264-CUPOLA.mkv",
+            "1920x1080",
+            "300k",
+            120,
+            False,
+        ),
+        "2160p": (
+            "Big.Buck.Bunny.2008.2160p.WEB-DL.DDP5.1.H.264-CUPOLA.mkv",
+            "3840x2160",
+            "500k",
+            120,
+            False,
+        ),
+        "480p": (
+            "Big.Buck.Bunny.2008.480p.WEB-DL.DDP5.1.H.264-CUPOLA.mkv",
+            "854x480",
+            "150k",
+            120,
+            False,
+        ),
+        "sample": (
+            "Big.Buck.Bunny.2008.1080p.WEB-DL.DDP5.1.H.264-CUPOLA.sample.mkv",
+            "1920x1080",
+            "300k",
+            20,
+            False,
+        ),
+        "short": (
+            "Big.Buck.Bunny.2008.1080p.WEB-DL.DDP5.1.H.264-CUPOLA.short.mkv",
+            "1920x1080",
+            "300k",
+            20,
+            False,
+        ),
+        "subs": (
+            "Big.Buck.Bunny.2008.1080p.WEB-DL.DDP5.1.H.264-CUPOLA.subs.mkv",
+            "1920x1080",
+            "300k",
+            120,
+            True,
+        ),
+        "episode": (
+            "Breaking.Bad.S01E02.1080p.WEB-DL.DDP5.1.H.264-CUPOLA.mkv",
+            "1920x1080",
+            "300k",
+            600,
+            False,
+        ),
+        "multi": (
+            "Breaking.Bad.S01E01E02.1080p.WEB-DL.DDP5.1.H.264-CUPOLA.mkv",
+            "1920x1080",
+            "300k",
+            600,
+            False,
+        ),
+        "unreadable": (
+            "Unreadable.Name.2024.1080p.WEB-DL.DDP5.1.H.264-CUPOLA.mkv",
+            "1920x1080",
+            "300k",
+            120,
+            False,
+        ),
+    }
+    for name, (file_name, size, bitrate, duration, subtitles) in files.items():
+        make_media(
+            spike_dir / file_name,
+            size,
+            bitrate,
+            duration=duration,
+            subtitles=subtitles,
+        )
+        print(f"[forge] spike {name}: {file_name}")
+    tracks = lidarr_tracks()
+    for track in tracks:
+        number = int(track.get("trackNumber") or 0)
+        title = str(track.get("title") or f"Track {number}")
+        duration = int((track.get("duration") or 0) / 1000)
+        if duration <= 0:
+            duration = 180
+        target = spike_dir / f"Daft Punk - Discovery - {number:02d} - {title}.flac"
+        make_music(
+            target,
+            title=title,
+            track=number,
+            album="Discovery",
+            duration=duration,
+        )
+        print(f"[forge] spike music: {target.name}")
+    if not tracks:
+        make_music(
+            spike_dir / "Daft Punk - Discovery - 01 - One More Time.flac",
+            title="One More Time",
+            track=1,
+            album="Discovery",
+            duration=320,
+        )
+    for name in ("archive.rar", "archive.password.rar"):
+        source = spike_dir / files["1080p"][0]
+        target = spike_dir / name
+        if not target.exists():
+            target.write_bytes(source.read_bytes())
+        print(f"[forge] spike archive: {name}")
+    return sorted(path.name for path in spike_dir.iterdir())
 
 
 def forge(
@@ -192,11 +415,17 @@ def main() -> int:
     parser.add_argument(
         "--tracker-url", default="http://testlab-indexer:8088/announce"
     )
+    parser.add_argument("--spike-dir", default="/downloads/spike")
     arguments = parser.parse_args()
     record = forge(
         Path(arguments.output_dir),
         Path(arguments.seed_dir),
         arguments.tracker_url,
+    )
+    record["spike"] = make_spike(Path(arguments.spike_dir))
+    (Path(arguments.output_dir) / "release.json").write_text(
+        json.dumps(record, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
     )
     print(json.dumps(record, indent=2, sort_keys=True))
     return 0

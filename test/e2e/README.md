@@ -166,6 +166,24 @@ curl -H "Authorization: Bearer $CUPOLA_TESTLAB_CONTROL_TOKEN" \
   http://127.0.0.1:8799/status
 ~~~
 
+## The forge spike
+
+`testlab-forge` writes a set of variants into `/downloads/spike`, and the spike
+asks the three arrs' own `manualimport` scan what they make of them:
+
+~~~bash
+python3 test/e2e/testlab/testlab.py spike
+~~~
+
+The report checks that a 1080p file parses as `WEBDL-1080p`, a 2160p as
+`WEBDL-2160p`, a 480p as `WEBDL-480p`, that a file with `sample` in its name is
+refused as a sample, that a 20-second file **without** the word is refused as a
+sample from its duration alone, that a `Breaking.Bad.S01E02...` file matches the
+series and the episode, that a FLAC track parses as FLAC, and that an unreadable
+name needs a match. The music files are generated from the Discovery album
+Lidarr knows, one file per track, with MusicBrainz's durations, so a partial
+album is not what the spike is measuring.
+
 ## A manual import slice
 
 `testlab-forge` makes a real 1080p MKV and a private torrent, `qbittorrent-seed`

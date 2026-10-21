@@ -390,6 +390,7 @@ services:
     volumes:
       - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/forge:/forge"
       - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/seed-data:/seed-data"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/downloads:/downloads"
     command:
       - --output-dir=/forge
       - --seed-dir=/seed-data
