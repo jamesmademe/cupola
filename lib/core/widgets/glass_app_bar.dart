@@ -24,43 +24,54 @@ import 'package:cupola/core/widgets/page_title.dart';
 class GlassSurface extends StatelessWidget {
   final Widget? child;
 
-  /// How much of the room is painted at each of [_stops], top to bottom.
-  final List<double> _alphas;
-  final List<double> _stops;
+  /// How far below the bar the glass fades out, or 0 for none.
+  final double _fade;
 
-  /// A glass that ends on the page: nearly whole down to its last quarter,
-  /// then gone. What scrolls under a title or a tab row is covered, never read
-  /// through it; the old veil (0.6 at the top, a third of that at the title's
-  /// line) let a queue's names print across `qBittorrent` (21/10). Since the
-  /// glass is the room painted again, its weight cannot be seen at rest.
-  const GlassSurface({super.key, this.child})
-    : _alphas = const [0.97, 0.92, 0],
-      _stops = const [0, 0.72, 1];
+  /// How much of the room the glass paints over what passes under it: all of
+  /// it, and evenly across the bar, never a ramp inside it. A 44pt tab row
+  /// that faded over its last quarter let the slabs under it read through its
+  /// labels at a fifth of their ink on device (21/10), well past what the
+  /// stops said, and even 0.97 left a ghost of every heading on paper. The
+  /// glass is the room painted again, so its weight cannot be seen at rest.
+  static const double _alpha = 1;
+
+  /// A glass that ends on the page: whole across the bar, then gone over
+  /// [AppSpacing.sm] below it: outside every label it carries, and inside the
+  /// air a page leaves above its first line.
+  const GlassSurface({super.key, this.child}) : _fade = AppSpacing.sm;
 
   /// A glass with another glass under it (a service room's band over its tab
   /// row): whole to its lower edge, so the two read as one and no seam of
   /// bare page opens between the title and the tabs.
-  const GlassSurface.continued({super.key, this.child})
-    : _alphas = const [0.97, 0.97],
-      _stops = const [0, 1];
+  const GlassSurface.continued({super.key, this.child}) : _fade = 0;
 
   @override
   Widget build(BuildContext context) {
     // The room painted again under the bar, not its flat ground: at rest the
     // glass cannot be seen and a lit room keeps its light up to the top edge.
-    final veil = _ScrimPaint(
-      alphas: _alphas,
-      stops: _stops,
+    _ScrimPaint veil(List<double> alphas) => _ScrimPaint(
+      alphas: alphas,
+      stops: const [0, 1],
       room: AmbientRoom.maybeOf(context),
       roomBox: context.getElementForInheritedWidgetOfExactType<AmbientRoom>(),
       ground: CupolaRoom.of(context).ground,
     );
-    if (child == null) return IgnorePointer(child: veil);
     return Stack(
       fit: StackFit.passthrough,
+      clipBehavior: Clip.none,
       children: [
-        Positioned.fill(child: IgnorePointer(child: veil)),
-        child!,
+        Positioned.fill(
+          child: IgnorePointer(child: veil(const [_alpha, _alpha])),
+        ),
+        if (_fade > 0)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: -_fade,
+            height: _fade,
+            child: IgnorePointer(child: veil(const [_alpha, 0])),
+          ),
+        child ?? const SizedBox.expand(),
       ],
     );
   }
