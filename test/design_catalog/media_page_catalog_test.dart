@@ -811,12 +811,16 @@ Future<List<MediaEpisodeFacts>> _seasonFacts(int season) async {
   ];
 }
 
-/// The episodes graph open over its series.
-CatalogScene _graphScene() {
+/// The episodes graph open over its series; [act] may tap it first.
+CatalogScene _graphScene({
+  String caption =
+      'Episodes graph · TMDB\'s votes a season to a column, in the title\'s '
+      'light; dashed where few voted',
+  Future<void> Function(WidgetTester tester, Finder scene)? act,
+}) {
   final rows = _series();
   return CatalogScene(
-    'Episodes graph · TMDB\'s votes a season to a column, in the title\'s '
-    'light; dashed where few voted',
+    caption,
     (context) => Stack(
       fit: StackFit.expand,
       children: [
@@ -846,6 +850,7 @@ CatalogScene _graphScene() {
     ),
     width: 390,
     height: 1000,
+    act: act,
     overrides: [
       mediaRowsProvider.overrideWith((ref, key) => rows),
       audienceProvider.overrideWithValue(Audience.operator),
@@ -1058,6 +1063,22 @@ void main() {
       _addScene(),
       _episodeScene(),
       _graphScene(),
+      _graphScene(
+        caption:
+            'Episodes graph · S2 E3 tapped: the cell ringed, the card says it',
+        act: (tester, scene) async {
+          final semantics = tester.ensureSemantics();
+          await tester.tap(
+            find.descendant(
+              of: scene,
+              matching: find.bySemanticsLabel(
+                'Season 2 episode 3, 8.1 from 37 votes',
+              ),
+            ),
+          );
+          semantics.dispose();
+        },
+      ),
       CatalogScene(
         'Requester · Request, and what it means: the title is not on the '
         'server yet',

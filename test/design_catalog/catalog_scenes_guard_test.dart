@@ -125,7 +125,44 @@ void main() {
     );
   });
 
+  test('no two scenes of a card share an id', () {
+    final clashes = [
+      for (final card in cards)
+        if (File(_testOf(catalogDir, card)) case final file
+            when file.existsSync())
+          for (final id in _duplicateIds(file.readAsStringSync())) '$card: $id',
+    ];
+    expect(
+      clashes,
+      isEmpty,
+      reason:
+          'A scene id names one scene on its card: board.py matches two '
+          'revisions of a card on it, and catalogCard refuses a clash when '
+          'the sheet is drawn. Give one of the two another `id:`.',
+    );
+  });
+
   group('the matcher', () {
+    test('finds an id given twice, and only in code', () {
+      const planted = '''
+CatalogScene('a', (_) => w, id: 'graph'),
+CatalogScene('b', (_) => w, id: "graph"),
+CatalogScene('c', (_) => w, id: 'other'),
+// CatalogScene('d', (_) => w, id: 'other'),
+CatalogScene('e', (_) => Row(key: k(id: 'other')), id: 'third'),
+''';
+      expect(_duplicateIds(planted), ['graph']);
+    });
+
+    test('a caption becomes a slug of at most 60 characters', () {
+      expect(
+        catalogSlug("Episodes graph · S2 E3 tapped: the cell's ring"),
+        'episodes-graph-s2-e3-tapped-the-cell-s-ring',
+      );
+      expect(catalogSlug('${'word ' * 20}end').length, lessThanOrEqualTo(60));
+      expect(catalogSlug('${'word ' * 20}end'), isNot(endsWith('-')));
+    });
+
     test('counts a scene that sets the scale, and nothing else', () {
       const planted = '''
 CatalogScene('a', (_) => w, textScale: catalogTextScale),
@@ -156,6 +193,33 @@ CatalogScene('e', (_) => w),
 /// `ServiceKpiPeek` → `<dir>/service_kpi_peek_catalog_test.dart`.
 String _testOf(String dir, String card) =>
     '$dir/${card.replaceAllMapped(RegExp(r'(?<!^)[A-Z]'), (m) => '_${m[0]}').toLowerCase()}_catalog_test.dart';
+
+/// The `id:` literals [source] gives more than one `CatalogScene`, outside
+/// comments.
+List<String> _duplicateIds(String source) {
+  // Found in the code, read in the source: codeOf keeps every offset and
+  // blanks the text of strings.
+  final code = codeOf(source);
+  final literal = RegExp(r'''id:\s*['"]([^'"]+)['"]''');
+  final seen = <String>{};
+  final clashes = <String>[];
+  for (final call in RegExp(r'\bCatalogScene\(').allMatches(code)) {
+    var depth = 0;
+    for (var i = call.end - 1; i < code.length; i++) {
+      final c = code[i];
+      if ('([{'.contains(c)) depth++;
+      if (')]}'.contains(c) && --depth == 0) break;
+      if (depth == 1 &&
+          code.startsWith('id:', i) &&
+          !RegExp(r'\w').hasMatch(code[i - 1])) {
+        if (literal.matchAsPrefix(source, i)?[1] case final id?) {
+          if (!seen.add(id)) clashes.add(id);
+        }
+      }
+    }
+  }
+  return clashes;
+}
 
 /// Whether [source] sets `textScale:` to the catalog's 200% (the constant, or
 /// a literal 2), outside comments and string text.

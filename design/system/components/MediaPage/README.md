@@ -48,6 +48,7 @@ Each sheet is drawn in the dark and the light room.
 - Series on a season: opened from a season or an episode of a media server, the episodes open on that season, not the one Play continues.
 - Episode: the sheet over its series, a 720p file below the 1080p cutoff and the search for it.
 - Episodes graph: the sheet over its series, in the title's light.
+- Episodes graph, S2 E3 tapped: the cell ringed, the door says it (drawn with `act`).
 - With Seerr: TMDB names the title, where to watch it, its release dates, and the collection band.
 - Decision: Anna asked for a film nobody holds; the answer takes the lead's place.
 - Through Seerr: no media server in Cupola; Seerr's link leads with `Watch on Jellyfin`, and Jellyfin's row is Seerr's word with the way to add it.
