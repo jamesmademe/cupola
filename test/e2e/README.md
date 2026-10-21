@@ -256,10 +256,12 @@ The journey asserts those real states.
 ## The arr libraries
 
 The seed materialises the world as a library rather than a handful of rows:
-40 films, 9 series, 8 artists and 6 authors. Radarr creates the films from the
-ids in `world.json` and asks `RefreshMovie` for the artwork in the background;
-Sonarr looks up the nine real TVDB series and refreshes their episodes; Lidarr
-adds each artist and its first album; Readarr's authors and books are written
+40 films, 10 series (the eight real ones the lookup resolves plus two lab
+specimens), 8 artists and 6 authors. Radarr creates the films from the ids in
+`world.json` and asks `RefreshMovie` for the artwork in the background; Sonarr
+looks up the real TVDB series and refreshes their episodes, with Brooklyn
+Nine-Nine the one the lookup does not resolve; Lidarr adds each artist and its
+first album; Readarr's authors and books are written
 straight into its database with the container stopped (`readarr_seed.py`),
 because its metadata host is gone.
 
@@ -297,6 +299,74 @@ qBittorrent starts, so that scenario restarts the app's qBittorrent container
 (`download_client_faults.dart`, `stuckAfter`) is a word for a long quiet, so a
 journey that wants `Stuck at 47%` must either wait it out or read the state the
 app maps, not the word.
+
+## The arr rows
+
+The catalogue's arr flows are scenarios that speak to the real services and
+read the result back. They use disposable titles, clone a quality profile,
+create a second root folder and a tag, and put everything back in the teardown.
+
+| Scenario | Rows | What it proves |
+|---|---|---|
+| `arr-actions-radarr` | A-01, A-04, A-06, A-07 | Add by TMDB id with profile, root, tag and monitoring; a duplicate is refused; profile and monitoring are read back; `MoviesSearch`; removal with files, folder and import exclusion |
+| `arr-actions-sonarr` | A-02, A-04, A-06, A-07 | Add with the first season and series type; duplicate; profile, monitoring and type; the three searches; removal and exclusion |
+| `arr-library-radarr` / `arr-library-sonarr` | A-08, A-09, A-11, A-12 | The library fields behind every chip, the calendar window, wanted missing and cutoff, the history rows of the L5 grab |
+| `arr-actions-lidarr` / `arr-actions-readarr` | A-04, A-06, A-07 | Profile and monitoring, the automatic searches, the removal where the service can make a disposable record |
+| `arr-library-lidarr` / `arr-library-readarr` | A-08, A-09, A-10, A-11, A-12 | The library, calendar, queue envelope, wanted and history |
+| `arr-queue` | A-10 | The queue envelope answers whole and empty, and the download client and indexer are reachable, so the empty is not a fault |
+
+The limits are real and declared. The arr queue's `trackedDownloadState` needs
+a grab the arr still tracks; the lab's catalogue has one torrent, so every
+release shares its infohash, and `golden-l6` already carries that infohash's
+import. The queue states that can be reached are the qBittorrent ones in
+`queue-*`. Sonarr has no episode files, so Available, Cutoff unmet and In queue
+are empty; the fields that decide the chips are verified. Readarr cannot make a
+disposable author (its metadata host answers 503) and deleting a seeded one is
+not reversible, so its A-07 is declared partial instead of faked.
+
+~~~bash
+flutter test --tags e2e --run-skipped test/e2e/testlab_arr_radarr_e2e_test.dart
+flutter test --tags e2e --run-skipped test/e2e/testlab_arr_sonarr_e2e_test.dart
+flutter test --tags e2e --run-skipped test/e2e/testlab_arr_lidarr_e2e_test.dart
+flutter test --tags e2e --run-skipped test/e2e/testlab_arr_readarr_e2e_test.dart
+~~~
+
+## Prowlarr and Bazarr
+
+`prowlarr-indexers`, `prowlarr-apps` and `prowlarr-history` cover A-13 to A-17:
+a disposable Torznab indexer is added, tested, enabled and disabled in bulk,
+given a tag, synced to the apps, then deleted; the seeded indexer and apps stay
+untouched. `bazarr-catalog` covers A-18 to A-20 by reusing `bazarr-embedded`:
+the wanted list, the extracted subtitle in the history and the provider reset.
+
+Prowlarr's `/api/v1/history` binds `eventType` to its numeric enum (1 grab, 2
+query, 3 RSS, 4 auth), not to the names the app uses. The app translates its
+names in `prowlarr_service.dart`; sending `indexerQuery` raw is a 400, and the
+History tabs would load nothing.
+
+~~~bash
+flutter test --tags e2e --run-skipped test/e2e/testlab_prowlarr_e2e_test.dart
+flutter test --tags e2e --run-skipped test/e2e/testlab_bazarr_catalog_e2e_test.dart
+~~~
+
+## Usenet over a local NNTP server
+
+`nntp_server.py` runs on the host (`127.0.0.1:1119`, plus a small HTTP surface
+on 1120 for the NZB and the health check) and serves yEnc articles to the two
+Usenet clients; the containers reach it at `host.docker.internal:1119`. The
+`usenet-sab` and `usenet-nzbget` scenarios configure the client's news server
+through its own API, add a real NZB, wait for the file to match byte for byte,
+and exercise queue, pause, resume, delete and history. They restore the server
+configuration and the jobs in the teardown.
+
+Two traps are documented in the code: NZBGet's `saveconfig` rewrites the file
+from only the options it receives, so the scenario saves and restores the five
+news-server fields it touches; and the seed's `cupola-nzbget-test` specimen job
+is paused while the scenario runs so it does not take the only connection.
+
+~~~bash
+flutter test --tags e2e --run-skipped test/e2e/testlab_usenet_e2e_test.dart
+~~~
 
 ## Published endpoint map
 
