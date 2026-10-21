@@ -121,7 +121,7 @@ class SeerrSignInFlow extends ChangeNotifier {
     required SeerrCertificateConsent consent,
     CertificateProber certificateProber = probeUntrustedCertificate,
     String? Function(String url)? invitedPin,
-    bool inviteIsSealed = false,
+    bool Function()? inviteIsSealed,
   }) : _ref = ref,
        _connectionOf = connection,
        _consent = consent,
@@ -135,10 +135,14 @@ class SeerrSignInFlow extends ChangeNotifier {
   final CertificateProber _certificateProber;
   final String? Function(String url)? _invitedPin;
 
-  /// Whether [invitedPin] came from the sealed package shown in person, rather
-  /// than from a `cupola://invite` link anyone can compose. Only the former may
-  /// skip the certificate dialog: a link is not a signature.
-  final bool _inviteIsSealed;
+  /// Whether [invitedPin] answers, right now, for the sealed package shown in
+  /// person rather than for a `cupola://invite` link anyone can compose. Only
+  /// the former may skip the certificate dialog: a link is not a signature.
+  ///
+  /// A question asked at each probe, not a value taken at construction: the
+  /// address the pin is looked up for can change under the flow (a link pasted
+  /// over a sealed invite), and the answer has to change with it.
+  final bool Function()? _inviteIsSealed;
 
   /// The login of the password form: an email, or a media server's username.
   final login = TextEditingController();
@@ -367,7 +371,7 @@ class SeerrSignInFlow extends ChangeNotifier {
           trusted: previous,
           invited: invited,
           shown: probe.certificate.fingerprint,
-          fromSealedPackage: _inviteIsSealed,
+          fromSealedPackage: _inviteIsSealed?.call() ?? false,
         ) ||
         await _consent(
           origin: UrlUtils.certOrigin(url) ?? url,

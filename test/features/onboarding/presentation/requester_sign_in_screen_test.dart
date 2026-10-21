@@ -518,6 +518,41 @@ void main() {
       await harness.unmount(tester);
     });
 
+    testWidgets('a link pasted over an invite shown in person asks about the '
+        'certificate its pin names', (tester) async {
+      final pin = probe.certificate.fingerprint;
+      final (harness, container, _) = await _atSignIn(
+        tester,
+        Profiles.p2,
+        // Sealed, and for another address: what made the flow sealed must
+        // not carry over to the link pasted after it.
+        held: const SeerrInvite(home: 'http://seerr.home.arpa:5055'),
+        certificateProber: (url, {pinnedFingerprint = ''}) async =>
+            url.contains(Uri.parse(WorldHosts.seerr).host)
+            ? UntrustedCertificate(probe)
+            : neverFindsACertificate(url),
+      );
+      harness.network.behave(WorldIds.seerr, ConnectionBehaviour.untrustedTls);
+
+      // A link anyone can compose, carrying the pin of the certificate shown.
+      // Over https, the only scheme an invite keeps a pin for.
+      final home = WorldHosts.seerr.replaceFirst('http:', 'https:');
+      final link = SeerrInvite(home: home, homePin: pin);
+      await tester.enterText(_address(), link.toLink());
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+
+      expect(find.text('Self-signed certificate'), findsOneWidget);
+      expect(
+        container.read(currentSettingsProvider).trustedCertificates,
+        isEmpty,
+        reason: 'the link pin is asked about, never written on its own word',
+      );
+
+      await harness.unmount(tester);
+    });
+
     testWidgets('a port that answers plain http is the same notice, even when '
         'its handshake only ran out of time', (tester) async {
       final (harness, _, _) = await _atSignIn(

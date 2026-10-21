@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/network/route_poster.dart';
 import 'package:cupola/core/platform/secure_screen.dart';
 import 'package:cupola/core/widgets/service_tab_bar.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
@@ -285,7 +286,10 @@ List<GoRoute> _mediaRoutes({String prefix = ''}) => [
                 heroTag: state.uri.queryParameters['heroTag'],
                 // go_router has already decoded it; decoding again would break a
                 // poster URL with a literal `%` in it.
-                posterUrl: state.uri.queryParameters['posterUrl'],
+                // A deep link can carry any URL here ([RoutePoster]).
+                posterUrl: RoutePoster.accept(
+                  state.uri.queryParameters['posterUrl'],
+                ),
               ),
             ),
     ),
@@ -298,7 +302,9 @@ List<GoRoute> _mediaRoutes({String prefix = ''}) => [
     (state) => PersonPage(
       personId: RouteUtils.safeIntParam(state, 'id')!,
       heroTag: state.uri.queryParameters['heroTag'],
-      initialProfileUrl: state.uri.queryParameters['posterUrl'],
+      initialProfileUrl: RoutePoster.accept(
+        state.uri.queryParameters['posterUrl'],
+      ),
     ),
     paned: prefix.isEmpty,
   ),

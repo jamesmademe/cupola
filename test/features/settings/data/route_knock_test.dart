@@ -184,6 +184,30 @@ void main() {
     });
   });
 
+  group('who may receive the access layer after a challenge', () {
+    test('a host TLS has authenticated', () {
+      expect(
+        mayCarryAccessAfterChallenge(Uri.parse('https://radarr.example.com')),
+        isTrue,
+      );
+      expect(
+        mayCarryAccessAfterChallenge(Uri.parse('https://192.168.1.10:7878')),
+        isTrue,
+      );
+    });
+
+    test('never a cleartext address, at home or away', () {
+      expect(
+        mayCarryAccessAfterChallenge(Uri.parse('http://192.168.1.10:7878')),
+        isFalse,
+      );
+      expect(
+        mayCarryAccessAfterChallenge(Uri.parse('http://radarr.example.com')),
+        isFalse,
+      );
+    });
+  });
+
   group('a knock on a server', () {
     late HttpServer server;
     late List<HttpHeaders> received;
@@ -239,7 +263,7 @@ void main() {
     );
 
     test(
-      'a gateway challenge gets the access only on the second knock',
+      'a challenge over http never gets the access: the host is unproved',
       () async {
         var calls = 0;
         handle = (request) {
@@ -262,11 +286,10 @@ void main() {
               (name: 'X-Proxy-Key', value: 'gateway-value'),
             ]),
           ),
-          isTrue,
+          isFalse,
         );
-        expect(calls, 2);
-        expect(received.first.value('x-proxy-key'), isNull);
-        expect(received.last.value('x-proxy-key'), 'gateway-value');
+        expect(calls, 1);
+        expect(received.single.value('x-proxy-key'), isNull);
       },
     );
 

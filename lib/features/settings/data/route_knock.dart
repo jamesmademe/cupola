@@ -165,8 +165,10 @@ Future<bool> knockAt(
   // on another network (the hotel that also uses 192.168.1.0/24). The first
   // knock carries no access header: a service that answers directly is proved
   // without the gateway credential ever leaving the app, and a gateway answers
-  // with a challenge. Only then is the access layer sent, and only to an answer
-  // that looks like a gateway rather than to whoever happens to hold the IP.
+  // with a challenge. A challenge alone proves nothing, though: the hotel's
+  // router answers 401 too, and so does anyone who wants the credential. The
+  // access layer is sent only where TLS has already said who the host is
+  // ([mayCarryAccessAfterChallenge]).
   final first = await _knockOnce(
     plan,
     base: base,
@@ -175,7 +177,11 @@ Future<bool> knockAt(
     withAccess: false,
   );
   if (first == _KnockOutcome.service) return true;
-  if (reach.access.isEmpty || first != _KnockOutcome.gateway) return false;
+  if (reach.access.isEmpty ||
+      first != _KnockOutcome.gateway ||
+      !mayCarryAccessAfterChallenge(uri)) {
+    return false;
+  }
 
   final second = await _knockOnce(
     plan,
@@ -186,6 +192,16 @@ Future<bool> knockAt(
   );
   return second == _KnockOutcome.service;
 }
+
+/// Whether a knock on [base] may answer a challenge with the access layer.
+///
+/// Only over `https`: the handshake has checked the host against the platform
+/// trust store or the connection's pin before any header leaves, so the
+/// credential goes to the server the person configured and to nobody else
+/// holding the same address. Over `http` nothing identifies the host, so a
+/// challenge ends the knock as not reached: the route goes away rather than
+/// hand the gateway credential to whoever answered.
+bool mayCarryAccessAfterChallenge(Uri base) => base.scheme == 'https';
 
 enum _KnockOutcome { service, gateway, other }
 
@@ -276,14 +292,6 @@ Future<_KnockOutcome> _knockOnce(
   }
 }
 
-/// Whether a redirect from [base] is a gateway sign-in rather than a captive
-/// portal on somebody else's network.
-///
-/// A same-origin redirect is the common reverse-proxy shape and stays inside
-/// the address the person configured. The one cross-origin host allowed is
-/// Cloudflare Access's own sign-in domain: the service token is going there
-/// anyway when the gateway is Cloudflare, so the second phase cannot hand it
-/// to a third party. Any other host stays refused.
 /// Whether the host that answered is the service's own or Cloudflare Access.
 ///
 /// A captive portal's sign-in page is a gateway too, but sending the access
@@ -297,6 +305,14 @@ bool _gatewayHostIsLocalOrCloudflare(AccessGatewayAnswer gateway, String base) {
       host.endsWith('.cloudflareaccess.com');
 }
 
+/// Whether a redirect from [base] is a gateway sign-in rather than a captive
+/// portal on somebody else's network.
+///
+/// A same-origin redirect is the common reverse-proxy shape and stays inside
+/// the address the person configured. The one cross-origin host allowed is
+/// Cloudflare Access's own sign-in domain: the service token is going there
+/// anyway when the gateway is Cloudflare, so the second phase cannot hand it
+/// to a third party. Any other host stays refused.
 bool _redirectLooksLikeGateway(Map<String, List<String>> headers, String base) {
   final location = _header((status: 0, headers: headers, body: ''), 'location');
   final origin = Uri.tryParse(base);

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:http/http.dart' as http;
 
 /// A [http.Client] that follows a redirect only where doing so cannot replay a
@@ -22,13 +24,30 @@ import 'package:http/http.dart' as http;
 /// The status codes are the ones [http.BaseRequest] itself treats as
 /// redirects. A response without `Location`, or past [maxRedirects], ends the
 /// chain as a refusal rather than looping.
+///
+/// A body is also capped at [maxBodyBytes]. The cache writes whatever arrives
+/// to disk before anyone looks at it, so a server (or a URL a deep link
+/// supplied) that answers with an endless body would otherwise fill the
+/// device. A declared `Content-Length` over the cap is refused before the body
+/// is read; an undeclared one is counted as it streams and cut at the cap.
 class SameOriginHttpClient extends http.BaseClient {
-  SameOriginHttpClient(this._inner, {this.maxRedirects = 5});
+  SameOriginHttpClient(
+    this._inner, {
+    this.maxRedirects = 5,
+    this.maxBodyBytes = defaultMaxBodyBytes,
+  });
 
   final http.Client _inner;
 
   /// How many redirects one request may follow before the chain is refused.
   final int maxRedirects;
+
+  /// The most one response body may carry.
+  final int maxBodyBytes;
+
+  /// Far above any poster or backdrop a service serves (an original fanart.tv
+  /// backdrop is a few megabytes), far below what fills a phone.
+  static const defaultMaxBodyBytes = 32 * 1024 * 1024;
 
   /// Headers that say what the client wants or accepts, never who it is.
   ///
@@ -65,7 +84,7 @@ class SameOriginHttpClient extends http.BaseClient {
       final response = await _inner.send(current);
       final location = _locationOf(response.headers);
       if (!_isRedirect(response.statusCode) || location == null) {
-        return response;
+        return _capped(response, url);
       }
 
       final target = url.resolve(location);
@@ -151,6 +170,52 @@ class SameOriginHttpClient extends http.BaseClient {
       next.bodyBytes = request.bodyBytes;
     }
     return next;
+  }
+
+  /// [response] with its body held to [maxBodyBytes].
+  Future<http.StreamedResponse> _capped(
+    http.StreamedResponse response,
+    Uri url,
+  ) async {
+    final declared = response.contentLength;
+    if (declared != null && declared > maxBodyBytes) {
+      unawaited(response.stream.drain<void>().catchError((_) {}));
+      throw http.ClientException(
+        'Refused a $declared-byte body from $url',
+        url,
+      );
+    }
+    final limit = maxBodyBytes;
+    var seen = 0;
+    var cut = false;
+    final body = response.stream.transform(
+      StreamTransformer<List<int>, List<int>>.fromHandlers(
+        handleData: (chunk, sink) {
+          if (cut) return;
+          seen += chunk.length;
+          if (seen > limit) {
+            cut = true;
+            sink
+              ..addError(
+                http.ClientException('A body over $limit bytes from $url', url),
+              )
+              ..close();
+            return;
+          }
+          sink.add(chunk);
+        },
+      ),
+    );
+    return http.StreamedResponse(
+      http.ByteStream(body),
+      response.statusCode,
+      contentLength: response.contentLength,
+      request: response.request,
+      headers: response.headers,
+      isRedirect: response.isRedirect,
+      persistentConnection: response.persistentConnection,
+      reasonPhrase: response.reasonPhrase,
+    );
   }
 
   @override

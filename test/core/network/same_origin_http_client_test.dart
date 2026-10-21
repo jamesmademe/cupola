@@ -140,4 +140,53 @@ void main() {
       expect(response.statusCode, 302);
     });
   });
+
+  group('the body cap', () {
+    test('refuses a declared length over the cap before reading', () async {
+      final inner = MockClient.streaming(
+        (request, _) async => http.StreamedResponse(
+          Stream.value(List.filled(8, 0)),
+          200,
+          contentLength: 64,
+        ),
+      );
+      final client = SameOriginHttpClient(inner, maxBodyBytes: 16);
+      addTearDown(client.close);
+
+      await expectLater(
+        client.get(Uri.parse('https://image.tmdb.org/p/w342/a.jpg')),
+        throwsA(isA<http.ClientException>()),
+      );
+    });
+
+    test('cuts an undeclared body that grows past the cap', () async {
+      final inner = MockClient.streaming(
+        (request, _) async => http.StreamedResponse(
+          Stream.fromIterable([for (var i = 0; i < 4; i++) List.filled(8, 0)]),
+          200,
+        ),
+      );
+      final client = SameOriginHttpClient(inner, maxBodyBytes: 16);
+      addTearDown(client.close);
+
+      await expectLater(
+        client.get(Uri.parse('https://image.tmdb.org/p/w342/a.jpg')),
+        throwsA(isA<http.ClientException>()),
+      );
+    });
+
+    test('passes a body within the cap whole', () async {
+      final inner = MockClient(
+        (request) async => http.Response.bytes(List.filled(16, 7), 200),
+      );
+      final client = SameOriginHttpClient(inner, maxBodyBytes: 16);
+      addTearDown(client.close);
+
+      final response = await client.get(
+        Uri.parse('https://image.tmdb.org/p/w342/a.jpg'),
+      );
+
+      expect(response.bodyBytes, List.filled(16, 7));
+    });
+  });
 }

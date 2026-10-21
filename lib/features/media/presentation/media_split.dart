@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_breakpoints.dart';
+import 'package:cupola/core/network/route_poster.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/side_pane_route.dart';
 import 'package:cupola/features/activity/presentation/download_page.dart';
@@ -176,7 +177,7 @@ abstract final class MediaSplit {
       key: key,
       focus: uri.queryParameters['i'],
       season: ServiceRoutes.mediaSeasonOf(uri),
-      posterUrl: uri.queryParameters['posterUrl'],
+      posterUrl: RoutePoster.accept(uri.queryParameters['posterUrl']),
       heroTag: uri.queryParameters['heroTag'],
     );
   }
@@ -205,7 +206,7 @@ abstract final class MediaSplit {
     return switch (segments[at + 1]) {
       'person' => MediaPanePerson(
         id: id,
-        posterUrl: query['posterUrl'],
+        posterUrl: RoutePoster.accept(query['posterUrl']),
         heroTag: query['heroTag'],
       ),
       'collection' => MediaPaneCollection(id: id, heroTag: query['heroTag']),
