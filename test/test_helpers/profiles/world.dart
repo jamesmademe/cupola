@@ -255,7 +255,556 @@ abstract final class WorldTitles {
     agent327,
   ];
 
-  static WorldTitle byKey(String key) => all.firstWhere((t) => t.key == key);
+  /// The extended catalogue the testlab materialises: public-domain classics
+  /// and well-known films, so a house has a library rather than twelve rows.
+  /// The fakes keep [all] for the screens whose counts the UI tests pin; the
+  /// exporter and the testlab seed read [catalogue].
+  static const catalogueMovies = <WorldTitle>[
+    WorldTitle(
+      key: 'nosferatu',
+      title: 'Nosferatu',
+      year: 1922,
+      tmdbId: 653,
+      imdbId: 'tt0013442',
+    ),
+    WorldTitle(
+      key: 'caligari',
+      title: 'The Cabinet of Dr. Caligari',
+      year: 1920,
+      tmdbId: 234,
+      imdbId: 'tt0010323',
+    ),
+    WorldTitle(
+      key: 'theKid',
+      title: 'The Kid',
+      year: 1921,
+      tmdbId: 10098,
+      imdbId: 'tt0012349',
+    ),
+    WorldTitle(
+      key: 'casablanca',
+      title: 'Casablanca',
+      year: 1942,
+      tmdbId: 289,
+      imdbId: 'tt0034583',
+    ),
+    WorldTitle(
+      key: 'sunsetBoulevard',
+      title: 'Sunset Boulevard',
+      year: 1950,
+      tmdbId: 599,
+      imdbId: 'tt0043014',
+    ),
+    WorldTitle(
+      key: 'singinInTheRain',
+      title: "Singin' in the Rain",
+      year: 1952,
+      tmdbId: 872,
+      imdbId: 'tt0045152',
+    ),
+    WorldTitle(
+      key: 'rearWindow',
+      title: 'Rear Window',
+      year: 1954,
+      tmdbId: 567,
+      imdbId: 'tt0047396',
+    ),
+    WorldTitle(
+      key: 'sevenSamurai',
+      title: 'Seven Samurai',
+      year: 1954,
+      tmdbId: 346,
+      imdbId: 'tt0047478',
+    ),
+    WorldTitle(
+      key: 'twelveAngryMen',
+      title: '12 Angry Men',
+      year: 1957,
+      tmdbId: 389,
+      imdbId: 'tt0050083',
+    ),
+    WorldTitle(
+      key: 'vertigo',
+      title: 'Vertigo',
+      year: 1958,
+      tmdbId: 426,
+      imdbId: 'tt0052357',
+    ),
+    WorldTitle(
+      key: 'northByNorthwest',
+      title: 'North by Northwest',
+      year: 1959,
+      tmdbId: 213,
+      imdbId: 'tt0053125',
+    ),
+    WorldTitle(
+      key: 'psycho',
+      title: 'Psycho',
+      year: 1960,
+      tmdbId: 539,
+      imdbId: 'tt0054215',
+    ),
+    WorldTitle(
+      key: 'breakfastAtTiffanys',
+      title: "Breakfast at Tiffany's",
+      year: 1961,
+      tmdbId: 164,
+      imdbId: 'tt0054698',
+    ),
+    WorldTitle(
+      key: 'lawrenceOfArabia',
+      title: 'Lawrence of Arabia',
+      year: 1962,
+      tmdbId: 947,
+      imdbId: 'tt0056172',
+    ),
+    WorldTitle(
+      key: 'toKillAMockingbird',
+      title: 'To Kill a Mockingbird',
+      year: 1962,
+      tmdbId: 595,
+      imdbId: 'tt0056592',
+    ),
+    WorldTitle(
+      key: 'drStrangelove',
+      title: 'Dr. Strangelove',
+      year: 1964,
+      tmdbId: 935,
+      imdbId: 'tt0057012',
+    ),
+    WorldTitle(
+      key: 'theGoodTheBadAndTheUgly',
+      title: 'The Good, the Bad and the Ugly',
+      year: 1966,
+      tmdbId: 429,
+      imdbId: 'tt0060196',
+    ),
+    WorldTitle(
+      key: 'twoThousandOne',
+      title: '2001: A Space Odyssey',
+      year: 1968,
+      tmdbId: 62,
+      imdbId: 'tt0062622',
+    ),
+    WorldTitle(
+      key: 'theGodfather',
+      title: 'The Godfather',
+      year: 1972,
+      tmdbId: 238,
+      imdbId: 'tt0068646',
+    ),
+    WorldTitle(
+      key: 'jaws',
+      title: 'Jaws',
+      year: 1975,
+      tmdbId: 578,
+      imdbId: 'tt0073195',
+    ),
+    WorldTitle(
+      key: 'taxiDriver',
+      title: 'Taxi Driver',
+      year: 1976,
+      tmdbId: 103,
+      imdbId: 'tt0075314',
+    ),
+    WorldTitle(
+      key: 'starWars',
+      title: 'Star Wars',
+      year: 1977,
+      tmdbId: 11,
+      imdbId: 'tt0076759',
+    ),
+    WorldTitle(
+      key: 'alien',
+      title: 'Alien',
+      year: 1979,
+      tmdbId: 348,
+      imdbId: 'tt0078748',
+    ),
+    WorldTitle(
+      key: 'bladeRunner',
+      title: 'Blade Runner',
+      year: 1982,
+      tmdbId: 78,
+      imdbId: 'tt0083658',
+    ),
+    WorldTitle(
+      key: 'backToTheFuture',
+      title: 'Back to the Future',
+      year: 1985,
+      tmdbId: 105,
+      imdbId: 'tt0088763',
+    ),
+    WorldTitle(
+      key: 'dieHard',
+      title: 'Die Hard',
+      year: 1988,
+      tmdbId: 562,
+      imdbId: 'tt0095016',
+    ),
+    WorldTitle(
+      key: 'jurassicPark',
+      title: 'Jurassic Park',
+      year: 1993,
+      tmdbId: 329,
+      imdbId: 'tt0107290',
+    ),
+    WorldTitle(
+      key: 'shawshank',
+      title: 'The Shawshank Redemption',
+      year: 1994,
+      tmdbId: 278,
+      imdbId: 'tt0111161',
+    ),
+    WorldTitle(
+      key: 'pulpFiction',
+      title: 'Pulp Fiction',
+      year: 1994,
+      tmdbId: 680,
+      imdbId: 'tt0110912',
+    ),
+    WorldTitle(
+      key: 'fightClub',
+      title: 'Fight Club',
+      year: 1999,
+      tmdbId: 550,
+      imdbId: 'tt0137523',
+    ),
+    WorldTitle(
+      key: 'theMatrix',
+      title: 'The Matrix',
+      year: 1999,
+      tmdbId: 603,
+      imdbId: 'tt0133093',
+    ),
+  ];
+
+  /// The series the testlab materialises: finished shows, ongoing shows and
+  /// three anime, so the calendars and the Sonarr hierarchy have real shapes.
+  static const catalogueSeries = <WorldTitle>[
+    WorldTitle(
+      key: 'breakingBad',
+      title: 'Breaking Bad',
+      year: 2008,
+      tmdbId: 1396,
+      tvdbId: 81189,
+      isSeries: true,
+    ),
+    WorldTitle(
+      key: 'theOffice',
+      title: 'The Office',
+      year: 2005,
+      tmdbId: 2316,
+      tvdbId: 73244,
+      isSeries: true,
+    ),
+    WorldTitle(
+      key: 'parksAndRec',
+      title: 'Parks and Recreation',
+      year: 2009,
+      tmdbId: 8592,
+      tvdbId: 84912,
+      isSeries: true,
+    ),
+    WorldTitle(
+      key: 'brooklynNineNine',
+      title: 'Brooklyn Nine-Nine',
+      year: 2013,
+      tmdbId: 48891,
+      tvdbId: 261661,
+      isSeries: true,
+    ),
+    WorldTitle(
+      key: 'theExpanse',
+      title: 'The Expanse',
+      year: 2015,
+      tmdbId: 63639,
+      tvdbId: 280619,
+      isSeries: true,
+    ),
+    WorldTitle(
+      key: 'arcane',
+      title: 'Arcane',
+      year: 2021,
+      tmdbId: 94605,
+      tvdbId: 371028,
+      isSeries: true,
+    ),
+    WorldTitle(
+      key: 'severance',
+      title: 'Severance',
+      year: 2022,
+      tmdbId: 95396,
+      tvdbId: 371980,
+      isSeries: true,
+    ),
+    WorldTitle(
+      key: 'bluey',
+      title: 'Bluey',
+      year: 2018,
+      tmdbId: 82728,
+      tvdbId: 348545,
+      isSeries: true,
+    ),
+    WorldTitle(
+      key: 'avatar',
+      title: 'Avatar: The Last Airbender',
+      year: 2005,
+      tmdbId: 246,
+      tvdbId: 74880,
+      isSeries: true,
+    ),
+  ];
+
+  static const catalogue = [...all, ...catalogueMovies, ...catalogueSeries];
+
+  static WorldTitle byKey(String key) =>
+      catalogue.firstWhere((t) => t.key == key);
+}
+
+/// One recording artist and its albums, with the ids Lidarr and MusicBrainz
+/// agree on.
+class WorldArtist {
+  const WorldArtist({
+    required this.key,
+    required this.name,
+    required this.foreignArtistId,
+    required this.albums,
+  });
+
+  final String key;
+  final String name;
+  final String foreignArtistId;
+  final List<WorldAlbum> albums;
+}
+
+class WorldAlbum {
+  const WorldAlbum({
+    required this.title,
+    required this.year,
+    required this.foreignAlbumId,
+    required this.tracks,
+  });
+
+  final String title;
+  final int year;
+  final String foreignAlbumId;
+  final int tracks;
+}
+
+/// The music the testlab materialises: eight artists, one album each, so
+/// Lidarr's shelves and the artist page have something to draw.
+abstract final class WorldMusic {
+  static const all = <WorldArtist>[
+    WorldArtist(
+      key: 'daftPunk',
+      name: 'Daft Punk',
+      foreignArtistId: '056e4f3e-d505-4dad-8ec1-d04f521cbb56',
+      albums: [
+        WorldAlbum(
+          title: 'Discovery',
+          year: 2001,
+          foreignAlbumId: 'album-daft-punk-discovery',
+          tracks: 14,
+        ),
+      ],
+    ),
+    WorldArtist(
+      key: 'massiveAttack',
+      name: 'Massive Attack',
+      foreignArtistId: 'artist-massive-attack',
+      albums: [
+        WorldAlbum(
+          title: 'Mezzanine',
+          year: 1998,
+          foreignAlbumId: 'album-massive-attack-mezzanine',
+          tracks: 11,
+        ),
+      ],
+    ),
+    WorldArtist(
+      key: 'boardsOfCanada',
+      name: 'Boards of Canada',
+      foreignArtistId: 'artist-boards-of-canada',
+      albums: [
+        WorldAlbum(
+          title: 'Music Has the Right to Children',
+          year: 1998,
+          foreignAlbumId: 'album-boc-mhtrtc',
+          tracks: 18,
+        ),
+      ],
+    ),
+    WorldArtist(
+      key: 'aphexTwin',
+      name: 'Aphex Twin',
+      foreignArtistId: 'artist-aphex-twin',
+      albums: [
+        WorldAlbum(
+          title: 'Selected Ambient Works 85-92',
+          year: 1992,
+          foreignAlbumId: 'album-aphex-saw',
+          tracks: 13,
+        ),
+      ],
+    ),
+    WorldArtist(
+      key: 'bonobo',
+      name: 'Bonobo',
+      foreignArtistId: 'artist-bonobo',
+      albums: [
+        WorldAlbum(
+          title: 'Black Sands',
+          year: 2010,
+          foreignAlbumId: 'album-bonobo-black-sands',
+          tracks: 12,
+        ),
+      ],
+    ),
+    WorldArtist(
+      key: 'air',
+      name: 'Air',
+      foreignArtistId: 'artist-air',
+      albums: [
+        WorldAlbum(
+          title: 'Moon Safari',
+          year: 1998,
+          foreignAlbumId: 'album-air-moon-safari',
+          tracks: 10,
+        ),
+      ],
+    ),
+    WorldArtist(
+      key: 'portishead',
+      name: 'Portishead',
+      foreignArtistId: 'artist-portishead',
+      albums: [
+        WorldAlbum(
+          title: 'Dummy',
+          year: 1994,
+          foreignAlbumId: 'album-portishead-dummy',
+          tracks: 11,
+        ),
+      ],
+    ),
+    WorldArtist(
+      key: 'cinematicOrchestra',
+      name: 'The Cinematic Orchestra',
+      foreignArtistId: 'artist-cinematic-orchestra',
+      albums: [
+        WorldAlbum(
+          title: 'Ma Fleur',
+          year: 2007,
+          foreignAlbumId: 'album-cinematic-ma-fleur',
+          tracks: 11,
+        ),
+      ],
+    ),
+  ];
+}
+
+/// One author and its books, for Readarr's shelves.
+class WorldAuthor {
+  const WorldAuthor({
+    required this.key,
+    required this.name,
+    required this.foreignAuthorId,
+    required this.books,
+  });
+
+  final String key;
+  final String name;
+  final String foreignAuthorId;
+  final List<WorldBook> books;
+}
+
+class WorldBook {
+  const WorldBook({
+    required this.title,
+    required this.year,
+    required this.foreignBookId,
+  });
+
+  final String title;
+  final int year;
+  final String foreignBookId;
+}
+
+abstract final class WorldBooks {
+  static const all = <WorldAuthor>[
+    WorldAuthor(
+      key: 'verne',
+      name: 'Jules Verne',
+      foreignAuthorId: 'author-jules-verne',
+      books: [
+        WorldBook(
+          title: 'Twenty Thousand Leagues Under the Seas',
+          year: 1870,
+          foreignBookId: 'book-verne-20000',
+        ),
+      ],
+    ),
+    WorldAuthor(
+      key: 'wells',
+      name: 'H. G. Wells',
+      foreignAuthorId: 'author-hg-wells',
+      books: [
+        WorldBook(
+          title: 'The War of the Worlds',
+          year: 1898,
+          foreignBookId: 'book-wells-war',
+        ),
+      ],
+    ),
+    WorldAuthor(
+      key: 'shelley',
+      name: 'Mary Shelley',
+      foreignAuthorId: 'author-mary-shelley',
+      books: [
+        WorldBook(
+          title: 'Frankenstein',
+          year: 1818,
+          foreignBookId: 'book-shelley-frankenstein',
+        ),
+      ],
+    ),
+    WorldAuthor(
+      key: 'stoker',
+      name: 'Bram Stoker',
+      foreignAuthorId: 'author-bram-stoker',
+      books: [
+        WorldBook(
+          title: 'Dracula',
+          year: 1897,
+          foreignBookId: 'book-stoker-dracula',
+        ),
+      ],
+    ),
+    WorldAuthor(
+      key: 'doyle',
+      name: 'Arthur Conan Doyle',
+      foreignAuthorId: 'author-conan-doyle',
+      books: [
+        WorldBook(
+          title: 'The Hound of the Baskervilles',
+          year: 1902,
+          foreignBookId: 'book-doyle-hound',
+        ),
+      ],
+    ),
+    WorldAuthor(
+      key: 'austen',
+      name: 'Jane Austen',
+      foreignAuthorId: 'author-jane-austen',
+      books: [
+        WorldBook(
+          title: 'Pride and Prejudice',
+          year: 1813,
+          foreignBookId: 'book-austen-pride',
+        ),
+      ],
+    ),
+  ];
 }
 
 /// The people on the Seerr side.

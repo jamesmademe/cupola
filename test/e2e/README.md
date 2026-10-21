@@ -297,6 +297,13 @@ Prowlarr. Bazarr is configured for the two arr services but has no subtitle
 records without a real media/subtitle provider. These are capability limits of
 the lab, not claims that the corresponding Cupola screens are unreachable.
 
+The seed reads `state/world.json`, which `dart run tool/testlab/export_world.dart`
+writes from `test/test_helpers/profiles/world.dart`. The export is deterministic,
+and `test/tool/export_world_test.dart` holds it to the Dart catalogue: 40 movies,
+12 series, 8 artists and 6 authors. The bootstrap exports it before the seed; a
+world.json that has drifted from the Dart source is a test failure, not a
+surprise in the lab.
+
 ## A household member's own Seerr account
 
 test/e2e/testlab_requester_e2e_test.dart signs in to the lab's Seerr (3.4.1,

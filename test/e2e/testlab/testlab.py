@@ -502,6 +502,24 @@ def scenario_list() -> dict[str, Any]:
     return {"scenarios": names}
 
 
+def export_world() -> dict[str, Any]:
+    ensure_state()
+    result = run(
+        [
+            "dart",
+            "run",
+            "tool/testlab/export_world.dart",
+            "--output",
+            str(STATE_ROOT / "world.json"),
+        ],
+        capture=True,
+        timeout=300,
+    )
+    if result.stdout:
+        sys.stderr.write(result.stdout)
+    return {"world": str(STATE_ROOT / "world.json")}
+
+
 def forge() -> dict[str, Any]:
     ensure_docker()
     ensure_state()
@@ -521,6 +539,7 @@ def forge() -> dict[str, Any]:
 
 def seed() -> dict[str, Any]:
     ensure_state()
+    export_world()
     forge()
     result = run(
         [
@@ -582,6 +601,20 @@ def doctor() -> dict[str, Any]:
             check("the indexer answers", answer.status == 200)
     except (urllib.error.URLError, TimeoutError) as error:
         check("the indexer answers", False, str(error))
+    world = STATE_ROOT / "world.json"
+    if world.is_file():
+        try:
+            document = json.loads(world.read_text(encoding="utf-8"))
+            titles = document.get("titles")
+            check(
+                "the world is exported",
+                isinstance(titles, list) and len(titles) > 0,
+                f"{len(titles) if isinstance(titles, list) else 0} titles",
+            )
+        except (OSError, ValueError) as error:
+            check("the world is exported", False, str(error))
+    else:
+        check("the world is exported", False, str(world))
     return {"ok": all(item["ok"] for item in checks), "checks": checks}
 
 

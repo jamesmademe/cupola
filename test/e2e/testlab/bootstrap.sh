@@ -288,6 +288,9 @@ DOCKGE_SETUP_USERNAME=cupola \
 DOCKGE_SETUP_PASSWORD=cupola-pass \
   "${compose[@]}" exec -T dockge node - <"$script_dir/dockge_setup.js"
 
+printf '\nExporting World A...\n'
+dart run tool/testlab/export_world.dart --output "$state_dir/world.json"
+
 printf '\nForging the synthetic release...\n'
 "${compose[@]}" --profile forge run --rm testlab-forge
 

@@ -115,6 +115,33 @@ def list_value(value: Any) -> list[dict[str, Any]]:
     return []
 
 
+def load_world(state_dir: Path) -> dict[str, Any]:
+    path = state_dir / "world.json"
+    if not path.is_file():
+        raise RuntimeError(
+            "world.json is missing; run "
+            "dart run tool/testlab/export_world.dart --output <state>/world.json"
+        )
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise RuntimeError("world.json is not an object")
+    return value
+
+
+def world_title(world: dict[str, Any], key: str) -> dict[str, Any]:
+    for title in world.get("titles", []):
+        if isinstance(title, dict) and title.get("key") == key:
+            return title
+    raise RuntimeError(f"world.json has no title {key!r}")
+
+
+def world_artist(world: dict[str, Any], key: str) -> dict[str, Any]:
+    for artist in world.get("artists", []):
+        if isinstance(artist, dict) and artist.get("key") == key:
+            return artist
+    raise RuntimeError(f"world.json has no artist {key!r}")
+
+
 def ensure_arr_root(
     name: str,
     port: int,
@@ -143,7 +170,7 @@ def ensure_arr_root(
         warn(f"{name} root folder", error)
 
 
-def seed_arrs() -> None:
+def seed_arrs(world: dict[str, Any]) -> None:
     ensure_arr_root("Radarr", 7878, "v3", "/media/movies", "Movies")
     ensure_arr_root("Sonarr", 8989, "v3", "/media/series", "Series")
     ensure_arr_root(
@@ -194,15 +221,18 @@ def seed_arrs() -> None:
         url = f"{ROOT}:8989/api/v3/series"
         headers = api_headers("v3")
         series = list_value(json_request(url, headers=headers))
-        if not any(item.get("title") == "Breaking Bad" for item in series):
+        breaking_bad = world_title(world, "breakingBad")
+        if not any(
+            item.get("title") == breaking_bad["title"] for item in series
+        ):
             request(
                 url,
                 method="POST",
                 headers=headers,
                 payload={
-                    "title": "Cupola Test Series",
-                    "tvdbId": 81189,
-                    "year": 2008,
+                    "title": breaking_bad["title"],
+                    "tvdbId": breaking_bad["tvdbId"],
+                    "year": breaking_bad["year"],
                     "qualityProfileId": 1,
                     "rootFolderPath": "/media/series",
                     "monitored": True,
@@ -220,14 +250,17 @@ def seed_arrs() -> None:
         url = f"{ROOT}:8686/api/v1/artist"
         headers = api_headers("v1")
         artists = list_value(json_request(url, headers=headers))
-        if not any(item.get("artistName") == "Daft Punk" for item in artists):
+        daft_punk = world_artist(world, "daftPunk")
+        if not any(
+            item.get("artistName") == daft_punk["name"] for item in artists
+        ):
             request(
                 url,
                 method="POST",
                 headers=headers,
                 payload={
-                    "artistName": "Daft Punk",
-                    "foreignArtistId": "056e4f3e-d505-4dad-8ec1-d04f521cbb56",
+                    "artistName": daft_punk["name"],
+                    "foreignArtistId": daft_punk["foreignArtistId"],
                     "qualityProfileId": 1,
                     "metadataProfileId": 1,
                     "rootFolderPath": "/media/music",
@@ -245,7 +278,7 @@ def seed_arrs() -> None:
     # when the upstream lookup cannot resolve one.
 
 
-def ensure_radarr_s1(env: dict[str, str]) -> None:
+def ensure_radarr_s1(env: dict[str, str], world: dict[str, Any]) -> None:
     """The Radarr side of the import slice: a movie, a client and an indexer.
 
     This is deliberately loud rather than best effort: the slice cannot run
@@ -254,13 +287,17 @@ def ensure_radarr_s1(env: dict[str, str]) -> None:
     """
     headers = api_headers("v3")
     base = f"{ROOT}:7878/api/v3"
+    title = world_title(world, "bigBuckBunny")
+    tmdb_id = title["tmdbId"]
     movies = list_value(json_request(f"{base}/movie", headers=headers))
-    if not any(movie.get("tmdbId") == 10378 for movie in movies):
+    if not any(movie.get("tmdbId") == tmdb_id for movie in movies):
         lookup = json_request(
-            f"{base}/movie/lookup/tmdb?tmdbId=10378", headers=headers
+            f"{base}/movie/lookup/tmdb?tmdbId={tmdb_id}", headers=headers
         )
         if not isinstance(lookup, dict) or not lookup.get("title"):
-            raise RuntimeError("Radarr could not look up Big Buck Bunny")
+            raise RuntimeError(
+                f"Radarr could not look up {title['title']}"
+            )
         payload = dict(lookup)
         payload.update(
             {
@@ -279,7 +316,7 @@ def ensure_radarr_s1(env: dict[str, str]) -> None:
         (
             item
             for item in list_value(json_request(f"{base}/movie", headers=headers))
-            if item.get("tmdbId") == 10378
+            if item.get("tmdbId") == tmdb_id
         ),
         None,
     )
@@ -1022,8 +1059,9 @@ def main() -> None:
         (args.state_dir / "media" / media_section).mkdir(
             parents=True, exist_ok=True
         )
-    seed_arrs()
-    ensure_radarr_s1(env)
+    world = load_world(args.state_dir)
+    seed_arrs(world)
+    ensure_radarr_s1(env, world)
     seed_seeder(env, args.state_dir)
     seed_seerr(env)
     seed_seerr_requesters(env)
