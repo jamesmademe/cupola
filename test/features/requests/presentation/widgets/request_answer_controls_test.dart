@@ -154,7 +154,7 @@ void main() {
 
       await tester.tap(_approve);
       await harness.settle(tester);
-      expect(find.text('Approve this request?'), findsOneWidget);
+      expect(find.text('Approve Charge'), findsOneWidget);
       expect(
         find.text('Charge goes to Radarr 1 and starts downloading.'),
         findsOneWidget,
@@ -199,7 +199,7 @@ void main() {
 
       await tester.tap(_approve);
       await harness.settle(tester);
-      await tester.tap(find.text('Cancel'));
+      await tester.tap(find.byTooltip('Close'));
       await harness.settle(tester);
       await tester.tap(_decline);
       await harness.settle(tester);
@@ -301,12 +301,14 @@ void main() {
       await tester.tap(_decline);
       await tester.pump();
       await harness.settle(tester);
-      expect(find.text('Approve this request?'), findsOneWidget);
+      expect(find.text('Approve Charge'), findsOneWidget);
       expect(find.text('Decline this request?'), findsNothing);
 
-      // Idle again behind the confirmation.
+      // Idle again behind the sheet.
       expect(_ring(find.byType(FilledButton)), findsNothing);
-      await tester.tap(find.text('Cancel'));
+      await tester.tap(find.byTooltip('Close'));
+      // The sheet's read of the server's profiles, slow too, ends after it.
+      await tester.pump(const Duration(seconds: 2));
       await harness.settle(tester);
       expect(_approve, findsOneWidget);
 

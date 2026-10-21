@@ -8,12 +8,19 @@ import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/capability/role_gate.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
 import 'package:cupola/core/theme.dart';
+import 'package:cupola/core/utils/dot_separator.dart';
+import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_actions.dart';
+import 'package:cupola/features/discover/domain/models/seerr_request.dart';
+import 'package:cupola/features/discover/domain/seerr_arr_server.dart';
 import 'package:cupola/features/discover/domain/seerr_grant.dart';
 import 'package:cupola/features/discover/domain/seerr_server_facts.dart';
+import 'package:cupola/features/discover/presentation/request_form_provider.dart';
+import 'package:cupola/features/discover/presentation/widgets/approve_request_sheet.dart';
 import 'package:cupola/features/home/data/answered_requests.dart';
 import 'package:cupola/features/media/presentation/media_parts.dart';
 import 'package:cupola/features/requests/presentation/widgets/request_answer_controls.dart';
+import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../test_helpers/settings_scope.dart';
@@ -328,6 +335,79 @@ void main() {
         platform: CatalogPlatform.desktop,
         overrides: [_mayNotApprove],
       ),
+      CatalogScene(
+        'Approve sheet · where Charge goes, with another Radarr of its copy '
+        'to send it to, the quality profile and the root folder',
+        (_) => const Align(
+          alignment: Alignment.bottomCenter,
+          child: AppBottomSheet(
+            title: 'Approve Charge',
+            subtitle: 'Anna asked${dotSeparator}Standard',
+            showClose: true,
+            child: ApproveRequestBody(
+              instanceId: '',
+              title: 'Charge',
+              request: _approved,
+              target: _approveTarget,
+              servers: [_radarr, _spare],
+              connections: [],
+              connectionTitle: _serviceTitle,
+            ),
+          ),
+        ),
+        width: 390,
+        height: 620,
+        overrides: [
+          seerrServerChoicesProvider.overrideWith(
+            (ref, source) async => (
+              profiles: const [
+                QualityProfileOption(id: 4, name: 'HD-1080p'),
+                QualityProfileOption(id: 6, name: 'Ultra-HD'),
+              ],
+              folders: const [
+                RootFolderOption(
+                  path: '/mnt/tank/media/movies',
+                  freeSpace: 12400000000000,
+                ),
+                RootFolderOption(path: '/mnt/tank/media/spare'),
+              ],
+            ),
+          ),
+        ],
+      ),
     ],
   );
 }
+
+const _radarr = SeerrArrServer(
+  service: ServiceKey.radarr,
+  id: 0,
+  name: 'Radarr',
+  isDefault: true,
+  activeProfileId: 4,
+  activeProfileName: 'HD-1080p',
+  activeDirectory: '/mnt/tank/media/movies',
+);
+const _spare = SeerrArrServer(
+  service: ServiceKey.radarr,
+  id: 2,
+  name: 'Radarr spare',
+  activeProfileId: 6,
+  activeDirectory: '/mnt/tank/media/spare',
+);
+const _approved = SeerrRequest(
+  id: 1,
+  status: RequestStatus.pendingApproval,
+  createdAt: '2026-10-21T10:00:00Z',
+  type: 'movie',
+);
+const _approveTarget = SeerrApproveTarget(
+  arr: ServiceKey.radarr,
+  is4k: false,
+  serversRead: true,
+  server: _radarr,
+  profileId: 4,
+  rootFolder: '/mnt/tank/media/movies',
+);
+
+String _serviceTitle(ServiceInstance connection) => connection.service.title;

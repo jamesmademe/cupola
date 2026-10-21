@@ -10,8 +10,10 @@ import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/domain/seerr_arr_server.dart';
 import 'package:cupola/features/discover/domain/seerr_grant.dart';
+import 'package:cupola/features/discover/domain/seerr_request_update.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/presentation/seerr_approve_target_read.dart';
+import 'package:cupola/features/discover/presentation/widgets/approve_request_sheet.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
@@ -218,28 +220,68 @@ class ActivityActions {
     var owned = approvals.begin(key, RequestAnswerPhase.checking);
     if (!owned) return null;
     try {
-      final (:message, :approved) = await _approveConfirmation(
+      final settings = ref.read(currentSettingsProvider);
+      final read = await readSeerrApproveTarget(
         ref,
         instanceId: instanceId,
         requestId: requestId,
-        title: title,
         request: request,
       );
-      // Idle behind the dialog, which is modal: the control is not busy
-      // while a person decides.
+      // Idle behind the sheet or the dialog, which are modal: the control is
+      // not busy while a person decides.
       approvals.end(key);
       owned = false;
       if (!context.mounted) return null;
 
-      final result = await showAppConfirmDialog(
-        context: context,
-        title: 'Approve this request?',
-        message: message,
-        icon: Icons.check_circle_outline_rounded,
-        confirmLabel: 'Approve request',
-      );
+      String connectionTitle(ServiceInstance connection) => settings
+          .connectionTitle(connection.id, connection.service, joiner: ' ');
+      final readRequest = read.request;
+      final target = read.target;
+      final servers = read.servers;
+      ApproveChoice? choice;
+      final String approved;
+      if (readRequest != null &&
+          target != null &&
+          target.server != null &&
+          servers != null) {
+        // Where it goes is known: the person may send it elsewhere first.
+        final connections = settings.configuredInstancesOf(target.arr);
+        choice = await showApproveRequestSheet(
+          context,
+          instanceId: instanceId,
+          title: title,
+          request: readRequest,
+          target: target,
+          servers: servers,
+          connections: connections,
+          connectionTitle: connectionTitle,
+        );
+        if (choice == null) return null;
+        approved = target
+            .sentTo(
+              choice.server,
+              connections: connections,
+              profileId: choice.profileId,
+              rootFolder: choice.rootFolder,
+            )
+            .approvedLine(connectionTitle: connectionTitle);
+      } else {
+        final confirmation = _approveConfirmation(
+          read,
+          title: title,
+          connectionTitle: connectionTitle,
+        );
+        approved = confirmation.approved;
+        final result = await showAppConfirmDialog(
+          context: context,
+          title: 'Approve this request?',
+          message: confirmation.message,
+          icon: Icons.check_circle_outline_rounded,
+          confirmLabel: 'Approve request',
+        );
+        if (!result.confirmed) return null;
+      }
 
-      if (!result.confirmed) return null;
       if (!context.mounted) return null;
       owned = approvals.begin(key, RequestAnswerPhase.approving);
       if (!owned) return null;
@@ -248,9 +290,26 @@ class ActivityActions {
         context,
         ref,
         service: ServiceKey.seerr,
-        action: () => ref
-            .read(seerrServiceForProvider(instanceId))
-            .approveRequest(requestId),
+        action: () async {
+          final service = ref.read(seerrServiceForProvider(instanceId));
+          if (choice case (:final server, :final profileId, :final rootFolder)
+              when readRequest != null &&
+                  target != null &&
+                  approveChoiceChanges(target, choice)) {
+            // Sent elsewhere first, then approved: Seerr hands the request
+            // on at the approval, with what it carries then.
+            await service.updateRequest(
+              requestId,
+              seerrRequestUpdateBody(
+                readRequest,
+                server: server,
+                profileId: profileId,
+                rootFolder: rootFolder,
+              ),
+            );
+          }
+          await service.approveRequest(requestId);
+        },
         successMessage: 'Request approved',
         failureMessage: 'Could not approve this request',
         invalidateRequests: true,
@@ -277,23 +336,14 @@ class ActivityActions {
     return false;
   }
 
-  /// What the approve confirmation says, read within one
-  /// [seerrTargetReadLimit] ([readSeerrApproveTarget]), and what the row
-  /// says once it is approved.
-  static Future<({String message, String approved})> _approveConfirmation(
-    WidgetRef ref, {
-    required String instanceId,
-    required int requestId,
+  /// What the approve confirmation says when there is no server to show in
+  /// the sheet, from what [read] got within one [seerrTargetReadLimit], and
+  /// what the row says once it is approved.
+  static ({String message, String approved}) _approveConfirmation(
+    SeerrApproveRead read, {
     required String title,
-    required SeerrRequest? request,
-  }) async {
-    final settings = ref.read(currentSettingsProvider);
-    final read = await readSeerrApproveTarget(
-      ref,
-      instanceId: instanceId,
-      requestId: requestId,
-      request: request,
-    );
+    required String Function(ServiceInstance connection) connectionTitle,
+  }) {
     final target = read.target;
     if (target == null) {
       // Not even its kind is known: the approval still goes where Seerr
@@ -305,8 +355,6 @@ class ActivityActions {
         approved: 'Approved',
       );
     }
-    String connectionTitle(ServiceInstance connection) => settings
-        .connectionTitle(connection.id, connection.service, joiner: ' ');
     return (
       message: target.confirmation(title, connectionTitle: connectionTitle),
       approved: target.approvedLine(connectionTitle: connectionTitle),

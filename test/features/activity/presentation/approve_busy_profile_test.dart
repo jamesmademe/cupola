@@ -60,10 +60,10 @@ void main() {
     await tester.pump();
     await harness.settle(tester);
 
-    expect(find.text('Approve this request?'), findsOneWidget);
+    expect(find.text('Approve Charge'), findsOneWidget);
     expect(reads(harness, '/api/v1/settings/radarr'), 1);
 
-    // Idle again behind the confirmation, and after it.
+    // Idle again behind the sheet, and after it.
     expect(
       find.descendant(
         of: approve,
@@ -71,7 +71,9 @@ void main() {
       ),
       findsNothing,
     );
-    await tester.tap(find.text('Cancel'));
+    await tester.tap(find.byTooltip('Close'));
+    // The sheet's read of the server's profiles, slow too, ends after it.
+    await tester.pump(const Duration(seconds: 2));
     await harness.settle(tester);
     expect(reads(harness, '/api/v1/settings/radarr'), 1);
 

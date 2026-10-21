@@ -280,6 +280,26 @@ class SeerrApproveTarget {
     );
   }
 
+  /// The same request sent to [server] instead, with [profileId] and
+  /// [rootFolder]: what the approve sheet says once a person changed where
+  /// it goes. [connections] tell a server Cupola also connects to.
+  SeerrApproveTarget sentTo(
+    SeerrArrServer server, {
+    Iterable<ServiceInstance> connections = const [],
+    int? profileId,
+    String? rootFolder,
+  }) => SeerrApproveTarget(
+    arr: arr,
+    is4k: is4k,
+    serversRead: true,
+    server: server,
+    connection: server.connectionIn(
+      connections.where((connection) => connection.service == arr),
+    ),
+    profileId: profileId,
+    rootFolder: rootFolder,
+  );
+
   /// Radarr for a movie, Sonarr for a series.
   final ServiceKey arr;
   final bool is4k;

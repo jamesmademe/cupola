@@ -83,7 +83,7 @@ void main() {
     await tester.ensureVisible(approve);
     await tester.tap(approve);
     await harness.settle(tester);
-    expect(find.text('Approve this request?'), findsOneWidget);
+    expect(find.text('Approve Charge'), findsOneWidget);
     await tester.tap(find.widgetWithText(FilledButton, 'Approve request'));
     await harness.settle(tester);
 

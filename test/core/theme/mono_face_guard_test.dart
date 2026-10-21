@@ -253,6 +253,14 @@ const _monoUses = <({String file, int uses, String prints})>[
         'returns it',
   ),
   (
+    file:
+        'lib/features/discover/presentation/widgets/approve_request_sheet.dart',
+    uses: 1,
+    prints:
+        'the root folder an approved request goes to: a path, exactly as '
+        'Seerr returns it',
+  ),
+  (
     file: 'lib/core/widgets/file_info_section.dart',
     uses: 2,
     prints:

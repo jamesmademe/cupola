@@ -16,10 +16,13 @@ ServiceKey seerrArrFor(SeerrRequest request) =>
     request.type == 'tv' ? ServiceKey.sonarr : ServiceKey.radarr;
 
 /// What the approve confirmation could read in its budget: the request, when
-/// it was known or arrived, and where it goes, when the request is known.
+/// it was known or arrived, where it goes, when the request is known, and
+/// Seerr's servers for its kind, when they arrived: the ones it may be sent
+/// to instead.
 typedef SeerrApproveRead = ({
   SeerrRequest? request,
   SeerrApproveTarget? target,
+  List<SeerrArrServer>? servers,
 });
 
 /// Where approving the request [requestId] on the Seerr [instanceId] sends
@@ -64,7 +67,9 @@ Future<SeerrApproveRead> readSeerrApproveTarget(
   }
 
   final readRequest = known;
-  if (readRequest == null) return (request: null, target: null);
+  if (readRequest == null) {
+    return (request: null, target: null, servers: null);
+  }
   final arr = seerrArrFor(readRequest);
   return (
     request: readRequest,
@@ -73,5 +78,6 @@ Future<SeerrApproveRead> readSeerrApproveTarget(
       servers: servers,
       connections: settings.configuredInstancesOf(arr),
     ),
+    servers: servers,
   );
 }

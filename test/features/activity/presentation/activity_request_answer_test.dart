@@ -121,7 +121,7 @@ void main() {
 
       await tester.tap(find.byTooltip('Approve Charge'));
       await harness.settle(tester);
-      expect(find.text('Approve this request?'), findsOneWidget);
+      expect(find.text('Approve Charge'), findsOneWidget);
       await tester.tap(find.widgetWithText(FilledButton, 'Approve request'));
       await harness.settle(tester);
 

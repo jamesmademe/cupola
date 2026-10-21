@@ -874,7 +874,7 @@ void main() {
 
     await tester.tap(find.widgetWithText(FilledButton, 'Approve'));
     await _answer(tester);
-    expect(find.text('Approve this request?'), findsOneWidget);
+    expect(find.text('Approve Charge'), findsOneWidget);
     await tester.tap(find.text('Approve request'));
     await _answer(tester);
     final approve = harness.network

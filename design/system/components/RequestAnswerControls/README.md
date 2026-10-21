@@ -6,7 +6,8 @@ went through, the pair gives way to what happened.
 
 Rendered from `lib/features/requests/presentation/widgets/request_answer_controls.dart` (`RequestAnswerControls`), its
 write path `lib/features/activity/presentation/widgets/activity_actions.dart` (`ActivityActions.approveRequest`,
-`declineRequest`, `requestAnswersInFlightProvider`) and its outcome `lib/features/home/data/answered_requests.dart`
+`declineRequest`, `requestAnswersInFlightProvider`), the approve sheet
+`lib/features/discover/presentation/widgets/approve_request_sheet.dart` (`showApproveRequestSheet`) and its outcome `lib/features/home/data/answered_requests.dart`
 (`answeredRequestsProvider`), by `test/design_catalog/request_answer_controls_catalog_test.dart`.
 
 ## Where it is drawn
@@ -40,8 +41,14 @@ makes `displayStatus` read Available, and the request would lose the only answer
 
 Every answer goes through `ActivityActions`, so every place asks the same question.
 
-- **Approve** reads where the request goes, then asks: `Approve this request?` · `Charge goes to Radarr and starts
-  downloading.` (`Radarr 4K` once there are two; a server Cupola has no connection to says so in a second sentence) ·
+- **Approve** reads where the request goes, then opens a sheet on it (`lib/features/discover/presentation/widgets/
+  approve_request_sheet.dart`): `Approve Charge` · `Anna asked · Standard`; the server (pills when Seerr has another of
+  the request's copy, a row otherwise), `Quality profile` and `Root folder` (with its free space) as rows that open the
+  value sheet; `Charge goes to Radarr and starts downloading.` (`Radarr 4K` once there are two; a server Cupola has no
+  connection to says so in a second sentence) · `Approve request`. Another server brings its own profile and folder. A
+  choice other than the one the sheet opened on is written first (`PUT /api/v1/request/{id}`), then approved; the
+  same choice writes nothing. A series request carrying no seasons only shows: Seerr edits a series with them. When the
+  server could not be read in the budget, the old question stands: `Approve this request?` · the same sentence ·
   `Approve request`. Then `Request approved`.
 - **Decline** asks, neutrally: `Decline this request?` · `Charge will not be downloaded. The request stays on record as
   declined.` · `Decline request`. Then `Request declined`. Never red: red means unreachable and nothing else.

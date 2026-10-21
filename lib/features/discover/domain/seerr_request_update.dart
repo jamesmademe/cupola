@@ -81,15 +81,3 @@ Map<String, dynamic> seerrRequestUpdateBody(
     'tags': ?tags,
   };
 }
-
-/// Whether the change asks Seerr for anything the request does not already
-/// carry. With none, approving needs no edit first.
-bool seerrRequestChanges(
-  SeerrRequest request, {
-  SeerrArrServer? server,
-  int? profileId,
-  String? rootFolder,
-}) =>
-    (server != null && server.id != request.serverId) ||
-    (profileId != null && profileId != request.profileId) ||
-    (rootFolder != null && rootFolder != request.rootFolder);

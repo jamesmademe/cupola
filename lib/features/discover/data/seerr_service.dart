@@ -827,6 +827,14 @@ class SeerrService {
     );
   }
 
+  /// Changes where a waiting request goes before it is approved: [body] is
+  /// `seerrRequestUpdateBody`'s, which carries every field the request keeps.
+  Future<void> updateRequest(int requestId, Map<String, dynamic> body) async {
+    await _guardConflict(
+      () => _client.put('/api/v1/request/$requestId', data: body),
+    );
+  }
+
   /// Declines a request, leaving the media untouched.
   Future<void> declineRequest(int requestId) async {
     await _guardConflict(
