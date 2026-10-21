@@ -241,9 +241,23 @@ class MediaEpisodesGraphPanel extends ConsumerWidget {
   }
 }
 
-/// The graph open: the best episode (it opens), every episode's score a
-/// season to a column, the scale, and what the votes say.
-class MediaEpisodesGraphSheet extends ConsumerWidget {
+/// What a cell says aloud: `Season 2 episode 6, 8.9 from 31 votes`, with
+/// `few votes` when TMDB has too few to trust.
+String _cellLabelOf(MediaEpisodeFacts episode) {
+  final vote = episode.voteAverage;
+  final where = 'Season ${episode.season} episode ${episode.number}';
+  if (vote == null) return '$where, no votes yet';
+  return [
+    '$where, ${vote.toStringAsFixed(1)} from '
+        '${countLabel(episode.voteCount, 'vote')}',
+    if (episode.voteCount < MediaEpisodesGraph.fewVotes) 'few votes',
+  ].join(', ');
+}
+
+/// The graph open: the chosen episode (the best until a cell is tapped; it
+/// opens), every episode's score a season to a column, the scale, and what
+/// the votes say.
+class MediaEpisodesGraphSheet extends ConsumerStatefulWidget {
   const MediaEpisodesGraphSheet({
     super.key,
     required this.connectionId,
@@ -265,13 +279,23 @@ class MediaEpisodesGraphSheet extends ConsumerWidget {
   final void Function(int season, int number) onOpenEpisode;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MediaEpisodesGraphSheet> createState() =>
+      _MediaEpisodesGraphSheetState();
+}
+
+class _MediaEpisodesGraphSheetState
+    extends ConsumerState<MediaEpisodesGraphSheet> {
+  /// The tapped cell, or none: then the best episode is the chosen one.
+  ({int season, int number})? _picked;
+
+  @override
+  Widget build(BuildContext context) {
     final room = CupolaRoom.of(context);
     final graph = watchEpisodesGraph(
       ref,
-      connectionId: connectionId,
-      tvId: tvId,
-      seasons: seasonNumbers,
+      connectionId: widget.connectionId,
+      tvId: widget.tvId,
+      seasons: widget.seasonNumbers,
     );
     if (graph == null) {
       return const Padding(
@@ -279,13 +303,32 @@ class MediaEpisodesGraphSheet extends ConsumerWidget {
         child: ShimmerPlaceholder(height: 320),
       );
     }
+    final light = widget.light;
     final best = graph.best.first;
-    final bestState = [
-      for (final season in seasons)
+    bool same(MediaEpisodeFacts a, MediaEpisodeFacts b) =>
+        a.season == b.season && a.number == b.number;
+    final chosen =
+        [
+          for (final season in graph.seasons)
+            for (final episode in season.episodes)
+              if (_picked case (
+                :final season,
+                :final number,
+              ) when episode.season == season && episode.number == number)
+                episode,
+        ].firstOrNull ??
+        best;
+    final isBest = same(chosen, best);
+    // The page's word for the chosen episode; none when the series' server
+    // does not list it, and then there is no page to open.
+    final chosenState = [
+      for (final season in widget.seasons)
         for (final episode in season.episodes)
-          if (episode.season == best.season && episode.number == best.number)
+          if (episode.season == chosen.season &&
+              episode.number == chosen.number)
             episode.state,
     ].firstOrNull;
+    final chosenVote = chosen.voteAverage;
     final stronger = graph.stronger;
     final rows = graph.seasons
         .map((season) => season.episodes.length)
@@ -298,62 +341,84 @@ class MediaEpisodesGraphSheet extends ConsumerWidget {
       ({int number, double? average, List<MediaEpisodeFacts> episodes}) season,
     ) => Column(
       children: [
-        SizedBox(
-          height: 28,
-          child: Center(
-            child: Text(
-              [
-                formatSeasonCode(season.number),
-                if (season.average case final average?)
-                  average.toStringAsFixed(1),
-              ].join(dotSeparator),
-              style: AppType.meta
-                  .weight(FontWeight.w600)
-                  .copyWith(color: room.inkSecondary),
+        ExcludeSemantics(
+          child: SizedBox(
+            height: 28,
+            child: Center(
+              child: Text(
+                [
+                  formatSeasonCode(season.number),
+                  if (season.average case final average?)
+                    average.toStringAsFixed(1),
+                ].join(dotSeparator),
+                style: AppType.meta
+                    .weight(FontWeight.w600)
+                    .copyWith(color: room.inkSecondary),
+              ),
             ),
           ),
         ),
         for (var index = 0; index < rows; index++)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.s),
-            child: SizedBox(
-              height: 36,
-              child: index < season.episodes.length
-                  ? _Cell(
-                      episode: season.episodes[index],
-                      light: light,
-                      radius: AppRadius.thumb,
-                      labelled: true,
-                      best: season.episodes[index] == best,
-                    )
-                  : null,
-            ),
-          ),
+          if (index < season.episodes.length)
+            // The gap below a cell is part of its target, so a finger gets
+            // the whole 44.
+            PressableScale(
+              onTap: () => setState(
+                () => _picked = (
+                  season: season.number,
+                  number: season.episodes[index].number,
+                ),
+              ),
+              semanticLabel: _cellLabelOf(season.episodes[index]),
+              semanticSelected: same(season.episodes[index], chosen),
+              excludeChildSemantics: true,
+              haptic: false,
+              ringRadius: const BorderRadius.all(
+                Radius.circular(AppRadius.thumb),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.s),
+                child: SizedBox(
+                  height: _cellHeight,
+                  child: _Cell(
+                    episode: season.episodes[index],
+                    light: light,
+                    radius: AppRadius.thumb,
+                    labelled: true,
+                    ringed: same(season.episodes[index], chosen),
+                  ),
+                ),
+              ),
+            )
+          else
+            const SizedBox(height: _cellHeight + AppSpacing.s),
       ],
     );
 
     final grid = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          width: 36,
-          child: Column(
-            children: [
-              const SizedBox(height: 28),
-              for (var index = 0; index < rows; index++)
-                SizedBox(
-                  height: 36 + AppSpacing.s,
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      formatEpisodeOrdinal(index + 1),
-                      style: AppType.meta
-                          .weight(FontWeight.w400)
-                          .copyWith(color: room.inkTertiary),
+        ExcludeSemantics(
+          child: SizedBox(
+            width: 36,
+            child: Column(
+              children: [
+                const SizedBox(height: 28),
+                for (var index = 0; index < rows; index++)
+                  SizedBox(
+                    height: _cellHeight + AppSpacing.s,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        formatEpisodeOrdinal(index + 1),
+                        style: AppType.meta
+                            .weight(FontWeight.w400)
+                            .copyWith(color: room.inkTertiary),
+                      ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
         if (graph.seasons.length <= 3)
@@ -382,58 +447,75 @@ class MediaEpisodesGraphSheet extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        PressableScale(
-          onTap: () => onOpenEpisode(best.season, best.number),
-          semanticLabel: [
-            'Best, ${formatEpisodeCode(best.season, best.number)}',
-            ?best.name,
-            best.voteAverage!.toStringAsFixed(1),
-            countLabel(best.voteCount, 'vote'),
-            ?bestState,
-          ].join('. '),
-          excludeChildSemantics: true,
-          child: Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: BoxDecoration(
-              color: room.door,
-              borderRadius: BorderRadius.circular(AppRadius.door),
-              border: Border.all(color: room.hair),
-            ),
-            child: Row(
-              children: [
-                Text(
-                  best.voteAverage!.toStringAsFixed(1),
-                  style: AppType.figure.copyWith(color: room.ink),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        [
-                          formatEpisodeCode(best.season, best.number),
-                          ?best.name,
-                        ].join(dotSeparator),
-                        style: AppType.row.copyWith(color: room.ink),
-                      ),
-                      Text(
-                        [
-                          countLabel(best.voteCount, 'vote'),
-                          ?bestState,
-                        ].join(dotSeparator),
-                        style: secondary,
-                      ),
-                    ],
+        // Spoken again whenever a cell changes it, so a tap is heard.
+        Semantics(
+          liveRegion: true,
+          child: PressableScale(
+            onTap: chosenState == null
+                ? null
+                : () => widget.onOpenEpisode(chosen.season, chosen.number),
+            semanticLabel: [
+              [
+                if (isBest) 'Best',
+                formatEpisodeCode(chosen.season, chosen.number),
+              ].join(', '),
+              ?chosen.name,
+              if (chosenVote != null) ...[
+                chosenVote.toStringAsFixed(1),
+                countLabel(chosen.voteCount, 'vote'),
+              ] else
+                'No votes yet',
+              ?chosenState,
+            ].join('. '),
+            semanticHint: chosenState == null ? null : 'Opens the episode',
+            excludeChildSemantics: true,
+            child: Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: room.door,
+                borderRadius: BorderRadius.circular(AppRadius.door),
+                border: Border.all(color: room.hair),
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    chosenVote?.toStringAsFixed(1) ?? '—',
+                    style: AppType.figure.copyWith(color: room.ink),
                   ),
-                ),
-                Icon(Icons.chevron_right_rounded, color: room.inkSecondary),
-              ],
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          [
+                            formatEpisodeCode(chosen.season, chosen.number),
+                            ?chosen.name,
+                          ].join(dotSeparator),
+                          style: AppType.row.copyWith(color: room.ink),
+                        ),
+                        Text(
+                          [
+                            if (chosenVote != null)
+                              countLabel(chosen.voteCount, 'vote')
+                            else
+                              'No votes yet',
+                            ?chosenState,
+                          ].join(dotSeparator),
+                          style: secondary,
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (chosenState != null)
+                    Icon(Icons.chevron_right_rounded, color: room.inkSecondary),
+                ],
+              ),
             ),
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
-        ExcludeSemantics(child: grid),
+        grid,
         const SizedBox(height: AppSpacing.md),
         ExcludeSemantics(
           child: Row(
@@ -560,6 +642,9 @@ Color _fillOf(CupolaRoom room, TitleLight? light, int step) {
   return Color.lerp(room.raised, hue, t)!;
 }
 
+/// A cell's height in the open graph: with the gap below it, a 44 target.
+const double _cellHeight = 44 - AppSpacing.s;
+
 /// One episode's cell: its score's step of the scale, dashed when few have
 /// voted, dotted and empty when nobody has.
 class _Cell extends StatelessWidget {
@@ -568,36 +653,52 @@ class _Cell extends StatelessWidget {
     required this.light,
     required this.radius,
     this.labelled = false,
-    this.best = false,
+    this.ringed = false,
   });
 
   final MediaEpisodeFacts episode;
   final TitleLight? light;
   final double radius;
   final bool labelled;
-  final bool best;
+
+  /// The chosen episode's cell, ringed.
+  final bool ringed;
 
   @override
   Widget build(BuildContext context) {
     final room = CupolaRoom.of(context);
     final vote = episode.voteAverage;
-    if (vote == null) {
-      return CustomPaint(
-        painter: _DashedBorder(
-          color: room.inkTertiary,
-          radius: radius,
-          dash: 2,
-        ),
-        child: labelled
-            ? Center(
-                child: Text(
-                  '—',
-                  style: AppType.meta.copyWith(color: room.inkTertiary),
-                ),
-              )
-            : null,
-      );
-    }
+    final cell = vote == null
+        ? CustomPaint(
+            painter: _DashedBorder(
+              color: room.inkTertiary,
+              radius: radius,
+              dash: 2,
+            ),
+            child: labelled
+                ? Center(
+                    child: Text(
+                      '—',
+                      style: AppType.meta.copyWith(color: room.inkTertiary),
+                    ),
+                  )
+                : null,
+          )
+        : _scored(room, vote);
+    if (!ringed) return cell;
+    // The chosen one, ringed in the room's ink, so the ring shows on the
+    // lightest step too.
+    return Container(
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius + 3),
+        border: Border.all(color: room.ink, width: 2),
+      ),
+      child: cell,
+    );
+  }
+
+  Widget _scored(CupolaRoom room, double vote) {
     final fill = _fillOf(room, light, MediaEpisodesGraph.stepOf(vote));
     // The ink that reads best on the fill, by contrast ratio: the room's
     // ink or the ink's own.
@@ -605,7 +706,7 @@ class _Cell extends StatelessWidget {
         ? room.ink
         : room.onInk;
     final few = episode.voteCount < MediaEpisodesGraph.fewVotes;
-    final cell = CustomPaint(
+    return CustomPaint(
       foregroundPainter: few
           ? _DashedBorder(color: onFill, radius: radius, dash: 4)
           : null,
@@ -622,17 +723,6 @@ class _Cell extends StatelessWidget {
               )
             : null,
       ),
-    );
-    if (!best) return cell;
-    // The best, ringed in the ink a step away from its fill, so the ring
-    // shows on the lightest step too.
-    return Container(
-      padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(radius + 3),
-        border: Border.all(color: room.ink, width: 2),
-      ),
-      child: cell,
     );
   }
 }
