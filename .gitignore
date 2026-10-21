@@ -1,6 +1,7 @@
 # Miscellaneous
 .*
 !.github/
+!.gitleaks.toml
 
 # Flutter/Dart/Pub related
 **/doc/api/

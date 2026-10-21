@@ -1,0 +1,11 @@
+# Test fixtures carry synthetic values that look like credentials: `test-key`,
+# 8-character placeholder keys, Plex `ratingKey`s and pair fixture keys. They
+# are not secrets, and the suite is offline by design.
+#
+# The allowlist is deliberately limited to `test/`: a real key in `lib/`, in a
+# script or in a workflow must still fail the scan.
+[allowlist]
+description = "Synthetic values in test fixtures"
+paths = [
+  '''test/.*''',
+]
