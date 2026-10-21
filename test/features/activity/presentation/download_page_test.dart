@@ -152,7 +152,7 @@ void main() {
     expect(_onPage(find.text('Sprite Fright')), findsOneWidget);
     expect(
       _onPage(
-        find.text('2021\u00A0· out on digital today\u00A0· Anna asked for it'),
+        find.text('2024\u00A0· out on digital today\u00A0· Anna asked for it'),
       ),
       findsOneWidget,
     );

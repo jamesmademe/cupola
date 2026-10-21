@@ -209,9 +209,9 @@ qBittorrent keeps a negative DNS answer for a tracker in its process, and a
 golden snapshot can carry a `Host not found` from the first start; the control
 plane reannounces, and restarts the seeder if the answer is still stale.
 
-Not in L5: the local NNTP server and the full Usenet and torrent queue states.
-The lot's acceptance, a search with rejection reasons and a grab that completes,
-passes; the states are L6.
+Not in L5: the local NNTP server and the full Usenet states. The lot's
+acceptance, a search with rejection reasons and a grab that completes, passes;
+the torrent states are in L6.
 
 ## A manual import slice
 
@@ -252,6 +252,51 @@ queue item; the manual import wizard is the flow that lets a person name the
 movie. And the review scan reports files the service already holds, so an
 imported file changes from `Needs match` to `Imported` instead of disappearing.
 The journey asserts those real states.
+
+## The arr libraries
+
+The seed materialises the world as a library rather than a handful of rows:
+40 films, 9 series, 8 artists and 6 authors. Radarr creates the films from the
+ids in `world.json` and asks `RefreshMovie` for the artwork in the background;
+Sonarr looks up the nine real TVDB series and refreshes their episodes; Lidarr
+adds each artist and its first album; Readarr's authors and books are written
+straight into its database with the container stopped (`readarr_seed.py`),
+because its metadata host is gone.
+
+Bazarr runs with `general.use_embedded_subs: false`, so the embedded provider
+actually extracts instead of treating the track as already present. The
+`bazarr-embedded` scenario adds an English track to a film, syncs Bazarr, and
+checks the extracted `.en.srt` and the history row; a film with only a French
+track stays wanted. Its teardown restores the file, the subtitle list and the
+setting.
+
+## The queue states
+
+Four scenarios put the app's qBittorrent in the states the flow catalogue asks
+for (D-16, and the journeys G-28 and G-29 that read them). Each one is
+idempotent, verifies the raw state through `/api/v2/torrents/info`, and puts the
+lab back: the seeder's file whole and rechecked, the client's torrent and bytes
+gone, the queueing preferences as they were.
+
+| Scenario | State | How it is made |
+|---|---|---|
+| `queue-stuck-47` | `stalledDL` at 47% | The seeder's file is backed up, truncated to 40 of 86 pieces and rechecked, so the only peer can serve exactly that much. |
+| `queue-paused` | `stoppedDL` mid-transfer | Added stopped, given a 64 KiB/s limit, started, and stopped once some bytes are in. |
+| `queue-missing-files` | `missingFiles` | The release is fetched whole, its folder moved away, and the app's qBittorrent restarted. |
+| `queue-queued` | `queuedDL` | `max_active_downloads=1` with the seed's magnet holding the slot. |
+
+~~~bash
+python3 test/e2e/testlab/testlab.py scenario apply queue-stuck-47
+python3 test/e2e/testlab/testlab.py scenario teardown queue-stuck-47
+~~~
+
+Two things the lab cannot do quickly. `missingFiles` is only decided when
+qBittorrent starts, so that scenario restarts the app's qBittorrent container
+(the arrs and the indexers are never touched). And `stalledDL` reads
+`Downloading` until 30 minutes pass with nothing arriving: the app's `Stuck`
+(`download_client_faults.dart`, `stuckAfter`) is a word for a long quiet, so a
+journey that wants `Stuck at 47%` must either wait it out or read the state the
+app maps, not the word.
 
 ## Published endpoint map
 
@@ -337,11 +382,13 @@ needs. Radarr receives Big Buck Bunny with no file, the qBittorrent client and
 the local Torznab indexer; Sonarr and Lidarr receive one resolved record each;
 Jellyfin and Plex receive a `Films` library; qBittorrent and Transmission
 receive paused zero-data magnets; SABnzbd and NZBGet receive a disposable NZB;
-and NPM receives `cupola.test`. Readarr gets its Books root but no author
-because metadata lookup would depend on the public internet. Prowlarr owns
+and NPM receives `cupola.test`. Readarr gets its Books root and six
+authors with their books, written into its database with the container stopped
+because its metadata host is gone. Prowlarr owns
 the Torznab indexer and syncs it to the four arrs; the direct Radarr indexer the
-import slice used is removed once the sync has run. Bazarr is configured for the two arr services but has no subtitle
-records without a real media/subtitle provider. These are capability limits of
+import slice used is removed once the sync has run. Bazarr is configured for the two arr services and extracts the English
+subtitles embedded in the forge files; a file without the language stays
+wanted. These are capability limits of
 the lab, not claims that the corresponding Cupola screens are unreachable.
 
 The seed reads `state/world.json`, which `dart run tool/testlab/export_world.dart`

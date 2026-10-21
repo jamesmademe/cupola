@@ -502,7 +502,7 @@ void main() {
       final harness = await _pump(tester, Profiles.p1, ActivityTab.all);
 
       expect(find.byType(ActivityHistoryRow), findsNWidgets(3));
-      final spring = tester.getTopLeft(find.text('Spring (2019).mkv')).dy;
+      final spring = tester.getTopLeft(find.text('Spring (2014).mkv')).dy;
       final coffee = tester.getTopLeft(find.text('Coffee Run (2020).mkv')).dy;
       final cosmos = tester
           .getTopLeft(find.text('Cosmos.Laundromat.S02E03.1080p.WEB'))
@@ -981,7 +981,7 @@ void main() {
       // Nothing of the other views.
       expect(find.byType(ActivityDownloadRow), findsNothing);
       // Each import with the file it became.
-      expect(find.text('Spring (2019).mkv'), findsOneWidget);
+      expect(find.text('Spring (2014).mkv'), findsOneWidget);
       expect(find.text('Tears of Steel (2012).mkv'), findsOneWidget);
       expect(
         find.text(
@@ -1085,7 +1085,7 @@ void main() {
 
       // Under the title, for the queue, and under the week.
       expect(find.text('Not in the total: Radarr 4K'), findsNWidgets(2));
-      expect(find.text('Spring (2019).mkv'), findsNothing);
+      expect(find.text('Spring (2014).mkv'), findsNothing);
       expect(find.text('Coffee Run (2020).mkv'), findsOneWidget);
 
       await harness.unmount(tester);

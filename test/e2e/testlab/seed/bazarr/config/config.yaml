@@ -4,6 +4,7 @@ auth:
   type: null
   username: ''
 general:
+  use_embedded_subs: false
   api_key: test-key
   ip: 0.0.0.0
   no_update: true

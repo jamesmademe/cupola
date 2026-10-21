@@ -18,6 +18,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import time
 import urllib.error
 import urllib.parse
@@ -86,7 +87,7 @@ def json_request(
     payload: Any | None = None,
     headers: dict[str, str] | None = None,
     opener: urllib.request.OpenerDirector | None = None,
-    timeout: float = 8,
+    timeout: float = 30,
 ) -> Any:
     _, body = request(
         url,
@@ -503,6 +504,197 @@ def seed_seeder(env: dict[str, str], state_dir: Path) -> None:
         opener=opener,
     )
     print("[testlab-seed] qBittorrent seeder: release added")
+
+
+def seed_radarr_library(world: dict[str, Any]) -> None:
+    """The 40 films of the world, without a TMDB lookup per film.
+
+    The lookup was the slow part (TMDB rate limits made forty films take
+    minutes). The world already carries the ids, so the record is created
+    from it and `RefreshMovie` fetches the artwork in the background.
+    """
+    headers = api_headers("v3")
+    base = f"{ROOT}:7878/api/v3"
+    movies = list_value(json_request(f"{base}/movie", headers=headers))
+    existing = {movie.get("tmdbId") for movie in movies}
+    films = [
+        title
+        for title in world.get("titles", [])
+        if isinstance(title, dict) and not title.get("isSeries")
+    ]
+    added: list[int] = []
+    for index, title in enumerate(films):
+        tmdb_id = title.get("tmdbId")
+        if not tmdb_id or tmdb_id in existing:
+            continue
+        try:
+            payload = {
+                "title": title.get("title"),
+                "originalTitle": title.get("title"),
+                "tmdbId": tmdb_id,
+                "year": title.get("year"),
+                "qualityProfileId": 1,
+                "rootFolderPath": "/media/movies",
+                "monitored": index % 4 != 0,
+                "minimumAvailability": "released",
+                "addOptions": {"searchForMovie": False},
+                "images": [],
+                "tags": [],
+            }
+            if title.get("imdbId"):
+                payload["imdbId"] = title["imdbId"]
+            created = json_request(
+                f"{base}/movie", method="POST", payload=payload, headers=headers
+            )
+            if isinstance(created, dict) and created.get("id"):
+                added.append(created["id"])
+        except Exception as error:
+            warn(f"Radarr {title.get('title')}", error)
+    if added:
+        json_request(
+            f"{base}/command",
+            method="POST",
+            payload={"name": "RefreshMovie", "movieIds": added},
+            headers=headers,
+        )
+    print(f"[testlab-seed] Radarr library: {len(added)} films added")
+
+
+def seed_sonarr_library(world: dict[str, Any]) -> None:
+    """The nine real series of the world, with their episodes."""
+    headers = api_headers("v3")
+    base = f"{ROOT}:8989/api/v3"
+    series = list_value(json_request(f"{base}/series", headers=headers))
+    existing = {item.get("tvdbId") for item in series}
+    fake_tvdb = {300001, 300002, 300003}
+    added = 0
+    for title in world.get("titles", []):
+        if not isinstance(title, dict) or not title.get("isSeries"):
+            continue
+        tvdb_id = title.get("tvdbId")
+        if not tvdb_id or tvdb_id in fake_tvdb or tvdb_id in existing:
+            continue
+        try:
+            lookup = json_request(
+                f"{base}/series/lookup?term=tvdb%3A{tvdb_id}", headers=headers
+            )
+            result = next(
+                (
+                    item
+                    for item in list_value(lookup)
+                    if item.get("tvdbId") == tvdb_id
+                ),
+                None,
+            )
+            if result is None:
+                warn(f"Sonarr lookup {title.get('title')}", RuntimeError("no result"))
+                continue
+            payload = dict(result)
+            payload.update(
+                {
+                    "qualityProfileId": 1,
+                    "rootFolderPath": "/media/series",
+                    "monitored": True,
+                    "seasonFolder": True,
+                    "addOptions": {"searchForMissingEpisodes": False},
+                    "seasons": [],
+                    "images": [],
+                }
+            )
+            created = json_request(
+                f"{base}/series", method="POST", payload=payload, headers=headers
+            )
+            added += 1
+            if isinstance(created, dict) and created.get("id"):
+                json_request(
+                    f"{base}/command",
+                    method="POST",
+                    payload={"name": "RefreshSeries", "seriesId": created["id"]},
+                    headers=headers,
+                )
+                time.sleep(3)
+        except Exception as error:
+            warn(f"Sonarr {title.get('title')}", error)
+    print(f"[testlab-seed] Sonarr library: {added} series added")
+
+
+def seed_lidarr_library(world: dict[str, Any]) -> None:
+    """The eight artists of the world, each with its first album."""
+    headers = api_headers("v1")
+    base = f"{ROOT}:8686/api/v1"
+    artists = list_value(json_request(f"{base}/artist", headers=headers))
+    existing = {
+        (item.get("artistName") or "").lower() for item in artists
+    }
+    added = 0
+    for artist in world.get("artists", []):
+        if not isinstance(artist, dict):
+            continue
+        name = str(artist.get("name") or "")
+        if not name or name.lower() in existing:
+            continue
+        try:
+            lookup = json_request(
+                f"{base}/artist/lookup?term={urllib.parse.quote(name)}",
+                headers=headers,
+            )
+            result = next(
+                (
+                    item
+                    for item in list_value(lookup)
+                    if (item.get("artistName") or "").lower() == name.lower()
+                ),
+                None,
+            )
+            if result is None:
+                warn(f"Lidarr lookup {name}", RuntimeError("no result"))
+                continue
+            payload = dict(result)
+            payload.update(
+                {
+                    "qualityProfileId": 1,
+                    "metadataProfileId": 1,
+                    "rootFolderPath": "/media/music",
+                    "monitored": True,
+                    "addOptions": {"searchForMissingAlbums": False},
+                    "images": [],
+                }
+            )
+            created = json_request(
+                f"{base}/artist", method="POST", payload=payload, headers=headers
+            )
+            added += 1
+            if not isinstance(created, dict) or not created.get("id"):
+                continue
+            albums = artist.get("albums") or []
+            if not albums:
+                continue
+            album_title = str(albums[0].get("title") or "")
+            if not album_title:
+                continue
+            album_lookup = json_request(
+                f"{base}/album/lookup?term={urllib.parse.quote(name + ' ' + album_title)}",
+                headers=headers,
+            )
+            album = next(
+                (
+                    item
+                    for item in list_value(album_lookup)
+                    if (item.get("title") or "").lower() == album_title.lower()
+                ),
+                None,
+            )
+            if album is None:
+                continue
+            album["artistId"] = created["id"]
+            album["monitored"] = True
+            album["addOptions"] = {"searchForNewAlbum": False}
+            json_request(
+                f"{base}/album", method="POST", payload=album, headers=headers
+            )
+        except Exception as error:
+            warn(f"Lidarr {name}", error)
+    print(f"[testlab-seed] Lidarr library: {added} artists added")
 
 
 def seed_prowlarr() -> None:
@@ -1253,6 +1445,18 @@ def main() -> None:
     world = load_world(args.state_dir)
     seed_arrs(world)
     ensure_radarr_s1(env, world)
+    seed_radarr_library(world)
+    seed_sonarr_library(world)
+    seed_lidarr_library(world)
+    subprocess.run(
+        [
+            sys.executable,
+            str(Path(__file__).resolve().parent / "readarr_seed.py"),
+            "--state-dir",
+            str(args.state_dir),
+        ],
+        check=True,
+    )
     seed_prowlarr()
     seed_seeder(env, args.state_dir)
     seed_seerr(env)

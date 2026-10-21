@@ -158,8 +158,8 @@ abstract final class WorldTitles {
   static const spriteFright = WorldTitle(
     key: 'spriteFright',
     title: 'Sprite Fright',
-    year: 2021,
-    tmdbId: 811631,
+    year: 2024,
+    tmdbId: 891761,
     imdbId: 'tt14852882',
   );
   static const elephantsDream = WorldTitle(
@@ -194,19 +194,19 @@ abstract final class WorldTitles {
     key: 'coffeeRun',
     title: 'Coffee Run',
     year: 2020,
-    tmdbId: 730154,
+    tmdbId: 908389,
   );
   static const spring = WorldTitle(
     key: 'spring',
     title: 'Spring',
-    year: 2019,
-    tmdbId: 593910,
+    year: 2014,
+    tmdbId: 241855,
   );
   static const charge = WorldTitle(
     key: 'charge',
     title: 'Charge',
     year: 2022,
-    tmdbId: 1011985,
+    tmdbId: 1062079,
   );
   static const metropolis = WorldTitle(
     key: 'metropolis',
