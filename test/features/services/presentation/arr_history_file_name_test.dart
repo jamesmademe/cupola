@@ -78,7 +78,7 @@ void main() {
           (entry) => entry.title == 'Spring',
         );
         expect(spring.outcome, ArrImportOutcome.imported);
-        expect(spring.fileName, 'Spring (2019).mkv');
+        expect(spring.fileName, 'Spring (${WorldTitles.spring.year}).mkv');
       },
     );
 
