@@ -127,20 +127,23 @@ class ServiceHomeScreen extends StatelessWidget {
           right: 0,
           // Glass band instead of an opaque surface strip, so the hosted
           // screen's ambient gradient reads continuously behind the app bar
-          // and scrolling content frosts underneath.
-          child: GlassSurface(
-            child: SafeArea(
-              bottom: false,
-              child: _ServiceDashboardAppBar(
-                service: service,
-                trailingAction: trailingAction,
-              ),
-            ),
-          ),
+          // and scrolling content frosts underneath. Whole to its edge when
+          // the tab row's glass carries on under it.
+          child: tabsFor(service) == null
+              ? GlassSurface(child: _band())
+              : GlassSurface.continued(child: _band()),
         ),
       ],
     );
   }
+
+  Widget _band() => SafeArea(
+    bottom: false,
+    child: _ServiceDashboardAppBar(
+      service: service,
+      trailingAction: trailingAction,
+    ),
+  );
 }
 
 class _ServiceDashboardAppBar extends ConsumerWidget {

@@ -572,8 +572,12 @@ class _SlabLightState extends State<SlabLight>
   }
 
   void _want() {
-    final art = widget.art;
-    final wanted = art == null ? null : (art, Theme.of(context).brightness);
+    // The night room only. By day the canvas keeps every slab white paper: a
+    // picture baked for the day room and laid at half strength greyed it, and
+    // a dark poster (Clayface) turned Coming up into a grey slab (21/10).
+    final brightness = Theme.of(context).brightness;
+    final art = brightness == Brightness.dark ? widget.art : null;
+    final wanted = art == null ? null : (art, brightness);
     if (wanted == _wanted) return;
     _wanted = wanted;
     if (wanted == null) {

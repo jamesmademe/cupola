@@ -24,16 +24,33 @@ import 'package:cupola/core/widgets/page_title.dart';
 class GlassSurface extends StatelessWidget {
   final Widget? child;
 
-  const GlassSurface({super.key, this.child});
+  /// How much of the room is painted at each of [_stops], top to bottom.
+  final List<double> _alphas;
+  final List<double> _stops;
+
+  /// A glass that ends on the page: nearly whole down to its last quarter,
+  /// then gone. What scrolls under a title or a tab row is covered, never read
+  /// through it; the old veil (0.6 at the top, a third of that at the title's
+  /// line) let a queue's names print across `qBittorrent` (21/10). Since the
+  /// glass is the room painted again, its weight cannot be seen at rest.
+  const GlassSurface({super.key, this.child})
+    : _alphas = const [0.97, 0.92, 0],
+      _stops = const [0, 0.72, 1];
+
+  /// A glass with another glass under it (a service room's band over its tab
+  /// row): whole to its lower edge, so the two read as one and no seam of
+  /// bare page opens between the title and the tabs.
+  const GlassSurface.continued({super.key, this.child})
+    : _alphas = const [0.97, 0.97],
+      _stops = const [0, 1];
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     // The room painted again under the bar, not its flat ground: at rest the
     // glass cannot be seen and a lit room keeps its light up to the top edge.
     final veil = _ScrimPaint(
-      alphas: isDark ? const [0.55, 0.28, 0] : const [0.6, 0.32, 0],
-      stops: const [0, 0.55, 1],
+      alphas: _alphas,
+      stops: _stops,
       room: AmbientRoom.maybeOf(context),
       roomBox: context.getElementForInheritedWidgetOfExactType<AmbientRoom>(),
       ground: CupolaRoom.of(context).ground,

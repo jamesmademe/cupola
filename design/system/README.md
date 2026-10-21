@@ -152,7 +152,7 @@ Each service keeps its accent in the registry (`ServiceKey.brandAccent`, `color.
 
 **Plates** (`plate-*`) stand in for missing artwork and are dark in both themes; artwork is not palette, and a missing poster is not a white hole on paper (*the plate palette is the same in both themes*, `theme_light_contrast_test.dart`).
 
-**The day room** keeps every rule: paper for the floor, white slabs with a hairline and a soft shadow, the title still lighting the room at about a third of the strength, tones darkened until they pass on paper, shadows in ink rather than black.
+**The day room** keeps every rule: paper for the floor, white slabs with a hairline and a soft shadow, the title still lighting the room at about a third of the strength but never a slab (a slab's light, `SlabLight`, is the night room's: by day the slab stays white paper), tones darkened until they pass on paper, shadows in ink rather than black.
 
 ## Typography
 

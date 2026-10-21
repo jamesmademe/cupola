@@ -858,7 +858,13 @@ class _EmptyReleases extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       controller: scrollController,
-      physics: const AlwaysScrollableScrollPhysics(),
+      // Clamped: a drag that grows the sheet to its top hands what is left of
+      // it to this list, and a bouncing list shorter than the sheet kept that
+      // overscroll, its glyph scrolled away and its title under the count
+      // line (21/10). Still always scrollable, so the drag reaches the sheet.
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: ClampingScrollPhysics(),
+      ),
       padding: const EdgeInsets.all(AppSpacing.xl),
       children: [
         hasActiveFilters
