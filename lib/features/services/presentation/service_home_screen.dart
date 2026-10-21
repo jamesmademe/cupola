@@ -213,7 +213,10 @@ class _ServiceDashboardAppBar extends ConsumerWidget {
               IconButton(
                 // The secondary ink, like every glyph on the band: the band is
                 // monochrome, the service is named beside it.
-                icon: Icon(Symbols.vital_signs, color: room.inkSecondary),
+                icon: Icon(
+                  Symbols.vital_signs_rounded,
+                  color: room.inkSecondary,
+                ),
                 onPressed: () => context.go('/activity'),
                 tooltip: 'Activity',
               ),

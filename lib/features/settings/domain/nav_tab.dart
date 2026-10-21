@@ -40,8 +40,13 @@ enum NavTab {
   activity(
     label: 'Activity',
     // The pulse line, as drawn in the brand's tab bar: Material Symbols has
-    // it, Material Icons does not.
-    icon: Symbols.vital_signs,
+    // it, Material Icons does not. Rounded in both states: a release build
+    // tree-shakes each Symbols family into a subset, and the Outlined subset
+    // draws nothing on iOS (the tab read as an empty column in TestFlight
+    // 202610211159). The state cue is the pill and the label's weight here,
+    // so the pair has nothing to tell apart; every phone tab's glyph is a
+    // line in the same ink.
+    icon: Symbols.vital_signs_rounded,
     selectedIcon: Symbols.vital_signs_rounded,
     railIcon: Symbols.vital_signs_rounded,
     routePath: '/activity',

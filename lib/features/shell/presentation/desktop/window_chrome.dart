@@ -175,7 +175,7 @@ class WindowChrome extends ConsumerWidget {
                   if (!compact && !beside)
                     _StripButton(
                       key: const ValueKey('strip-sidebar'),
-                      icon: Symbols.dock_to_left,
+                      icon: Symbols.dock_to_left_rounded,
                       label: folded ? 'Show the sidebar' : 'Hide the sidebar',
                       shortcut: ShellShortcuts.sidebar,
                       intent: const ToggleSidebarIntent(),
@@ -767,7 +767,7 @@ class SidebarHead extends StatelessWidget {
             const Spacer(),
             _StripButton(
               key: const ValueKey('strip-sidebar'),
-              icon: Symbols.dock_to_left,
+              icon: Symbols.dock_to_left_rounded,
               label: 'Hide the sidebar',
               shortcut: ShellShortcuts.sidebar,
               intent: const ToggleSidebarIntent(),

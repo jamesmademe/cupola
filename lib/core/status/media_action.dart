@@ -412,7 +412,7 @@ MediaPrimaryAction _queueOrNothing(
   return MediaPrimaryAction(
     kind: MediaActionKind.openQueue,
     label: 'Open queue',
-    icon: Symbols.vital_signs,
+    icon: Symbols.vital_signs_rounded,
     consequence: consequence,
   );
 }
