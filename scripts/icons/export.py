@@ -44,7 +44,10 @@ from pathlib import Path
 
 from PIL import Image
 
-RESVG = ["npx", "--yes", "@resvg/resvg-js-cli"]
+# `--no-install` keeps the version in scripts/icons/package-lock.json. A bare
+# `npx --yes` resolves `latest` at execution time and runs its postinstall with
+# the maintainer's privileges, in the repository root.
+RESVG = ["npx", "--no-install", "@resvg/resvg-js-cli"]
 
 # Below this the cloud passes only add mud, so the simplified twin takes over.
 SIMPLE_BELOW = 64

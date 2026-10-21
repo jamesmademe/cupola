@@ -328,6 +328,18 @@ class _PairReceiveScreenState extends ConsumerState<PairReceiveScreen> {
           children: [for (final c in plan.toAdd) _ConnectionRow(c)],
         ),
       ],
+      // A pin is a trust decision, so the origins it applies to are named
+      // rather than counted: the person can see that this copy also trusts a
+      // certificate, and exactly where.
+      if (plan.certificates.isNotEmpty) ...[
+        const SizedBox(height: AppSpacing.lg),
+        SettingsGroupCard(
+          children: [
+            for (final origin in plan.certificates.keys)
+              _CertificateRow(origin),
+          ],
+        ),
+      ],
       for (final note in notes) ...[
         const SizedBox(height: AppSpacing.md),
         _Note(note),
@@ -369,6 +381,26 @@ class _PairReceiveScreenState extends ConsumerState<PairReceiveScreen> {
 
 /// One connection that arrives: its mark, its title (the label when it has
 /// one), and where it is, dim. Read as one sentence.
+/// One origin whose certificate the copy would trust.
+class _CertificateRow extends StatelessWidget {
+  const _CertificateRow(this.origin);
+
+  final String origin;
+
+  @override
+  Widget build(BuildContext context) {
+    final shown = origin.startsWith('https://')
+        ? origin.substring('https://'.length)
+        : origin;
+    return SettingsCard.grouped(
+      leading: const Icon(Icons.verified_user_outlined),
+      title: 'Trusted certificate',
+      subtitle: shown,
+      semanticLabel: 'Trusted certificate for $shown',
+    );
+  }
+}
+
 class _ConnectionRow extends StatelessWidget {
   const _ConnectionRow(this.connection);
 

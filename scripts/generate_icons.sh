@@ -71,6 +71,10 @@ if [[ $MODE == write ]]; then
     printf 'error: --write requires Pillow (pip install Pillow)\n' >&2; exit 1; }
   command -v npx >/dev/null 2>&1 || {
     printf 'error: --write requires node/npx for the SVG rasteriser\n' >&2; exit 1; }
+  [[ -d "$ROOT_DIR/scripts/icons/node_modules" ]] || {
+    printf 'error: install the pinned rasteriser first:\n  npm ci --prefix scripts/icons\n' >&2
+    exit 1
+  }
 
   BUILD_DIR="$ROOT_DIR/scripts/icons/.build"
   rm -rf "$BUILD_DIR"

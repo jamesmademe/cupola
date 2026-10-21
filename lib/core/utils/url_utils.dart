@@ -404,6 +404,12 @@ class UrlUtils {
     if (uri == null || uri.host.isEmpty) return null;
 
     final port = uri.hasPort ? uri.port : 443;
-    return 'https://${uri.host}:$port';
+    // `Uri.host` strips the brackets from an IPv6 literal, so building the
+    // string by hand turned `[::1]:8443` into `https://::1:8443`, which no
+    // parser can turn back into a host and port. `Uri.authority` puts the
+    // brackets back; the port is appended explicitly because `Uri` omits
+    // `:443`, and every stored pin is keyed with it.
+    final authority = Uri(scheme: 'https', host: uri.host).authority;
+    return 'https://$authority:$port';
   }
 }

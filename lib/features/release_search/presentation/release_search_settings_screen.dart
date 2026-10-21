@@ -104,6 +104,13 @@ class _ReleaseSearchSettingsScreenState
     final cleartextServices = _servicesWithReach(
       ReleaseSearchReach.whileOpenCleartext,
     );
+    // The one limit that is not a downgrade: these connections still run in
+    // the background, because the setting is the person's choice, and the
+    // screen says what that choice can cost.
+    final gatewayServices = ServiceKey.values
+        .where(SearchHeadroomCard.appliesTo)
+        .where((s) => ref.watch(releaseSearchLensGatewayProvider(s)))
+        .toList(growable: false);
 
     // The platform question comes first here for the same reason it comes first
     // in `reachFor`: where there is no background path, a switch would invent a
@@ -228,6 +235,7 @@ class _ReleaseSearchSettingsScreenState
             _LimitsCard(
               pinnedServices: pinnedServices,
               cleartextServices: cleartextServices,
+              gatewayServices: gatewayServices,
               backgroundActive:
                   canRunInBackground && settings.backgroundEnabled,
             ),
@@ -521,6 +529,7 @@ class _LimitsCard extends StatelessWidget {
   const _LimitsCard({
     required this.pinnedServices,
     required this.cleartextServices,
+    required this.gatewayServices,
     required this.backgroundActive,
   });
 
@@ -541,6 +550,11 @@ class _LimitsCard extends StatelessWidget {
   /// are reached over cleartext `http://`: see [ReleaseSearchReach]. Kept
   /// apart from [pinnedServices] because the fix is a different one.
   final List<ServiceKey> cleartextServices;
+
+  /// Release-search services reached through a gateway. These still run in the
+  /// background, because the switch is the person's choice; the line below
+  /// says what that choice can cost and how to take it back.
+  final List<ServiceKey> gatewayServices;
 
   /// Only stated where it is true, rather than hedged everywhere, and only
   /// while the ceiling can actually be hit.
@@ -606,6 +620,16 @@ class _LimitsCard extends StatelessWidget {
               'background search cannot refuse a redirect, and over http '
               'anyone on the network can inject one to collect the API key. '
               'Switching to https restores it.',
+            ),
+          if (backgroundActive && gatewayServices.isNotEmpty)
+            line(
+              '${gatewayServices.map((s) => s.title).join(', ')} '
+              '${gatewayServices.length == 1 ? 'is' : 'are'} behind a gateway. '
+              'A search that survives leaving the app cannot refuse a redirect, '
+              'so the gateway credential can be sent to another host. Turning '
+              'Background search off above keeps '
+              '${gatewayServices.length == 1 ? 'that search' : 'those searches'} '
+              'in the app.',
             ),
           line(
             'Nothing is searched on a server of ours, there is not one. Your '

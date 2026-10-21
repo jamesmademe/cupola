@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
+import 'package:cupola/core/platform/secure_clipboard.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/a11y_announce.dart';
@@ -87,17 +88,53 @@ class _PairOfferScreenState extends ConsumerState<PairOfferScreen> {
         ),
       );
 
+  /// How long the pairing link stays on the clipboard.
+  ///
+  /// The link carries the key that opens every secret on this device, so it
+  /// gets the same treatment as an API key: the host's sensitive-clip flags
+  /// where they exist, a timed read-back clear everywhere, and never a plain
+  /// clip just because a platform has no flag.
+  static const Duration _clipboardLifetime = Duration(seconds: 45);
+
   Future<void> _copy(PairLink link) async {
-    await Clipboard.setData(ClipboardData(text: link.toLink()));
+    final text = link.toLink();
+    final hardened = await SecureClipboard.copySecret(
+      text,
+      expiresIn: _clipboardLifetime,
+    );
+    if (!hardened) {
+      await Clipboard.setData(ClipboardData(text: text));
+    }
+    // Scheduled before the mounted check: leaving the screen is not a reason
+    // to leave the key on the clipboard.
+    unawaited(_expireCopiedLink(text));
     if (!mounted) return;
     setState(() => _copied = true);
     // The label changes under a focused button, which a screen reader does
     // not read by itself.
-    announce(context, 'Link copied');
+    announce(
+      context,
+      'Link copied, the clipboard is cleared in '
+      '${_clipboardLifetime.inSeconds} seconds',
+    );
     _copiedTimer?.cancel();
     _copiedTimer = Timer(PairOfferScreen.copiedFor, () {
       if (mounted) setState(() => _copied = false);
     });
+  }
+
+  /// Takes the link back off the clipboard once it has had time to be pasted.
+  ///
+  /// The read-back only spares a clipboard it can see holding something else,
+  /// so a person who copied over the link is not punished for it. An
+  /// unreadable clipboard is cleared, not spared, for the same reason as the
+  /// API-key copy: Android answers null to an app without window focus, and
+  /// that is exactly the case this timer exists for.
+  static Future<void> _expireCopiedLink(String link) async {
+    await Future<void>.delayed(_clipboardLifetime);
+    final current = await Clipboard.getData(Clipboard.kTextPlain);
+    if (current != null && current.text != link) return;
+    await Clipboard.setData(const ClipboardData(text: ''));
   }
 
   void _done() {

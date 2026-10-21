@@ -90,6 +90,7 @@ class _RequesterSignInScreenState extends ConsumerState<RequesterSignInScreen> {
     connection: _draft,
     certificateProber: widget.certificateProber,
     invitedPin: (url) => _invite?.pinFor(url),
+    inviteIsSealed: _inviteIsSealed,
     consent:
         ({
           required origin,
@@ -117,6 +118,11 @@ class _RequesterSignInScreenState extends ConsumerState<RequesterSignInScreen> {
   /// own: changed by hand, it is an address like any other.
   SeerrInvite? _invite;
 
+  /// Whether [_invite] came from the sealed package shown in person. A link
+  /// invite is not signed, so its pin is a hint for the dialog, never a
+  /// reason to skip it.
+  bool _inviteIsSealed = false;
+
   static const _brokenInvite = "This invite isn't whole. Ask for a new one.";
 
   @override
@@ -131,6 +137,7 @@ class _RequesterSignInScreenState extends ConsumerState<RequesterSignInScreen> {
         _problemOf = '';
         _addressProblem = _brokenInvite;
       } else {
+        _inviteIsSealed = held != null;
         _take(invite);
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;

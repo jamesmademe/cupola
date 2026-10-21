@@ -74,6 +74,7 @@ final class PairPackage {
     required this.from,
     required this.connections,
     this.certificates = const {},
+    this.orphanCertificates = 0,
     this.unknown = 0,
     this.invite = false,
   });
@@ -145,7 +146,19 @@ final class PairPackage {
 
   /// The pins of their origins, as `SettingsModel.trustedCertificates` keeps
   /// them: origin to lowercase SHA-256.
+  ///
+  /// Only origins of a connection in [connections] are kept. A pin is a trust
+  /// assertion, not payload: a package that names an origin it does not carry
+  /// is trying to pre-trust a server the receiver has not chosen, so those
+  /// entries are dropped and counted in [orphanCertificates].
   final Map<String, String> certificates;
+
+  /// Certificates the package carried for origins no connection uses.
+  ///
+  /// Read rather than trusted. A package from this build never has any; a
+  /// package from a hand-made one can, and the receiving screen says how many
+  /// were left out so the omission is not silent.
+  final int orphanCertificates;
 
   /// Connections of a service this build does not know, left out on reading:
   /// a newer Cupola on the sending device.
@@ -262,12 +275,38 @@ final class PairPackage {
       final bool b => b,
       _ => throw const FormatException('invite'),
     };
-    if (invite) _checkInvite(connections, unknown, certificates);
+
+    // A pin is a trust decision, so it can only be carried for a connection
+    // the package also carries. Anything else would let a package pre-trust an
+    // origin the receiver has not chosen yet. An invite keeps its stricter
+    // shape: a pin outside its one Seerr refuses the whole package rather than
+    // being quietly dropped.
+    final allowedOrigins = <String>{
+      for (final connection in connections)
+        for (final address in connection.addresses)
+          ?UrlUtils.certOrigin(address),
+    };
+    final scoped = <String, String>{};
+    var orphanCertificates = 0;
+    for (final MapEntry(:key, :value) in certificates.entries) {
+      if (allowedOrigins.contains(key)) {
+        scoped[key] = value;
+      } else {
+        orphanCertificates++;
+      }
+    }
+    if (invite) {
+      if (orphanCertificates > 0) {
+        throw const FormatException('an invite pins only its own addresses');
+      }
+      _checkInvite(connections, unknown, scoped);
+    }
 
     return PairPackage(
       from: from,
       connections: connections,
-      certificates: certificates,
+      certificates: scoped,
+      orphanCertificates: orphanCertificates,
       unknown: unknown,
       invite: invite,
     );
@@ -433,6 +472,13 @@ final class PairPackage {
         !(uri.scheme == 'http' || uri.scheme == 'https') ||
         uri.host.isEmpty) {
       throw const FormatException('address');
+    }
+    // A connection form strips `user:password@` on save (`UrlUtils`), and the
+    // pairing package is another way into the same state. A package is not a
+    // credential store: a URL that carries one is refused rather than written
+    // into the plaintext settings beside the connection.
+    if (uri.userInfo.isNotEmpty) {
+      throw const FormatException('address with credentials');
     }
     return text;
   }

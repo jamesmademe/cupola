@@ -26,6 +26,7 @@ final class PairPlan {
     required this.toAdd,
     required this.alreadyHere,
     required this.certificates,
+    required this.orphanCertificates,
     required this.unknown,
     required Map<String, UnreadSecret> sentWithout,
   }) : _sentWithout = sentWithout;
@@ -89,6 +90,7 @@ final class PairPlan {
         for (final MapEntry(:key, :value) in package.certificates.entries)
           if ((settings.trustedCertificates[key] ?? '').isEmpty) key: value,
       },
+      orphanCertificates: package.orphanCertificates,
       unknown: package.unknown,
       sentWithout: sentWithout,
     );
@@ -109,6 +111,10 @@ final class PairPlan {
   /// The pins Add writes: the package's, for origins this device trusts no
   /// certificate at yet.
   final Map<String, String> certificates;
+
+  /// Certificates the package carried for origins no connection uses, dropped
+  /// on reading ([PairPackage.orphanCertificates]).
+  final int orphanCertificates;
 
   /// Connections of a service this build does not know.
   final int unknown;

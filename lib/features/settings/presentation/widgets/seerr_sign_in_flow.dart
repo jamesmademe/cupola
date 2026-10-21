@@ -82,7 +82,9 @@ bool trustedOnInvite({
   required String? trusted,
   required String? invited,
   required String shown,
-}) => trusted == null && invited != null && invited == shown;
+  bool fromSealedPackage = false,
+}) =>
+    fromSealedPackage && trusted == null && invited != null && invited == shown;
 
 /// Asks the person whether to trust the certificate [probe] found at
 /// [origin]; true when they do. [invitedFingerprint] is the one an invite
@@ -119,17 +121,24 @@ class SeerrSignInFlow extends ChangeNotifier {
     required SeerrCertificateConsent consent,
     CertificateProber certificateProber = probeUntrustedCertificate,
     String? Function(String url)? invitedPin,
+    bool inviteIsSealed = false,
   }) : _ref = ref,
        _connectionOf = connection,
        _consent = consent,
        _certificateProber = certificateProber,
-       _invitedPin = invitedPin;
+       _invitedPin = invitedPin,
+       _inviteIsSealed = inviteIsSealed;
 
   final WidgetRef _ref;
   final ServiceInstance Function() _connectionOf;
   final SeerrCertificateConsent _consent;
   final CertificateProber _certificateProber;
   final String? Function(String url)? _invitedPin;
+
+  /// Whether [invitedPin] came from the sealed package shown in person, rather
+  /// than from a `cupola://invite` link anyone can compose. Only the former may
+  /// skip the certificate dialog: a link is not a signature.
+  final bool _inviteIsSealed;
 
   /// The login of the password form: an email, or a media server's username.
   final login = TextEditingController();
@@ -358,6 +367,7 @@ class SeerrSignInFlow extends ChangeNotifier {
           trusted: previous,
           invited: invited,
           shown: probe.certificate.fingerprint,
+          fromSealedPackage: _inviteIsSealed,
         ) ||
         await _consent(
           origin: UrlUtils.certOrigin(url) ?? url,

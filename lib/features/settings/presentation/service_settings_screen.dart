@@ -2065,17 +2065,27 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
 
   /// The Access row of one address: folded while it has nothing to send, as
   /// most addresses at home have.
-  Widget _buildAccessRow({required bool away}) => KeyedSubtree(
-    key: away ? _awayAccessKey : _accessKey,
-    child: ConnectionAccessFields(
-      controller: away ? _awayAccess : _access,
-      foldWhenNone: true,
-      changeLabel: away ? 'Change access away' : 'Change access at home',
-      onMoveToCredential: (value) {
-        if (value.isNotEmpty) _apiKeyController.text = value;
-      },
-    ),
-  );
+  Widget _buildAccessRow({required bool away}) {
+    final access = away ? _awayAccess : _access;
+    return KeyedSubtree(
+      key: away ? _awayAccessKey : _accessKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ConnectionAccessFields(
+            controller: access,
+            foldWhenNone: true,
+            changeLabel: away ? 'Change access away' : 'Change access at home',
+            onMoveToCredential: (value) {
+              if (value.isNotEmpty) _apiKeyController.text = value;
+            },
+          ),
+          if (jellyfinKeyTravelsInQuery(service, access.access))
+            const _JellyfinQueryKeyWarning(),
+        ],
+      ),
+    );
+  }
 
   /// A standing confirmation that this address's origin has a trusted
   /// self-signed certificate, with a way to revoke it: the address at home's,
@@ -2709,6 +2719,44 @@ class _HeaderStatus extends StatelessWidget {
                   .weight(FontWeight.w600)
                   .copyWith(color: color),
               overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The cost of letting a proxy own `Authorization` on a Jellyfin connection.
+///
+/// Jellyfin's own sign-in uses that header; when the Access row already sends
+/// one, the client has no header left and puts the API key in the query string.
+/// That works, and every proxy access log records it, so the form says so where
+/// the choice is made rather than after the fact.
+class _JellyfinQueryKeyWarning extends StatelessWidget {
+  const _JellyfinQueryKeyWarning();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = theme.colorScheme.onSurfaceVariant;
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Icon(Icons.info_outline_rounded, size: 14, color: color),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Expanded(
+            child: Text(
+              'This proxy signs in with Authorization, so Jellyfin sends its '
+              'API key in the request address (ApiKey=). Use a proxy credential '
+              'on a header of its own, such as CF-Access-Client-Id and '
+              'CF-Access-Client-Secret, to keep the key out of proxy logs.',
+              style: theme.textTheme.bodySmall?.copyWith(color: color),
             ),
           ),
         ],

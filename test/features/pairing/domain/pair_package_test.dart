@@ -147,10 +147,27 @@ void main() {
       expect(package.unknown, 1);
     });
 
+    test('drops a certificate no connection carries, and counts it', () {
+      final changed = json();
+      (changed['certificates']! as Map)['https://old.example.net:443'] =
+          _strayPin;
+
+      final package = read(changed);
+
+      expect(
+        package.certificates,
+        isNot(contains('https://old.example.net:443')),
+      );
+      expect(package.orphanCertificates, 1);
+    });
+
     test('refuses what the sending device never writes', () {
       final cases = <String, void Function(Map<String, Object?>)>{
         'an address that is not one': (j) =>
             ((j['connections']! as List).first as Map)['url'] = 'ftp://nas',
+        'an address carrying credentials': (j) =>
+            ((j['connections']! as List).first as Map)['url'] =
+                'https://user:pass@nas.local',
         'a pin that is not a fingerprint': (j) =>
             (j['certificates']! as Map)['https://radarr.home.arpa:443'] = 'x',
         'a pin under a raw address': (j) =>

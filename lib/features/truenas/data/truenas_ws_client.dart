@@ -8,6 +8,7 @@ import 'package:cupola/core/capability/permission_refusal.dart';
 import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/idle_close.dart';
+import 'package:cupola/core/network/no_redirect_upgrade_client.dart';
 import 'package:cupola/core/network/upgrade_gateway.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/url_utils.dart';
@@ -113,39 +114,6 @@ class TrueNasInsecureTransportException extends TrueNasException
 
   @override
   String get failureDetail => message;
-}
-
-/// The pinned [HttpClient] as `WebSocket.connect` sees it, refusing to follow
-/// a redirect on the upgrade request.
-///
-/// `dart:io` follows a redirect on the upgrade GET like on any other, carrying
-/// the WebSocket headers along, and whatever answers `101` at the end of the
-/// chain gets the socket. The API key is not in that request: it is the first
-/// frame *after* the upgrade, so the redirect alone leaks nothing; the frame
-/// does. A `Location: http://…` would put `auth.login_with_api_key` on a
-/// cleartext socket after the scheme check had passed, and a `Location` on
-/// another host would hand that host the key outright. The Dio clients refuse
-/// the same thing through `SameOriginRedirectInterceptor`; this is the guard
-/// for the one transport Dio does not carry.
-///
-/// Only [openUrl] is implemented because it is the only member
-/// `WebSocket.connect` calls on its `customClient`. Every loopback test in
-/// `truenas_ws_client_test.dart` dials through this wrapper, so an SDK that
-/// starts calling another member fails there, loudly, and not in the field.
-class _NoRedirectUpgradeClient implements HttpClient {
-  _NoRedirectUpgradeClient(this._inner);
-
-  final HttpClient _inner;
-
-  @override
-  Future<HttpClientRequest> openUrl(String method, Uri url) async =>
-      (await _inner.openUrl(method, url))..followRedirects = false;
-
-  @override
-  void close({bool force = false}) => _inner.close(force: force);
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 /// The exception a JSON-RPC `error` object stands for, from [method].
@@ -295,7 +263,7 @@ class TrueNasWsClient {
   Future<WebSocket> dial(Uri endpoint, HttpClient client) => WebSocket.connect(
     endpoint.toString(),
     headers: accessHeaders,
-    customClient: _NoRedirectUpgradeClient(client),
+    customClient: NoRedirectUpgradeClient(client),
   );
 
   Future<void> _ensureConnected() {

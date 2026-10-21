@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/platform/secure_screen.dart';
 import 'package:cupola/core/widgets/service_tab_bar.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_bar_action.dart';
@@ -3094,7 +3095,10 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
       _section('connections', (state) => const SettingsConnectionsScreen()),
       // The code another device copies this one's connections from: the
       // operator's, since the requester has no connection to hand over.
-      _page('another-device', (state) => const PairOfferScreen()),
+      _page(
+        'another-device',
+        (state) => const SecureScreen(child: PairOfferScreen()),
+      ),
       // Former name of the connections screen, kept so an existing
       // deep link or a shortcut does not dead-end.
       GoRoute(
@@ -3118,16 +3122,18 @@ RouteBase _branchRootFor(NavTab tab) => switch (tab) {
           // the form, not a level of the hierarchy, and threading a segment
           // through would have every nested settings route grow one it never
           // reads.
-          return ServiceSettingsScreen(
-            service: _settingsServiceOf(state)!,
-            instanceId: state.uri.queryParameters['i'],
-            isNew: state.uri.queryParameters['new'] == '1',
-            initialAccess: AccessKind.byName(
-              state.uri.queryParameters['access'],
+          return SecureScreen(
+            child: ServiceSettingsScreen(
+              service: _settingsServiceOf(state)!,
+              instanceId: state.uri.queryParameters['i'],
+              isNew: state.uri.queryParameters['new'] == '1',
+              initialAccess: AccessKind.byName(
+                state.uri.queryParameters['access'],
+              ),
+              focusAway: state.uri.queryParameters['away'] == '1',
+              foundFrom: state.uri.queryParameters['from'],
+              foundName: state.uri.queryParameters['known'],
             ),
-            focusAway: state.uri.queryParameters['away'] == '1',
-            foundFrom: state.uri.queryParameters['from'],
-            foundName: state.uri.queryParameters['known'],
           );
         },
         // A service the app does not know is no service's form. It used to
@@ -3324,7 +3330,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: 'pair',
-            builder: (context, state) => const PairReceiveScreen(),
+            builder: (context, state) =>
+                const SecureScreen(child: PairReceiveScreen()),
           ),
           GoRoute(
             path: 'sign-in',
