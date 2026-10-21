@@ -12,16 +12,16 @@
 #
 #   ensure       make the certificate when it is missing (the default)
 #   fingerprint  ensure, then print the fingerprint on stdout
-#   credentials  ensure, then set CUPOLA_MACLAB_TRUENAS_CERT_FINGERPRINT in the
+#   credentials  ensure, then set CUPOLA_TESTLAB_TRUENAS_CERT_FINGERPRINT in the
 #                lab's credentials.env, leaving every other entry as it is
 #
 # The fingerprint is printed exactly as the app compares it: the SHA-256 of
 # the certificate's DER encoding as 64 lowercase hex digits, without colons.
 #
-# The state directory is CUPOLA_MACLAB_STATE_DIR, or the lab's default under
+# The state directory is CUPOLA_TESTLAB_STATE_DIR, or the lab's default under
 # this checkout. A worktree may name another checkout's lab (the running lab is
 # one per machine), so only the shape of the path is checked: it must sit under
-# a .ai/scratch/zz_maclab directory. Nothing here removes anything.
+# a .ai/scratch/zz_testlab directory. Nothing here removes anything.
 #
 # The certificate and its key never leave that directory and are never
 # committed. The mock reads them for every connection, so a certificate made
@@ -31,7 +31,7 @@ set -euo pipefail
 
 script_dir="$(cd -- "$(dirname -- "$0")" && pwd)"
 repo_root="$(cd -- "$script_dir/../../.." && pwd)"
-state_dir="${CUPOLA_MACLAB_STATE_DIR:-$repo_root/.ai/scratch/zz_maclab/state}"
+state_dir="${CUPOLA_TESTLAB_STATE_DIR:-$repo_root/.ai/scratch/zz_testlab/state}"
 action=ensure
 
 while [[ $# -gt 0 ]]; do
@@ -64,9 +64,9 @@ case "$state_dir" in
     printf 'Refusing a state directory with dot segments: %s\n' "$state_dir" >&2
     exit 2
     ;;
-  */.ai/scratch/zz_maclab/*) ;;
+  */.ai/scratch/zz_testlab/*) ;;
   *)
-    printf 'Refusing a state directory outside a .ai/scratch/zz_maclab: %s\n' "$state_dir" >&2
+    printf 'Refusing a state directory outside a .ai/scratch/zz_testlab: %s\n' "$state_dir" >&2
     exit 2
     ;;
 esac
@@ -148,9 +148,9 @@ case "$action" in
     scratch="$(mktemp "$credentials.XXXXXX")"
     {
       if [[ -f "$credentials" ]]; then
-        grep -v '^CUPOLA_MACLAB_TRUENAS_CERT_FINGERPRINT=' "$credentials" || true
+        grep -v '^CUPOLA_TESTLAB_TRUENAS_CERT_FINGERPRINT=' "$credentials" || true
       fi
-      printf 'CUPOLA_MACLAB_TRUENAS_CERT_FINGERPRINT=%s\n' "$value"
+      printf 'CUPOLA_TESTLAB_TRUENAS_CERT_FINGERPRINT=%s\n' "$value"
     } >"$scratch"
     chmod 600 "$scratch"
     mv "$scratch" "$credentials"

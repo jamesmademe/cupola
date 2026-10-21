@@ -272,7 +272,7 @@ P2-J and P2-P and fails on any service name but Jellyfin and Plex, and on the
 operator's words (queue, indexer, quality profile, Approve).
 
 Checked against Seerr 3.4.1 on Jellyfin 12.1 in the macOS lab
-(`test/e2e/maclab_requester_e2e_test.dart`, see `test/e2e/README.md`): the
+(`test/e2e/testlab_requester_e2e_test.dart`, see `test/e2e/README.md`): the
 validator's 401 for a request with no credential, the four-column user of the
 local sign-in, the session store's expiry 30 days after the last use, and
 Jellyfin's Quick Connect as Seerr relays it (an unapproved `authenticate`

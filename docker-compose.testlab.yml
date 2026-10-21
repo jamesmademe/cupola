@@ -2,17 +2,17 @@
 #
 # The host application talks to 127.0.0.1. Every bind mount and port in this
 # file is disposable and local to the current run. Keep the state directory
-# under .ai/scratch/zz_maclab (or pass CUPOLA_MACLAB_STATE_DIR explicitly).
+# under .ai/scratch/zz_testlab (or pass CUPOLA_TESTLAB_STATE_DIR explicitly).
 #
 # Start the complete lab with:
-#   docker compose -p "${CUPOLA_MACLAB_PROJECT:-cupola-maclab}" \
-#     -f docker-compose.maclab.yml \
+#   docker compose -p "${CUPOLA_TESTLAB_PROJECT:-cupola-testlab}" \
+#     -f docker-compose.testlab.yml \
 #     --profile core --profile downloads --profile media --profile infra \
 #     --profile protocol-mocks up -d --wait
 #
 # The TrueNAS mock serves TLS and needs its self-signed certificate in the state
-# directory first: test/e2e/maclab/bootstrap.sh makes it, or run
-# test/e2e/maclab/truenas_cert.sh on its own.
+# directory first: test/e2e/testlab/bootstrap.sh makes it, or run
+# test/e2e/testlab/truenas_cert.sh on its own.
 services:
   seerr:
     # Seerr v3.4.1, linux/arm64 manifest pinned for a reproducible lab.
@@ -23,7 +23,7 @@ services:
     ports:
       - "127.0.0.1:5055:5055"
     volumes:
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/seerr:/app/config"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/seerr:/app/config"
     healthcheck:
       test: [CMD-SHELL, "wget -q -O /dev/null http://127.0.0.1:5055/api/v1/status || exit 1"]
       interval: 5s
@@ -42,8 +42,8 @@ services:
     ports:
       - "127.0.0.1:7878:7878"
     volumes:
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/radarr:/config"
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/media:/media"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/radarr:/config"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/media:/media"
     healthcheck:
       test: [CMD-SHELL, "curl -fsS -H 'X-Api-Key: test-key' http://127.0.0.1:7878/api/v3/system/status >/dev/null || exit 1"]
       interval: 5s
@@ -59,8 +59,8 @@ services:
     ports:
       - "127.0.0.1:8989:8989"
     volumes:
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/sonarr:/config"
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/media:/media"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/sonarr:/config"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/media:/media"
     healthcheck:
       test: [CMD-SHELL, "curl -fsS -H 'X-Api-Key: test-key' http://127.0.0.1:8989/api/v3/system/status >/dev/null || exit 1"]
       interval: 5s
@@ -76,8 +76,8 @@ services:
     ports:
       - "127.0.0.1:8686:8686"
     volumes:
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/lidarr:/config"
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/media:/media"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/lidarr:/config"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/media:/media"
     healthcheck:
       test: [CMD-SHELL, "curl -fsS -H 'X-Api-Key: test-key' http://127.0.0.1:8686/api/v1/system/status >/dev/null || exit 1"]
       interval: 5s
@@ -93,8 +93,8 @@ services:
     ports:
       - "127.0.0.1:8787:8787"
     volumes:
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/readarr:/config"
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/media:/media"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/readarr:/config"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/media:/media"
     healthcheck:
       test: [CMD-SHELL, "curl -fsS -H 'X-Api-Key: test-key' http://127.0.0.1:8787/api/v1/system/status >/dev/null || exit 1"]
       interval: 5s
@@ -110,7 +110,7 @@ services:
     ports:
       - "127.0.0.1:9696:9696"
     volumes:
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/prowlarr:/config"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/prowlarr:/config"
     healthcheck:
       test: [CMD-SHELL, "curl -fsS -H 'X-Api-Key: test-key' http://127.0.0.1:9696/api/v1/system/status >/dev/null || exit 1"]
       interval: 5s
@@ -126,8 +126,8 @@ services:
     ports:
       - "127.0.0.1:6767:6767"
     volumes:
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/bazarr:/config"
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/media:/media"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/bazarr:/config"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/media:/media"
     healthcheck:
       test: [CMD-SHELL, "curl -fsS -H 'X-API-KEY: test-key' http://127.0.0.1:6767/api/badges >/dev/null || exit 1"]
       interval: 5s
@@ -146,8 +146,8 @@ services:
       # it uses inside the container; SABnzbd uses 8082 below.
       - "127.0.0.1:8080:8080"
     volumes:
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/qbittorrent:/config"
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/downloads:/downloads"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/qbittorrent:/config"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/downloads:/downloads"
     healthcheck:
       test: [CMD-SHELL, "curl -fsS http://127.0.0.1:8080 >/dev/null || exit 1"]
       interval: 5s
@@ -168,8 +168,8 @@ services:
     ports:
       - "127.0.0.1:9091:9091"
     volumes:
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/transmission:/config"
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/downloads:/downloads"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/transmission:/config"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/downloads:/downloads"
     healthcheck:
       test: [CMD-SHELL, "auth=$$(printf '%s:%s' \"$$USER\" \"$$PASS\" | base64); code=$$(curl -sS -o /dev/null -w '%{http_code}' -H \"Authorization: Basic $$auth\" -X POST http://127.0.0.1:9091/transmission/rpc); test \"$$code\" = 200 || test \"$$code\" = 409"]
       interval: 5s
@@ -185,8 +185,8 @@ services:
     ports:
       - "127.0.0.1:8082:8080"
     volumes:
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/sabnzbd:/config"
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/downloads:/downloads"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/sabnzbd:/config"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/downloads:/downloads"
     healthcheck:
       test: [CMD-SHELL, "curl -fsS 'http://127.0.0.1:8080/api?mode=version&output=json&apikey=test-key' >/dev/null || exit 1"]
       interval: 5s
@@ -205,8 +205,8 @@ services:
     ports:
       - "127.0.0.1:6789:6789"
     volumes:
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/nzbget:/config"
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/downloads:/downloads"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/nzbget:/config"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/downloads:/downloads"
     healthcheck:
       test: [CMD-SHELL, "auth=$$(printf '%s:%s' \"$$NZBGET_USER\" \"$$NZBGET_PASS\" | base64); curl -fsS -H \"Authorization: Basic $$auth\" http://127.0.0.1:6789/jsonrpc >/dev/null || exit 1"]
       interval: 5s
@@ -222,8 +222,8 @@ services:
     ports:
       - "127.0.0.1:8096:8096"
     volumes:
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/jellyfin:/config"
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/media:/media:ro"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/jellyfin:/config"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/media:/media:ro"
     healthcheck:
       test: [CMD-SHELL, "curl -fsS http://127.0.0.1:8096/System/Info/Public >/dev/null || exit 1"]
       interval: 5s
@@ -241,8 +241,8 @@ services:
     ports:
       - "127.0.0.1:32400:32400"
     volumes:
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/plex:/config"
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/media:/media:ro"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/plex:/config"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/media:/media:ro"
     healthcheck:
       test: [CMD-SHELL, "curl -fsS http://127.0.0.1:32400/identity >/dev/null || exit 1"]
       interval: 5s
@@ -250,22 +250,45 @@ services:
       retries: 30
       start_period: 30s
 
+  docker-dind:
+    # Docker in Docker, isolated: Dockge gets a daemon of its own and never
+    # OrbStack's socket. Privileged by design; it publishes no port to the host
+    # and only Dockge reaches it, over this compose network.
+    image: docker:dind@sha256:ba3d67c44952ffc448696659a36ef91dd813f03a9c70a2bc0ad1d286d542f4fb
+    profiles: [core, infra]
+    privileged: true
+    environment:
+      DOCKER_TLS_CERTDIR: ""
+    command:
+      - dockerd
+      - --host=tcp://0.0.0.0:2375
+      - --host=unix:///var/run/docker.sock
+      - --tls=false
+    volumes:
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/dind:/var/lib/docker"
+    healthcheck:
+      test: [CMD-SHELL, "docker info >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
   dockge:
     # Dockge 1.5.0.
     image: louislam/dockge@sha256:335c6368b880ecc203236ed89e6e5232e0d6578e8ef5920e4a502390451502bf
     profiles: [core, infra]
     environment:
       DOCKGE_STACKS_DIR: /opt/stacks
+      DOCKER_HOST: tcp://docker-dind:2375
       TZ: ${TZ:-Europe/Rome}
+    depends_on:
+      docker-dind:
+        condition: service_healthy
     ports:
       - "127.0.0.1:5001:5001"
     volumes:
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/dockge:/app/data"
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/stacks:/opt/stacks"
-      # Dockge shells out to Docker to discover stack and service state. Without
-      # the daemon socket it authenticates successfully but its stackList never
-      # becomes available, leaving clients in an endless loading state.
-      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/dockge:/app/data"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/stacks:/opt/stacks"
     healthcheck:
       test: [CMD-SHELL, "node -e \"fetch('http://127.0.0.1:5001').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\""]
       interval: 5s
@@ -285,8 +308,8 @@ services:
       - "127.0.0.1:8088:80"
       - "127.0.0.1:8443:443"
     volumes:
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/npm/data:/data"
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/npm/letsencrypt:/etc/letsencrypt"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/npm/data:/data"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/npm/letsencrypt:/etc/letsencrypt"
     healthcheck:
       test: [CMD-SHELL, "curl -fsS http://127.0.0.1:81/api/ >/dev/null || exit 1"]
       interval: 5s
@@ -296,7 +319,7 @@ services:
 
   truenas-mock:
     build:
-      context: test/e2e/maclab/mock
+      context: test/e2e/testlab/mock
     profiles: [core, infra, protocol-mocks]
     environment:
       MOCK_MODE: truenas
@@ -304,10 +327,10 @@ services:
       MOCK_TLS_CERT: /certs/truenas.crt
       MOCK_TLS_KEY: /certs/truenas.key
     volumes:
-      # The self-signed certificate test/e2e/maclab/truenas_cert.sh makes: the
+      # The self-signed certificate test/e2e/testlab/truenas_cert.sh makes: the
       # app refuses a TrueNAS that is not https://. A directory, not two files,
       # so a certificate made again replaces what the mock reads.
-      - "${CUPOLA_MACLAB_STATE_DIR:-.ai/scratch/zz_maclab/state}/truenas:/certs:ro"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/truenas:/certs:ro"
     ports:
       - "127.0.0.1:8460:8460"
     healthcheck:
@@ -318,7 +341,7 @@ services:
 
   unraid-mock:
     build:
-      context: test/e2e/maclab/mock
+      context: test/e2e/testlab/mock
     profiles: [core, infra, protocol-mocks]
     environment:
       MOCK_MODE: unraid

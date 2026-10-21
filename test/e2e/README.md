@@ -19,7 +19,7 @@ port 8080. Its seed files must not be mounted as writable long-lived state.
 
 ## Full macOS laboratory
 
-docker-compose.maclab.yml and test/e2e/maclab/bootstrap.sh implement the
+docker-compose.testlab.yml and test/e2e/testlab/bootstrap.sh implement the
 disposable lab for a native Flutter process on macOS. Containers run in
 OrbStack; Cupola connects to their loopback-published ports like ordinary
 self-hosted instances.
@@ -36,17 +36,17 @@ The first command must print orbstack. Bootstrap or reset the disposable
 project with:
 
 ~~~bash
-test/e2e/maclab/bootstrap.sh --reset
+test/e2e/testlab/bootstrap.sh --reset
 ~~~
 
 A normal rerun is idempotent:
 
 ~~~bash
-test/e2e/maclab/bootstrap.sh
+test/e2e/testlab/bootstrap.sh
 ~~~
 
 The script pins vendor images by digest, copies tracked seeds into
-.ai/scratch/zz_maclab/state, waits for all healthchecks, bootstraps Jellyfin,
+.ai/scratch/zz_testlab/state, waits for all healthchecks, bootstraps Jellyfin,
 Seerr and the first Dockge account, and writes generated credentials to a
 chmod-600 file. `--reset` includes every Compose profile, so it really stops
 and recreates this disposable project rather than silently leaving profiled
@@ -54,8 +54,8 @@ containers running. Run the full Dart transport harness without putting
 credentials in the command line:
 
 ~~~bash
-export CUPOLA_MACLAB_CREDENTIALS_FILE="$PWD/.ai/scratch/zz_maclab/state/credentials.env"
-flutter test test/e2e/maclab_transport_e2e_test.dart \
+export CUPOLA_TESTLAB_CREDENTIALS_FILE="$PWD/.ai/scratch/zz_testlab/state/credentials.env"
+flutter test test/e2e/testlab_transport_e2e_test.dart \
   --tags e2e --run-skipped
 ~~~
 
@@ -70,7 +70,7 @@ claimed, the bootstrap writes the server's own token (from its
 `Preferences.xml`) to the credentials file and the probe runs.
 
 The TrueNAS checks go over TLS with the fingerprint the bootstrap recorded in
-`CUPOLA_MACLAB_TRUENAS_CERT_FINGERPRINT`, at the address a person saves,
+`CUPOLA_TESTLAB_TRUENAS_CERT_FINGERPRINT`, at the address a person saves,
 `https://127.0.0.1:8460`. The wrong key is refused as a key (classified
 `unauthorized`, so a failure of the certificate can never pass for it). A pin
 one digit off, and no pin at all, are each refused as an untrusted certificate
@@ -108,22 +108,24 @@ Unclaimed, Plex is a transport/shape fixture: claiming it ties the lab to a
 Plex account, which is the owner's choice and never the bootstrap's. Claimed,
 its token stays in the chmod-600 credentials file like every other secret.
 
-Dockge deliberately has no Docker socket mounted. Login, Socket.IO session and
-read-only stack discovery are safe to test. Terminal and stack-mutating
-capabilities require a separately approved disposable Docker socket/proxy and
-are not silently granted by this compose file.
+Dockge runs against its own `docker:dind` sidecar, privileged and isolated on
+the compose network: the OrbStack socket is never mounted into a container.
+Login, Socket.IO session, stack discovery and the stack actions Dockge offers
+are safe to test; the dind daemon holds only the lab's stacks and publishes no
+port to the host. The Terminal tab reads Dockge's combined action log, not an
+interactive shell.
 
 The TrueNAS fixture speaks TLS and nothing else, because Cupola refuses to dial
 a TrueNAS address that is not https:// (TrueNAS 25.04 and later revoke an API key
 that arrives in cleartext). Its certificate is self-signed, made once by
-test/e2e/maclab/truenas_cert.sh (bootstrap.sh runs it before it starts the
+test/e2e/testlab/truenas_cert.sh (bootstrap.sh runs it before it starts the
 containers) with `localhost` and `127.0.0.1` as names, and kept with the rest of
 the lab's disposable state in `state/truenas/`; it is never committed. Cupola
 trusts it the way a person does, by its fingerprint: the SHA-256 of the
 certificate's DER encoding as 64 lowercase hex digits, without colons, the form
 `certFingerprint` compares and `SettingsModel.trustedCertificates` stores under
 the origin `https://127.0.0.1:8460`. The bootstrap writes it to the credentials
-file as `CUPOLA_MACLAB_TRUENAS_CERT_FINGERPRINT`. Added by hand in the app at
+file as `CUPOLA_TESTLAB_TRUENAS_CERT_FINGERPRINT`. Added by hand in the app at
 `https://127.0.0.1:8460`, "Test connection" reads the certificate and offers to
 trust it; the fingerprint it shows is that one, written in colon-separated
 uppercase pairs. A lab started before this
@@ -131,9 +133,9 @@ existed gets the certificate, the credentials entry and a mock that serves it
 without a reset (the other credentials are left as they are):
 
 ~~~bash
-export CUPOLA_MACLAB_STATE_DIR="$PWD/.ai/scratch/zz_maclab/state"
-test/e2e/maclab/truenas_cert.sh credentials
-docker compose -p cupola-maclab -f docker-compose.maclab.yml \
+export CUPOLA_TESTLAB_STATE_DIR="$PWD/.ai/scratch/zz_testlab/state"
+test/e2e/testlab/truenas_cert.sh credentials
+docker compose -p cupola-testlab -f docker-compose.testlab.yml \
   --profile core up -d --build --wait truenas-mock
 ~~~
 
@@ -160,7 +162,7 @@ claims that the corresponding Cupola screens are unreachable.
 
 ## A household member's own Seerr account
 
-test/e2e/maclab_requester_e2e_test.dart signs in to the lab's Seerr (3.4.1,
+test/e2e/testlab_requester_e2e_test.dart signs in to the lab's Seerr (3.4.1,
 set up on the lab's Jellyfin 12.1) the way a household member does, through
 Cupola's own code: `SeerrAuthService` for the sign-in, `seerrClientFor` for
 the session cookie and the CSRF token, `SeerrAccounts` and the providers for
@@ -176,12 +178,12 @@ in the chmod-600 credentials file next to the other lab secrets. The bootstrap
 starts the lab and seeds them; a rerun only sets the new passwords:
 
 ~~~bash
-test/e2e/maclab/bootstrap.sh
-flutter test --tags e2e --run-skipped test/e2e/maclab_requester_e2e_test.dart
+test/e2e/testlab/bootstrap.sh
+flutter test --tags e2e --run-skipped test/e2e/testlab_requester_e2e_test.dart
 ~~~
 
-The test reads `CUPOLA_MACLAB_CREDENTIALS_FILE` like the other lab tests, and
-falls back to .ai/scratch/zz_maclab/state/credentials.env under the working
+The test reads `CUPOLA_TESTLAB_CREDENTIALS_FILE` like the other lab tests, and
+falls back to .ai/scratch/zz_testlab/state/credentials.env under the working
 directory. Asking for a movie needs the lab's Seerr to reach TMDB, so that
 step needs the internet. What it proves:
 
@@ -207,7 +209,7 @@ step needs the internet. What it proves:
 - with Seerr's CSRF protection on, writes as the key and as an account, a
   sign-in, a Quick Connect code and a sign-out all pass the guard. The test
   turns the setting on, restarts the Seerr container (`docker restart
-  cupola-maclab-seerr-1`, or `$CUPOLA_MACLAB_PROJECT-seerr-1`), and puts it
+  cupola-testlab-seerr-1`, or `$CUPOLA_TESTLAB_PROJECT-seerr-1`), and puts it
   back the same way when it ends, failed or not.
 
 Never read Seerr's database while its container runs: it writes in SQLite's
@@ -227,8 +229,8 @@ by hand on a macOS build of Cupola:
    at http://127.0.0.1:32400/web.
 2. Start a second Seerr on its own port and state directory, from the image
    the Compose file pins:
-   `docker run -d --name cupola-maclab-seerr-plex -p 127.0.0.1:5056:5055
-   -v "$PWD/.ai/scratch/zz_maclab/state/seerr-plex:/app/config" <image>`.
+   `docker run -d --name cupola-testlab-seerr-plex -p 127.0.0.1:5056:5055
+   -v "$PWD/.ai/scratch/zz_testlab/state/seerr-plex:/app/config" <image>`.
 3. Open http://127.0.0.1:5056 in a browser, sign in with Plex, choose the
    lab's Plex server and finish the setup. To sign in as a household member
    rather than the owner, share the server with a second plex.tv account.
@@ -269,7 +271,7 @@ Docker endpoint cannot be mistaken for a UI placeholder:
    history, Prowlarr application/indexer reads, download queues, Bazarr
    wanted/history, Jellyfin/Plex library/session views, TrueNAS queries,
    Unraid GraphQL reads, and NPM account/proxy/audit reads. Dockge mutations
-   are conditional on the separately isolated socket profile.
+   run against its isolated `docker:dind` sidecar, never OrbStack's daemon.
 7. Write pass: run the safe mutations below. Every specimen is disposable;
    qBittorrent and Transmission are deleted, SABnzbd is restored paused,
    NZBGet is deleted from either queue or history, and the NPM flag is restored.
@@ -290,7 +292,7 @@ flutter test integration_test/cupola_native_smoke_test.dart -d macos
 ~~~
 
 The reusable full matrix is
-integration_test/maclab_ui_matrix_test.dart. It injects the disposable lab settings
+integration_test/testlab_ui_matrix_test.dart. It injects the disposable lab settings
 inside a test-only ProviderScope, then visits 160 route roots: every ServiceTab
 root, every TrueNAS section root, the global/settings roots, and deterministic
 detail/editor specimens for Seerr, the arr clients, qBittorrent, Bazarr,
@@ -298,7 +300,7 @@ Prowlarr, Dockge, Jellyfin, Plex and TrueNAS. Each route is drawn at all three
 sizes and both themes. The test also checks for a Flutter exception immediately
 after every viewport resize, before the next route is opened; this keeps an
 overflow attributed to the screen that caused it. It writes PNG evidence to
-.ai/scratch/zz_maclab/screenshots:
+.ai/scratch/zz_testlab/screenshots:
 
 The native runner is sandboxed away from the checkout. Use `flutter drive` with
 the host-side driver below: the app process renders the PNG in memory and the
@@ -308,21 +310,21 @@ process environment without putting them in the command line or source control:
 
 ~~~bash
 set -a
-. "$CUPOLA_MACLAB_CREDENTIALS_FILE"
+. "$CUPOLA_TESTLAB_CREDENTIALS_FILE"
 set +a
-export CUPOLA_MACLAB_DRIVER_SCREENSHOTS=true
-export CUPOLA_MACLAB_SCREENSHOT_DIR="$PWD/.ai/scratch/zz_maclab/screenshots"
+export CUPOLA_TESTLAB_DRIVER_SCREENSHOTS=true
+export CUPOLA_TESTLAB_SCREENSHOT_DIR="$PWD/.ai/scratch/zz_testlab/screenshots"
 flutter drive -d macos \
-  --target=integration_test/maclab_ui_matrix_test.dart \
-  --driver=test_driver/maclab_ui_matrix_driver.dart \
-  --dart-define=CUPOLA_MACLAB_SCREENSHOTS=true \
-  --dart-define=CUPOLA_MACLAB_DRIVER_SCREENSHOTS=true
+  --target=integration_test/testlab_ui_matrix_test.dart \
+  --driver=test_driver/testlab_ui_matrix_driver.dart \
+  --dart-define=CUPOLA_TESTLAB_SCREENSHOTS=true \
+  --dart-define=CUPOLA_TESTLAB_DRIVER_SCREENSHOTS=true
 ~~~
 
 The matrix saves TrueNAS as `https://127.0.0.1:8460` with the recorded
 fingerprint as the trusted certificate of that origin, as a person's settings
 hold it after they trust the lab's certificate; the credentials it exports
-carry `CUPOLA_MACLAB_TRUENAS_CERT_FINGERPRINT` with the rest. A run without it
+carry `CUPOLA_TESTLAB_TRUENAS_CERT_FINGERPRINT` with the rest. A run without it
 stops before the first route and names the missing entry (every `unreachable`
 run needs none: nothing is dialled).
 
@@ -340,27 +342,27 @@ process. Use route slices while retaining the same complete 160 x 3 x 2
 coverage, for example:
 
 ~~~bash
-export CUPOLA_MACLAB_ROUTE_OFFSET=108
-export CUPOLA_MACLAB_ROUTE_LIMIT=8
-export CUPOLA_MACLAB_SCREENSHOT_DIR="$PWD/.ai/scratch/zz_maclab/screenshots"
+export CUPOLA_TESTLAB_ROUTE_OFFSET=108
+export CUPOLA_TESTLAB_ROUTE_LIMIT=8
+export CUPOLA_TESTLAB_SCREENSHOT_DIR="$PWD/.ai/scratch/zz_testlab/screenshots"
 flutter drive -d macos \
-  --target=integration_test/maclab_ui_matrix_test.dart \
-  --driver=test_driver/maclab_ui_matrix_driver.dart \
-  --dart-define=CUPOLA_MACLAB_SCREENSHOTS=true \
-  --dart-define=CUPOLA_MACLAB_DRIVER_SCREENSHOTS=true
+  --target=integration_test/testlab_ui_matrix_test.dart \
+  --driver=test_driver/testlab_ui_matrix_driver.dart \
+  --dart-define=CUPOLA_TESTLAB_SCREENSHOTS=true \
+  --dart-define=CUPOLA_TESTLAB_DRIVER_SCREENSHOTS=true
 ~~~
 
-Set `CUPOLA_MACLAB_ROUTE_OFFSET`/`CUPOLA_MACLAB_ROUTE_LIMIT` to successive
+Set `CUPOLA_TESTLAB_ROUTE_OFFSET`/`CUPOLA_TESTLAB_ROUTE_LIMIT` to successive
 slices (or omit them for a no-screenshot smoke pass). Set
-`CUPOLA_MACLAB_SIZE=390x844`, `720x450` or `1440x900` to isolate one viewport.
+`CUPOLA_TESTLAB_SIZE=390x844`, `720x450` or `1440x900` to isolate one viewport.
 The 17-service transport harness must pass before starting the visual matrix.
 
 The matrix has five explicit scenarios selected with
-`CUPOLA_MACLAB_SCENARIO`: `healthy` (the default seeded lab),
+`CUPOLA_TESTLAB_SCENARIO`: `healthy` (the default seeded lab),
 `not-configured`, `degraded` (Radarr/Sonarr fail), `unreachable` (all endpoints
 fail) and `invalid-auth` (valid URLs with rejected credentials). The latter is
 bounded by the disposable qBittorrent seed's high failed-login threshold so a
-negative-auth sweep cannot lock the lab out. `CUPOLA_MACLAB_SETTLE_MS` controls
+negative-auth sweep cannot lock the lab out. `CUPOLA_TESTLAB_SETTLE_MS` controls
 the provider settle window; keep the default 2000ms for evidence and use a
 smaller value only for focused diagnostics.
 
@@ -378,8 +380,8 @@ The write-safe mutation tier is separate from the read-only transport and UI
 passes:
 
 ~~~bash
-export CUPOLA_MACLAB_CREDENTIALS_FILE="$PWD/.ai/scratch/zz_maclab/state/credentials.env"
-flutter test test/e2e/maclab_mutation_e2e_test.dart \
+export CUPOLA_TESTLAB_CREDENTIALS_FILE="$PWD/.ai/scratch/zz_testlab/state/credentials.env"
+flutter test test/e2e/testlab_mutation_e2e_test.dart \
   --tags e2e --run-skipped
 ~~~
 
@@ -392,12 +394,12 @@ deployment require an explicitly isolated socket/proxy profile.
 Keep the project name used by the run, then clean only that disposable project:
 
 ~~~bash
-docker compose -p "$CUPOLA_MACLAB_PROJECT" \
-  -f docker-compose.maclab.yml \
+docker compose -p "$CUPOLA_TESTLAB_PROJECT" \
+  -f docker-compose.testlab.yml \
   --profile core --profile downloads --profile media --profile infra \
   --profile protocol-mocks down -v --remove-orphans
 ~~~
 
 The bootstrap's --reset performs the same project cleanup and removes only the
-validated .ai/scratch/zz_maclab/state directory. Never use the personal Docker
+validated .ai/scratch/zz_testlab/state directory. Never use the personal Docker
 socket or a broad recursive cleanup for this lab.

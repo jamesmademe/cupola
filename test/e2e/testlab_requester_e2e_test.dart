@@ -40,8 +40,8 @@ import '../test_helpers/settings_scope.dart';
 /// `test/test_helpers/profiles/fakes/seerr_sessions.dart`; this proves the
 /// fakes answer as Seerr does. The bootstrap seeds the two accounts it signs
 /// in as, each with REQUEST alone, and writes their generated passwords to
-/// the lab's credentials file (`CUPOLA_MACLAB_CREDENTIALS_FILE`, or
-/// `.ai/scratch/zz_maclab/state/credentials.env` under the working
+/// the lab's credentials file (`CUPOLA_TESTLAB_CREDENTIALS_FILE`, or
+/// `.ai/scratch/zz_testlab/state/credentials.env` under the working
 /// directory). Asking for a title needs the lab's Seerr to reach TMDB.
 ///
 /// The CSRF group restarts the Seerr container twice, to turn the protection
@@ -548,15 +548,15 @@ class _Lab {
   _Lab._(this._values);
 
   factory _Lab.load() {
-    final named = Platform.environment['CUPOLA_MACLAB_CREDENTIALS_FILE'];
+    final named = Platform.environment['CUPOLA_TESTLAB_CREDENTIALS_FILE'];
     final path = named == null || named.isEmpty
-        ? '.ai/scratch/zz_maclab/state/credentials.env'
+        ? '.ai/scratch/zz_testlab/state/credentials.env'
         : named;
     final file = File(path);
     if (!file.existsSync()) {
       fail(
-        'No lab credentials at $path: run test/e2e/maclab/bootstrap.sh, or '
-        'point CUPOLA_MACLAB_CREDENTIALS_FILE at its credentials file.',
+        'No lab credentials at $path: run test/e2e/testlab/bootstrap.sh, or '
+        'point CUPOLA_TESTLAB_CREDENTIALS_FILE at its credentials file.',
       );
     }
     final values = <String, String>{};
@@ -583,14 +583,14 @@ class _Lab {
   final jellyfinUrl = 'http://127.0.0.1:8096';
 
   String get project =>
-      Platform.environment['CUPOLA_MACLAB_PROJECT'] ?? 'cupola-maclab';
+      Platform.environment['CUPOLA_TESTLAB_PROJECT'] ?? 'cupola-testlab';
 
-  String get apiKey => _value('CUPOLA_MACLAB_SEERR_API_KEY');
-  String get email => _value('CUPOLA_MACLAB_SEERR_REQUESTER_EMAIL');
-  String get emailPassword => _value('CUPOLA_MACLAB_SEERR_REQUESTER_PASSWORD');
-  String get viewer => _value('CUPOLA_MACLAB_JELLYFIN_REQUESTER_USERNAME');
+  String get apiKey => _value('CUPOLA_TESTLAB_SEERR_API_KEY');
+  String get email => _value('CUPOLA_TESTLAB_SEERR_REQUESTER_EMAIL');
+  String get emailPassword => _value('CUPOLA_TESTLAB_SEERR_REQUESTER_PASSWORD');
+  String get viewer => _value('CUPOLA_TESTLAB_JELLYFIN_REQUESTER_USERNAME');
   String get viewerPassword =>
-      _value('CUPOLA_MACLAB_JELLYFIN_REQUESTER_PASSWORD');
+      _value('CUPOLA_TESTLAB_JELLYFIN_REQUESTER_PASSWORD');
 
   /// The operator's connection, with the key.
   ServiceInstance keyConnection() => ServiceInstance(
@@ -677,7 +677,7 @@ class _Lab {
   Future<void> approveQuickConnect(String code) async {
     const device =
         'MediaBrowser Client="Cupola Lab", Device="Lab", '
-        'DeviceId="cupola-maclab-quick-connect", Version="1.0"';
+        'DeviceId="cupola-testlab-quick-connect", Version="1.0"';
     final signedIn = await _rawJson(
       'POST',
       '$jellyfinUrl/Users/AuthenticateByName',
@@ -705,10 +705,10 @@ class _Lab {
 
   /// A Jellyfin user nobody imported into Seerr.
   Future<_JellyfinUser> newJellyfinUser() async {
-    final token = _value('CUPOLA_MACLAB_JELLYFIN_TOKEN');
+    final token = _value('CUPOLA_TESTLAB_JELLYFIN_TOKEN');
     final admin =
         'MediaBrowser Client="Cupola Lab", Device="Lab", '
-        'DeviceId="cupola-maclab-requester", Version="1.0", Token="$token"';
+        'DeviceId="cupola-testlab-requester", Version="1.0", Token="$token"';
     final stamp = DateTime.now().microsecondsSinceEpoch;
     final name = 'stranger-$stamp';
     final password = 'pw-$stamp';

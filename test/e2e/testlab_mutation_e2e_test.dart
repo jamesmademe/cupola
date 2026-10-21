@@ -27,8 +27,8 @@ void main() {
   test('qBittorrent add, pause and delete a zero-data magnet', () async {
     final client = QbittorrentClient(
       url: 'http://127.0.0.1:8080',
-      username: credentials['CUPOLA_MACLAB_QBITTORRENT_USERNAME'],
-      password: credentials['CUPOLA_MACLAB_QBITTORRENT_PASSWORD'],
+      username: credentials['CUPOLA_TESTLAB_QBITTORRENT_USERNAME'],
+      password: credentials['CUPOLA_TESTLAB_QBITTORRENT_PASSWORD'],
     );
     addTearDown(client.close);
     final service = QbittorrentService(client);
@@ -79,8 +79,8 @@ void main() {
   test('Transmission add, stop and remove a zero-data magnet', () async {
     final client = TransmissionClient(
       url: 'http://127.0.0.1:9091',
-      username: credentials['CUPOLA_MACLAB_TRANSMISSION_USERNAME'],
-      password: credentials['CUPOLA_MACLAB_TRANSMISSION_PASSWORD'],
+      username: credentials['CUPOLA_TESTLAB_TRANSMISSION_USERNAME'],
+      password: credentials['CUPOLA_TESTLAB_TRANSMISSION_PASSWORD'],
     );
     addTearDown(client.close);
     const marker = 'Cupola Mutation Transmission';
@@ -163,13 +163,13 @@ void main() {
   test('NZBGet append and delete a disposable job', () async {
     final client = NzbgetClient(
       url: 'http://127.0.0.1:6789',
-      username: credentials['CUPOLA_MACLAB_NZBGET_USERNAME'],
-      password: credentials['CUPOLA_MACLAB_NZBGET_PASSWORD'],
+      username: credentials['CUPOLA_TESTLAB_NZBGET_USERNAME'],
+      password: credentials['CUPOLA_TESTLAB_NZBGET_PASSWORD'],
     );
     addTearDown(client.close);
     const marker = 'cupola-mutation-nzbget.nzb';
     final content = File(
-      'test/e2e/maclab/seed/downloads/cupola-test.nzb',
+      'test/e2e/testlab/seed/downloads/cupola-test.nzb',
     ).readAsStringSync();
     var id = 0;
     addTearDown(() async {
@@ -220,8 +220,8 @@ void main() {
     () async {
       final client = NpmClient(
         url: 'http://127.0.0.1:8181',
-        identity: credentials['CUPOLA_MACLAB_NPM_USERNAME'],
-        secret: credentials['CUPOLA_MACLAB_NPM_PASSWORD'],
+        identity: credentials['CUPOLA_TESTLAB_NPM_USERNAME'],
+        secret: credentials['CUPOLA_TESTLAB_NPM_PASSWORD'],
       );
       addTearDown(client.close);
       final host = (await client.proxyHosts()).firstWhere(
@@ -247,8 +247,8 @@ void main() {
       // a fixture of what it might say.
       final admin = _NpmAdmin(
         url: 'http://127.0.0.1:8181',
-        identity: credentials['CUPOLA_MACLAB_NPM_USERNAME']!,
-        secret: credentials['CUPOLA_MACLAB_NPM_PASSWORD']!,
+        identity: credentials['CUPOLA_TESTLAB_NPM_USERNAME']!,
+        secret: credentials['CUPOLA_TESTLAB_NPM_PASSWORD']!,
       );
       addTearDown(admin.close);
       const email = 'cupola-scoped@example.com';
@@ -409,15 +409,15 @@ Future<T> _eventually<T>(
 }
 
 Map<String, String> _loadCredentials() {
-  final path = Platform.environment['CUPOLA_MACLAB_CREDENTIALS_FILE'];
+  final path = Platform.environment['CUPOLA_TESTLAB_CREDENTIALS_FILE'];
   if (path == null || path.isEmpty) {
     fail(
-      'CUPOLA_MACLAB_CREDENTIALS_FILE must point to the bootstrap output '
-      '(.ai/scratch/zz_maclab/state/credentials.env)',
+      'CUPOLA_TESTLAB_CREDENTIALS_FILE must point to the bootstrap output '
+      '(.ai/scratch/zz_testlab/state/credentials.env)',
     );
   }
   final file = File(path);
-  if (!file.existsSync()) fail('Missing maclab credentials file: $path');
+  if (!file.existsSync()) fail('Missing testlab credentials file: $path');
   final values = <String, String>{};
   for (final line in file.readAsLinesSync()) {
     if (line.isEmpty || line.startsWith('#')) continue;

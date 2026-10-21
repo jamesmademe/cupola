@@ -11,7 +11,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// The route probe's knock table against the macOS laboratory: every service
 /// answers its knock with no key, and no service answers another's.
 ///
-/// Needs the lab up (`test/e2e/maclab/bootstrap.sh`); no credentials, which
+/// Needs the lab up (`test/e2e/testlab/bootstrap.sh`); no credentials, which
 /// is the point.
 void main() {
   const lab = <ServiceKey, String>{

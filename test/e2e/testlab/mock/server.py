@@ -8,7 +8,7 @@ passes.
 
 The TrueNAS mock speaks TLS only, like a TrueNAS that revokes an API key sent
 over a cleartext socket, with the self-signed certificate that
-test/e2e/maclab/truenas_cert.sh keeps in the lab's state directory. It reads
+test/e2e/testlab/truenas_cert.sh keeps in the lab's state directory. It reads
 the certificate for every connection, so one made again is served without a
 restart. With `--healthcheck` this file performs a TLS handshake against the
 running mock and exits 0 or 1, which is what the Compose healthcheck runs.
@@ -304,7 +304,7 @@ def main() -> None:
         except (ssl.SSLError, OSError) as error:
             sys.exit(
                 f"The TrueNAS mock needs a TLS certificate at {TLS_CERT} and its key at "
-                f"{TLS_KEY} ({error}). Make them with test/e2e/maclab/truenas_cert.sh."
+                f"{TLS_KEY} ({error}). Make them with test/e2e/testlab/truenas_cert.sh."
             )
         server = socketserver.ThreadingTCPServer(("0.0.0.0", TRUENAS_PORT), TrueNasHandler)
     else:

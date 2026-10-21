@@ -10,15 +10,15 @@ set -euo pipefail
 
 script_dir="$(cd -- "$(dirname -- "$0")" && pwd)"
 repo_root="$(cd -- "$script_dir/../../.." && pwd)"
-compose_file="$repo_root/docker-compose.maclab.yml"
-project="${CUPOLA_MACLAB_PROJECT:-cupola-maclab}"
-state_dir="${CUPOLA_MACLAB_STATE_DIR:-$repo_root/.ai/scratch/zz_maclab/state}"
+compose_file="$repo_root/docker-compose.testlab.yml"
+project="${CUPOLA_TESTLAB_PROJECT:-cupola-testlab}"
+state_dir="${CUPOLA_TESTLAB_STATE_DIR:-$repo_root/.ai/scratch/zz_testlab/state}"
 
 if [[ "$state_dir" != /* ]]; then
   state_dir="$repo_root/$state_dir"
 fi
 
-safe_state_root="$repo_root/.ai/scratch/zz_maclab"
+safe_state_root="$repo_root/.ai/scratch/zz_testlab"
 case "$state_dir" in
   "$safe_state_root"/*) ;;
   *)
@@ -180,9 +180,9 @@ if [[ "$(json_get "$jellyfin_info" StartupWizardCompleted 2>/dev/null || true)" 
 fi
 
 jellyfin_auth="$state_dir/.jellyfin-auth.json"
-jellyfin_header='MediaBrowser Client="Cupola", Device="Cupola MacLab", DeviceId="cupola-maclab", Version="1.0"'
+jellyfin_header='MediaBrowser Client="Cupola", Device="Cupola TestLab", DeviceId="cupola-testlab", Version="1.0"'
 post_json "$jellyfin_url/Users/AuthenticateByName" \
-  '{"Username":"cupola-admin","Pw":"cupola-pass","App":"Cupola","AppVersion":"1.0","DeviceId":"cupola-maclab","Device":"Cupola MacLab"}' \
+  '{"Username":"cupola-admin","Pw":"cupola-pass","App":"Cupola","AppVersion":"1.0","DeviceId":"cupola-testlab","Device":"Cupola TestLab"}' \
   -H "Authorization: $jellyfin_header" >"$jellyfin_auth"
 jellyfin_token="$(json_get "$jellyfin_auth" AccessToken)"
 jellyfin_user_id="$(json_get "$jellyfin_auth" User Id)"
@@ -249,26 +249,26 @@ PY
 credentials="$state_dir/credentials.env"
 umask 077
 {
-  printf 'CUPOLA_MACLAB_JELLYFIN_TOKEN=%s\n' "$jellyfin_token"
-  printf 'CUPOLA_MACLAB_JELLYFIN_USER_ID=%s\n' "$jellyfin_user_id"
-  printf 'CUPOLA_MACLAB_SEERR_API_KEY=%s\n' "$seerr_api_key"
-  printf 'CUPOLA_MACLAB_SEERR_REQUESTER_EMAIL=requester@example.com\n'
-  printf 'CUPOLA_MACLAB_SEERR_REQUESTER_PASSWORD=%s\n' "$seerr_requester_password"
-  printf 'CUPOLA_MACLAB_JELLYFIN_REQUESTER_USERNAME=cupola-viewer\n'
-  printf 'CUPOLA_MACLAB_JELLYFIN_REQUESTER_PASSWORD=%s\n' "$jellyfin_requester_password"
-  printf 'CUPOLA_MACLAB_JELLYFIN_PASSWORD=cupola-pass\n'
-  printf 'CUPOLA_MACLAB_NPM_USERNAME=admin@example.com\n'
-  printf 'CUPOLA_MACLAB_NPM_PASSWORD=changeme\n'
-  printf 'CUPOLA_MACLAB_QBITTORRENT_USERNAME=admin\n'
-  printf 'CUPOLA_MACLAB_QBITTORRENT_PASSWORD=cupola-pass\n'
-  printf 'CUPOLA_MACLAB_NZBGET_USERNAME=nzbget\n'
-  printf 'CUPOLA_MACLAB_NZBGET_PASSWORD=tegbzn6789\n'
-  printf 'CUPOLA_MACLAB_TRANSMISSION_USERNAME=transmission\n'
-  printf 'CUPOLA_MACLAB_TRANSMISSION_PASSWORD=transmission\n'
-  printf 'CUPOLA_MACLAB_DOCKGE_USERNAME=cupola\n'
-  printf 'CUPOLA_MACLAB_DOCKGE_PASSWORD=cupola-pass\n'
-  printf 'CUPOLA_MACLAB_PLEX_TOKEN=%s\n' "$plex_token"
-  printf 'CUPOLA_MACLAB_TRUENAS_CERT_FINGERPRINT=%s\n' "$truenas_cert_fingerprint"
+  printf 'CUPOLA_TESTLAB_JELLYFIN_TOKEN=%s\n' "$jellyfin_token"
+  printf 'CUPOLA_TESTLAB_JELLYFIN_USER_ID=%s\n' "$jellyfin_user_id"
+  printf 'CUPOLA_TESTLAB_SEERR_API_KEY=%s\n' "$seerr_api_key"
+  printf 'CUPOLA_TESTLAB_SEERR_REQUESTER_EMAIL=requester@example.com\n'
+  printf 'CUPOLA_TESTLAB_SEERR_REQUESTER_PASSWORD=%s\n' "$seerr_requester_password"
+  printf 'CUPOLA_TESTLAB_JELLYFIN_REQUESTER_USERNAME=cupola-viewer\n'
+  printf 'CUPOLA_TESTLAB_JELLYFIN_REQUESTER_PASSWORD=%s\n' "$jellyfin_requester_password"
+  printf 'CUPOLA_TESTLAB_JELLYFIN_PASSWORD=cupola-pass\n'
+  printf 'CUPOLA_TESTLAB_NPM_USERNAME=admin@example.com\n'
+  printf 'CUPOLA_TESTLAB_NPM_PASSWORD=changeme\n'
+  printf 'CUPOLA_TESTLAB_QBITTORRENT_USERNAME=admin\n'
+  printf 'CUPOLA_TESTLAB_QBITTORRENT_PASSWORD=cupola-pass\n'
+  printf 'CUPOLA_TESTLAB_NZBGET_USERNAME=nzbget\n'
+  printf 'CUPOLA_TESTLAB_NZBGET_PASSWORD=tegbzn6789\n'
+  printf 'CUPOLA_TESTLAB_TRANSMISSION_USERNAME=transmission\n'
+  printf 'CUPOLA_TESTLAB_TRANSMISSION_PASSWORD=transmission\n'
+  printf 'CUPOLA_TESTLAB_DOCKGE_USERNAME=cupola\n'
+  printf 'CUPOLA_TESTLAB_DOCKGE_PASSWORD=cupola-pass\n'
+  printf 'CUPOLA_TESTLAB_PLEX_TOKEN=%s\n' "$plex_token"
+  printf 'CUPOLA_TESTLAB_TRUENAS_CERT_FINGERPRINT=%s\n' "$truenas_cert_fingerprint"
 } >"$credentials"
 chmod 600 "$credentials"
 
@@ -303,7 +303,7 @@ printf '  Jellyfin           http://127.0.0.1:8096\n'
 printf '  Plex               http://127.0.0.1:32400\n'
 printf '  Dockge             http://127.0.0.1:5001\n'
 printf '  Nginx Proxy Manager http://127.0.0.1:8181\n'
-printf '  TrueNAS mock       wss://127.0.0.1:8460 (self-signed; pin CUPOLA_MACLAB_TRUENAS_CERT_FINGERPRINT)\n'
+printf '  TrueNAS mock       wss://127.0.0.1:8460 (self-signed; pin CUPOLA_TESTLAB_TRUENAS_CERT_FINGERPRINT)\n'
 printf '  Unraid mock        http://127.0.0.1:8480/graphql\n'
 
 if [[ ! -f "$state_dir/dockge/dockge.db" ]]; then

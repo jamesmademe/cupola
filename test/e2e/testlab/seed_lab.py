@@ -100,7 +100,7 @@ def json_request(
 
 
 def warn(label: str, error: Exception) -> None:
-    print(f"[maclab-seed] warning {label}: {type(error).__name__}: {error}")
+    print(f"[testlab-seed] warning {label}: {type(error).__name__}: {error}")
 
 
 def api_headers(version: str) -> dict[str, str]:
@@ -138,7 +138,7 @@ def ensure_arr_root(
         if metadata_profile is not None:
             payload["defaultMetadataProfileId"] = metadata_profile
         request(url, method="POST", payload=payload, headers=headers)
-        print(f"[maclab-seed] {name}: root folder {path}")
+        print(f"[testlab-seed] {name}: root folder {path}")
     except Exception as error:
         warn(f"{name} root folder", error)
 
@@ -186,7 +186,7 @@ def seed_arrs() -> None:
                     "tags": [],
                 },
             )
-            print("[maclab-seed] Radarr: movie specimen")
+            print("[testlab-seed] Radarr: movie specimen")
     except Exception as error:
         warn("Radarr movie", error)
 
@@ -212,7 +212,7 @@ def seed_arrs() -> None:
                     "seasons": [],
                 },
             )
-            print("[maclab-seed] Sonarr: series specimen")
+            print("[testlab-seed] Sonarr: series specimen")
     except Exception as error:
         warn("Sonarr series", error)
 
@@ -236,7 +236,7 @@ def seed_arrs() -> None:
                     "images": [],
                 },
             )
-            print("[maclab-seed] Lidarr: artist specimen")
+            print("[testlab-seed] Lidarr: artist specimen")
     except Exception as error:
         warn("Lidarr artist", error)
 
@@ -297,7 +297,7 @@ def seed_seerr(env: dict[str, str]) -> None:
             if configured:
                 continue
             request(url, method="POST", payload=payload, headers=headers)
-            print(f"[maclab-seed] Seerr: {service} application")
+            print(f"[testlab-seed] Seerr: {service} application")
         except Exception as error:
             warn(f"Seerr {service} application", error)
 
@@ -311,7 +311,7 @@ def seerr_write_headers(env: dict[str, str]) -> dict[str, str]:
     """
 
     headers = {
-        "X-Api-Key": env.get("CUPOLA_MACLAB_SEERR_API_KEY", ""),
+        "X-Api-Key": env.get("CUPOLA_TESTLAB_SEERR_API_KEY", ""),
         "Content-Type": "application/json",
         "Accept": "application/json",
     }
@@ -336,12 +336,12 @@ def seed_seerr_requesters(env: dict[str, str]) -> None:
 
     seerr = f"{ROOT}:5055/api/v1"
     request_only = 32
-    local_email = env.get("CUPOLA_MACLAB_SEERR_REQUESTER_EMAIL", "")
-    local_password = env.get("CUPOLA_MACLAB_SEERR_REQUESTER_PASSWORD", "")
-    viewer_name = env.get("CUPOLA_MACLAB_JELLYFIN_REQUESTER_USERNAME", "")
-    viewer_password = env.get("CUPOLA_MACLAB_JELLYFIN_REQUESTER_PASSWORD", "")
+    local_email = env.get("CUPOLA_TESTLAB_SEERR_REQUESTER_EMAIL", "")
+    local_password = env.get("CUPOLA_TESTLAB_SEERR_REQUESTER_PASSWORD", "")
+    viewer_name = env.get("CUPOLA_TESTLAB_JELLYFIN_REQUESTER_USERNAME", "")
+    viewer_password = env.get("CUPOLA_TESTLAB_JELLYFIN_REQUESTER_PASSWORD", "")
     if not (local_email and local_password and viewer_name and viewer_password):
-        print("[maclab-seed] warning Seerr requesters: no credentials to seed")
+        print("[testlab-seed] warning Seerr requesters: no credentials to seed")
         return
 
     def seerr_users() -> list[dict[str, Any]]:
@@ -373,7 +373,7 @@ def seed_seerr_requesters(env: dict[str, str]) -> None:
                 payload={"localLogin": True, "mediaServerLogin": True},
                 headers=seerr_write_headers(env),
             )
-            print("[maclab-seed] Seerr: local and Jellyfin sign-in on")
+            print("[testlab-seed] Seerr: local and Jellyfin sign-in on")
 
         local = next(
             (
@@ -394,7 +394,7 @@ def seed_seerr_requesters(env: dict[str, str]) -> None:
                 },
                 headers=seerr_write_headers(env),
             )
-            print("[maclab-seed] Seerr: local requester account")
+            print("[testlab-seed] Seerr: local requester account")
         else:
             request(
                 f"{seerr}/user/{local['id']}/settings/password",
@@ -420,7 +420,7 @@ def seed_seerr_requesters(env: dict[str, str]) -> None:
                 payload={"Name": viewer_name, "Password": viewer_password},
                 headers=jellyfin,
             )
-            print("[maclab-seed] Jellyfin: requester user")
+            print("[testlab-seed] Jellyfin: requester user")
         else:
             request(
                 f"{ROOT}:8096/Users/{viewer['Id']}/Password",
@@ -446,18 +446,18 @@ def seed_seerr_requesters(env: dict[str, str]) -> None:
                 headers=seerr_write_headers(env),
             )
             known = list_value(imported)[0]
-            print("[maclab-seed] Seerr: Jellyfin requester imported")
+            print("[testlab-seed] Seerr: Jellyfin requester imported")
         request_only_for(int(known["id"]))
     except Exception as error:
         warn("Seerr Jellyfin requester", error)
 
 
 def jellyfin_headers(env: dict[str, str]) -> dict[str, str]:
-    token = env.get("CUPOLA_MACLAB_JELLYFIN_TOKEN", "")
+    token = env.get("CUPOLA_TESTLAB_JELLYFIN_TOKEN", "")
     return {
         "Authorization": (
-            'MediaBrowser Client="Cupola", Device="Cupola MacLab", '
-            f'DeviceId="cupola-maclab", Version="1.0", Token="{token}"'
+            'MediaBrowser Client="Cupola", Device="Cupola TestLab", '
+            f'DeviceId="cupola-testlab", Version="1.0", Token="{token}"'
         ),
         "Accept": "application/json",
         "Content-Type": "application/json",
@@ -500,11 +500,11 @@ def seed_media_servers(state_dir: Path, env: dict[str, str]) -> None:
                     ],
                     check=True,
                 )
-                print("[maclab-seed] media: generated 2s movie specimen")
+                print("[testlab-seed] media: generated 2s movie specimen")
             except Exception as error:
                 warn("media fixture", error)
         else:
-            print("[maclab-seed] warning media fixture: ffmpeg not installed")
+            print("[testlab-seed] warning media fixture: ffmpeg not installed")
 
     try:
         headers = jellyfin_headers(env)
@@ -531,7 +531,7 @@ def seed_media_servers(state_dir: Path, env: dict[str, str]) -> None:
                 payload=b"{}",
                 headers=headers,
             )
-            print("[maclab-seed] Jellyfin: Films library")
+            print("[testlab-seed] Jellyfin: Films library")
         request(
             f"{ROOT}:8096/Library/Refresh",
             method="POST",
@@ -542,8 +542,8 @@ def seed_media_servers(state_dir: Path, env: dict[str, str]) -> None:
 
     try:
         headers = {
-            "X-Plex-Token": env.get("CUPOLA_MACLAB_PLEX_TOKEN", "test-token"),
-            "X-Plex-Client-Identifier": "cupola-maclab-seed",
+            "X-Plex-Token": env.get("CUPOLA_TESTLAB_PLEX_TOKEN", "test-token"),
+            "X-Plex-Client-Identifier": "cupola-testlab-seed",
         }
         _, body = request(
             f"{ROOT}:32400/library/sections",
@@ -584,7 +584,7 @@ def seed_media_servers(state_dir: Path, env: dict[str, str]) -> None:
                     section.attrib.get("title") == "Films" for section in sections
                 ):
                     break
-            print("[maclab-seed] Plex: Films library")
+            print("[testlab-seed] Plex: Films library")
     except Exception as error:
         warn("Plex library", error)
 
@@ -595,8 +595,8 @@ def seed_qbittorrent(env: dict[str, str]) -> None:
         opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
         login = urllib.parse.urlencode(
             {
-                "username": env.get("CUPOLA_MACLAB_QBITTORRENT_USERNAME", "admin"),
-                "password": env.get("CUPOLA_MACLAB_QBITTORRENT_PASSWORD", ""),
+                "username": env.get("CUPOLA_TESTLAB_QBITTORRENT_USERNAME", "admin"),
+                "password": env.get("CUPOLA_TESTLAB_QBITTORRENT_PASSWORD", ""),
             }
         ).encode()
         request(
@@ -624,7 +624,7 @@ def seed_qbittorrent(env: dict[str, str]) -> None:
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
                 opener=opener,
             )
-            print("[maclab-seed] qBittorrent: paused torrent")
+            print("[testlab-seed] qBittorrent: paused torrent")
     except Exception as error:
         warn("qBittorrent torrent", error)
 
@@ -635,8 +635,8 @@ def transmission_call(
     method: str,
     arguments: dict[str, Any] | None = None,
 ) -> tuple[str | None, dict[str, Any]]:
-    user = env.get("CUPOLA_MACLAB_TRANSMISSION_USERNAME", "transmission")
-    password = env.get("CUPOLA_MACLAB_TRANSMISSION_PASSWORD", "transmission")
+    user = env.get("CUPOLA_TESTLAB_TRANSMISSION_USERNAME", "transmission")
+    password = env.get("CUPOLA_TESTLAB_TRANSMISSION_PASSWORD", "transmission")
     encoded = base64.b64encode(f"{user}:{password}".encode()).decode()
     headers = {
         "Authorization": f"Basic {encoded}",
@@ -677,13 +677,13 @@ def seed_transmission(env: dict[str, str]) -> None:
                 "torrent-add",
                 {"filename": TRANSMISSION_MAGNET, "paused": True},
             )
-            print("[maclab-seed] Transmission: paused torrent")
+            print("[testlab-seed] Transmission: paused torrent")
     except Exception as error:
         warn("Transmission torrent", error)
 
 
 def multipart_body(field: str, filename: str, content: bytes) -> tuple[str, bytes]:
-    boundary = "----CupolaMacLabSeed"
+    boundary = "----CupolaTestLabSeed"
     body = b"".join(
         [
             f"--{boundary}\r\n".encode(),
@@ -734,7 +734,7 @@ def seed_sabnzbd(state_dir: Path) -> None:
                 headers={"Content-Type": content_type},
             ) or {}
             ids = result.get("nzo_ids", [])
-            print("[maclab-seed] SABnzbd: NZB specimen")
+            print("[testlab-seed] SABnzbd: NZB specimen")
         for nzo_id in ids:
             query = urllib.parse.urlencode(
                 {
@@ -752,8 +752,8 @@ def seed_sabnzbd(state_dir: Path) -> None:
 
 def seed_nzbget(state_dir: Path, env: dict[str, str]) -> None:
     try:
-        user = env.get("CUPOLA_MACLAB_NZBGET_USERNAME", "nzbget")
-        password = env.get("CUPOLA_MACLAB_NZBGET_PASSWORD", "")
+        user = env.get("CUPOLA_TESTLAB_NZBGET_USERNAME", "nzbget")
+        password = env.get("CUPOLA_TESTLAB_NZBGET_PASSWORD", "")
         auth = base64.b64encode(f"{user}:{password}".encode()).decode()
         headers = {
             "Authorization": f"Basic {auth}",
@@ -788,7 +788,7 @@ def seed_nzbget(state_dir: Path, env: dict[str, str]) -> None:
                 "append",
                 ["cupola-test.nzb", content, "", 0, False, True, "cupola-test", 0, "FORCE"],
             )
-            print(f"[maclab-seed] NZBGet: NZB specimen ({result})")
+            print(f"[testlab-seed] NZBGet: NZB specimen ({result})")
     except Exception as error:
         warn("NZBGet NZB", error)
 
@@ -802,8 +802,8 @@ def seed_npm(env: dict[str, str]) -> None:
             f"{base}/tokens",
             method="POST",
             payload={
-                "identity": env.get("CUPOLA_MACLAB_NPM_USERNAME", ""),
-                "secret": env.get("CUPOLA_MACLAB_NPM_PASSWORD", ""),
+                "identity": env.get("CUPOLA_TESTLAB_NPM_USERNAME", ""),
+                "secret": env.get("CUPOLA_TESTLAB_NPM_PASSWORD", ""),
             },
         )
         token = auth.get("token") if isinstance(auth, dict) else None
@@ -838,7 +838,7 @@ def seed_npm(env: dict[str, str]) -> None:
                 "meta": {},
             },
         )
-        print("[maclab-seed] NPM: proxy host")
+        print("[testlab-seed] NPM: proxy host")
     except Exception as error:
         warn("NPM proxy host", error)
 
@@ -862,7 +862,7 @@ def main() -> None:
     seed_sabnzbd(args.state_dir)
     seed_nzbget(args.state_dir, env)
     seed_npm(env)
-    print("[maclab-seed] done")
+    print("[testlab-seed] done")
 
 
 if __name__ == "__main__":

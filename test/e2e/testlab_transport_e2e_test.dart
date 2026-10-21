@@ -34,7 +34,7 @@ import 'package:cupola/features/music/data/lidarr_service.dart';
 /// Disposable transport smoke for the full macOS/OrbStack laboratory.
 ///
 /// The bootstrap writes the generated Seerr/Jellyfin values to a chmod-600
-/// file. Pass its path with CUPOLA_MACLAB_CREDENTIALS_FILE; fixed passwords and
+/// file. Pass its path with CUPOLA_TESTLAB_CREDENTIALS_FILE; fixed passwords and
 /// API keys are intentionally kept in that file too, rather than in Git.
 ///
 /// This suite proves service reachability, authentication and the first typed
@@ -46,7 +46,7 @@ void main() {
   test('Seerr REST + session', () async {
     final client = ApiClient(
       baseUrl: 'http://127.0.0.1:5055',
-      apiKey: credentials['CUPOLA_MACLAB_SEERR_API_KEY']!,
+      apiKey: credentials['CUPOLA_TESTLAB_SEERR_API_KEY']!,
     );
     addTearDown(client.close);
     final service = SeerrService(client);
@@ -120,8 +120,8 @@ void main() {
   test('qBittorrent form auth + torrent parser', () async {
     final client = QbittorrentClient(
       url: 'http://127.0.0.1:8080',
-      username: credentials['CUPOLA_MACLAB_QBITTORRENT_USERNAME'],
-      password: credentials['CUPOLA_MACLAB_QBITTORRENT_PASSWORD'],
+      username: credentials['CUPOLA_TESTLAB_QBITTORRENT_USERNAME'],
+      password: credentials['CUPOLA_TESTLAB_QBITTORRENT_PASSWORD'],
     );
     addTearDown(client.close);
     final service = QbittorrentService(client);
@@ -141,8 +141,8 @@ void main() {
   test('Transmission RPC auth + CSRF handshake', () async {
     final client = TransmissionClient(
       url: 'http://127.0.0.1:9091',
-      username: credentials['CUPOLA_MACLAB_TRANSMISSION_USERNAME'],
-      password: credentials['CUPOLA_MACLAB_TRANSMISSION_PASSWORD'],
+      username: credentials['CUPOLA_TESTLAB_TRANSMISSION_USERNAME'],
+      password: credentials['CUPOLA_TESTLAB_TRANSMISSION_PASSWORD'],
     );
     addTearDown(client.close);
     expect(await client.testConnection(), isTrue);
@@ -173,8 +173,8 @@ void main() {
   test('NZBGet Basic auth + positional JSON-RPC', () async {
     final client = NzbgetClient(
       url: 'http://127.0.0.1:6789',
-      username: credentials['CUPOLA_MACLAB_NZBGET_USERNAME'],
-      password: credentials['CUPOLA_MACLAB_NZBGET_PASSWORD'],
+      username: credentials['CUPOLA_TESTLAB_NZBGET_USERNAME'],
+      password: credentials['CUPOLA_TESTLAB_NZBGET_PASSWORD'],
     );
     addTearDown(client.close);
     expect(await client.testConnection(), isTrue);
@@ -195,10 +195,10 @@ void main() {
   test('Jellyfin token auth + library parser', () async {
     final client = JellyfinClient(
       baseUrl: 'http://127.0.0.1:8096',
-      apiKey: credentials['CUPOLA_MACLAB_JELLYFIN_TOKEN']!,
-      userId: credentials['CUPOLA_MACLAB_JELLYFIN_USER_ID']!,
-      deviceName: 'Cupola MacLab E2E',
-      deviceId: 'cupola-maclab-e2e',
+      apiKey: credentials['CUPOLA_TESTLAB_JELLYFIN_TOKEN']!,
+      userId: credentials['CUPOLA_TESTLAB_JELLYFIN_USER_ID']!,
+      deviceName: 'Cupola TestLab E2E',
+      deviceId: 'cupola-testlab-e2e',
     );
     addTearDown(client.close);
     expect(await client.verifyCredential(), isTrue);
@@ -210,8 +210,8 @@ void main() {
   test('Plex token auth + identity parser', () async {
     final client = PlexClient(
       url: 'http://127.0.0.1:32400',
-      token: credentials['CUPOLA_MACLAB_PLEX_TOKEN']!,
-      clientIdentifier: 'cupola-maclab-e2e',
+      token: credentials['CUPOLA_TESTLAB_PLEX_TOKEN']!,
+      clientIdentifier: 'cupola-testlab-e2e',
     );
     addTearDown(client.close);
     expect(await client.verifyCredential(), isTrue);
@@ -232,8 +232,8 @@ void main() {
   test('Dockge Socket.IO login + stack list', () async {
     final client = DockgeClient(
       baseUrl: 'http://127.0.0.1:5001',
-      username: credentials['CUPOLA_MACLAB_DOCKGE_USERNAME'],
-      password: credentials['CUPOLA_MACLAB_DOCKGE_PASSWORD'],
+      username: credentials['CUPOLA_TESTLAB_DOCKGE_USERNAME'],
+      password: credentials['CUPOLA_TESTLAB_DOCKGE_PASSWORD'],
     );
     addTearDown(client.close);
     final service = DockgeService(client);
@@ -246,8 +246,8 @@ void main() {
   test('Nginx Proxy Manager login + proxy host parser', () async {
     final client = NpmClient(
       url: 'http://127.0.0.1:8181',
-      identity: credentials['CUPOLA_MACLAB_NPM_USERNAME'],
-      secret: credentials['CUPOLA_MACLAB_NPM_PASSWORD'],
+      identity: credentials['CUPOLA_TESTLAB_NPM_USERNAME'],
+      secret: credentials['CUPOLA_TESTLAB_NPM_PASSWORD'],
     );
     addTearDown(client.close);
     expect(await client.testConnection(), isTrue);
@@ -396,7 +396,7 @@ void main() {
 
     final qbit = QbittorrentClient(
       url: 'http://127.0.0.1:8080',
-      username: credentials['CUPOLA_MACLAB_QBITTORRENT_USERNAME'],
+      username: credentials['CUPOLA_TESTLAB_QBITTORRENT_USERNAME'],
       password: 'wrong-password',
     );
     addTearDown(qbit.close);
@@ -404,7 +404,7 @@ void main() {
 
     final transmission = TransmissionClient(
       url: 'http://127.0.0.1:9091',
-      username: credentials['CUPOLA_MACLAB_TRANSMISSION_USERNAME'],
+      username: credentials['CUPOLA_TESTLAB_TRANSMISSION_USERNAME'],
       password: 'wrong-password',
     );
     addTearDown(transmission.close);
@@ -427,7 +427,7 @@ void main() {
 
     final nzbget = NzbgetClient(
       url: 'http://127.0.0.1:6789',
-      username: credentials['CUPOLA_MACLAB_NZBGET_USERNAME'],
+      username: credentials['CUPOLA_TESTLAB_NZBGET_USERNAME'],
       password: 'wrong-password',
     );
     addTearDown(nzbget.close);
@@ -440,16 +440,16 @@ void main() {
     final jellyfin = JellyfinClient(
       baseUrl: 'http://127.0.0.1:8096',
       apiKey: 'wrong-token',
-      userId: credentials['CUPOLA_MACLAB_JELLYFIN_USER_ID']!,
-      deviceName: 'Cupola MacLab invalid-auth probe',
-      deviceId: 'cupola-maclab-invalid-auth',
+      userId: credentials['CUPOLA_TESTLAB_JELLYFIN_USER_ID']!,
+      deviceName: 'Cupola TestLab invalid-auth probe',
+      deviceId: 'cupola-testlab-invalid-auth',
     );
     addTearDown(jellyfin.close);
     expect(await jellyfin.verifyCredential(), isFalse, reason: 'Jellyfin');
 
     final dockge = DockgeClient(
       baseUrl: 'http://127.0.0.1:5001',
-      username: credentials['CUPOLA_MACLAB_DOCKGE_USERNAME'],
+      username: credentials['CUPOLA_TESTLAB_DOCKGE_USERNAME'],
       password: 'wrong-password',
     );
     addTearDown(dockge.close);
@@ -457,7 +457,7 @@ void main() {
 
     final npm = NpmClient(
       url: 'http://127.0.0.1:8181',
-      identity: credentials['CUPOLA_MACLAB_NPM_USERNAME'],
+      identity: credentials['CUPOLA_TESTLAB_NPM_USERNAME'],
       secret: 'wrong-password',
     );
     addTearDown(npm.close);
@@ -502,7 +502,7 @@ void main() {
     final client = PlexClient(
       url: 'http://127.0.0.1:32400',
       token: 'wrong-token',
-      clientIdentifier: 'cupola-maclab-invalid-auth',
+      clientIdentifier: 'cupola-testlab-invalid-auth',
     );
     addTearDown(client.close);
     final accepted = await client.verifyCredential();
@@ -529,16 +529,16 @@ const _truenasUrl = 'https://127.0.0.1:$_truenasPort';
 /// The fingerprint the bootstrap recorded for the TrueNAS mock's certificate:
 /// 64 lowercase hex digits, the form `certFingerprint` compares.
 String _truenasPin(Map<String, String> credentials) {
-  final pin = credentials['CUPOLA_MACLAB_TRUENAS_CERT_FINGERPRINT'];
+  final pin = credentials['CUPOLA_TESTLAB_TRUENAS_CERT_FINGERPRINT'];
   if (pin == null || pin.isEmpty) {
     fail(
-      'Missing CUPOLA_MACLAB_TRUENAS_CERT_FINGERPRINT in the lab credentials: '
-      'run test/e2e/maclab/truenas_cert.sh credentials (see test/e2e/README.md)',
+      'Missing CUPOLA_TESTLAB_TRUENAS_CERT_FINGERPRINT in the lab credentials: '
+      'run test/e2e/testlab/truenas_cert.sh credentials (see test/e2e/README.md)',
     );
   }
   if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(pin)) {
     fail(
-      'CUPOLA_MACLAB_TRUENAS_CERT_FINGERPRINT must be 64 lowercase hex digits '
+      'CUPOLA_TESTLAB_TRUENAS_CERT_FINGERPRINT must be 64 lowercase hex digits '
       'without colons, the SHA-256 of the certificate',
     );
   }
@@ -581,15 +581,15 @@ Future<void> _expectUntrusted(Future<Object?> call, String reason) =>
     );
 
 Map<String, String> _loadCredentials() {
-  final path = Platform.environment['CUPOLA_MACLAB_CREDENTIALS_FILE'];
+  final path = Platform.environment['CUPOLA_TESTLAB_CREDENTIALS_FILE'];
   if (path == null || path.isEmpty) {
     fail(
-      'CUPOLA_MACLAB_CREDENTIALS_FILE must point to the bootstrap output '
-      '(.ai/scratch/zz_maclab/state/credentials.env)',
+      'CUPOLA_TESTLAB_CREDENTIALS_FILE must point to the bootstrap output '
+      '(.ai/scratch/zz_testlab/state/credentials.env)',
     );
   }
   final file = File(path);
-  if (!file.existsSync()) fail('Missing maclab credentials file: $path');
+  if (!file.existsSync()) fail('Missing testlab credentials file: $path');
   final values = <String, String>{};
   for (final line in file.readAsLinesSync()) {
     if (line.isEmpty || line.startsWith('#')) continue;

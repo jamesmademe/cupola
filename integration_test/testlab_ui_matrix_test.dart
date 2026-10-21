@@ -38,11 +38,11 @@ import '../test/test_helpers/settings_scope.dart';
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   const capture = bool.fromEnvironment(
-    'CUPOLA_MACLAB_SCREENSHOTS',
+    'CUPOLA_TESTLAB_SCREENSHOTS',
     defaultValue: true,
   );
   const driverScreenshots = bool.fromEnvironment(
-    'CUPOLA_MACLAB_DRIVER_SCREENSHOTS',
+    'CUPOLA_TESTLAB_DRIVER_SCREENSHOTS',
     defaultValue: false,
   );
 
@@ -56,11 +56,11 @@ void main() {
       final allRoutes = _routes();
       final routeOffset =
           int.tryParse(
-            Platform.environment['CUPOLA_MACLAB_ROUTE_OFFSET'] ?? '',
+            Platform.environment['CUPOLA_TESTLAB_ROUTE_OFFSET'] ?? '',
           ) ??
           0;
       final routeLimit = int.tryParse(
-        Platform.environment['CUPOLA_MACLAB_ROUTE_LIMIT'] ?? '',
+        Platform.environment['CUPOLA_TESTLAB_ROUTE_LIMIT'] ?? '',
       );
       final routes = allRoutes
           .skip(routeOffset.clamp(0, allRoutes.length))
@@ -75,7 +75,7 @@ void main() {
         (name: '720x450', size: const Size(720, 450)),
         (name: '390x844', size: const Size(390, 844)),
       ];
-      final requestedSize = Platform.environment['CUPOLA_MACLAB_SIZE'];
+      final requestedSize = Platform.environment['CUPOLA_TESTLAB_SIZE'];
       final sizes = requestedSize == null
           ? allSizes
           : allSizes
@@ -83,7 +83,7 @@ void main() {
                 .toList(growable: false);
       if (sizes.isEmpty) {
         fail(
-          'CUPOLA_MACLAB_SIZE must be one of: '
+          'CUPOLA_TESTLAB_SIZE must be one of: '
           '${allSizes.map((frame) => frame.name).join(', ')}',
         );
       }
@@ -95,11 +95,11 @@ void main() {
       final screenshotDirectory = driverScreenshots
           ? null
           : (Directory(
-              Platform.environment['CUPOLA_MACLAB_SCREENSHOT_DIR'] ??
-                  '.ai/scratch/zz_maclab/screenshots',
+              Platform.environment['CUPOLA_TESTLAB_SCREENSHOT_DIR'] ??
+                  '.ai/scratch/zz_testlab/screenshots',
             )..createSync(recursive: true));
       debugPrint(
-        '[maclab] scenario=$scenario capture=$capture cwd=${Directory.current.path} '
+        '[testlab] scenario=$scenario capture=$capture cwd=${Directory.current.path} '
         'screenshots=${screenshotDirectory?.absolute.path ?? 'driver'} '
         'routes=${routes.length}/${allRoutes.length} offset=$routeOffset',
       );
@@ -134,7 +134,7 @@ void main() {
             await tester.pump();
             final resizeException = tester.takeException();
             if (resizeException != null &&
-                Platform.environment['CUPOLA_MACLAB_VERBOSE'] == 'true') {
+                Platform.environment['CUPOLA_TESTLAB_VERBOSE'] == 'true') {
               debugPrint(
                 resizeException is FlutterError
                     ? resizeException.toStringDeep()
@@ -148,8 +148,8 @@ void main() {
             );
 
             for (final route in routes) {
-              if (Platform.environment['CUPOLA_MACLAB_VERBOSE'] == 'true') {
-                debugPrint('[maclab] ${theme.name} · ${frame.name} · $route');
+              if (Platform.environment['CUPOLA_TESTLAB_VERBOSE'] == 'true') {
+                debugPrint('[testlab] ${theme.name} · ${frame.name} · $route');
               }
               router.go(route);
               await _pumpRoute(tester);
@@ -168,7 +168,7 @@ void main() {
               }
 
               if (exception != null &&
-                  Platform.environment['CUPOLA_MACLAB_VERBOSE'] == 'true') {
+                  Platform.environment['CUPOLA_TESTLAB_VERBOSE'] == 'true') {
                 debugPrint(
                   exception is FlutterError
                       ? exception.toStringDeep()
@@ -230,7 +230,7 @@ Future<void> _pumpRoute(WidgetTester tester) async {
 
 Duration get _settleDuration {
   final milliseconds =
-      int.tryParse(Platform.environment['CUPOLA_MACLAB_SETTLE_MS'] ?? '') ??
+      int.tryParse(Platform.environment['CUPOLA_TESTLAB_SETTLE_MS'] ?? '') ??
       2000;
   return Duration(milliseconds: milliseconds.clamp(0, 10000));
 }
@@ -343,7 +343,7 @@ SettingsModel _labSettings(
       : 'https://127.0.0.1:8460';
   final truenasPin = unreachable
       ? ''
-      : _required(credentials, 'CUPOLA_MACLAB_TRUENAS_CERT_FINGERPRINT');
+      : _required(credentials, 'CUPOLA_TESTLAB_TRUENAS_CERT_FINGERPRINT');
 
   String username(String key) =>
       invalidAuth ? 'wrong-user' : _required(credentials, key);
@@ -353,11 +353,11 @@ SettingsModel _labSettings(
 
   final settings = settingsWith(
     themeMode: theme,
-    plexClientId: 'cupola-maclab-ui-matrix',
+    plexClientId: 'cupola-testlab-ui-matrix',
     seerrUrl: endpoint('http://127.0.0.1:5055'),
     seerrApiKey: invalidAuth
         ? 'wrong-key'
-        : _required(credentials, 'CUPOLA_MACLAB_SEERR_API_KEY'),
+        : _required(credentials, 'CUPOLA_TESTLAB_SEERR_API_KEY'),
     radarrUrl: endpoint('http://127.0.0.1:7878', broken: true),
     radarrApiKey: apiKey,
     sonarrUrl: endpoint('http://127.0.0.1:8989', broken: true),
@@ -371,31 +371,31 @@ SettingsModel _labSettings(
     bazarrUrl: endpoint('http://127.0.0.1:6767'),
     bazarrApiKey: apiKey,
     qbittorrentUrl: endpoint('http://127.0.0.1:8080'),
-    qbittorrentUsername: username('CUPOLA_MACLAB_QBITTORRENT_USERNAME'),
-    qbittorrentPassword: password('CUPOLA_MACLAB_QBITTORRENT_PASSWORD'),
+    qbittorrentUsername: username('CUPOLA_TESTLAB_QBITTORRENT_USERNAME'),
+    qbittorrentPassword: password('CUPOLA_TESTLAB_QBITTORRENT_PASSWORD'),
     transmissionUrl: endpoint('http://127.0.0.1:9091'),
-    transmissionUsername: username('CUPOLA_MACLAB_TRANSMISSION_USERNAME'),
-    transmissionPassword: password('CUPOLA_MACLAB_TRANSMISSION_PASSWORD'),
+    transmissionUsername: username('CUPOLA_TESTLAB_TRANSMISSION_USERNAME'),
+    transmissionPassword: password('CUPOLA_TESTLAB_TRANSMISSION_PASSWORD'),
     sabnzbdUrl: endpoint('http://127.0.0.1:8082'),
     sabnzbdApiKey: apiKey,
     nzbgetUrl: endpoint('http://127.0.0.1:6789'),
-    nzbgetUsername: username('CUPOLA_MACLAB_NZBGET_USERNAME'),
-    nzbgetPassword: password('CUPOLA_MACLAB_NZBGET_PASSWORD'),
+    nzbgetUsername: username('CUPOLA_TESTLAB_NZBGET_USERNAME'),
+    nzbgetPassword: password('CUPOLA_TESTLAB_NZBGET_PASSWORD'),
     jellyfinUrl: endpoint('http://127.0.0.1:8096'),
     jellyfinApiKey: invalidAuth
         ? 'wrong-token'
-        : _required(credentials, 'CUPOLA_MACLAB_JELLYFIN_TOKEN'),
-    jellyfinUserId: _required(credentials, 'CUPOLA_MACLAB_JELLYFIN_USER_ID'),
+        : _required(credentials, 'CUPOLA_TESTLAB_JELLYFIN_TOKEN'),
+    jellyfinUserId: _required(credentials, 'CUPOLA_TESTLAB_JELLYFIN_USER_ID'),
     plexUrl: endpoint('http://127.0.0.1:32400'),
     plexToken: invalidAuth
         ? 'wrong-token'
-        : _required(credentials, 'CUPOLA_MACLAB_PLEX_TOKEN'),
+        : _required(credentials, 'CUPOLA_TESTLAB_PLEX_TOKEN'),
     dockgeUrl: endpoint('http://127.0.0.1:5001'),
-    dockgeUsername: username('CUPOLA_MACLAB_DOCKGE_USERNAME'),
-    dockgePassword: password('CUPOLA_MACLAB_DOCKGE_PASSWORD'),
+    dockgeUsername: username('CUPOLA_TESTLAB_DOCKGE_USERNAME'),
+    dockgePassword: password('CUPOLA_TESTLAB_DOCKGE_PASSWORD'),
     npmUrl: endpoint('http://127.0.0.1:8181'),
-    npmUsername: username('CUPOLA_MACLAB_NPM_USERNAME'),
-    npmPassword: password('CUPOLA_MACLAB_NPM_PASSWORD'),
+    npmUsername: username('CUPOLA_TESTLAB_NPM_USERNAME'),
+    npmPassword: password('CUPOLA_TESTLAB_NPM_PASSWORD'),
     truenasUrl: truenasUrl,
     truenasApiKey: apiKey,
     unraidUrl: endpoint('http://127.0.0.1:8480'),
@@ -415,20 +415,20 @@ String get _scenario {
     'unreachable',
     'invalid-auth',
   };
-  final value = Platform.environment['CUPOLA_MACLAB_SCENARIO'] ?? 'healthy';
+  final value = Platform.environment['CUPOLA_TESTLAB_SCENARIO'] ?? 'healthy';
   if (!allowed.contains(value)) {
-    fail('CUPOLA_MACLAB_SCENARIO must be one of: ${allowed.join(', ')}');
+    fail('CUPOLA_TESTLAB_SCENARIO must be one of: ${allowed.join(', ')}');
   }
   return value;
 }
 
 Map<String, String> _loadCredentials({required bool mustExist}) {
-  final path = Platform.environment['CUPOLA_MACLAB_CREDENTIALS_FILE'];
+  final path = Platform.environment['CUPOLA_TESTLAB_CREDENTIALS_FILE'];
   final values = <String, String>{};
   // A native macOS integration-test runner is sandboxed away from the
   // checkout, while the Dart VM transport test can read the disposable file
   // directly. Prefer it when available, then fall back to inherited
-  // CUPOLA_MACLAB_* variables for the native runner. The bootstrap file is
+  // CUPOLA_TESTLAB_* variables for the native runner. The bootstrap file is
   // still the only source of the values; this fallback avoids putting them in
   // source control or in command-line arguments.
   if (path != null && path.isNotEmpty) {
@@ -446,14 +446,14 @@ Map<String, String> _loadCredentials({required bool mustExist}) {
     }
   }
   for (final entry in Platform.environment.entries) {
-    if (entry.key.startsWith('CUPOLA_MACLAB_')) {
+    if (entry.key.startsWith('CUPOLA_TESTLAB_')) {
       values.putIfAbsent(entry.key, () => entry.value);
     }
   }
   if (mustExist && values.isEmpty) {
     fail(
-      'Provide CUPOLA_MACLAB_* environment variables from the bootstrap '
-      'credentials.env, or a readable CUPOLA_MACLAB_CREDENTIALS_FILE',
+      'Provide CUPOLA_TESTLAB_* environment variables from the bootstrap '
+      'credentials.env, or a readable CUPOLA_TESTLAB_CREDENTIALS_FILE',
     );
   }
   return values;

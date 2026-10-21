@@ -46,7 +46,7 @@ import 'package:cupola/features/stream/domain/stream_server_client.dart';
 /// matches a token against user sessions first and API keys second, so an
 /// API key authenticates as Administrator with no user, while a user's
 /// `AccessToken` from `POST /Users/AuthenticateByName`, which is what the
-/// maclab bootstrap stores, authenticates as that user, with that user's
+/// testlab bootstrap stores, authenticates as that user, with that user's
 /// policy.
 ///
 /// Even so, **no session control Cupola draws can be refused.** Pause, resume,
