@@ -4,7 +4,8 @@
     python3 tool/design_system/lint_boards.py <folder of .dc.html> \\
         --kit <kit/tokens.css> --canvas <canvas.json> [--all-pages]
 
-A board outside the archive (its page in canvas.json is not `archive`):
+A board outside the archive (its page id in canvas.json does not start with
+`archive`, the id of every Archivio page):
 
 - error: a colour written as a literal (`#hex`, `rgb()`, `hsl()`) anywhere
   but in a `--art-*` declaration. The light a title's artwork casts is the
@@ -99,7 +100,7 @@ def main(argv: list[str]) -> int:
         if entry is None:
             print(f"{path.name}: not on the canvas, skipped")
             continue
-        if entry.get("page") == "archive" and not args.all_pages:
+        if str(entry.get("page", "")).startswith("archive") and not args.all_pages:
             continue
         errors, warnings = lint(path, values)
         for error in errors:
