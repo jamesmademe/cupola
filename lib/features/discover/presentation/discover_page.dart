@@ -796,7 +796,7 @@ class _LidarrLink extends ConsumerWidget {
             vertical: AppSpacing.sm,
           ),
           decoration: BoxDecoration(
-            color: room.fillQuiet,
+            color: room.door,
             borderRadius: BorderRadius.circular(AppRadius.door),
             border: Border.all(color: room.hair),
           ),

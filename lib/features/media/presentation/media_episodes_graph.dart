@@ -134,7 +134,7 @@ class MediaEpisodesGraphPanel extends ConsumerWidget {
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.slabY),
           decoration: BoxDecoration(
-            color: room.fillQuiet,
+            color: room.door,
             borderRadius: BorderRadius.circular(AppRadius.slab),
             border: Border.all(color: room.hair),
           ),
@@ -395,7 +395,7 @@ class MediaEpisodesGraphSheet extends ConsumerWidget {
           child: Container(
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
-              color: room.fillQuiet,
+              color: room.door,
               borderRadius: BorderRadius.circular(AppRadius.door),
               border: Border.all(color: room.hair),
             ),

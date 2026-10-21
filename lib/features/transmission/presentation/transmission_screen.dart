@@ -43,6 +43,7 @@ class TransmissionScreen extends ConsumerWidget {
           ? const GlassAppBar(title: Text('Transmission'))
           : null,
       body: SafeArea(
+        bottom: false,
         child: isConfigured
             ? _TransmissionDashboard(topPadding: topPadding)
             : NotConfiguredPlaceholder.forService(ServiceKey.transmission),

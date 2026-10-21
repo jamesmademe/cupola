@@ -619,7 +619,7 @@ class _ServiceMatrixBand extends StatelessWidget {
         child: Container(
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            color: room.fillQuiet,
+            color: room.door,
             borderRadius: BorderRadius.circular(AppRadius.group),
             border: Border.all(color: room.fillControl),
           ),

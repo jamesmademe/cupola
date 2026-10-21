@@ -103,6 +103,7 @@ class SonarrOverviewScreen extends ConsumerWidget {
     return AmbientScaffold(
       accent: ServiceKey.sonarr.accent,
       body: SafeArea(
+        bottom: false,
         child: configured
             // Checked BEFORE anything reaches a provider: a `FutureProvider`
             // that throws "Sonarr not configured" is a *failed* provider, and
@@ -156,13 +157,9 @@ class _OverviewBody extends ConsumerWidget {
       },
       // One scroll view for the whole page: the regions are one column of
       // reading, not four independently scrolling panes.
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.only(
-          bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-        ),
+      child: ServiceOverviewScroll(
+        topPadding: topPadding,
         children: [
-          if (topPadding > 0) SizedBox(height: topPadding),
           const ServiceOverviewIdentity(service: ServiceKey.sonarr),
           ...sectionsOrOneLine(ref, ServiceKey.sonarr, [
             ServiceKpiPeek.room(

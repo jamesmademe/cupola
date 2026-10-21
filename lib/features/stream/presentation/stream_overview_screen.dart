@@ -120,6 +120,7 @@ class StreamOverviewScreen extends ConsumerWidget {
     return AmbientScaffold(
       accent: service.accent,
       body: SafeArea(
+        bottom: false,
         child: configured
             ? _OverviewBody(
                 service: service,
@@ -224,13 +225,9 @@ class _OverviewBody extends ConsumerWidget {
       },
       // One scroll view for the whole page: the regions are one column of
       // reading, not four independently scrolling panes.
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.only(
-          bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-        ),
+      child: ServiceOverviewScroll(
+        topPadding: topPadding,
         children: [
-          if (topPadding > 0) SizedBox(height: topPadding),
           ServiceOverviewIdentity(service: service, instanceId: instanceId),
           ...sectionsOrOneLine(
             ref,

@@ -62,16 +62,12 @@ class MediaDecisionCard extends ConsumerWidget {
       StateWord.waitingForApproval.label,
       formatDayWordsOf(request.createdAt),
     ].join(dotSeparator);
-    final info = statusToneColor(
-      scheme,
-      StatusTone.info,
-      surface: room.fillQuiet,
-    );
+    final info = statusToneColor(scheme, StatusTone.info, surface: room.door);
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: room.fillQuiet,
+        color: room.door,
         borderRadius: BorderRadius.circular(AppRadius.door),
         border: Border.all(color: room.hair),
       ),

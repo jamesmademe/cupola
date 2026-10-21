@@ -86,6 +86,7 @@ class LidarrOverviewScreen extends ConsumerWidget {
     return AmbientScaffold(
       accent: ServiceKey.lidarr.accent,
       body: SafeArea(
+        bottom: false,
         // Checked **before** anything reaches a provider, not after: a fetch on
         // an unconfigured service throws "Lidarr not configured", and a
         // FutureProvider that throws is a failed provider. Riverpod schedules
@@ -134,13 +135,9 @@ class _OverviewBody extends ConsumerWidget {
       },
       // One scroll view for the whole page: the regions are one column of
       // reading, not four independently scrolling panes.
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.only(
-          bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-        ),
+      child: ServiceOverviewScroll(
+        topPadding: topPadding,
         children: [
-          if (topPadding > 0) SizedBox(height: topPadding),
           const ServiceOverviewIdentity(service: ServiceKey.lidarr),
           ...sectionsOrOneLine(ref, ServiceKey.lidarr, [
             ServiceKpiPeek.room(

@@ -178,7 +178,7 @@ class NeedsYouLine extends StatelessWidget {
               vertical: AppSpacing.sm,
             ),
             decoration: BoxDecoration(
-              color: room.fillQuiet,
+              color: room.door,
               borderRadius: BorderRadius.circular(AppRadius.button),
               border: Border.all(color: room.hair),
             ),

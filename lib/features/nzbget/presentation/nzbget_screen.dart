@@ -42,6 +42,7 @@ class NzbgetScreen extends ConsumerWidget {
       accent: ServiceKey.nzbget.accent,
       appBar: showAppBar ? const GlassAppBar(title: Text('NZBGet')) : null,
       body: SafeArea(
+        bottom: false,
         // The shared placeholder, not a private copy: see the note on the
         // SABnzbd dashboard, which had grown the same widget independently.
         child: isConfigured

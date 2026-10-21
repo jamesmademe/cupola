@@ -538,12 +538,12 @@ class _RetiredNote extends StatelessWidget {
     final info = statusToneColor(
       Theme.of(context).colorScheme,
       StatusTone.info,
-      surface: room.fillQuiet,
+      surface: room.door,
     );
     return Container(
       padding: const EdgeInsets.all(AppSpacing.slabY),
       decoration: BoxDecoration(
-        color: room.fillQuiet,
+        color: room.door,
         borderRadius: BorderRadius.circular(AppRadius.button),
         border: Border.all(color: room.hair),
       ),

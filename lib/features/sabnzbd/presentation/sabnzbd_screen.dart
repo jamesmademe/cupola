@@ -42,6 +42,7 @@ class SabnzbdScreen extends ConsumerWidget {
       accent: ServiceKey.sabnzbd.accent,
       appBar: showAppBar ? const GlassAppBar(title: Text('SABnzbd')) : null,
       body: SafeArea(
+        bottom: false,
         // The shared placeholder, not a private copy. Four dashboards had grown
         // their own version of "this service isn't set up", same shape, four
         // different icons, paddings and sentences, while

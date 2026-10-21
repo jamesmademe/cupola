@@ -75,7 +75,7 @@ class MediaNextAiringCard extends StatelessWidget {
           vertical: AppSpacing.md,
         ),
         decoration: BoxDecoration(
-          color: room.fillQuiet,
+          color: room.door,
           borderRadius: BorderRadius.circular(AppRadius.door),
           border: Border.all(color: room.hair),
         ),

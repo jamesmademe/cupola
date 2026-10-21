@@ -188,13 +188,13 @@ class _Panel extends StatelessWidget {
     final room = CupolaRoom.of(context);
     final scheme = Theme.of(context).colorScheme;
     Color tone(StatusTone tone) =>
-        statusToneColor(scheme, tone, surface: room.fillQuiet);
+        statusToneColor(scheme, tone, surface: room.door);
     final fault = panel.tone;
     final actions = panel.actions;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: room.fillQuiet,
+        color: room.door,
         borderRadius: BorderRadius.circular(AppRadius.door),
         border: Border.all(color: room.hair),
       ),

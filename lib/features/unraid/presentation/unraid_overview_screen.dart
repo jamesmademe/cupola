@@ -86,6 +86,7 @@ class UnraidOverviewScreen extends ConsumerWidget {
     return AmbientScaffold(
       accent: ServiceKey.unraid.accent,
       body: SafeArea(
+        bottom: false,
         child: configured
             ? _OverviewBody(topPadding: topPadding)
             // `.forService`, never the generic form: this is a service
@@ -107,11 +108,7 @@ class _OverviewBody extends ConsumerWidget {
     return RefreshIndicator(
       onRefresh: () async {
         invalidateServiceReadout(ref, ServiceKey.unraid);
-        // The three documents, and then the folds derived from them. The folds
-        // are invalidated too rather than left to recompute: they are
-        // `autoDispose`, so a region the user has scrolled past may already
-        // have been collected, and invalidating only the source would leave it
-        // holding the previous fold when it came back.
+        // The three documents, and then the folds derived from them.
         ref.invalidate(unraidArrayProvider);
         ref.invalidate(unraidDockerProvider);
         ref.invalidate(unraidInfoProvider);
@@ -122,13 +119,9 @@ class _OverviewBody extends ConsumerWidget {
       },
       // One scroll view for the whole page: the regions are one column of
       // reading, not three independently scrolling panes.
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.only(
-          bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-        ),
+      child: ServiceOverviewScroll(
+        topPadding: topPadding,
         children: [
-          if (topPadding > 0) SizedBox(height: topPadding),
           const ServiceOverviewIdentity(service: ServiceKey.unraid),
           ...sectionsOrOneLine(ref, ServiceKey.unraid, [
             ServiceKpiPeek.room(

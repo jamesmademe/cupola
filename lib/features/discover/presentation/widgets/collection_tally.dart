@@ -82,8 +82,7 @@ class CollectionTally extends ConsumerWidget {
     final headline = held == total && total > 1
         ? 'All $total on your server'
         : '$held of $total on your server';
-    Color tone(StatusTone t) =>
-        statusToneColor(scheme, t, surface: room.fillQuiet);
+    Color tone(StatusTone t) => statusToneColor(scheme, t, surface: room.door);
     final coming = [
       if (onTheWay > 0) ('$onTheWay on the way', tone(StatusTone.info), false),
       if (waiting > 0)
@@ -207,7 +206,7 @@ class CollectionTally extends ConsumerWidget {
     final slab = Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: room.fillQuiet,
+        color: room.door,
         borderRadius: BorderRadius.circular(AppRadius.door),
         border: Border.all(color: room.hair),
       ),
@@ -318,8 +317,7 @@ class _Strip extends StatelessWidget {
     required CupolaRoom room,
     required ColorScheme scheme,
   }) {
-    Color tone(StatusTone t) =>
-        statusToneColor(scheme, t, surface: room.fillQuiet);
+    Color tone(StatusTone t) => statusToneColor(scheme, t, surface: room.door);
     final (color, hollow) = switch (stand) {
       CollectionPartStand.onServer => (tone(StatusTone.success), false),
       CollectionPartStand.onTheWay => (tone(StatusTone.info), false),

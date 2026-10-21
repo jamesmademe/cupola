@@ -97,6 +97,7 @@ class DockgeOverviewScreen extends ConsumerWidget {
     return AmbientScaffold(
       accent: ServiceKey.dockge.accent,
       body: SafeArea(
+        bottom: false,
         child: configured
             ? _OverviewBody(topPadding: topPadding)
             // `.forService`, never the generic form: this is a service
@@ -121,11 +122,8 @@ class _OverviewBody extends ConsumerWidget {
         // `autoDispose`, so a pull that left it alone redrew the band from the
         // answer it already had.
         invalidateServiceReadout(ref, ServiceKey.dockge);
-        // The two pushes every region is folded from. The three derived
-        // providers are invalidated too rather than left to recompute: they are
-        // `autoDispose`, so a region the user has scrolled past may already
-        // have been collected, and invalidating the source alone would leave it
-        // holding the previous fold when it came back.
+        // The two pushes every region is folded from, and the three folds
+        // derived from them.
         ref.invalidate(dockgeStackListProvider);
         ref.invalidate(dockgeAgentsProvider);
         ref.invalidate(dockgeOverviewCensusProvider);
@@ -135,13 +133,9 @@ class _OverviewBody extends ConsumerWidget {
       },
       // One scroll view for the whole page: the regions are one column of
       // reading, not independently scrolling panes.
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.only(
-          bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-        ),
+      child: ServiceOverviewScroll(
+        topPadding: topPadding,
         children: [
-          if (topPadding > 0) SizedBox(height: topPadding),
           const ServiceOverviewIdentity(service: ServiceKey.dockge),
           ...sectionsOrOneLine(ref, ServiceKey.dockge, [
             ServiceKpiPeek.room(

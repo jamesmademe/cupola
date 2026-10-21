@@ -30,7 +30,7 @@ The single import of a title, its room or the ⋯ menu stays the wizard (Locate 
 
 - **Title** (in the glass bar): `Review 18 imports`, one import per file.
   - Under it, in `AppType.body` `inkSecondary`, the arr's cause in a sentence: `The file names don't match the series name, so Sonarr won't guess.`
-- **Why?**: an outlined button with a chevron. Open, a quiet box (`fillQuiet`, slab radius, hairline) shows:
+- **Why?**: an outlined button with a chevron. Open, a quiet box (`door`, slab radius, hairline) shows:
   - `What Sonarr says`, then each distinct message of the queue, then of each file listed, in `AppType.mono`, word for word. The sentence above takes the first cause the app recognises among them; `One or more episodes expected in this release were not imported` is only the sum of its files' and names the cause only when nothing else does;
   - `In plain words: …` in `AppType.meta`.
 - **The jump**: `PageTabs` with `Clear 12` and `Need you 6`, the second count in amber. It shows only when both parts have files.

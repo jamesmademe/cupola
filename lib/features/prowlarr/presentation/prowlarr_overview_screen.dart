@@ -63,6 +63,7 @@ class ProwlarrOverviewScreen extends ConsumerWidget {
     return AmbientScaffold(
       accent: ServiceKey.prowlarr.accent,
       body: SafeArea(
+        bottom: false,
         child: configured
             ? _OverviewBody(topPadding: topPadding)
             // `.forService`: this is a service dashboard, so the door goes to
@@ -93,13 +94,9 @@ class _OverviewBody extends ConsumerWidget {
         ref.invalidate(prowlarrOverviewRecentProvider);
         await Future<void>.delayed(AppAnimation.durationMd);
       },
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.only(
-          bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-        ),
+      child: ServiceOverviewScroll(
+        topPadding: topPadding,
         children: [
-          if (topPadding > 0) SizedBox(height: topPadding),
           const ServiceOverviewIdentity(service: ServiceKey.prowlarr),
           ...sectionsOrOneLine(ref, ServiceKey.prowlarr, [
             ServiceKpiPeek.room(

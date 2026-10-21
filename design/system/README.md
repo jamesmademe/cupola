@@ -97,7 +97,7 @@ A near-black room, lit from the content. Dark is the primary theme; light is **t
 | `ground` | `#0A0A0D` | paper `#F6F4EF` | The floor (`surface`). Nothing sits under it. |
 | `slab` | `#121218` | `#FFFFFF` | A section, a card, grouped rows (`surface-container`), always with its `line.hair` edge; on paper also a soft lift. |
 | `raised` | `#17171D` | `#FFFFFF` | Sheets and dialogs (`surface-container-high` in the dark). |
-| `door` | `#16161C` | `#FFFFFF` | Discover's doors and tiles: a place you walk into. |
+| `door` | `#16161C` | `#FFFFFF` | Discover's doors and tiles, and every group, slab and banner a page sets on its ground: a place you walk into, white paper in the day room. Never `fill.quiet`, which in the day room is a step below the ground (`test/core/theme/group_surface_guard_test.dart`). |
 | `enamel` | `#1A1A1F` | `#FFFFFF` | Floating bars only (tab bar, rail, compact bar, selection bar), at `opacity.glass-surface` 0.95. |
 | `menu` | `#1D1D24` | `#FFFFFF` | Popovers. The day room lifts menus by shadow, not by tone. |
 | `toast` | `#202028` | `#16151A` | The toast (`inverse-surface`); in the day room the ink reversed. |

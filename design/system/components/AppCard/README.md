@@ -10,6 +10,7 @@ Rendered from `lib/core/widgets/app_card.dart` by `test/design_catalog/app_card_
 - `AppCard.outlined`: transparent with a 1px `outline` edge.
 - `AppCard.surfaceOutlined`: the slab with an edge of the caller's (`borderColor`), `line.hair` by default.
 - `AppCard.elevated`: the slab with an explicit `AppElevation.level2` shadow stack.
+- A card whose `backgroundColor` is transparent casts no shadow in any variant: a blurred shadow is a whole rectangle under its box and shows through as a grey wash (the Stack's rows, which sit on their group's surface).
 - All: `radius.slab` (26) corners, padding `space-lg` unless overridden. The edge is drawn over the card, never as a border that insets the child, so a card keeps its interior size whether it is tappable or not. It drew `radius-md` (14) with no edge, against the brand book's slab.
 - Optional `accentColor` paints one radial glow behind the content (`AppGradients.serviceGlow`), from `accentGlowCenter` (default top-right) at `accentGlowAlpha` (default 0.22), one card lit on its own. The light is the lamp for a service (`ServiceKey.accent`) or a tone on a card about a state. A grid of cells lighting from the same light should pass a fraction of that, e.g. 0.08 from `Alignment.topLeft`, or thirteen cells at full strength stop reading as lit cells and start reading as decoration.
 

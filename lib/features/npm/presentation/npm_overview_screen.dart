@@ -105,6 +105,7 @@ class NpmOverviewScreen extends ConsumerWidget {
     return AmbientScaffold(
       accent: ServiceKey.nginxProxyManager.accent,
       body: SafeArea(
+        bottom: false,
         child: configured
             ? _OverviewBody(topPadding: topPadding)
             // `.forService`, never the generic form: this is a service
@@ -139,21 +140,14 @@ class _OverviewBody extends ConsumerWidget {
         // is what the default-admin warning reads.
         ref.invalidate(npmAccountProvider);
         ref.invalidate(npmServerInfoProvider);
-        // `autoDispose`, so a region scrolled past may already have been
-        // collected; invalidating only the sources would leave it holding the
-        // previous fold when it came back.
         ref.invalidate(npmOverviewAttentionProvider);
         await Future<void>.delayed(AppAnimation.durationMd);
       },
       // One scroll view for the whole page: the regions are one column of
       // reading, not three independently scrolling panes.
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.only(
-          bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-        ),
+      child: ServiceOverviewScroll(
+        topPadding: topPadding,
         children: [
-          if (topPadding > 0) SizedBox(height: topPadding),
           const ServiceOverviewIdentity(service: ServiceKey.nginxProxyManager),
           ...sectionsOrOneLine(ref, ServiceKey.nginxProxyManager, [
             ServiceKpiPeek.room(

@@ -13,6 +13,7 @@ import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/widgets/ambient_background.dart';
 import 'package:cupola/core/widgets/content_card.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
+import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/widgets/rail_arrows.dart';
@@ -1017,8 +1018,8 @@ class _LensChip extends StatelessWidget {
 /// "Lens" above is the connection the page reads: [instanceId] when the page
 /// reads another (a visit to a media server opened on one), else the lens.
 ///
-/// A spread rather than a wrapper, so the page's list keeps building its
-/// sections lazily; called from the page's build with its [ref].
+/// A spread rather than a wrapper, so the sections stay direct children of
+/// [ServiceOverviewScroll]; called from the page's build with its [ref].
 List<Widget> sectionsOrOneLine(
   WidgetRef ref,
   ServiceKey service,
@@ -1048,6 +1049,44 @@ List<Widget> sectionsOrOneLine(
     ],
     _ => sections,
   };
+}
+
+/// The one scroll view of an Overview: the band's room at its top, the
+/// sections in one column, and the bar's clearance at its foot.
+///
+/// **Every section stays built, never a lazy list.** A section's figures come
+/// from `autoDispose` providers derived from the page's sources. In a
+/// `ListView` a section scrolled past its cache extent was unmounted, its
+/// provider collected, and scrolling back rebuilt it from a skeleton a third of
+/// its height before the figures arrived a frame later: the list corrected its
+/// offset above the viewport twice, and the page jumped under the thumb
+/// (qBittorrent's Queue, 21/10). An Overview is half a dozen sections, so
+/// building them all costs nothing a lazy list would save.
+class ServiceOverviewScroll extends StatelessWidget {
+  const ServiceOverviewScroll({
+    super.key,
+    required this.topPadding,
+    required this.children,
+  });
+
+  /// Height of the chrome the host draws above the page.
+  final double topPadding;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.only(
+        top: topPadding,
+        bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      ),
+    );
+  }
 }
 
 /// The one line of an Overview whose lens connection did not answer. Red,

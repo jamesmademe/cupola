@@ -197,6 +197,7 @@ void main() {
 
     final under = <String>[];
     final short = <String>[];
+    final cut = <String>[];
     final read = <String>[];
     for (final location in _locations(profile)) {
       router.go(location);
@@ -213,12 +214,29 @@ void main() {
       if (last.overflows && above > _mostAbove) {
         short.add('$where: ${above.round()}pt above');
       }
+      // The page passes under the bar: its list runs to the screen's foot
+      // and only its padding clears the glass. A `SafeArea` that keeps the
+      // bottom inset stops the list at the bar's top edge instead, a hard
+      // line across the page (qBittorrent, 21/10).
+      final list = _lists().reduce((a, b) {
+        final sa = a.context.size!, sb = b.context.size!;
+        return sa.width * sa.height >= sb.width * sb.height ? a : b;
+      });
+      final box = list.context.findRenderObject()! as RenderBox;
+      final foot = box.localToGlobal(Offset.zero).dy + box.size.height;
+      if (foot < _phone.height - 1) {
+        cut.add(
+          '$location (${last.page}): ${(_phone.height - foot).round()}pt '
+          'short of the foot',
+        );
+      }
     }
 
     // A sweep that measured nothing would pass both checks.
     expect(read.length, greaterThan(10), reason: read.join('\n'));
     expect(under, isEmpty, reason: 'The last line ends under the bar.');
     expect(short, isEmpty, reason: 'The page reserves the bar twice.');
+    expect(cut, isEmpty, reason: 'The page stops above the bar.');
 
     // Off the last service before the tree goes: Dockge's socket says
     // goodbye on a timer of its own.

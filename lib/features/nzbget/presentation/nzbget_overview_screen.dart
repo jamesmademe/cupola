@@ -71,6 +71,7 @@ class NzbgetOverviewScreen extends ConsumerWidget {
     return AmbientScaffold(
       accent: ServiceKey.nzbget.accent,
       body: SafeArea(
+        bottom: false,
         child: configured
             ? _OverviewBody(topPadding: topPadding)
             // `.forService`, never the generic form: this is a service
@@ -105,13 +106,9 @@ class _OverviewBody extends ConsumerWidget {
       },
       // One scroll view for the whole page: the regions are one column of
       // reading, not two independently scrolling panes.
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.only(
-          bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-        ),
+      child: ServiceOverviewScroll(
+        topPadding: topPadding,
         children: [
-          if (topPadding > 0) SizedBox(height: topPadding),
           const ServiceOverviewIdentity(service: ServiceKey.nzbget),
           ...sectionsOrOneLine(ref, ServiceKey.nzbget, [
             // The shared rail, not a private one: Speed, Queue, Remaining and

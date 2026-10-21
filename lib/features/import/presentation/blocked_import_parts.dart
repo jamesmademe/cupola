@@ -52,7 +52,7 @@ class BlockedImportWhy extends StatelessWidget {
     final room = CupolaRoom.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: room.fillQuiet,
+        color: room.door,
         borderRadius: AppRadius.borderRadiusSlab,
         border: Border.all(color: room.hair),
       ),

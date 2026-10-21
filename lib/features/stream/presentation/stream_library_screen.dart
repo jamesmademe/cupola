@@ -309,6 +309,7 @@ class _StreamLibraryScreenState extends ConsumerState<StreamLibraryScreen> {
       accent: accent,
       appBar: GlassAppBar.inPage(pageTitle: _title),
       body: SafeArea(
+        bottom: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

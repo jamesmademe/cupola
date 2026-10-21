@@ -73,6 +73,7 @@ class StreamItemScreen extends ConsumerWidget {
       accent: service.accent,
       appBar: GlassAppBar.inPage(pageTitle: title),
       body: SafeArea(
+        bottom: false,
         child: TitledBody(
           title: title,
           child: AsyncValueWidget<StreamItem?>(

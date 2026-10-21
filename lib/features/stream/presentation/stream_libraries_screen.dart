@@ -82,6 +82,7 @@ class StreamLibrariesScreen extends ConsumerWidget {
       // shell) the band above consumes it and the tab bar sits an inset lower
       // than `topPadding` says.
       body: SafeArea(
+        bottom: false,
         child: settings.isServiceConfigured(service)
             ? _LibrariesBody(
                 service: service,

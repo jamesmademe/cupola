@@ -84,6 +84,7 @@ class QbittorrentOverviewScreen extends ConsumerWidget {
     return AmbientScaffold(
       accent: ServiceKey.qbittorrent.accent,
       body: SafeArea(
+        bottom: false,
         child: configured
             ? _OverviewBody(topPadding: topPadding)
             // `.forService`, never the generic form: this is a service
@@ -106,11 +107,8 @@ class _OverviewBody extends ConsumerWidget {
       onRefresh: () async {
         clearQbittorrentLoginRefusal(ref);
         invalidateServiceReadout(ref, ServiceKey.qbittorrent);
-        // The two sources every region on this page is folded from. The four
-        // derived providers below are invalidated too rather than left to
-        // recompute: they are `autoDispose`, so a region the user has scrolled
-        // past may already have been collected, and invalidating the source
-        // alone would leave it holding the previous fold when it came back.
+        // The two sources every region on this page is folded from, and the
+        // folds derived from them.
         ref.invalidate(allTorrentsProvider);
         ref.invalidate(transferInfoProvider);
         ref.invalidate(qbittorrentOverviewAttentionProvider);
@@ -123,13 +121,9 @@ class _OverviewBody extends ConsumerWidget {
       },
       // One scroll view for the whole page: the regions are one column of
       // reading, not four independently scrolling panes.
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.only(
-          bottom: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-        ),
+      child: ServiceOverviewScroll(
+        topPadding: topPadding,
         children: [
-          if (topPadding > 0) SizedBox(height: topPadding),
           const ServiceOverviewIdentity(service: ServiceKey.qbittorrent),
           ...sectionsOrOneLine(ref, ServiceKey.qbittorrent, [
             ServiceKpiPeek.room(

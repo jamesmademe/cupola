@@ -129,7 +129,7 @@ answering` already answers) or before anything answered (no space is held for it
   Keyed on the reason, and on the credential only where it is named (two refused keys are one sentence, a key and a
   sign-in are two); a fault whose words name more than its reason (a gateway in front) is said alone.
 - `+2` when more things need the person. A request waiting for approval is not a fault: it is never in Needs you.
-- `fillQuiet` under a `hair` edge, `AppRadius.button`, at least 52pt tall. At a large reading size the count and the
+- `door` under a `hair` edge, `AppRadius.button`, at least 52pt tall. At a large reading size the count and the
   way in go under the sentence.
 
 ## Continue watching, Coming up, Arrived

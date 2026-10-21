@@ -78,8 +78,9 @@ class MediaRoom extends StatelessWidget {
   }
 }
 
-/// One group of rows on a Media page or one of its sheets: the room's quiet
-/// fill, `AppRadius.group`, a hairline round it and between the rows.
+/// One group of rows on a Media page or one of its sheets: the room's door
+/// (white in the day room, a step above the ground at night),
+/// `AppRadius.group`, a hairline round it and between the rows.
 class MediaGroup extends StatelessWidget {
   const MediaGroup({super.key, required this.children});
 
@@ -91,7 +92,7 @@ class MediaGroup extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.slabY),
       decoration: BoxDecoration(
-        color: room.fillQuiet,
+        color: room.door,
         borderRadius: BorderRadius.circular(AppRadius.group),
         border: Border.all(color: room.hair),
       ),

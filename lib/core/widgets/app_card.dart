@@ -280,6 +280,12 @@ class AppCard extends StatelessWidget {
         break;
     }
 
+    // A card with no surface casts no shadow. A blurred shadow is painted as
+    // a whole rectangle under its box, so under a transparent card it shows
+    // through as a grey wash: the Stack's rows, stacked, greyed their group in
+    // the day room (21/10). The dark room's `level1` is empty and hid it.
+    if (bgColor.a == 0) shadows = null;
+
     // Optional glow of the card's light, painted behind the content.
     final glow = accentColor != null
         ? AppGradients.serviceGlow(

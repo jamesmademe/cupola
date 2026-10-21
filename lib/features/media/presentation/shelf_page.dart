@@ -800,7 +800,7 @@ class ShelfSliverGroup extends StatelessWidget {
     final room = CupolaRoom.of(context);
     return DecoratedSliver(
       decoration: BoxDecoration(
-        color: room.fillQuiet,
+        color: room.door,
         borderRadius: BorderRadius.circular(AppRadius.group),
         border: Border.all(color: room.hair),
       ),

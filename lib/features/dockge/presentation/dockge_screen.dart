@@ -48,6 +48,7 @@ class DockgeScreen extends ConsumerWidget {
       // consumes it and the tab bar under the band sits an inset lower than
       // `topPadding` says, so the page has to start below the inset too.
       body: SafeArea(
+        bottom: false,
         child: isConfigured
             ? _DockgeDashboard(topPadding: topPadding)
             : const NotConfiguredPlaceholder(serviceName: 'Dockge'),

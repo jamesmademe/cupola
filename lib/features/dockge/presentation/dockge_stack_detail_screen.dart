@@ -68,6 +68,7 @@ class DockgeStackDetailScreen extends ConsumerWidget {
         ],
       ),
       body: SafeArea(
+        bottom: false,
         child: isConfigured
             ? _StackDetailBody(name: name, onRefresh: _refresh)
             : TitledBody(
@@ -129,11 +130,11 @@ class _DetailBody extends ConsumerWidget {
       },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(
+        padding: EdgeInsets.fromLTRB(
           AppSpacing.lg,
           0,
           AppSpacing.lg,
-          AppSpacing.xxl,
+          FloatingNavBarMetrics.getScrollViewBottomPadding(context),
         ),
         children: [
           // The stack's name, and how it stands under it.

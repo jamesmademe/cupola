@@ -259,6 +259,11 @@ final Map<String, ({RegExp present, RegExp absent})> _anchors = {
   // The page reserves the room the bands take with a `SizedBox` of
   // `topPadding`, below the `SafeArea` that took the inset.
   'SizedBox': _anchor(r'\bSizedBox\(\s*height:\s*topPadding\b'),
+  // An Overview hands `topPadding` to its one scroll view, which pads its
+  // column by it, below the `SafeArea` that took the inset.
+  'ServiceOverviewScroll': _anchor(
+    r'\bServiceOverviewScroll\(\s*topPadding:\s*topPadding\b',
+  ),
   // The screen hands `topPadding` to the shared browse scaffold, whose header
   // adds the inset itself (measured by the Radarr Library case).
   'MediaBrowseScaffold': _anchor(
@@ -268,7 +273,7 @@ final Map<String, ({RegExp present, RegExp absent})> _anchors = {
 
 const String _safeAreaOverview =
     'its body is a SafeArea, which takes the inset, and the page reserves '
-    'the room the bands take with a SizedBox of topPadding';
+    'the room the bands take by handing topPadding to ServiceOverviewScroll';
 
 const String _safeAreaDashboard =
     'its body is a SafeArea, which takes the inset, and the dashboard '

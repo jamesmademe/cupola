@@ -9,7 +9,7 @@ Rendered from `lib/features/discover/presentation/widgets/collection_tally.dart`
 - **Page** (`CollectionTally`): the headline in the section role, `5 of 8 on your server`, or `All 4 on your server` when nothing is missing.
 - **Invitation** (`CollectionTally.invitation`): `Complete the collection` in the section role with the chevron of a shelf's header (`chevron_right_rounded` in the primary), and under it the name and the count in the label role at 400, `inkSecondary`: `Blender Open Movies · 5 of 8 on your server`. The whole slab is one button that opens the collection's page, where the movies are added and a request is answered.
 
-Both are a slab: `fillQuiet`, `AppRadius.door`, a hairline edge, padding `AppSpacing.lg`. The invitation glows with the light of its first movie's cover (`SlabLight` at 0.5, clipped to the slab), read from the cover the strip draws.
+Both are a slab: `door`, `AppRadius.door`, a hairline edge, padding `AppSpacing.lg`. The invitation glows with the light of its first movie's cover (`SlabLight` at 0.5, clipped to the slab), read from the cover the strip draws.
 
 **Wide**: once the inside of the slab is `CollectionTally.besideFrom` (776) wide, the strip goes beside the words, at the end of the slab and at its own width (its covers at 44, never more than `CollectionTally.stripMeasure`, 376, the widest phone's strip), with the legend under the words. The atrium's invitation reaches it on a tablet on its side and in a desktop window; a collection's page never does, its column stopping at the reading well.
 

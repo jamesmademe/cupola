@@ -132,6 +132,7 @@ class UnraidScreen extends ConsumerWidget {
       // shell) the band above consumes it and the tab bar sits an inset lower
       // than `topPadding` says.
       body: SafeArea(
+        bottom: false,
         // The shared placeholder, not a private copy: four dashboards had each
         // grown their own "this service isn't set up" card, which is the state
         // `NotConfiguredPlaceholder` exists to unify.

@@ -150,6 +150,7 @@ class NpmScreen extends ConsumerWidget {
       // shell) the band above consumes it and the tab bar sits an inset lower
       // than `topPadding` says.
       body: SafeArea(
+        bottom: false,
         child: isConfigured
             // Keyed by section so two variants cannot share one list state:
             // they are separate branches of the service shell and each keeps
