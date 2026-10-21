@@ -649,8 +649,12 @@ class NavBadgedIcon extends StatelessWidget {
         children: [
           child,
           Positioned(
-            top: -4,
-            right: -_NavBarItem.badgeOverhang,
+            top: -7,
+            // Anchored by its left edge, so a wider count ("1+", "9+") grows
+            // away from the glyph instead of over it: pinned by the right
+            // edge it swallowed the whole pulse line of Activity.
+            left:
+                _NavBarItem.iconSize + _NavBarItem.badgeOverhang - _minSize + 5,
             child: Container(
               key: const ValueKey('floating-nav-badge'),
               // A floor, not a height: the numeral grows with the bar's own

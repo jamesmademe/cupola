@@ -463,6 +463,20 @@ void main() {
         }
       });
 
+      testWidgets('a wide count grows away from the glyph, never over it', (
+        tester,
+      ) async {
+        for (final count in [3, 12]) {
+          await pumpBadged(tester, selectedIndex: 2, count: count);
+          final glyph = tester.getRect(find.byIcon(Icons.bolt_outlined));
+          expect(
+            tester.getRect(badge()).left,
+            greaterThanOrEqualTo(glyph.center.dx),
+            reason: 'count $count covered the glyph',
+          );
+        }
+      });
+
       testWidgets('the badge is the ink disc with the on-ink numeral', (
         tester,
       ) async {
