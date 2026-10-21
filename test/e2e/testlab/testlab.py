@@ -468,10 +468,11 @@ def reset(name: str = "golden") -> dict[str, Any]:
 
 
 def scenario_module(name: str) -> Any:
-    if not name.replace("_", "").isalnum():
+    module_name = name.replace("-", "_")
+    if not module_name.replace("_", "").isalnum():
         raise LabError("scenario needs a simple module name")
     sys.path.insert(0, str(TESTLAB_DIR))
-    return importlib.import_module(f"scenarios.{name}")
+    return importlib.import_module(f"scenarios.{module_name}")
 
 
 def scenario_apply(name: str) -> dict[str, Any]:
@@ -501,8 +502,26 @@ def scenario_list() -> dict[str, Any]:
     return {"scenarios": names}
 
 
+def forge() -> dict[str, Any]:
+    ensure_docker()
+    ensure_state()
+    run(
+        compose_command(
+            "run",
+            "--rm",
+            "--build",
+            "testlab-forge",
+            profiles=(*PROFILES, "forge"),
+        ),
+        capture=True,
+        timeout=600,
+    )
+    return {"forged": True}
+
+
 def seed() -> dict[str, Any]:
     ensure_state()
+    forge()
     result = run(
         [
             sys.executable,
@@ -556,6 +575,13 @@ def doctor() -> dict[str, Any]:
         check("every proxy exists", not missing, ",".join(missing))
     except LabError as error:
         check("every proxy exists", False, str(error))
+    try:
+        with urllib.request.urlopen(
+            "http://127.0.0.1:8188/healthz", timeout=3
+        ) as answer:
+            check("the indexer answers", answer.status == 200)
+    except (urllib.error.URLError, TimeoutError) as error:
+        check("the indexer answers", False, str(error))
     return {"ok": all(item["ok"] for item in checks), "checks": checks}
 
 

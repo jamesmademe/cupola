@@ -46,11 +46,18 @@ def request(
     method: str = "GET",
     payload: Any | None = None,
     headers: dict[str, str] | None = None,
+    opener: urllib.request.OpenerDirector | None = None,
     timeout: float = 15,
 ) -> tuple[int, Any]:
     data = None
     request_headers = {"Accept": "application/json"}
-    if payload is not None:
+    if payload is None:
+        data = None
+    elif isinstance(payload, bytes):
+        data = payload
+    elif isinstance(payload, str):
+        data = payload.encode("utf-8")
+    else:
         data = json.dumps(payload).encode("utf-8")
         request_headers["Content-Type"] = "application/json"
     if headers:
@@ -58,8 +65,9 @@ def request(
     call = urllib.request.Request(
         url, data=data, method=method, headers=request_headers
     )
+    client = opener or urllib.request.build_opener()
     try:
-        with urllib.request.urlopen(call, timeout=timeout) as response:
+        with client.open(call, timeout=timeout) as response:
             body = response.read()
             status = response.status
     except urllib.error.HTTPError as error:

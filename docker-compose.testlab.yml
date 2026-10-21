@@ -44,6 +44,7 @@ services:
     volumes:
       - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/radarr:/config"
       - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/media:/media"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/downloads:/downloads"
     healthcheck:
       test: [CMD-SHELL, "curl -fsS -H 'X-Api-Key: test-key' http://127.0.0.1:7878/api/v3/system/status >/dev/null || exit 1"]
       interval: 5s
@@ -61,6 +62,7 @@ services:
     volumes:
       - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/sonarr:/config"
       - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/media:/media"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/downloads:/downloads"
     healthcheck:
       test: [CMD-SHELL, "curl -fsS -H 'X-Api-Key: test-key' http://127.0.0.1:8989/api/v3/system/status >/dev/null || exit 1"]
       interval: 5s
@@ -78,6 +80,7 @@ services:
     volumes:
       - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/lidarr:/config"
       - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/media:/media"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/downloads:/downloads"
     healthcheck:
       test: [CMD-SHELL, "curl -fsS -H 'X-Api-Key: test-key' http://127.0.0.1:8686/api/v1/system/status >/dev/null || exit 1"]
       interval: 5s
@@ -95,6 +98,7 @@ services:
     volumes:
       - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/readarr:/config"
       - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/media:/media"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/downloads:/downloads"
     healthcheck:
       test: [CMD-SHELL, "curl -fsS -H 'X-Api-Key: test-key' http://127.0.0.1:8787/api/v1/system/status >/dev/null || exit 1"]
       interval: 5s
@@ -128,6 +132,7 @@ services:
     volumes:
       - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/bazarr:/config"
       - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/media:/media"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/downloads:/downloads"
     healthcheck:
       test: [CMD-SHELL, "curl -fsS -H 'X-API-KEY: test-key' http://127.0.0.1:6767/api/badges >/dev/null || exit 1"]
       interval: 5s
@@ -150,6 +155,28 @@ services:
       - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/downloads:/downloads"
     healthcheck:
       test: [CMD-SHELL, "curl -fsS http://127.0.0.1:8080 >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  qbittorrent-seed:
+    # The local seeder. Its data lives outside the app client's downloads, so
+    # the app's qBittorrent really fetches the release over BitTorrent.
+    image: lscr.io/linuxserver/qbittorrent@sha256:7034f73a3c6fa4ea40fd67df462939d1665d765231b572523921c98c2db5362e
+    profiles: [core, downloads]
+    environment:
+      <<: *linuxserver-env
+      WEBUI_PORT: "8081"
+    ports:
+      - "127.0.0.1:8081:8081"
+      - "6881:6881"
+      - "6881:6881/udp"
+    volumes:
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/qbittorrent-seed:/config"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/seed-data:/downloads"
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS http://127.0.0.1:8081 >/dev/null || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 30
@@ -350,6 +377,37 @@ services:
       - "127.0.0.1:8480:8480"
     healthcheck:
       test: [CMD-SHELL, "python3 -c 'import urllib.request; urllib.request.urlopen(\"http://127.0.0.1:8480/graphql\", timeout=1)' "]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  testlab-forge:
+    # One synthetic release: a real MKV and a private torrent. It runs once,
+    # through `docker compose run`, before the seed; it is not part of `up`.
+    build:
+      context: test/e2e/testlab/forge
+    profiles: [forge]
+    volumes:
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/forge:/forge"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/seed-data:/seed-data"
+    command:
+      - --output-dir=/forge
+      - --seed-dir=/seed-data
+      - --tracker-url=http://testlab-indexer:8088/announce
+
+  testlab-indexer:
+    build:
+      context: test/e2e/testlab/mock
+    profiles: [core, downloads]
+    environment:
+      MOCK_MODE: indexer
+      MOCK_FORGE_DIR: /forge
+    ports:
+      - "127.0.0.1:8188:8088"
+    volumes:
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/forge:/forge:ro"
+    healthcheck:
+      test: [CMD-SHELL, "python3 -c 'import urllib.request; urllib.request.urlopen(\"http://127.0.0.1:8088/healthz\", timeout=1)'"]
       interval: 5s
       timeout: 5s
       retries: 20

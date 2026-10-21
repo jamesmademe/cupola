@@ -245,6 +245,175 @@ def seed_arrs() -> None:
     # when the upstream lookup cannot resolve one.
 
 
+def ensure_radarr_s1(env: dict[str, str]) -> None:
+    """The Radarr side of the import slice: a movie, a client and an indexer.
+
+    This is deliberately loud rather than best effort: the slice cannot run
+    without these three, and a warning here would turn into a mysterious empty
+    queue later.
+    """
+    headers = api_headers("v3")
+    base = f"{ROOT}:7878/api/v3"
+    movies = list_value(json_request(f"{base}/movie", headers=headers))
+    if not any(movie.get("tmdbId") == 10378 for movie in movies):
+        lookup = json_request(
+            f"{base}/movie/lookup/tmdb?tmdbId=10378", headers=headers
+        )
+        if not isinstance(lookup, dict) or not lookup.get("title"):
+            raise RuntimeError("Radarr could not look up Big Buck Bunny")
+        payload = dict(lookup)
+        payload.update(
+            {
+                "qualityProfileId": 1,
+                "rootFolderPath": "/media/movies",
+                "monitored": True,
+                "minimumAvailability": "released",
+                "addOptions": {"searchForMovie": False},
+                "tags": [],
+            }
+        )
+        json_request(f"{base}/movie", method="POST", payload=payload, headers=headers)
+        print("[testlab-seed] Radarr: Big Buck Bunny added")
+
+    movie = next(
+        (
+            item
+            for item in list_value(json_request(f"{base}/movie", headers=headers))
+            if item.get("tmdbId") == 10378
+        ),
+        None,
+    )
+    if movie is None:
+        raise RuntimeError("Radarr did not keep Big Buck Bunny")
+    if movie.get("hasFile"):
+        print(
+            "[testlab-seed] Radarr: Big Buck Bunny has a file; the manual "
+            "import slice expects a movie with none"
+        )
+
+    clients = list_value(json_request(f"{base}/downloadclient", headers=headers))
+    if not any(client.get("name") == "qBittorrent (testlab)" for client in clients):
+        payload = {
+            "enable": True,
+            "protocol": "torrent",
+            "priority": 1,
+            "name": "qBittorrent (testlab)",
+            "implementation": "QBittorrent",
+            "configContract": "QBittorrentSettings",
+            "fields": [
+                {"name": "host", "value": "qbittorrent"},
+                {"name": "port", "value": 8080},
+                {"name": "useSsl", "value": False},
+                {"name": "urlBase", "value": ""},
+                {
+                    "name": "username",
+                    "value": env.get(
+                        "CUPOLA_TESTLAB_QBITTORRENT_USERNAME", "admin"
+                    ),
+                },
+                {
+                    "name": "password",
+                    "value": env.get("CUPOLA_TESTLAB_QBITTORRENT_PASSWORD", ""),
+                },
+                {"name": "movieCategory", "value": "radarr"},
+                {"name": "movieImportedCategory", "value": ""},
+                {"name": "recentMoviePriority", "value": 0},
+                {"name": "olderMoviePriority", "value": 0},
+                {"name": "initialState", "value": 0},
+                {"name": "sequentialOrder", "value": False},
+                {"name": "firstAndLast", "value": False},
+                {"name": "contentLayout", "value": 0},
+            ],
+            "tags": [],
+        }
+        json_request(
+            f"{base}/downloadclient",
+            method="POST",
+            payload=payload,
+            headers=headers,
+        )
+        print("[testlab-seed] Radarr: qBittorrent client")
+
+    indexers = list_value(json_request(f"{base}/indexer", headers=headers))
+    if not any(item.get("name") == "Cupola testlab" for item in indexers):
+        payload = {
+            "enableRss": True,
+            "enableAutomaticSearch": True,
+            "enableInteractiveSearch": True,
+            "name": "Cupola testlab",
+            "implementation": "Torznab",
+            "configContract": "TorznabSettings",
+            "protocol": "torrent",
+            "priority": 1,
+            "fields": [
+                {"name": "baseUrl", "value": "http://testlab-indexer:8088"},
+                {"name": "apiPath", "value": "/api"},
+                {"name": "apiKey", "value": "test-key"},
+                {
+                    "name": "categories",
+                    "value": [2000, 2010, 2020, 2030, 2040, 2045, 2050, 2060],
+                },
+                {"name": "additionalParameters", "value": ""},
+                {"name": "minimumSeeders", "value": 1},
+            ],
+            "tags": [],
+        }
+        json_request(
+            f"{base}/indexer",
+            method="POST",
+            payload=payload,
+            headers=headers,
+        )
+        print("[testlab-seed] Radarr: Torznab indexer")
+
+
+def seed_seeder(env: dict[str, str], state_dir: Path) -> None:
+    """Make the local seeder hold the forged release, once."""
+    release_file = state_dir / "forge" / "release.json"
+    if not release_file.is_file():
+        raise RuntimeError("the forge did not write release.json")
+    release = json.loads(release_file.read_text(encoding="utf-8"))
+    torrent = release.get("torrent")
+    if not torrent:
+        raise RuntimeError("release.json names no torrent")
+    jar = http.cookiejar.CookieJar()
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+    login = urllib.parse.urlencode(
+        {
+            "username": env.get("CUPOLA_TESTLAB_QBITTORRENT_USERNAME", "admin"),
+            "password": env.get("CUPOLA_TESTLAB_QBITTORRENT_PASSWORD", ""),
+        }
+    ).encode()
+    request(
+        f"{ROOT}:8081/api/v2/auth/login",
+        method="POST",
+        payload=login,
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        opener=opener,
+    )
+    torrents = json_request(f"{ROOT}:8081/api/v2/torrents/info", opener=opener)
+    if any(
+        isinstance(item, dict) and item.get("name") == release.get("folder")
+        for item in torrents or []
+    ):
+        return
+    form = urllib.parse.urlencode(
+        {
+            "urls": f"http://testlab-indexer:8088/torrents/{torrent}",
+            "savepath": "/downloads",
+            "paused": "false",
+        }
+    ).encode()
+    request(
+        f"{ROOT}:8081/api/v2/torrents/add",
+        method="POST",
+        payload=form,
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        opener=opener,
+    )
+    print("[testlab-seed] qBittorrent seeder: release added")
+
+
 def seed_seerr(env: dict[str, str]) -> None:
     """Connect Seerr to the disposable Radarr and Sonarr applications."""
 
@@ -854,6 +1023,8 @@ def main() -> None:
             parents=True, exist_ok=True
         )
     seed_arrs()
+    ensure_radarr_s1(env)
+    seed_seeder(env, args.state_dir)
     seed_seerr(env)
     seed_seerr_requesters(env)
     seed_media_servers(args.state_dir, env)

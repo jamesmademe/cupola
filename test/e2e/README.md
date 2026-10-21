@@ -166,6 +166,46 @@ curl -H "Authorization: Bearer $CUPOLA_TESTLAB_CONTROL_TOKEN" \
   http://127.0.0.1:8799/status
 ~~~
 
+## A manual import slice
+
+`testlab-forge` makes a real 1080p MKV and a private torrent, `qbittorrent-seed`
+seeds it from its own downloads folder, and `testlab-indexer` serves both a
+Torznab search and a BEP 3 tracker. The seed gives Radarr the qBittorrent client
+and the indexer, and adds Big Buck Bunny to the library with no file. The
+release title matches the movie; the file inside is named
+`The.Great.Bunny.2008.1080p...`, which Radarr cannot match, so its
+`manualimport` scan reports `Unknown Movie`.
+
+The scenario adds the torrent to the app's qBittorrent, waits for the real
+download, and checks Radarr's scan. It is idempotent and has a teardown. A reset
+restores the golden state, torrent and all.
+
+~~~bash
+python3 test/e2e/testlab/testlab.py snapshot golden-s1
+python3 test/e2e/testlab/testlab.py scenario apply manual-import-radarr-ambiguous
+python3 test/e2e/testlab/testlab.py scenario teardown manual-import-radarr-ambiguous
+python3 test/e2e/testlab/testlab.py reset golden-s1
+~~~
+
+The journey starts on the dedicated iOS simulator, not the configured one. It
+walks Activity, `Manual import…`, the Radarr connection, the download folder,
+the scan, `Which movie?`, `Match to Big Buck Bunny`, and the import. It checks
+Radarr for the file and the scan for no importable item left. Run it after the
+scenario has been applied:
+
+~~~bash
+flutter test integration_test/journeys/manual_import_radarr_journey_test.dart \
+  -d <dedicated-simulator-udid> --tags e2e --run-skipped
+~~~
+
+Two sentences from the original plan do not match the app and Radarr as they
+are. A release Radarr grabbed is imported under the movie it grabbed, so a wrong
+file name inside the download does not by itself produce an `importBlocked`
+queue item; the manual import wizard is the flow that lets a person name the
+movie. And the review scan reports files the service already holds, so an
+imported file changes from `Needs match` to `Imported` instead of disappearing.
+The journey asserts those real states.
+
 ## Published endpoint map
 
 
@@ -188,6 +228,12 @@ curl -H "Authorization: Bearer $CUPOLA_TESTLAB_CONTROL_TOKEN" \
 | Nginx Proxy Manager | http://127.0.0.1:8181 | admin@example.com / changeme | REST + JWT |
 | TrueNAS fixture | wss://127.0.0.1:8460 (self-signed; the app saves https://127.0.0.1:8460) | test-key | WebSocket JSON-RPC over TLS |
 | Unraid fixture | http://127.0.0.1:8480/graphql | test-key | GraphQL |
+
+The lab-only services are not app connections: `testlab-indexer` listens on
+host port 8188 for Torznab and tracker requests, the seeder's WebUI is on 8081,
+and `testlab-forge` is a one-shot container that writes the release and exits.
+The indexer's own port inside the Compose network stays 8088, which is what the
+torrent's announce URL and Radarr's indexer use.
 
 qBittorrent 5.1 validates the Host/Origin port, so the full lab uses host
 port 8080 for qBittorrent and 8082 for SABnzbd. Transmission's LinuxServer
@@ -239,15 +285,17 @@ servers. They reproduce the JSON shapes, authentication and framing used by
 Cupola. Certification against a real TrueNAS/Unraid host remains a separate
 environmental test.
 
-The seed is deliberately small and offline: Radarr, Sonarr and Lidarr receive
-one resolved media record each; Jellyfin and Plex receive a `Films` library;
-qBittorrent and Transmission receive paused zero-data magnets; SABnzbd and
-NZBGet receive a disposable NZB; and NPM receives `cupola.test`. Readarr gets
-its Books root but no author because metadata lookup would depend on the
-public internet. Prowlarr remains an empty indexer registry. Bazarr is
-configured for the two arr services but has no subtitle records without a
-real media/subtitle provider. These are capability limits of the lab, not
-claims that the corresponding Cupola screens are unreachable.
+The seed is small and uses the network once, for the metadata Radarr's lookup
+needs. Radarr receives Big Buck Bunny with no file, the qBittorrent client and
+the local Torznab indexer; Sonarr and Lidarr receive one resolved record each;
+Jellyfin and Plex receive a `Films` library; qBittorrent and Transmission
+receive paused zero-data magnets; SABnzbd and NZBGet receive a disposable NZB;
+and NPM receives `cupola.test`. Readarr gets its Books root but no author
+because metadata lookup would depend on the public internet. Prowlarr remains
+an empty indexer registry: the slice configures Radarr's own indexer, not
+Prowlarr. Bazarr is configured for the two arr services but has no subtitle
+records without a real media/subtitle provider. These are capability limits of
+the lab, not claims that the corresponding Cupola screens are unreachable.
 
 ## A household member's own Seerr account
 

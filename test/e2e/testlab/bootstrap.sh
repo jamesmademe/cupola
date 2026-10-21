@@ -90,6 +90,9 @@ install_seed \
   "$script_dir/seed/qbittorrent/qBittorrent/qBittorrent.conf" \
   "$state_dir/qbittorrent/qBittorrent/qBittorrent.conf"
 install_seed \
+  "$script_dir/seed/qbittorrent-seed/qBittorrent/qBittorrent.conf" \
+  "$state_dir/qbittorrent-seed/qBittorrent/qBittorrent.conf"
+install_seed \
   "$repo_root/test/e2e/seed/sabnzbd/sabnzbd.ini" \
   "$state_dir/sabnzbd/sabnzbd.ini"
 install_seed \
@@ -284,6 +287,9 @@ chmod 600 "$credentials"
 DOCKGE_SETUP_USERNAME=cupola \
 DOCKGE_SETUP_PASSWORD=cupola-pass \
   "${compose[@]}" exec -T dockge node - <"$script_dir/dockge_setup.js"
+
+printf '\nForging the synthetic release...\n'
+"${compose[@]}" --profile forge run --rm testlab-forge
 
 printf '\nSeeding deterministic media and queue specimens...\n'
 python3 "$script_dir/seed_lab.py" --state-dir "$state_dir"
