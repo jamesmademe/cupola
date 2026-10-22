@@ -54,10 +54,11 @@ dependencies:
   # `Client`, and `IOClient` is what lets it wrap our pinned `dart:io`
   # `HttpClient`.
   http: ^1.6.0
-  # Promoted from Flutter's own dependency, at the version Flutter pins, for
-  # the title light: Celebi quantising and HCT, as the brand book derives the
-  # room's light from a title's artwork.
-  material_color_utilities: ^0.11.1
+  # Promoted from Flutter's own dependency, for the title light: Celebi
+  # quantising and HCT, as the brand book derives the room's light from a
+  # title's artwork. A range, because the Flutter SDK's own pin moved from
+  # 0.11.1 to 0.13.0 and both SDKs are in use (CI on 3.38.7, the Mac on 3.47.7).
+  material_color_utilities: ">=0.11.1 <0.14.0"
   # Promoted from a transitive dependency of `flutter_cache_manager`, at the
   # version already resolved, for the Home's last known state: the system's
   # cache folder, where a file that may be purged and is never backed up
