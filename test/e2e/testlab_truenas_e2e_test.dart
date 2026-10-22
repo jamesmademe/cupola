@@ -91,9 +91,7 @@ void main() {
     final scanning = await _eventually(
       () => storage.getPool('tank'),
       (pool) =>
-          pool != null &&
-          pool.isScanning &&
-          (pool.scanPercentage ?? 0) > 0,
+          pool != null && pool.isScanning && (pool.scanPercentage ?? 0) > 0,
       label: 'the scrub to start and move',
     );
     expect(scanning!.scanFunction?.toUpperCase(), 'SCRUB');

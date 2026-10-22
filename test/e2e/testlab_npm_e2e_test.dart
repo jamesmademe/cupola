@@ -350,11 +350,7 @@ Future<NpmProxyHost> _host(NpmClient client, String domain) async {
 
 /// Reads a body from NPM's HTTP port, addressed by `Host`, waiting out the
 /// moment nginx takes to hand new connections to a reloaded configuration.
-Future<String> _served(
-  String domain,
-  String path, {
-  String? expected,
-}) async {
+Future<String> _served(String domain, String path, {String? expected}) async {
   final deadline = DateTime.now().add(const Duration(seconds: 10));
   String last = 'no answer';
   while (DateTime.now().isBefore(deadline)) {
