@@ -1041,6 +1041,30 @@ def seed_seerr_requesters(env: dict[str, str]) -> None:
         warn("Seerr Jellyfin requester", error)
 
 
+def seed_seerr_world(state_dir: Path) -> None:
+    """The main Seerr's world: people, every request state, an issue, a watchlist.
+
+    The Seerr flows (the catalog's G-15 to G-23) read this world, so the seed
+    runs here for the same reason the requesters do: the accounts must exist
+    before any test signs in. It is idempotent and writes its own contract,
+    ``seerr-world.json``, inside the disposable state directory. A machine whose
+    Seerr cannot reach TMDB leaves the world unfinished, loudly, and the flow's
+    scenario then fails on its own verify rather than here.
+    """
+    script_dir = str(Path(__file__).resolve().parent)
+    if script_dir not in sys.path:
+        sys.path.insert(0, script_dir)
+    try:
+        import seerr_world
+
+        seerr_world.seed(state_dir)
+        seerr_world.verify_only(state_dir)
+    except Exception as error:
+        # The rest of the lab is still worth having: a warning here becomes the
+        # scenario's own refusal, which names what is missing.
+        warn("Seerr world", error)
+
+
 def jellyfin_headers(env: dict[str, str]) -> dict[str, str]:
     token = env.get("CUPOLA_TESTLAB_JELLYFIN_TOKEN", "")
     return {
@@ -1461,6 +1485,7 @@ def main() -> None:
     seed_seeder(env, args.state_dir)
     seed_seerr(env)
     seed_seerr_requesters(env)
+    seed_seerr_world(args.state_dir)
     seed_media_servers(args.state_dir, env)
     seed_qbittorrent(env)
     seed_transmission(env)

@@ -297,6 +297,14 @@ printf '\nForging the synthetic release...\n'
 printf '\nSeeding deterministic media and queue specimens...\n'
 python3 "$script_dir/seed_lab.py" --state-dir "$state_dir"
 
+# Sara's Seerr (P9) is a server of its own: the same image, its own port and
+# state. It needs the Jellyfin users the seed above made, so it comes after
+# it. The script waits for the container, runs the first-setup routes and
+# seeds the accounts and the operator's pending request, and writes the
+# passwords it generates to seerr-sara.json inside the state directory.
+printf '\nSetting up the second Seerr (Sara'"'"'s)...\n'
+python3 "$script_dir/seerr_sara.py" --state-dir "$state_dir"
+
 rm -f "$jellyfin_info" "$jellyfin_auth" "$seerr_public" "$seerr_cookie" "$seerr_response"
 
 printf '\nCupola macOS lab is ready.\n'
@@ -304,6 +312,7 @@ printf 'Credentials: %s (chmod 600; never commit or paste its contents)\n' "$cre
 printf 'For a shell client probe: source %q\n' "$credentials"
 printf '\nPublished endpoints:\n'
 printf '  Seerr              http://127.0.0.1:5055\n'
+printf '  Seerr (Sara)       http://127.0.0.1:5056\n'
 printf '  Radarr             http://127.0.0.1:7878\n'
 printf '  Sonarr             http://127.0.0.1:8989\n'
 printf '  Lidarr             http://127.0.0.1:8686\n'

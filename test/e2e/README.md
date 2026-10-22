@@ -368,12 +368,46 @@ is paused while the scenario runs so it does not take the only connection.
 flutter test --tags e2e --run-skipped test/e2e/testlab_usenet_e2e_test.dart
 ~~~
 
+## The Seerr world
+
+The household Seerr is a world, not a single account. `seerr_world.py` seeds it
+through the API, idempotently: Anna (local, request only, low quota), Luca
+(local, 4K and advanced requests, auto-approval), the Jellyfin-imported viewer,
+requests in pending, processing, available, declined and failed states, a
+series with two of its eight seasons, a 4K request, an issue with comments and
+Anna's watchlist. It writes `seerr-world.json` (mode 0600) with the generated
+passwords and the fixture ids; the e2e reads that contract. The failed request
+is real: Seerr approves it and Radarr refuses a root folder that does not
+exist, so Seerr marks it failed.
+
+Sara's Seerr is a second server, `seerr-sara` on port 5056 with its own state
+and admin (a Jellyfin user). The operator holds a local account there that may
+only request, and one pending request of his own. `seerr_sara.py` initializes
+and seeds it, and `bootstrap.sh` calls it after the household seed. P9 uses
+both servers: the household one by key, Sara's by the operator's account. P5
+uses the household Seerr and Jellyfin only, and reads the Radarr and Sonarr
+from Seerr's settings, which it reaches only on the Compose network.
+
+The Plex-imported user is not in the lab: the Plex server is claimed with the
+real account, and Seerr's Plex first setup would create the admin from that
+plex.tv identity. The P2-P profile covers the Plex path in the offline fakes;
+the lab's second Seerr is on Jellyfin. That is a declared limit, not a fake.
+
+~~~bash
+python3 test/e2e/testlab/testlab.py scenario apply seerr-world
+python3 test/e2e/testlab/testlab.py scenario teardown seerr-world
+flutter test --tags e2e --run-skipped test/e2e/testlab_seerr_flows_e2e_test.dart
+flutter test --tags e2e --run-skipped test/e2e/testlab_seerr_p9_e2e_test.dart
+flutter test --tags e2e --run-skipped test/e2e/testlab_seerr_p5_e2e_test.dart
+~~~
+
 ## Published endpoint map
 
 
 | Service | Native endpoint | Auth in the lab | Transport |
 |---|---|---|---|
 | Seerr | http://127.0.0.1:5055 | generated API key; a local requester account with a generated password | REST + session cookie |
+| Seerr (Sara) | http://127.0.0.1:5056 | generated API key; the operator's local requester account, generated | REST + session cookie |
 | Radarr | http://127.0.0.1:7878 | test-key | REST v3 |
 | Sonarr | http://127.0.0.1:8989 | test-key | REST v3 |
 | Lidarr | http://127.0.0.1:8686 | test-key | REST v1 |
