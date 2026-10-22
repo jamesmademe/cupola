@@ -42,7 +42,7 @@ void main() {
     expect(find.text('15 set up\u00A0· 2 not set up'), findsOneWidget);
     expect(
       tester.getSemantics(find.text('Connections')),
-      containsSemantics(isHeader: true),
+      isSemantics(isHeader: true),
     );
   });
 

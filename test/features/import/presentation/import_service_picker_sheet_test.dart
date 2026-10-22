@@ -80,7 +80,7 @@ void main() {
       tester.getSemantics(
         find.bySemanticsLabel(RegExp(r'^Radarr, Not set up')),
       ),
-      containsSemantics(
+      isSemantics(
         label: 'Radarr, Not set up',
         hint: 'requires Radarr, opens its setup',
         isButton: true,

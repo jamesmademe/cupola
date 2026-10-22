@@ -72,11 +72,11 @@ void main() {
       // control, so neither can drift again.
       expect(
         find.semantics.byLabel('Queue'),
-        containsSemantics(isButton: true, isSelected: true),
+        isSemantics(isButton: true, isSelected: true),
       );
       expect(
         find.semantics.byLabel('Blocklist'),
-        containsSemantics(isButton: true, isSelected: false),
+        isSemantics(isButton: true, isSelected: false),
       );
     });
   });

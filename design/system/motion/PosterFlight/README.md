@@ -2,7 +2,7 @@
 
 The shared-element flight from a grid poster to the detail page's poster slot: the page slides in underneath while the poster flies over both, lifted to level-3 at the midpoint and set down at level-2.
 
-Hand-written from `lib/core/widgets/media_poster_card.dart` (`flightShuttleBuilder`), the route page in `lib/core/utils/route_utils.dart` and `media_detail_view.dart`, plus the Flutter 3.38.7 framework pieces they rely on. Artwork: `__POSTER__`, `__BACKDROP__`. Tap any poster; the back button pops.
+Hand-written from `lib/core/widgets/media_poster_card.dart` (`flightShuttleBuilder`), the route page in `lib/core/utils/route_utils.dart` and `media_detail_view.dart`, plus the Flutter 3.47.7 framework pieces they rely on. Artwork: `__POSTER__`, `__BACKDROP__`. Tap any poster; the back button pops.
 
 - **Route**: detail routes are `CupertinoPage`s (`route_utils.dart:13`), so the push runs over Cupertino's `kTransitionDuration`, **500ms** (`cupertino/route.dart:155`), not an app token. The incoming page slides from the right on `fastEaseInToSlowEaseOut`, the grid shifts a third left on `linearToEaseOut`; the pop uses the flipped curve and `easeInToLinear` (`route.dart:535–541`).
 - **Flight**: the Hero's animation is the route's on `Curves.fastOutSlowIn` = `cubic-bezier(0.4, 0, 0.2, 1)`, flipped for the pop (`widgets/heroes.dart:464`). Its path is a `MaterialRectArcTween` (MaterialApp's hero controller, `material/app.dart:802`): two opposite corners each travel along a circular arc, which is why the poster curves rather than sliding straight. Both ends are measured inside their own routes, ignoring the page slide, so the poster lands on the slot's final position while the page is still arriving.

@@ -1227,7 +1227,7 @@ void main() {
       expect(indexed.index, 3);
       expect(
         tester.getSemantics(find.text('A0003')),
-        containsSemantics(label: 'A0003', isButton: true, hasTapAction: true),
+        isSemantics(label: 'A0003', isButton: true, hasTapAction: true),
       );
     });
   });

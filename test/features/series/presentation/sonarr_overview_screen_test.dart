@@ -260,7 +260,7 @@ void main() {
           matching: find.byType(PressableScale),
         ),
       ),
-      containsSemantics(label: 'Severance', isButton: true),
+      isSemantics(label: 'Severance', isButton: true),
     );
   });
 

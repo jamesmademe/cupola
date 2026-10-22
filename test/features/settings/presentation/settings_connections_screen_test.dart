@@ -289,7 +289,7 @@ void main() {
 
       expect(
         find.semantics.byLabel('Lidarr, Not set up'),
-        containsSemantics(
+        isSemantics(
           isButton: true,
           hasTapAction: true,
           // "the Lidarr connection", not "Lidarr": what this row sets up is
@@ -311,7 +311,7 @@ void main() {
 
       expect(
         find.semantics.byLabel('Radarr, Answering, radarr.local:7878'),
-        containsSemantics(
+        isSemantics(
           isButton: true,
           hasTapAction: true,
           // Renamed with the pane: "Radarr settings" is now the name of the

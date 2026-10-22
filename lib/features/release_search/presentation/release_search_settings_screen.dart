@@ -342,25 +342,28 @@ class _DisclosureBlock extends StatelessWidget {
           Theme(
             // The tile is inside a card that already draws its own divisions.
             data: theme.copyWith(dividerColor: Colors.transparent),
-            child: ExpansionTile(
-              title: Text(
-                'What is stored, and for how long',
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: colors.primary,
-                ),
-              ),
-              tilePadding: EdgeInsets.zero,
-              childrenPadding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              expandedCrossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  detailsFor(isIOS: isIOS),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colors.onSurfaceVariant,
-                    height: 1.5,
+            child: Material(
+              type: MaterialType.transparency,
+              child: ExpansionTile(
+                title: Text(
+                  'What is stored, and for how long',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: colors.primary,
                   ),
                 ),
-              ],
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                expandedCrossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    detailsFor(isIOS: isIOS),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.onSurfaceVariant,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

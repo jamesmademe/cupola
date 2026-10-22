@@ -64,24 +64,20 @@ void main() {
       expect(activityDayLabel(dayAfter(day, 1), now: next), 'Today');
     }, skip: skipSpring);
 
-    test(
-      'the last download says yesterday, and the week ends on the 7th',
-      () {
-        final at = dayAfter(day, 0, hour: 18);
-        expect(
-          lastDownloadFinished(at, now: next),
-          'Last download finished yesterday 18:00',
-        );
-        expect(
-          lastFinishedLine(at, now: next),
-          'The last download finished yesterday at 18:00.',
-        );
-        final week = dayAfter(day, -6, hour: 18);
-        expect(lastDownloadFinished(week, now: next), isNull);
-        expect(lastFinishedLine(week, now: next), isNull);
-      },
-      skip: skipSpring,
-    );
+    test('the last download says yesterday, and the week ends on the 7th', () {
+      final at = dayAfter(day, 0, hour: 18);
+      expect(
+        lastDownloadFinished(at, now: next),
+        'Last download finished yesterday 18:00',
+      );
+      expect(
+        lastFinishedLine(at, now: next),
+        'The last download finished yesterday at 18:00.',
+      );
+      final week = dayAfter(day, -6, hour: 18);
+      expect(lastDownloadFinished(week, now: next), isNull);
+      expect(lastFinishedLine(week, now: next), isNull);
+    }, skip: skipSpring);
 
     test('a request says yesterday for the day before', () {
       final at = dayAfter(day, 0, hour: 8);
@@ -114,20 +110,16 @@ void main() {
       );
     }, skip: skipSpring);
 
-    test(
-      'the next episode airs Tomorrow, and a week on names its date',
-      () {
-        MediaNextAiring airing(DateTime at) =>
-            MediaNextAiring(season: 1, number: 2, at: at, timed: false);
-        final now = dayAfter(day, 0, hour: 12);
-        expect(mediaAiringDay(airing(dayAfter(day, 1)), now), 'Tomorrow');
-        expect(
-          mediaAiringDay(airing(dayAfter(day, 7)), now),
-          formatDayMonth(dayAfter(day, 7), now: now),
-        );
-      },
-      skip: skipSpring,
-    );
+    test('the next episode airs Tomorrow, and a week on names its date', () {
+      MediaNextAiring airing(DateTime at) =>
+          MediaNextAiring(season: 1, number: 2, at: at, timed: false);
+      final now = dayAfter(day, 0, hour: 12);
+      expect(mediaAiringDay(airing(dayAfter(day, 1)), now), 'Tomorrow');
+      expect(
+        mediaAiringDay(airing(dayAfter(day, 7)), now),
+        formatDayMonth(dayAfter(day, 7), now: now),
+      );
+    }, skip: skipSpring);
   });
 
   group('the night the clocks go back (a 25 h day)', () {

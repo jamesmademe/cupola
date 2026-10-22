@@ -72,6 +72,9 @@ dart format --output=none --set-exit-if-changed .
 printf '==> Running flutter test...\n'
 flutter test
 
+printf '==> Verifying icon font subsetting...\n'
+flutter test test/tool/material_symbols_subset_test.dart
+
 printf '==> Verifying platform icons...\n'
 bash "$ROOT_DIR/scripts/verify_icons.sh"
 

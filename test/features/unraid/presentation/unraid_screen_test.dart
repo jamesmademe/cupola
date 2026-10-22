@@ -325,7 +325,7 @@ void main() {
         final control = find.byTooltip(tooltip);
         expect(
           tester.getSemantics(control),
-          containsSemantics(
+          isSemantics(
             hint: copy.hint,
             isButton: true,
             isEnabled: true,

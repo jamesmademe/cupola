@@ -98,7 +98,7 @@ void main() {
           tester.getSemantics(
             find.bySemanticsLabel('Inspector, nothing chosen'),
           ),
-          containsSemantics(
+          isSemantics(
             isButton: true,
             hasEnabledState: true,
             isEnabled: false,

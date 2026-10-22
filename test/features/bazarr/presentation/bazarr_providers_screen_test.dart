@@ -59,7 +59,12 @@ void main() {
       find.byKey(const ValueKey('bazarr-reset-provider-throttles')),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Reset throttles'));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, 'Reset throttles'),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(service.resetProviderStatusesCalled, isTrue);
     expect(find.text('Provider throttles reset'), findsOneWidget);

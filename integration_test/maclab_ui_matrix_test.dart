@@ -46,152 +46,148 @@ void main() {
     defaultValue: false,
   );
 
-  testWidgets(
-    'Cupola macOS lab route matrix: every tab, size and theme',
-    (tester) async {
-      final scenario = _scenario;
-      final credentials = _loadCredentials(
-        mustExist: scenario != 'not-configured',
+  testWidgets('Cupola macOS lab route matrix: every tab, size and theme', (
+    tester,
+  ) async {
+    final scenario = _scenario;
+    final credentials = _loadCredentials(
+      mustExist: scenario != 'not-configured',
+    );
+    final allRoutes = _routes();
+    final routeOffset =
+        int.tryParse(
+          Platform.environment['CUPOLA_MACLAB_ROUTE_OFFSET'] ?? '',
+        ) ??
+        0;
+    final routeLimit = int.tryParse(
+      Platform.environment['CUPOLA_MACLAB_ROUTE_LIMIT'] ?? '',
+    );
+    final routes = allRoutes
+        .skip(routeOffset.clamp(0, allRoutes.length))
+        .take(
+          routeLimit != null && routeLimit > 0 ? routeLimit : allRoutes.length,
+        )
+        .toList(growable: false);
+    final allSizes = <({String name, Size size})>[
+      (name: '1440x900', size: const Size(1440, 900)),
+      (name: '720x450', size: const Size(720, 450)),
+      (name: '390x844', size: const Size(390, 844)),
+    ];
+    final requestedSize = Platform.environment['CUPOLA_MACLAB_SIZE'];
+    final sizes = requestedSize == null
+        ? allSizes
+        : allSizes
+              .where((frame) => frame.name == requestedSize)
+              .toList(growable: false);
+    if (sizes.isEmpty) {
+      fail(
+        'CUPOLA_MACLAB_SIZE must be one of: '
+        '${allSizes.map((frame) => frame.name).join(', ')}',
       );
-      final allRoutes = _routes();
-      final routeOffset =
-          int.tryParse(
-            Platform.environment['CUPOLA_MACLAB_ROUTE_OFFSET'] ?? '',
-          ) ??
-          0;
-      final routeLimit = int.tryParse(
-        Platform.environment['CUPOLA_MACLAB_ROUTE_LIMIT'] ?? '',
+    }
+    final themes = <({String name, AppThemeMode mode})>[
+      (name: 'dark', mode: AppThemeMode.dark),
+      (name: 'light', mode: AppThemeMode.light),
+    ];
+
+    final screenshotDirectory = driverScreenshots
+        ? null
+        : (Directory(
+            Platform.environment['CUPOLA_MACLAB_SCREENSHOT_DIR'] ??
+                '.ai/scratch/zz_maclab/screenshots',
+          )..createSync(recursive: true));
+    debugPrint(
+      '[maclab] scenario=$scenario capture=$capture cwd=${Directory.current.path} '
+      'screenshots=${screenshotDirectory?.absolute.path ?? 'driver'} '
+      'routes=${routes.length}/${allRoutes.length} offset=$routeOffset',
+    );
+
+    for (final theme in themes) {
+      final settings = _labSettings(credentials, theme.mode, scenario);
+      final container = ProviderContainer(
+        overrides: [
+          ...await settingsScopeOverrides(customize: (_) => settings),
+        ],
       );
-      final routes = allRoutes
-          .skip(routeOffset.clamp(0, allRoutes.length))
-          .take(
-            routeLimit != null && routeLimit > 0
-                ? routeLimit
-                : allRoutes.length,
-          )
-          .toList(growable: false);
-      final allSizes = <({String name, Size size})>[
-        (name: '1440x900', size: const Size(1440, 900)),
-        (name: '720x450', size: const Size(720, 450)),
-        (name: '390x844', size: const Size(390, 844)),
-      ];
-      final requestedSize = Platform.environment['CUPOLA_MACLAB_SIZE'];
-      final sizes = requestedSize == null
-          ? allSizes
-          : allSizes
-                .where((frame) => frame.name == requestedSize)
-                .toList(growable: false);
-      if (sizes.isEmpty) {
-        fail(
-          'CUPOLA_MACLAB_SIZE must be one of: '
-          '${allSizes.map((frame) => frame.name).join(', ')}',
-        );
-      }
-      final themes = <({String name, AppThemeMode mode})>[
-        (name: 'dark', mode: AppThemeMode.dark),
-        (name: 'light', mode: AppThemeMode.light),
-      ];
+      final router = container.read(routerProvider);
+      final screenshotKey = GlobalKey();
 
-      final screenshotDirectory = driverScreenshots
-          ? null
-          : (Directory(
-              Platform.environment['CUPOLA_MACLAB_SCREENSHOT_DIR'] ??
-                  '.ai/scratch/zz_maclab/screenshots',
-            )..createSync(recursive: true));
-      debugPrint(
-        '[maclab] scenario=$scenario capture=$capture cwd=${Directory.current.path} '
-        'screenshots=${screenshotDirectory?.absolute.path ?? 'driver'} '
-        'routes=${routes.length}/${allRoutes.length} offset=$routeOffset',
-      );
-
-      for (final theme in themes) {
-        final settings = _labSettings(credentials, theme.mode, scenario);
-        final container = ProviderContainer(
-          overrides: [
-            ...await settingsScopeOverrides(customize: (_) => settings),
-          ],
-        );
-        final router = container.read(routerProvider);
-        final screenshotKey = GlobalKey();
-
-        try {
-          await tester.pumpWidget(
-            UncontrolledProviderScope(
-              container: container,
-              child: RepaintBoundary(
-                key: screenshotKey,
-                child: const cupola.CupolaApp(),
-              ),
+      try {
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: RepaintBoundary(
+              key: screenshotKey,
+              child: const cupola.CupolaApp(),
             ),
-          );
-          await _pumpRoute(tester);
+          ),
+        );
+        await _pumpRoute(tester);
 
-          for (final frame in sizes) {
-            tester.view.physicalSize = frame.size;
-            tester.view.devicePixelRatio = 1.0;
-            addTearDown(tester.view.resetPhysicalSize);
-            addTearDown(tester.view.resetDevicePixelRatio);
-            await tester.pump();
-            final resizeException = tester.takeException();
-            if (resizeException != null &&
+        for (final frame in sizes) {
+          tester.view.physicalSize = frame.size;
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          await tester.pump();
+          final resizeException = tester.takeException();
+          if (resizeException != null &&
+              Platform.environment['CUPOLA_MACLAB_VERBOSE'] == 'true') {
+            debugPrint(
+              resizeException is FlutterError
+                  ? resizeException.toStringDeep()
+                  : resizeException.toString(),
+            );
+          }
+          expect(
+            resizeException,
+            isNull,
+            reason: '${theme.name} · ${frame.name} · resize',
+          );
+
+          for (final route in routes) {
+            if (Platform.environment['CUPOLA_MACLAB_VERBOSE'] == 'true') {
+              debugPrint('[maclab] ${theme.name} · ${frame.name} · $route');
+            }
+            router.go(route);
+            await _pumpRoute(tester);
+            final exception = tester.takeException();
+
+            if (capture) {
+              final slug = _slug('${theme.name}_${frame.name}_$route');
+              final bytes = await _captureScreenshot(screenshotKey);
+              if (driverScreenshots) {
+                _addDriverScreenshot(binding, slug, bytes);
+              } else {
+                await File(
+                  '${screenshotDirectory!.path}/$slug.png',
+                ).writeAsBytes(bytes, flush: true);
+              }
+            }
+
+            if (exception != null &&
                 Platform.environment['CUPOLA_MACLAB_VERBOSE'] == 'true') {
               debugPrint(
-                resizeException is FlutterError
-                    ? resizeException.toStringDeep()
-                    : resizeException.toString(),
+                exception is FlutterError
+                    ? exception.toStringDeep()
+                    : exception.toString(),
               );
             }
             expect(
-              resizeException,
+              exception,
               isNull,
-              reason: '${theme.name} · ${frame.name} · resize',
+              reason: '${theme.name} · ${frame.name} · $route',
             );
-
-            for (final route in routes) {
-              if (Platform.environment['CUPOLA_MACLAB_VERBOSE'] == 'true') {
-                debugPrint('[maclab] ${theme.name} · ${frame.name} · $route');
-              }
-              router.go(route);
-              await _pumpRoute(tester);
-              final exception = tester.takeException();
-
-              if (capture) {
-                final slug = _slug('${theme.name}_${frame.name}_$route');
-                final bytes = await _captureScreenshot(screenshotKey);
-                if (driverScreenshots) {
-                  _addDriverScreenshot(binding, slug, bytes);
-                } else {
-                  await File(
-                    '${screenshotDirectory!.path}/$slug.png',
-                  ).writeAsBytes(bytes, flush: true);
-                }
-              }
-
-              if (exception != null &&
-                  Platform.environment['CUPOLA_MACLAB_VERBOSE'] == 'true') {
-                debugPrint(
-                  exception is FlutterError
-                      ? exception.toStringDeep()
-                      : exception.toString(),
-                );
-              }
-              expect(
-                exception,
-                isNull,
-                reason: '${theme.name} · ${frame.name} · $route',
-              );
-            }
           }
-        } finally {
-          await tester.pumpWidget(const SizedBox.shrink());
-          await tester.pump();
-          router.dispose();
-          container.dispose();
         }
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        router.dispose();
+        container.dispose();
       }
-    },
-    timeout: const Timeout(Duration(minutes: 45)),
-  );
+    }
+  }, timeout: const Timeout(Duration(minutes: 45)));
 }
 
 Future<List<int>> _captureScreenshot(GlobalKey key) async {

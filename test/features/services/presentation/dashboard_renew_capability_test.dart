@@ -93,7 +93,7 @@ void main() {
       tester.getSemantics(
         find.ancestor(of: _renew, matching: find.byType(TextButton)),
       ),
-      containsSemantics(
+      isSemantics(
         label: 'Renew',
         hint: npmCapabilityHint,
         isButton: true,

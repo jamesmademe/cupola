@@ -27,10 +27,7 @@ void main() {
 
     expect(
       tester.getSemantics(find.byType(PressableScale)),
-      containsSemantics(
-        label: 'Open in qBittorrent',
-        hint: 'requires qBittorrent',
-      ),
+      isSemantics(label: 'Open in qBittorrent', hint: 'requires qBittorrent'),
     );
     handle.dispose();
   });
@@ -53,7 +50,7 @@ void main() {
 
     expect(
       tester.getSemantics(find.byType(PressableScale)),
-      containsSemantics(hint: 'requires qBittorrent'),
+      isSemantics(hint: 'requires qBittorrent'),
     );
     handle.dispose();
   });

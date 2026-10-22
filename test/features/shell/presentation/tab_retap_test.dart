@@ -61,7 +61,8 @@ void main() {
     final lists = [
       for (final element in find.byType(Scrollable).evaluate())
         if ((element as StatefulElement).state case final ScrollableState state
-            when state.position.axis == Axis.vertical && TickerMode.of(element))
+            when state.position.axis == Axis.vertical &&
+                TickerMode.valuesOf(element).enabled)
           state,
     ];
     lists.sort(

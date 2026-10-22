@@ -54,7 +54,7 @@ void main() {
     expect(row, findsOneWidget);
     expect(
       find.semantics.byLabel(RegExp(r'^Stuck, Big\.Buck\.Bunny')),
-      containsSemantics(
+      isSemantics(
         isButton: true,
         hasTapAction: true,
         hint: 'opens this download',
@@ -64,7 +64,7 @@ void main() {
       find.semantics.byHint(
         'asks the trackers again for Big.Buck.Bunny.2008.1080p.BluRay',
       ),
-      containsSemantics(
+      isSemantics(
         label: 'Look for peers again',
         isButton: true,
         hasTapAction: true,
@@ -118,10 +118,7 @@ void main() {
     expect(find.text('Look for peers again'), findsNothing);
     expect(
       find.semantics.byLabel(RegExp(r'^3 downloads stuck, ')),
-      containsSemantics(
-        isButton: true,
-        hint: 'opens the qBittorrent Queue tab',
-      ),
+      isSemantics(isButton: true, hint: 'opens the qBittorrent Queue tab'),
     );
     // The header counts the torrents, not the one row.
     expect(

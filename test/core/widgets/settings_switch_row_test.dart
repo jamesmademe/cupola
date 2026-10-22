@@ -48,11 +48,7 @@ void main() {
     );
     expect(
       node,
-      containsSemantics(
-        hasToggledState: true,
-        isToggled: false,
-        hasTapAction: true,
-      ),
+      isSemantics(hasToggledState: true, isToggled: false, hasTapAction: true),
     );
     await tester.tap(find.byType(Switch));
     expect(flips, [true]);

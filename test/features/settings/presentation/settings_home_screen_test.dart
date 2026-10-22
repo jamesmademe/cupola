@@ -178,7 +178,7 @@ void main() {
         // and a tint and nothing else.
         expect(
           find.semantics.byLabel('Radarr, Did not answer'),
-          containsSemantics(
+          isSemantics(
             isButton: true,
             hasTapAction: true,
             hint: 'opens the Radarr connection settings',
@@ -192,13 +192,10 @@ void main() {
       ) async {
         await _pumpSettingsHome(tester);
 
-        expect(
-          find.semantics.byLabel('General'),
-          containsSemantics(isHeader: true),
-        );
+        expect(find.semantics.byLabel('General'), isSemantics(isHeader: true));
         expect(
           find.semantics.byLabel('Connections'),
-          containsSemantics(isHeader: true),
+          isSemantics(isHeader: true),
         );
         // Drawn as it is read: there is no uppercase voice to spell out.
         expect(find.text('General'), findsOneWidget);

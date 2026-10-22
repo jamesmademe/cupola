@@ -87,7 +87,7 @@ void main() {
     expect(row, findsOneWidget);
     expect(
       find.semantics.byLabel(RegExp(r'^Stuck, Slow Horses S4 E1–E3, ')),
-      containsSemantics(isButton: true, hint: 'opens this download'),
+      isSemantics(isButton: true, hint: 'opens this download'),
     );
 
     await tester.tap(row);

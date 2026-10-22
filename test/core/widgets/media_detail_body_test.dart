@@ -91,7 +91,7 @@ void main() {
       // ...original case in the ear, with the count folded into the sentence.
       expect(
         tester.getSemantics(find.byType(MediaDetailSectionLabel)),
-        containsSemantics(
+        isSemantics(
           label: 'Episodes, 41 of 48\u00A0· 5 seasons',
           isHeader: true,
         ),
@@ -117,7 +117,7 @@ void main() {
 
       expect(
         tester.getSemantics(find.byType(TextButton)),
-        containsSemantics(label: 'S3 of 40', isButton: true),
+        isSemantics(label: 'S3 of 40', isButton: true),
       );
       await tester.tap(find.text('S3 of 40'));
       expect(tapped, 1);

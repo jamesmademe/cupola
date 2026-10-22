@@ -124,7 +124,7 @@ void main() {
 
     expect(
       find.semantics.byLabel(RegExp(r'^nginx refused, photos\.example\.net')),
-      containsSemantics(
+      isSemantics(
         isButton: true,
         hasTapAction: true,
         hint: 'opens the Nginx Proxy Manager Proxy hosts tab',
@@ -174,7 +174,7 @@ void main() {
 
     expect(
       find.semantics.byLabel(RegExp(r'^1 certificate expiring, ')),
-      containsSemantics(
+      isSemantics(
         isButton: true,
         hint: 'opens the Nginx Proxy Manager Certificates tab',
       ),

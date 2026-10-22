@@ -779,7 +779,12 @@ void main() {
 
       await tester.tap(find.text('Import 5 files'));
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(FilledButton, 'Import 5 files'));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.widgetWithText(FilledButton, 'Import 5 files'),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(client.postCallCount, 1);

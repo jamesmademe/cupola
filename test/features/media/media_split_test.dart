@@ -508,7 +508,7 @@ void main() {
           matching: find.byType(PressableScale),
         )
         .first;
-    expect(tester.getSemantics(row), containsSemantics(isSelected: true));
+    expect(tester.getSemantics(row), isSemantics(isSelected: true));
 
     await _tapShelfControl(tester, 'Close');
     expect(
@@ -517,7 +517,7 @@ void main() {
     );
     expect(find.byType(PersonPage), findsNothing);
     expect(SidePaneSlots.instance.debugCount, 0);
-    expect(tester.getSemantics(row), containsSemantics(isSelected: false));
+    expect(tester.getSemantics(row), isSemantics(isSelected: false));
 
     semantics.dispose();
     await _close(tester, harness, container);

@@ -34,7 +34,7 @@ void main() {
 
         expect(
           tester.getSemantics(_navItem('Services')),
-          containsSemantics(
+          isSemantics(
             label: 'Services\nTab 1 of 4',
             isButton: true,
             hasTapAction: true,
@@ -48,7 +48,7 @@ void main() {
         // about the same navigation.
         expect(
           tester.getSemantics(_navItem('Search')),
-          containsSemantics(label: 'Search\nTab 3 of 4', isButton: true),
+          isSemantics(label: 'Search\nTab 3 of 4', isButton: true),
         );
       });
 
@@ -61,7 +61,7 @@ void main() {
         // without hasSelectedState the reader cannot say "not selected".
         expect(
           tester.getSemantics(_navItem('Activity')),
-          containsSemantics(hasSelectedState: true, isSelected: false),
+          isSemantics(hasSelectedState: true, isSelected: false),
         );
       });
     });

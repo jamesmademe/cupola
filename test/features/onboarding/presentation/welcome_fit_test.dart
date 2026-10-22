@@ -194,7 +194,7 @@ void main() {
           ]) {
             expect(
               find.semantics.byLabel(label),
-              containsSemantics(isButton: true, hasTapAction: true, hint: hint),
+              isSemantics(isButton: true, hasTapAction: true, hint: hint),
               reason: label,
             );
           }

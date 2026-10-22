@@ -864,7 +864,7 @@ Future<List<GlobalSearchServiceResults>> _settledLanes(
       await container.read(globalSearchLegProvider(leg).future);
     }
     await _settle();
-    return container.read(globalSearchLanesProvider);
+    return await container.read(globalSearchLanesProvider);
   } finally {
     sub.close();
   }

@@ -8,4 +8,13 @@
 #
 # Kept to the stock Flutter set on purpose: the point is to have the gate the
 # repo already claimed, not a house style nobody agreed to.
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
 include: package:flutter_lints/flutter.yaml

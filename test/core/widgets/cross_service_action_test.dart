@@ -56,7 +56,7 @@ void main() {
       // five things the two previous implementations took away between them.
       expect(
         tester.getSemantics(find.byType(CrossServiceAction)),
-        containsSemantics(
+        isSemantics(
           label: 'Open in qBittorrent',
           hint: 'requires qBittorrent',
           isButton: true,
@@ -241,7 +241,7 @@ void main() {
 
       expect(
         tester.getSemantics(find.byType(CapabilityGatedAction)),
-        containsSemantics(
+        isSemantics(
           label: 'Restart jellyfin',
           hint: 'requires a read-write key',
           isEnabled: true,
@@ -438,7 +438,7 @@ void _gatedVariants() {
 
         expect(
           tester.getSemantics(find.byType(IconButton)),
-          containsSemantics(
+          isSemantics(
             // The tooltip is the icon button's name; the hint sits beside it.
             tooltip: 'Start Home Assistant',
             hint: hint,
@@ -512,7 +512,7 @@ void _gatedVariants() {
       );
       expect(
         tester.getSemantics(find.byType(IconButton)),
-        containsSemantics(hint: 'this key\'s permissions are unknown'),
+        isSemantics(hint: 'this key\'s permissions are unknown'),
       );
       await tester.tap(find.byType(IconButton));
       await tester.pumpAndSettle();
@@ -540,7 +540,7 @@ void _gatedVariants() {
 
       expect(
         tester.getSemantics(find.byType(TextButton)),
-        containsSemantics(
+        isSemantics(
           label: 'Start',
           hint: hint,
           isButton: true,
@@ -608,7 +608,7 @@ void _gatedVariants() {
 
       expect(
         tester.getSemantics(find.byType(Switch)),
-        containsSemantics(
+        isSemantics(
           hint: hint,
           hasToggledState: true,
           isToggled: true,
@@ -698,7 +698,7 @@ void _gatedVariants() {
       );
       expect(
         tester.getSemantics(find.text('Stop')),
-        containsSemantics(label: 'Stop', hint: hint, isEnabled: true),
+        isSemantics(label: 'Stop', hint: hint, isEnabled: true),
       );
       final opacity = tester.widget<Opacity>(
         find.ancestor(of: find.text('Stop'), matching: find.byType(Opacity)),
@@ -747,7 +747,7 @@ void _gatedVariants() {
       );
       expect(
         tester.getSemantics(find.byType(TextButton)),
-        containsSemantics(
+        isSemantics(
           label: 'Open in Radarr',
           hint: 'requires Radarr',
           isEnabled: true,
@@ -927,7 +927,7 @@ void _bannerSlot() {
       );
       expect(
         tester.getSemantics(find.byType(CapabilityBanner)),
-        isNot(containsSemantics(isLiveRegion: true)),
+        isNot(isSemantics(isLiveRegion: true)),
       );
     });
   });

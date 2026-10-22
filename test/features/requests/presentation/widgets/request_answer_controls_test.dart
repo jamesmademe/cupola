@@ -129,19 +129,11 @@ void main() {
 
       expect(
         tester.getSemantics(find.widgetWithText(FilledButton, 'Approve')),
-        containsSemantics(
-          label: 'Approve Charge',
-          isButton: true,
-          isEnabled: true,
-        ),
+        isSemantics(label: 'Approve Charge', isButton: true, isEnabled: true),
       );
       expect(
         tester.getSemantics(find.widgetWithText(OutlinedButton, 'Decline')),
-        containsSemantics(
-          label: 'Decline Charge',
-          isButton: true,
-          isEnabled: true,
-        ),
+        isSemantics(label: 'Decline Charge', isButton: true, isEnabled: true),
       );
 
       handle.dispose();
@@ -292,7 +284,7 @@ void main() {
       expect(tester.getRect(find.byType(OutlinedButton)), declineRect);
       expect(
         tester.getSemantics(find.byType(FilledButton)),
-        containsSemantics(
+        isSemantics(
           label: 'Approve Charge',
           value: 'Checking where it goes',
           isButton: true,
@@ -344,7 +336,7 @@ void main() {
       expect(_ring(find.byType(FilledButton)), findsNothing);
       expect(
         tester.getSemantics(find.byType(OutlinedButton)),
-        containsSemantics(label: 'Decline Charge', value: 'Declining'),
+        isSemantics(label: 'Decline Charge', value: 'Declining'),
       );
       expect(_opacityOf(tester, find.byType(FilledButton)), lessThan(0.5));
 
@@ -389,7 +381,7 @@ void main() {
       final approve = tester.getSemantics(find.byType(FilledButton));
       expect(
         approve,
-        containsSemantics(isButton: true, isEnabled: true, hint: _friendReason),
+        isSemantics(isButton: true, isEnabled: true, hint: _friendReason),
       );
       expect(_opacityOf(tester, find.byType(FilledButton)), lessThan(0.5));
 

@@ -89,7 +89,7 @@ void main() {
 
       expect(
         find.semantics.byLabel(OnePunchline.claim),
-        containsSemantics(isHeader: true),
+        isSemantics(isHeader: true),
       );
       // Drawn on two lines, never spoken as two.
       expect(find.semantics.byLabel('A Cupola over'), findsNothing);
@@ -109,7 +109,7 @@ void main() {
 
       expect(
         find.semantics.byLabel('Set up a service'),
-        containsSemantics(
+        isSemantics(
           isButton: true,
           hasTapAction: true,
           hint: SetupDoors.setUpHint,
@@ -117,7 +117,7 @@ void main() {
       );
       expect(
         find.semantics.byLabel('Copy from another device'),
-        containsSemantics(
+        isSemantics(
           isButton: true,
           hasTapAction: true,
           hint: SetupDoors.copyHint,
@@ -125,7 +125,7 @@ void main() {
       );
       expect(
         find.semantics.byLabel('I have a Seerr account'),
-        containsSemantics(
+        isSemantics(
           isButton: true,
           hasTapAction: true,
           hint: SetupDoors.signInHint,
@@ -168,7 +168,7 @@ void main() {
 
       expect(
         find.semantics.byLabel(OnePunchline.promise),
-        containsSemantics(isHeader: true),
+        isSemantics(isHeader: true),
       );
       expect(
         find.text(
@@ -181,7 +181,7 @@ void main() {
 
       expect(
         find.semantics.byLabel('Enter Cupola'),
-        containsSemantics(isButton: true),
+        isSemantics(isButton: true),
       );
       await tester.tap(find.byType(ReelCommandButton));
       await tester.pump();

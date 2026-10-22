@@ -66,7 +66,7 @@ void main() {
 
       expect(
         find.semantics.byLabel('HD-1080p').first,
-        containsSemantics(value: 'Selected'),
+        isSemantics(value: 'Selected'),
       );
       handle.dispose();
     });

@@ -124,46 +124,39 @@ void main() {
   // redirect, and the access headers then the login frame would go to whatever
   // answered at the end of the chain.
   group('DockgeClient upgrade redirects', () {
-    test(
-      'a redirect is refused, not followed',
-      () async {
-        var redirected = 0;
-        var reachedTarget = 0;
-        final target = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-        target.listen((request) async {
-          reachedTarget++;
-          request.response.statusCode = HttpStatus.ok;
-          await request.response.close();
-        });
-        final redirector = await HttpServer.bind(
-          InternetAddress.loopbackIPv4,
-          0,
+    test('a redirect is refused, not followed', () async {
+      var redirected = 0;
+      var reachedTarget = 0;
+      final target = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      target.listen((request) async {
+        reachedTarget++;
+        request.response.statusCode = HttpStatus.ok;
+        await request.response.close();
+      });
+      final redirector = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      redirector.listen((request) async {
+        redirected++;
+        request.response.statusCode = HttpStatus.found;
+        request.response.headers.set(
+          'location',
+          'http://127.0.0.1:${target.port}/socket.io/',
         );
-        redirector.listen((request) async {
-          redirected++;
-          request.response.statusCode = HttpStatus.found;
-          request.response.headers.set(
-            'location',
-            'http://127.0.0.1:${target.port}/socket.io/',
-          );
-          await request.response.close();
-        });
-        final client = DockgeClient(
-          baseUrl: 'http://127.0.0.1:${redirector.port}',
-          username: 'someone',
-          password: 'secret',
-        );
-        addTearDown(() async {
-          await client.close();
-          await redirector.close(force: true);
-          await target.close(force: true);
-        });
+        await request.response.close();
+      });
+      final client = DockgeClient(
+        baseUrl: 'http://127.0.0.1:${redirector.port}',
+        username: 'someone',
+        password: 'secret',
+      );
+      addTearDown(() async {
+        await client.close();
+        await redirector.close(force: true);
+        await target.close(force: true);
+      });
 
-        await expectLater(client.ensureConnected(), throwsA(anything));
-        expect(redirected, greaterThanOrEqualTo(1));
-        expect(reachedTarget, 0);
-      },
-      timeout: const Timeout(Duration(seconds: 20)),
-    );
+      await expectLater(client.ensureConnected(), throwsA(anything));
+      expect(redirected, greaterThanOrEqualTo(1));
+      expect(reachedTarget, 0);
+    }, timeout: const Timeout(Duration(seconds: 20)));
   });
 }

@@ -108,7 +108,7 @@ void main() {
     expect(find.textContaining('Missing'), findsWidgets);
     expect(
       tester.getSemantics(find.byType(BazarrWantedEpisodeTile)),
-      containsSemantics(label: 'Season 1, episode 1, The Emperor, Missing en'),
+      isSemantics(label: 'Season 1, episode 1, The Emperor, Missing en'),
     );
     // The uppercase `EN` badge is gone with the hand-rolled row: the language is
     // now part of the row's own facts line, which a sighted low-vision user can

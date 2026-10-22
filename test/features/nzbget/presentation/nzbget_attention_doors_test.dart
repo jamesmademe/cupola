@@ -100,7 +100,7 @@ void main() {
 
     expect(
       find.semantics.byLabel(RegExp(r'^Sugar\.S02E01, failed, par repair')),
-      containsSemantics(
+      isSemantics(
         isButton: true,
         hasTapAction: true,
         hint: 'opens the NZBGet History tab',
@@ -108,7 +108,7 @@ void main() {
     );
     expect(
       find.semantics.byLabel(RegExp(r'^Andor\.S02E02, success')),
-      containsSemantics(isButton: false, hasTapAction: false),
+      isSemantics(isButton: false, hasTapAction: false),
     );
 
     await tester.tap(find.textContaining('Sugar.S02E01'));
@@ -134,7 +134,7 @@ void main() {
     );
     expect(
       find.semantics.byLabel(RegExp(r'^3 downloads failed, ')),
-      containsSemantics(isButton: true, hint: 'opens the NZBGet History tab'),
+      isSemantics(isButton: true, hint: 'opens the NZBGet History tab'),
     );
     expect(
       tester

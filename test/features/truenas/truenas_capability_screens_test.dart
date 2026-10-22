@@ -364,7 +364,7 @@ void main() {
           expect(c.control, findsWidgets, reason: c.verb);
           expect(
             tester.getSemantics(c.control.first),
-            containsSemantics(hint: trueNasCapabilityHint, isEnabled: true),
+            isSemantics(hint: trueNasCapabilityHint, isEnabled: true),
             reason: c.verb,
           );
           // The page's name sits over the section now: a control under the

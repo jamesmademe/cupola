@@ -23,6 +23,7 @@ the page it was opened from (`MediaBackPlate`).
   is set up, its line says what it needs instead (`Needs TrueNAS or Unraid`, `Needs Seerr`). Stack health, Storage and
   Discover shelf start off. Held, the handle drags the row; tapped, it
   lifts the row (`fillQuiet`) and its switch gives way to two 44pt arrows, the one at the end of the order dimmed.
+  Dragging, arrows and screen-reader moves preserve the same saved order in either direction.
 - The hint: `Hold a handle and drag, or tap it and use the arrows. With VoiceOver: Move up, Move down.` (TalkBack on
   Android, a screen reader elsewhere).
 - **At the foot of Home**: Set up next, which stands last, with a switch and no handle.

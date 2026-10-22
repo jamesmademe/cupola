@@ -478,37 +478,35 @@ void main() {
   });
 
   group('in a desktop window', () {
-    testWidgets(
-      'the header names the connection in view, on every tab',
-      (tester) async {
-        final (harness, router, container) = await _app(
-          tester,
-          _twoJellyfin,
-          size: const Size(1440, 900),
-        );
-        router.go(
-          ServiceRoutes.streamActivity(
-            _jellyfin,
-            instanceId: WorldIds.jellyfinCabin,
-          ),
-        );
-        await _answer(tester);
-        expect(_badge(tester), 'Cabin');
+    testWidgets('the header names the connection in view, on every tab', (
+      tester,
+    ) async {
+      final (harness, router, container) = await _app(
+        tester,
+        _twoJellyfin,
+        size: const Size(1440, 900),
+      );
+      router.go(
+        ServiceRoutes.streamActivity(
+          _jellyfin,
+          instanceId: WorldIds.jellyfinCabin,
+        ),
+      );
+      await _answer(tester);
+      expect(_badge(tester), 'Cabin');
 
-        _forget(harness);
-        await _openTab(tester, ServiceTab.users);
-        expect(_badge(tester), 'Cabin');
-        expect(_reached(harness, WorldIds.jellyfinCabin), contains('/Users'));
-        expect(_reached(harness, WorldIds.jellyfin), isNot(contains('/Users')));
-        expect(_lensOf(container, _jellyfin), WorldIds.jellyfin);
+      _forget(harness);
+      await _openTab(tester, ServiceTab.users);
+      expect(_badge(tester), 'Cabin');
+      expect(_reached(harness, WorldIds.jellyfinCabin), contains('/Users'));
+      expect(_reached(harness, WorldIds.jellyfin), isNot(contains('/Users')));
+      expect(_lensOf(container, _jellyfin), WorldIds.jellyfin);
 
-        await _chooseInLensSheet(tester, 'Jellyfin 1');
-        expect(_badge(tester), 'Jellyfin 1');
+      await _chooseInLensSheet(tester, 'Jellyfin 1');
+      expect(_badge(tester), 'Jellyfin 1');
 
-        await _close(tester, harness, container);
-      },
-      variant: TargetPlatformVariant.only(TargetPlatform.macOS),
-    );
+      await _close(tester, harness, container);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
     testWidgets(
       'the strip above does not name a second connection at a tab, and names '

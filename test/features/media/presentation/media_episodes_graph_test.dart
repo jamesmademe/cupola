@@ -116,7 +116,7 @@ void main() {
     expect(find.text('9 votes${dotSeparator}Downloading'), findsOneWidget);
     expect(
       tester.getSemantics(cell),
-      containsSemantics(
+      isSemantics(
         label: 'Season 2 episode 1, 8.1 from 9 votes, few votes',
         isButton: true,
         isSelected: true,

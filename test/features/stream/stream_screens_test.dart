@@ -199,7 +199,7 @@ void expectReachableControl(WidgetTester tester, String name) {
   expect(finder, findsOneWidget, reason: '"$name" must be on screen');
   expect(
     tester.getSemantics(finder),
-    containsSemantics(tooltip: name, isButton: true, hasTapAction: true),
+    isSemantics(tooltip: name, isButton: true, hasTapAction: true),
   );
 }
 
