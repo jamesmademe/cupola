@@ -436,6 +436,16 @@ flutter test --tags e2e --run-skipped test/e2e/testlab_plex_e2e_test.dart
 flutter test --tags e2e --run-skipped test/e2e/testlab_stream_sessions_e2e_test.dart
 ~~~
 
+The L12 journeys drive the same playbacks from the screen, on the simulator.
+The app cannot open a process there, so the player runs on the host and
+`journey_sessions.py` owns it: it starts the devices, waits for the server to
+list them, runs the journey, and ends them on the way out.
+
+~~~bash
+python3 test/e2e/testlab/journey_sessions.py S-03
+python3 test/e2e/testlab/journey_sessions.py S-09
+~~~
+
 ## TrueNAS, Unraid, NPM and Dockge
 
 TrueNAS and Unraid are stateful simulators, not fixture bags. `mock/server.py`
