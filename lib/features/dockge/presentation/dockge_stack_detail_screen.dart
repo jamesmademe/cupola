@@ -18,6 +18,7 @@ import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack_detail.dart';
 import 'package:cupola/features/dockge/presentation/dockge_actions.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
+import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -28,6 +29,7 @@ List<ProviderOrFamily> _staleAfterAction(String name) => [
   dockgeStackDetailProvider(name),
   dockgeServiceStatusProvider(name),
   dockgeStackListProvider,
+  serviceKpiProvider(ServiceKey.dockge),
 ];
 
 class DockgeStackDetailScreen extends ConsumerWidget {
@@ -337,7 +339,10 @@ class _ActionBar extends ConsumerWidget {
       action: (c) => c.deleteStack(name),
       successMessage: 'Deleted $name',
       failureMessage: 'Could not delete',
-      invalidate: [dockgeStackListProvider],
+      invalidate: [
+        dockgeStackListProvider,
+        serviceKpiProvider(ServiceKey.dockge),
+      ],
     );
     if (ok && context.mounted) context.pop();
   }

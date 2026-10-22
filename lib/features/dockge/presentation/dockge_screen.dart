@@ -80,7 +80,7 @@ class _DockgeDashboard extends ConsumerWidget {
         children: [
           if (topPadding > 0) SizedBox(height: topPadding),
           ServiceKpiPeek(
-            kpis: ref.watch(serviceKpiProvider(ServiceKey.dockge)),
+            kpis: stacksAsync.whenData(dockgeKpisFrom),
             service: ServiceKey.dockge,
           ),
           const SizedBox(height: AppSpacing.xs),
@@ -248,7 +248,10 @@ class _StackQuickActions extends ConsumerWidget {
               (c) => c.startStack(stack.name),
               'Started ${stack.name}',
               'Could not start ${stack.name}',
-              invalidate: [dockgeStackListProvider],
+              invalidate: [
+                dockgeStackListProvider,
+                serviceKpiProvider(ServiceKey.dockge),
+              ],
             ),
           ),
         IconButton(
@@ -289,7 +292,10 @@ class _StackQuickActions extends ConsumerWidget {
       action,
       success,
       failure,
-      invalidate: [dockgeStackListProvider],
+      invalidate: [
+        dockgeStackListProvider,
+        serviceKpiProvider(ServiceKey.dockge),
+      ],
     );
   }
 }

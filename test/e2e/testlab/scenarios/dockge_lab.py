@@ -186,7 +186,12 @@ class DockgeLabScenario(Scenario):
 
             statuses = {name: dockge.status(name) for name in lab.STACKS}
             recorded = marker.get("statuses") or {}
-            if statuses != recorded:
+            # The crash stack exits on its own by design, so its status can move
+            # between the push that recorded it and this read. When the runtime
+            # works, the `wanted` block below is the check that matters; the
+            # recorded statuses are the oracle only on a dind that cannot run a
+            # container, where all three sit still.
+            if not available and statuses != recorded:
                 raise ScenarioError(
                     f"the stacks moved since apply: {statuses} != {recorded}"
                 )

@@ -76,8 +76,10 @@ AsyncValue<List<ServiceKpi>> queueRailOf(
 
 /// KPIs shown in the [ServiceKpiPeek] at the top of each service page.
 ///
-/// Derives metrics from the library providers the pages already load, so it
-/// adds no extra network calls and stays live-consistent with the list views.
+/// Derives metrics from the same sources the pages load, so the figures agree
+/// with the lists. A page that already watches a live stream derives its rail
+/// from that watch (Dockge does); this provider then serves the dashboard
+/// card's snapshot.
 final serviceKpiProvider = FutureProvider.autoDispose
     .family<List<ServiceKpi>, ServiceKey>((ref, service) async {
       switch (service) {
@@ -1204,30 +1206,48 @@ List<ServiceKpi> _truenasKpisFrom(TrueNasDashboard dashboard) {
 }
 
 Future<List<ServiceKpi>> _dockgeKpis(Ref ref) async {
-  return _dockgeKpisFrom(await ref.watch(dockgeStackListProvider.future));
+  // The rail is a snapshot, not a second listener on the live stack list:
+  // reading the service keeps the figures on the same client cache without
+  // tying an autoDispose provider to a stream another page owns. The pages
+  // that draw the list derive their own rail from it.
+  return dockgeKpisFrom(await ref.watch(dockgeServiceProvider).fetchStacks());
 }
 
 Future<List<ServiceKpi>> _dockgeKpisFor(Ref ref, String instanceId) async {
   final stacks = await ref
       .watch(dockgeServiceForProvider(instanceId))
       .fetchStacks();
-  return _dockgeKpisFrom(stacks);
+  return dockgeKpisFrom(stacks);
 }
 
-List<ServiceKpi> _dockgeKpisFrom(List<DockgeStack> stacks) {
+/// The Dockge rail from the stack list the page is drawing.
+List<ServiceKpi> dockgeKpisFrom(List<DockgeStack> stacks) {
   final running = stacks
       .where((s) => s.status == DockgeStackStatus.running)
       .length;
   final stopped = stacks
       .where((s) => s.status == DockgeStackStatus.exited)
       .length;
-  final inactive = stacks.length - running - stopped;
+  return dockgeKpisFromCounts(
+    total: stacks.length,
+    running: running,
+    stopped: stopped,
+  );
+}
+
+/// The Dockge rail from three counts, so the Overview can feed it from the
+/// census it already watches instead of opening a second read of the list.
+///
+/// The inactive count is the remainder: a status the rail has no word for
+/// still counts in the total it was counted in.
+List<ServiceKpi> dockgeKpisFromCounts({
+  required int total,
+  required int running,
+  required int stopped,
+}) {
+  final inactive = total - running - stopped;
   return [
-    ServiceKpi(
-      label: 'Stacks',
-      value: '${stacks.length}',
-      icon: Icons.layers_rounded,
-    ),
+    ServiceKpi(label: 'Stacks', value: '$total', icon: Icons.layers_rounded),
     ServiceKpi(
       label: 'Running',
       value: '$running',

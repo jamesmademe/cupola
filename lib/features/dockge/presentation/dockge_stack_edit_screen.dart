@@ -11,6 +11,7 @@ import 'package:cupola/core/widgets/page_title.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack_detail.dart';
 import 'package:cupola/features/dockge/presentation/dockge_actions.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
+import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -126,7 +127,11 @@ class _DockgeStackEditScreenState extends ConsumerState<DockgeStackEditScreen> {
             ),
       successMessage: deploy ? 'Deployed $name' : 'Saved $name',
       failureMessage: deploy ? 'Deploy failed' : 'Save failed',
-      invalidate: [dockgeStackListProvider, dockgeStackDetailProvider(name)],
+      invalidate: [
+        dockgeStackListProvider,
+        dockgeStackDetailProvider(name),
+        serviceKpiProvider(ServiceKey.dockge),
+      ],
     );
     if (!mounted) return;
     setState(() => _busy = false);

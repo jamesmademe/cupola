@@ -961,6 +961,12 @@ class ControlHandler(http.server.BaseHTTPRequestHandler):
             self._answer(200, dispatch(command, arguments))
         except LabError as error:
             self._answer(400, {"error": str(error)})
+        except Exception as error:  # noqa: BLE001 - answer, never drop the socket
+            # A scenario that raises its own error used to close the connection
+            # with no answer, which reached the app as "connection closed before
+            # full header was received" and named nothing. The control plane
+            # now says what happened.
+            self._answer(500, {"error": f"{type(error).__name__}: {error}"})
 
 
 def serve(port: int) -> None:

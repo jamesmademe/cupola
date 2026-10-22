@@ -139,7 +139,15 @@ class _OverviewBody extends ConsumerWidget {
           const ServiceOverviewIdentity(service: ServiceKey.dockge),
           ...sectionsOrOneLine(ref, ServiceKey.dockge, [
             ServiceKpiPeek.room(
-              kpis: ref.watch(serviceKpiProvider(ServiceKey.dockge)),
+              kpis: ref
+                  .watch(dockgeOverviewCensusProvider)
+                  .whenData(
+                    (census) => dockgeKpisFromCounts(
+                      total: census.total,
+                      running: census.running,
+                      stopped: census.stopped,
+                    ),
+                  ),
               service: ServiceKey.dockge,
             ),
             const _StacksSection(),
@@ -340,7 +348,10 @@ class _IdleRow extends ConsumerWidget {
                 (client) => client.startStack(stack),
                 'Started $stack',
                 'Could not start $stack',
-                invalidate: [dockgeStackListProvider],
+                invalidate: [
+                  dockgeStackListProvider,
+                  serviceKpiProvider(ServiceKey.dockge),
+                ],
               ),
             )
           : null,
