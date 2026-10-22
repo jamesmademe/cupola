@@ -477,6 +477,45 @@ services:
       - "127.0.0.1:29091:29091"
       - "127.0.0.1:29696:29696"
 
+  caddy:
+    # The lab's edge: three origins, each with a certificate of its own, issued
+    # by Caddy's internal CA. The edge is the one service the lab starts on
+    # demand (the `caddy-edge` scenario), so the rest of the lab never pays for
+    # it and the certificates it holds can be thrown away and made again at
+    # will. The configuration is written by test/e2e/testlab/caddy_lab.py into
+    # the lab's state, never kept in the repository. Its own profile needs the
+    # lab's: it stands in front of services that live in theirs.
+    image: caddy:2-alpine@sha256:24ec7b05bc532c7bb57f727030c5056e257ff7138b4b50460306819ff79362bd
+    profiles: [edge]
+    depends_on:
+      radarr:
+        condition: service_healthy
+      dockge:
+        condition: service_healthy
+      truenas-mock:
+        condition: service_healthy
+    ports:
+      # One port per origin: the app pins a host, a port and a fingerprint, so
+      # three origins need three addresses of their own. 8444 belongs to the
+      # L10c edge (a process of the host), hence the block starts one above it.
+      - "127.0.0.1:8445:8445"
+      - "127.0.0.1:8446:8446"
+      - "127.0.0.1:8447:8447"
+    volumes:
+      # The configuration the lab writes, and the CA that issues: both in the
+      # lab's state, and the CA's files are Caddy's own 0600.
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/caddy:/etc/caddy:ro"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/caddy/data:/data"
+      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/caddy/config:/config"
+    healthcheck:
+      # The name is what the client sends as SNI, and the certificate belongs
+      # to it: the edge answers on that name only.
+      test: ["CMD-SHELL", "curl -skf --resolve radarr.localhost:8445:127.0.0.1 -o /dev/null https://radarr.localhost:8445/ping || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
 volumes:
   # The dind's own disk. Named so overlayfs can write; not part of the lab's
   # state directory, and the snapshots already ignore the dind.
