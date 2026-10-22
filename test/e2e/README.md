@@ -498,10 +498,15 @@ python3 test/e2e/testlab/testlab.py fault radarr slow 4000
 flutter test --tags e2e --run-skipped test/e2e/testlab_faults_e2e_test.dart
 ~~~
 
+Il gateway è un processo dell'host (`gateway_lab.py`, porta 8466) che porta tutti i ruoli di un gateway: il login di
+Cloudflare Access e il suo rifiuto di una richiesta senza il token di servizio, la password di un proxy, gli header
+personalizzati richiesti, una pagina di accesso che Cupola non può completare, e un'altra applicazione al posto del
+servizio. L'e2e verifica che l'app li riconosca tutti e percorre i sei esiti di Collega: risposto, chiave rifiutata,
+nessuna risposta, un certificato di cui non si fida, http in chiaro dove serve https, e il gateway che rifiuta il
+token inviato.
+
 Non è ancora costruito il resto di L10: il bordo Caddy con le origini TLS autofirmate e la rotazione del
-certificato, il simulatore di gateway (Cloudflare Access, Basic, header richiesti, pagina di accesso) e gli
-indirizzi sbagliati del primo avvio. Le righe del catalogo che restano scoperte sono I-22 e la seconda metà di
-G-02.
+certificato a comando. La riga di catalogo ancora scoperta è I-22; la seconda metà di G-02 è coperta dal gateway.
 
 ## Published endpoint map
 
