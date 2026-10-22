@@ -156,11 +156,14 @@ if [[ "$TARGET" == "ios" || "$TARGET" == "all" ]]; then
   fi
 fi
 
-# TestFlight is never part of `all`: it uploads a build to App Store Connect,
-# signed for the store by the team in ios/ExportOptions-testflight.plist with
-# the Apple ID signed in to Xcode. Each upload needs a build number higher than
-# the last one, so it defaults to the UTC minute (CUPOLA_BUILD_NUMBER overrides
-# it); the version stays the one in pubspec.yaml.
+# TestFlight is never part of `all`: it uploads the iOS build and then the macOS
+# one to App Store Connect, signed for the store by the team in
+# ios/ExportOptions-testflight.plist and macos/ExportOptions-testflight.plist
+# with the Apple ID signed in to Xcode. Both platforms share one build number,
+# higher than the last upload: it defaults to the UTC minute
+# (CUPOLA_BUILD_NUMBER overrides it); the version stays the one in
+# pubspec.yaml. macOS goes second so a signing failure there never costs the
+# iOS upload.
 if [[ "$TARGET" == "testflight" ]]; then
   if [[ "$(uname -s)" != "Darwin" ]]; then
     printf 'TestFlight uploads can only be made on macOS\n' >&2
@@ -178,6 +181,18 @@ if [[ "$TARGET" == "testflight" ]]; then
   printf '==> Uploading to TestFlight...\n'
   xcodebuild -exportArchive -archivePath "$IOS_ARCHIVE" -exportOptionsPlist ios/ExportOptions-testflight.plist \
     -exportPath "build/ios/testflight" -allowProvisioningUpdates
+
+  printf '==> Archiving macOS %s (%s) for App Store Connect...\n' "$VERSION" "$BUILD_NUMBER"
+  flutter build macos --release --config-only --build-number "$BUILD_NUMBER"
+  MACOS_TF_ARCHIVE="build/macos/${APP_NAME}-testflight.xcarchive"
+  rm -rf "$MACOS_TF_ARCHIVE"
+  xcodebuild -workspace macos/Runner.xcworkspace -scheme Runner -configuration Release \
+    -archivePath "$MACOS_TF_ARCHIVE" -allowProvisioningUpdates -quiet archive
+
+  printf '==> Uploading macOS to TestFlight...\n'
+  xcodebuild -exportArchive -archivePath "$MACOS_TF_ARCHIVE" \
+    -exportOptionsPlist macos/ExportOptions-testflight.plist \
+    -exportPath "build/macos/testflight" -allowProvisioningUpdates
 fi
 
 if [[ "$TARGET" == "macos" || "$TARGET" == "all" ]]; then
