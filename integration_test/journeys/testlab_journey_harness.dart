@@ -720,6 +720,51 @@ class LabApp {
   /// Radarr, straight to the service.
   LabRadarr get radarr => LabRadarr(lab.arrKeys[ServiceKey.radarr] ?? '');
 
+  /// Runs one of the lab's own commands through its control plane.
+  ///
+  /// The journeys run on the simulator, where starting a process is forbidden,
+  /// so the world's state (a fault in front of a service, a scenario) is
+  /// changed the way the lab's own CLI changes it: `['fault', 'radarr',
+  /// 'down']`, `['fault', 'radarr', 'clear']`.
+  Future<Map<String, Object?>> command(List<String> arguments) async {
+    final url = credentials.controlUrl;
+    final token = credentials.controlToken;
+    if (url == null || token == null) {
+      fail(
+        'the lab control API is not running: its URL and token are missing '
+        'from the credentials file',
+      );
+    }
+    final client = HttpClient();
+    try {
+      final request = await client.postUrl(Uri.parse('$url/command'));
+      request.headers.set('Authorization', 'Bearer $token');
+      request.headers.contentType = ContentType.json;
+      // The control API reads an exact `Content-Length` and refuses a chunked
+      // body, which is what `write` alone sends.
+      final payload = utf8.encode(
+        jsonEncode({
+          'command': arguments.first,
+          'arguments': arguments.sublist(1),
+        }),
+      );
+      request.contentLength = payload.length;
+      request.add(payload);
+      final response = await request.close();
+      final body = await response.transform(utf8.decoder).join();
+      if (response.statusCode != 200) {
+        fail(
+          'the lab refused "${arguments.join(' ')}" with '
+          '${response.statusCode}: $body',
+        );
+      }
+      final decoded = body.isEmpty ? null : jsonDecode(body);
+      return decoded is Map<String, Object?> ? decoded : const {};
+    } finally {
+      client.close(force: true);
+    }
+  }
+
   /// Puts the lab back in the state the seed left it in, when the control
   /// plane of the lab is running.
   ///
@@ -728,27 +773,14 @@ class LabApp {
   /// failed halfway leaves its own request behind, which the next run's
   /// seed removes.
   Future<bool> restoreWorld() async {
-    final url = credentials.controlUrl;
-    final token = credentials.controlToken;
-    if (url == null || token == null) return false;
-    final client = HttpClient();
+    if (credentials.controlUrl == null || credentials.controlToken == null) {
+      return false;
+    }
     try {
-      final request = await client.postUrl(Uri.parse('$url/command'));
-      request.headers.set('Authorization', 'Bearer $token');
-      request.headers.contentType = ContentType.json;
-      request.write(
-        jsonEncode({
-          'command': 'scenario',
-          'arguments': ['apply', 'seerr-world'],
-        }),
-      );
-      final response = await request.close();
-      final body = await response.transform(utf8.decoder).join();
-      return response.statusCode == 200 && !body.contains('"error"');
+      final answer = await command(['scenario', 'apply', 'seerr-world']);
+      return answer['error'] == null;
     } on Object {
       return false;
-    } finally {
-      client.close(force: true);
     }
   }
 }
