@@ -505,8 +505,12 @@ servizio. L'e2e verifica che l'app li riconosca tutti e percorre i sei esiti di 
 nessuna risposta, un certificato di cui non si fida, http in chiaro dove serve https, e il gateway che rifiuta il
 token inviato.
 
-Non è ancora costruito il resto di L10: il bordo Caddy con le origini TLS autofirmate e la rotazione del
-certificato a comando. La riga di catalogo ancora scoperta è I-22; la seconda metà di G-02 è coperta dal gateway.
+Il bordo è un processo dell'host (`edge_lab.py`, porta 8444) con un certificato autofirmato proprio davanti a Radarr:
+l'app legge l'impronta, la pin, e con la pin la connessione passa. La rotazione è a comando: il laboratorio rifà il
+certificato, l'impronta cambia, e il pin vecchio viene rifiutato (`Radarr has a certificate Cupola does not trust`)
+mentre quello nuovo funziona. Non è un Caddy: è la stessa forma del gateway, un processo dell'host, e porta la
+sostanza della riga (un'origine con certificato proprio che il laboratorio fa cambiare) senza un container da
+gestire. Gli indirizzi sbagliati del primo avvio sono i sei esiti che il gateway copre già.
 
 ## Published endpoint map
 
