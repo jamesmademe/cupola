@@ -1202,6 +1202,34 @@ def seed_media_servers(state_dir: Path, env: dict[str, str]) -> None:
         warn("Plex library", error)
 
 
+def seed_media_libraries(state_dir: Path) -> None:
+    """Jellyfin and Plex get Series and Music beside the seeded Films (L8).
+
+    Both scripts are idempotent and read the same disposable state. The
+    Jellyfin one takes its state from the environment, the Plex one takes the
+    path explicitly; a custom ``--state-dir`` reaches both.
+    """
+
+    scripts = (
+        ("jellyfin_media.py", []),
+        ("plex_media.py", ["--state-dir", str(state_dir)]),
+    )
+    environment = {**os.environ, "CUPOLA_TESTLAB_STATE_DIR": str(state_dir)}
+    for script, arguments in scripts:
+        try:
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(Path(__file__).resolve().parent / script),
+                    *arguments,
+                ],
+                check=True,
+                env=environment,
+            )
+        except Exception as error:
+            warn(script, error)
+
+
 def seed_qbittorrent(env: dict[str, str]) -> None:
     try:
         jar = http.cookiejar.CookieJar()
@@ -1487,6 +1515,7 @@ def main() -> None:
     seed_seerr_requesters(env)
     seed_seerr_world(args.state_dir)
     seed_media_servers(args.state_dir, env)
+    seed_media_libraries(args.state_dir)
     seed_qbittorrent(env)
     seed_transmission(env)
     seed_sabnzbd(args.state_dir)

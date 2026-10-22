@@ -552,6 +552,64 @@ def reset(name: str = "golden") -> dict[str, Any]:
     }
 
 
+def play(arguments: argparse.Namespace) -> dict[str, Any]:
+    """Start a playback on the lab, and pause or stop it on request.
+
+    Jellyfin is the real one: the helper opens a session with a dedicated
+    device, then the helper's own pause/stop reports move it. Plex is the
+    spike: its session comes from a part read, and the app's Stop is behind
+    Plex Pass, so only the helper's stop and a declared refusal exist.
+    """
+
+    env = dict(os.environ)
+    env.setdefault("CUPOLA_TESTLAB_STATE_DIR", str(STATE_ROOT))
+    env.setdefault(
+        "CUPOLA_TESTLAB_CREDENTIALS_FILE", str(STATE_ROOT / "credentials.env")
+    )
+    if arguments.server == "jellyfin":
+        device = arguments.device or "cupola-play"
+        script = TESTLAB_DIR / "jellyfin_play.py"
+        common = [
+            sys.executable,
+            str(script),
+            "--device",
+            device,
+            "--user",
+            arguments.user,
+        ]
+        subprocess.run(
+            [*common, "--title", arguments.title],
+            check=True,
+            env=env,
+        )
+        if arguments.pause:
+            subprocess.run([*common, "--pause"], check=True, env=env)
+        if arguments.stop:
+            subprocess.run([*common, "--stop"], check=True, env=env)
+        return {
+            "server": "jellyfin",
+            "title": arguments.title,
+            "device": device,
+            "paused": arguments.pause,
+            "stopped": arguments.stop,
+        }
+
+    if arguments.pause:
+        raise LabError(
+            "Plex has no pause this app can reach; only the helper's stop exists"
+        )
+    script = TESTLAB_DIR / "plex_play.py"
+    base = [sys.executable, str(script), "--state-dir", str(STATE_ROOT)]
+    subprocess.run([*base, "play"], check=True, env=env)
+    if arguments.stop:
+        subprocess.run([*base, "stop"], check=True, env=env)
+    return {
+        "server": "plex",
+        "title": arguments.title,
+        "stopped": arguments.stop,
+    }
+
+
 def scenario_module(name: str) -> Any:
     module_name = name.replace("-", "_")
     if not module_name.replace("_", "").isalnum():
@@ -874,9 +932,19 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     commands.add_parser(
         "app-config", help="configure the app for a profile (arrives in L11)"
     )
-    commands.add_parser(
-        "play", help="start a playback session (arrives in L8)"
+    play_parser = commands.add_parser(
+        "play", help="start, pause or stop a playback session"
     )
+    play_parser.add_argument("title")
+    play_parser.add_argument(
+        "--server", choices=("jellyfin", "plex"), default="jellyfin"
+    )
+    play_parser.add_argument(
+        "--user", choices=("admin", "viewer"), default="viewer"
+    )
+    play_parser.add_argument("--device")
+    play_parser.add_argument("--pause", action="store_true")
+    play_parser.add_argument("--stop", action="store_true")
     commands.add_parser(
         "journeys", help="run the UI journeys (arrives in L12)"
     )
@@ -942,7 +1010,7 @@ def main(argv: list[str] | None = None) -> int:
         elif arguments.command == "app-config":
             raise LabError("app-config arrives in L11")
         elif arguments.command == "play":
-            raise LabError("play arrives in L8")
+            print(json.dumps(play(arguments), indent=2))
         elif arguments.command == "journeys":
             raise LabError("journeys arrives in L12")
     except LabError as error:

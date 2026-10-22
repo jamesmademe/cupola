@@ -401,6 +401,41 @@ flutter test --tags e2e --run-skipped test/e2e/testlab_seerr_p9_e2e_test.dart
 flutter test --tags e2e --run-skipped test/e2e/testlab_seerr_p5_e2e_test.dart
 ~~~
 
+## Jellyfin and Plex
+
+The seed adds `Series` and `Music` beside `Films` on the same `/media` folders.
+The files are the forge's episode and FLACs, so the libraries hold a film, a
+two-episode series and Daft Punk's Discovery with 14 tracks, not empty
+collections. `jellyfin_media.py` also leaves the non-admin `cupola-viewer` with
+a watched film and an episode at a third of its length in Continue watching;
+`plex_media.py` leaves the watched film and episode and Plex's own next-up on
+deck.
+
+~~~bash
+python3 test/e2e/testlab/testlab.py play "Big Buck Bunny" --server jellyfin --pause --stop
+python3 test/e2e/testlab/testlab.py play "Big Buck Bunny" --server plex --stop
+~~~
+
+Jellyfin is the controllable one: `jellyfin_play.py` opens a session with a
+dedicated device and its pause/stop report moves the state. The app's own
+Pause/Stop are remote-control commands: the server answers 204 and forwards
+`Playstate` to the client over the WebSocket, so they only change the session
+when a client is listening (`jellyfin_play.py --listen --hold`). Plex has no
+pause the app can reach; its session is a spike (a part read beside
+`/:/timeline`) and its Stop is behind Plex Pass, which this server does not
+have: the app does not draw it and the raw terminate answers 401. No Plex Home
+user is created, because the server is claimed with the real account.
+
+The e2e drive the app's clients and the providers behind Home, Overview and
+Stack. A widget-level Now playing is L12; here the test reads the same
+providers the surfaces read.
+
+~~~bash
+flutter test --tags e2e --run-skipped test/e2e/testlab_jellyfin_e2e_test.dart
+flutter test --tags e2e --run-skipped test/e2e/testlab_plex_e2e_test.dart
+flutter test --tags e2e --run-skipped test/e2e/testlab_stream_sessions_e2e_test.dart
+~~~
+
 ## Published endpoint map
 
 
