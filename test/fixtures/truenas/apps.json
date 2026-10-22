@@ -1,0 +1,50 @@
+[
+  {
+    "name": "jellyfin",
+    "id": "jellyfin",
+    "state": "RUNNING",
+    "version": "1.2.4",
+    "human_version": "10.10.6",
+    "upgrade_available": false,
+    "metadata": {
+      "title": "Jellyfin",
+      "train": "community",
+      "version": "1.2.4"
+    },
+    "portals": {
+      "Web UI": "https://nas.home.arpa:8096"
+    }
+  },
+  {
+    "name": "immich",
+    "id": "immich",
+    "state": "STOPPED",
+    "version": "1.119.0",
+    "human_version": "v1.119.0",
+    "upgrade_available": false,
+    "metadata": {
+      "title": "Immich",
+      "train": "community",
+      "version": "1.119.0"
+    },
+    "portals": {
+      "Web UI": "https://nas.home.arpa:2283"
+    }
+  },
+  {
+    "name": "paperless",
+    "id": "paperless",
+    "state": "CRASHED",
+    "version": "2.14.7",
+    "human_version": "2.14.7",
+    "upgrade_available": false,
+    "metadata": {
+      "title": "Paperless-ngx",
+      "train": "community",
+      "version": "2.14.7"
+    },
+    "portals": {
+      "Web UI": "https://nas.home.arpa:8000"
+    }
+  }
+]

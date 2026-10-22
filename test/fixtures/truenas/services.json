@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1,
+    "service": "cifs",
+    "state": "RUNNING",
+    "enable": true
+  },
+  {
+    "id": 2,
+    "service": "nfs",
+    "state": "STOPPED",
+    "enable": true
+  },
+  {
+    "id": 3,
+    "service": "ssh",
+    "state": "RUNNING",
+    "enable": false
+  },
+  {
+    "id": 4,
+    "service": "iscsitarget",
+    "state": "STOPPED",
+    "enable": false
+  },
+  {
+    "id": 5,
+    "service": "smartd",
+    "state": "RUNNING",
+    "enable": true
+  },
+  {
+    "id": 6,
+    "service": "ftp",
+    "state": "STOPPED",
+    "enable": false
+  }
+]

@@ -1,0 +1,11 @@
+# Stack che fallisce: il container scrive una riga ed esce con 1, quindi la
+# lista di Dockge lo legge `Stopped` e il log combinato porta quella riga.
+services:
+  crash:
+    image: cupola-lab/base:1
+    pull_policy: never
+    entrypoint:
+      - /bin/sh
+      - -c
+      - "echo 'cupola-crash exits 1 on purpose'; exit 1"
+    restart: "no"

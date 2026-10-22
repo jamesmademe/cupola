@@ -1,0 +1,17 @@
+# Stack che scrive: una riga al secondo, così il terminale combinato di Dockge
+# (`docker compose logs -f`) ha qualcosa da mostrare.
+services:
+  writer:
+    image: cupola-lab/base:1
+    pull_policy: never
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "cupola-log ready"
+        i=0
+        while true; do
+          i=$$((i + 1))
+          echo "cupola-log line $$i"
+          sleep 1
+        done
+    restart: unless-stopped

@@ -1,0 +1,15 @@
+{
+  "version": "TrueNAS-SCALE-25.10.2.1",
+  "hostname": "nas",
+  "uptime_seconds": 86400,
+  "cores": 8,
+  "physmem": 17179869184,
+  "loadavg": [
+    0.42,
+    0.31,
+    0.27
+  ],
+  "model": "Supermicro X11SCH-F",
+  "system_product": "Cupola NAS",
+  "system_serial": "CUPOLA0001"
+}

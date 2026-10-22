@@ -1,0 +1,28 @@
+[
+  {
+    "id": "cupola-vm",
+    "name": "cupola-vm",
+    "type": "VM",
+    "status": "STOPPED",
+    "cpu": 2,
+    "memory": 4294967296,
+    "autostart": false,
+    "image": {
+      "os": "Debian",
+      "release": "13"
+    }
+  },
+  {
+    "id": "devbox",
+    "name": "devbox",
+    "type": "CONTAINER",
+    "status": "RUNNING",
+    "cpu": 1,
+    "memory": 1073741824,
+    "autostart": true,
+    "image": {
+      "os": "Alpine",
+      "release": "3.21"
+    }
+  }
+]

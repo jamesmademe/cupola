@@ -1,0 +1,36 @@
+[
+  {
+    "id": 1,
+    "name": "tank",
+    "guid": "1000000000000001",
+    "status": "ONLINE",
+    "healthy": true,
+    "path": "/mnt/tank",
+    "size": 21990232555520,
+    "allocated": 7516192771840,
+    "free": 14474039783680,
+    "encrypt": 0,
+    "scan": {
+      "function": "SCRUB",
+      "state": "FINISHED",
+      "percentage": 100.0,
+      "bytes_processed": 21990232555520,
+      "total_secs_left": null,
+      "end_time": {
+        "$date": 1792552440000
+      }
+    }
+  },
+  {
+    "id": 2,
+    "name": "backup",
+    "guid": "1000000000000002",
+    "status": "DEGRADED",
+    "healthy": false,
+    "path": "/mnt/backup",
+    "size": 3995116290048,
+    "allocated": 996432543744,
+    "free": 2998683746304,
+    "encrypt": 0
+  }
+]

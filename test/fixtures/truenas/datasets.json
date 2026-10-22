@@ -1,0 +1,489 @@
+[
+  {
+    "id": "backup",
+    "name": "backup",
+    "pool": "backup",
+    "type": "FILESYSTEM",
+    "mountpoint": "/mnt/backup",
+    "encrypted": false,
+    "used": {
+      "value": "928.00 GiB",
+      "rawvalue": "996432543744",
+      "parsed": 996432543744
+    },
+    "available": {
+      "value": "2.73 TiB",
+      "rawvalue": "2998683746304",
+      "parsed": 2998683746304
+    },
+    "quota": {
+      "value": "0 B",
+      "rawvalue": "0",
+      "parsed": 0
+    },
+    "refquota": {
+      "value": "0 B",
+      "rawvalue": "0",
+      "parsed": 0
+    },
+    "compression": {
+      "value": "ZSTD"
+    },
+    "compressratio": {
+      "value": "1.00x"
+    },
+    "recordsize": {
+      "value": "1M"
+    },
+    "deduplication": {
+      "value": "OFF"
+    },
+    "comments": {
+      "value": "Copies"
+    },
+    "children": [
+      {
+        "id": "backup/copies",
+        "name": "backup/copies",
+        "pool": "backup",
+        "type": "FILESYSTEM",
+        "mountpoint": "/mnt/backup/copies",
+        "encrypted": false,
+        "used": {
+          "value": "928.00 GiB",
+          "rawvalue": "996432543744",
+          "parsed": 996432543744
+        },
+        "available": {
+          "value": "2.73 TiB",
+          "rawvalue": "2998683746304",
+          "parsed": 2998683746304
+        },
+        "quota": {
+          "value": "0 B",
+          "rawvalue": "0",
+          "parsed": 0
+        },
+        "refquota": {
+          "value": "0 B",
+          "rawvalue": "0",
+          "parsed": 0
+        },
+        "compression": {
+          "value": "ZSTD"
+        },
+        "compressratio": {
+          "value": "1.00x"
+        },
+        "recordsize": {
+          "value": "128K"
+        },
+        "deduplication": {
+          "value": "OFF"
+        },
+        "comments": {
+          "value": "Weekly copies"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "id": "tank",
+    "name": "tank",
+    "pool": "tank",
+    "type": "FILESYSTEM",
+    "mountpoint": "/mnt/tank",
+    "encrypted": false,
+    "used": {
+      "value": "6.00 GiB",
+      "rawvalue": "6442450944",
+      "parsed": 6442450944
+    },
+    "available": {
+      "value": "13.16 TiB",
+      "rawvalue": "14474039281664",
+      "parsed": 14474039281664
+    },
+    "quota": {
+      "value": "0 B",
+      "rawvalue": "0",
+      "parsed": 0
+    },
+    "refquota": {
+      "value": "0 B",
+      "rawvalue": "0",
+      "parsed": 0
+    },
+    "compression": {
+      "value": "LZ4"
+    },
+    "compressratio": {
+      "value": "1.02x"
+    },
+    "recordsize": {
+      "value": "128K"
+    },
+    "deduplication": {
+      "value": "OFF"
+    },
+    "comments": {
+      "value": "Cupola lab"
+    },
+    "children": [
+      {
+        "id": "tank/apps",
+        "name": "tank/apps",
+        "pool": "tank",
+        "type": "FILESYSTEM",
+        "mountpoint": "/mnt/tank/apps",
+        "encrypted": false,
+        "used": {
+          "value": "64.00 GiB",
+          "rawvalue": "68719476736",
+          "parsed": 68719476736
+        },
+        "available": {
+          "value": "13.16 TiB",
+          "rawvalue": "14474039281664",
+          "parsed": 14474039281664
+        },
+        "quota": {
+          "value": "0 B",
+          "rawvalue": "0",
+          "parsed": 0
+        },
+        "refquota": {
+          "value": "0 B",
+          "rawvalue": "0",
+          "parsed": 0
+        },
+        "compression": {
+          "value": "LZ4"
+        },
+        "compressratio": {
+          "value": "1.00x"
+        },
+        "recordsize": {
+          "value": "128K"
+        },
+        "deduplication": {
+          "value": "OFF"
+        },
+        "comments": {
+          "value": "App storage"
+        },
+        "children": []
+      },
+      {
+        "id": "tank/downloads",
+        "name": "tank/downloads",
+        "pool": "tank",
+        "type": "FILESYSTEM",
+        "mountpoint": "/mnt/tank/downloads",
+        "encrypted": false,
+        "used": {
+          "value": "40.00 GiB",
+          "rawvalue": "42949672960",
+          "parsed": 42949672960
+        },
+        "available": {
+          "value": "13.16 TiB",
+          "rawvalue": "14474039281664",
+          "parsed": 14474039281664
+        },
+        "quota": {
+          "value": "0 B",
+          "rawvalue": "0",
+          "parsed": 0
+        },
+        "refquota": {
+          "value": "0 B",
+          "rawvalue": "0",
+          "parsed": 0
+        },
+        "compression": {
+          "value": "LZ4"
+        },
+        "compressratio": {
+          "value": "1.00x"
+        },
+        "recordsize": {
+          "value": "1M"
+        },
+        "deduplication": {
+          "value": "OFF"
+        },
+        "comments": {
+          "value": "qBittorrent, Transmission, SABnzbd, NZBGet"
+        },
+        "children": []
+      },
+      {
+        "id": "tank/media",
+        "name": "tank/media",
+        "pool": "tank",
+        "type": "FILESYSTEM",
+        "mountpoint": "/mnt/tank/media",
+        "encrypted": false,
+        "used": {
+          "value": "6.74 TiB",
+          "rawvalue": "7412345667584",
+          "parsed": 7412345667584
+        },
+        "available": {
+          "value": "13.16 TiB",
+          "rawvalue": "14474039281664",
+          "parsed": 14474039281664
+        },
+        "quota": {
+          "value": "0 B",
+          "rawvalue": "0",
+          "parsed": 0
+        },
+        "refquota": {
+          "value": "0 B",
+          "rawvalue": "0",
+          "parsed": 0
+        },
+        "compression": {
+          "value": "LZ4"
+        },
+        "compressratio": {
+          "value": "1.00x"
+        },
+        "recordsize": {
+          "value": "1M"
+        },
+        "deduplication": {
+          "value": "OFF"
+        },
+        "comments": {
+          "value": "Films, series, music, books"
+        },
+        "children": [
+          {
+            "id": "tank/media/books",
+            "name": "tank/media/books",
+            "pool": "tank",
+            "type": "FILESYSTEM",
+            "mountpoint": "/mnt/tank/media/books",
+            "encrypted": false,
+            "used": {
+              "value": "200.00 GiB",
+              "rawvalue": "214748364800",
+              "parsed": 214748364800
+            },
+            "available": {
+              "value": "13.16 TiB",
+              "rawvalue": "14474039281664",
+              "parsed": 14474039281664
+            },
+            "quota": {
+              "value": "0 B",
+              "rawvalue": "0",
+              "parsed": 0
+            },
+            "refquota": {
+              "value": "0 B",
+              "rawvalue": "0",
+              "parsed": 0
+            },
+            "compression": {
+              "value": "ZSTD"
+            },
+            "compressratio": {
+              "value": "1.11x"
+            },
+            "recordsize": {
+              "value": "128K"
+            },
+            "deduplication": {
+              "value": "OFF"
+            },
+            "comments": {
+              "value": "Readarr"
+            },
+            "children": []
+          },
+          {
+            "id": "tank/media/movies",
+            "name": "tank/media/movies",
+            "pool": "tank",
+            "type": "FILESYSTEM",
+            "mountpoint": "/mnt/tank/media/movies",
+            "encrypted": false,
+            "used": {
+              "value": "3.00 TiB",
+              "rawvalue": "3298534883328",
+              "parsed": 3298534883328
+            },
+            "available": {
+              "value": "13.16 TiB",
+              "rawvalue": "14474039281664",
+              "parsed": 14474039281664
+            },
+            "quota": {
+              "value": "0 B",
+              "rawvalue": "0",
+              "parsed": 0
+            },
+            "refquota": {
+              "value": "0 B",
+              "rawvalue": "0",
+              "parsed": 0
+            },
+            "compression": {
+              "value": "LZ4"
+            },
+            "compressratio": {
+              "value": "1.00x"
+            },
+            "recordsize": {
+              "value": "1M"
+            },
+            "deduplication": {
+              "value": "OFF"
+            },
+            "comments": {
+              "value": "Radarr"
+            },
+            "children": []
+          },
+          {
+            "id": "tank/media/music",
+            "name": "tank/media/music",
+            "pool": "tank",
+            "type": "FILESYSTEM",
+            "mountpoint": "/mnt/tank/media/music",
+            "encrypted": false,
+            "used": {
+              "value": "560.00 GiB",
+              "rawvalue": "601295421440",
+              "parsed": 601295421440
+            },
+            "available": {
+              "value": "13.16 TiB",
+              "rawvalue": "14474039281664",
+              "parsed": 14474039281664
+            },
+            "quota": {
+              "value": "0 B",
+              "rawvalue": "0",
+              "parsed": 0
+            },
+            "refquota": {
+              "value": "0 B",
+              "rawvalue": "0",
+              "parsed": 0
+            },
+            "compression": {
+              "value": "ZSTD"
+            },
+            "compressratio": {
+              "value": "1.04x"
+            },
+            "recordsize": {
+              "value": "128K"
+            },
+            "deduplication": {
+              "value": "OFF"
+            },
+            "comments": {
+              "value": "Lidarr"
+            },
+            "children": []
+          },
+          {
+            "id": "tank/media/series",
+            "name": "tank/media/series",
+            "pool": "tank",
+            "type": "FILESYSTEM",
+            "mountpoint": "/mnt/tank/media/series",
+            "encrypted": false,
+            "used": {
+              "value": "3.00 TiB",
+              "rawvalue": "3298534883328",
+              "parsed": 3298534883328
+            },
+            "available": {
+              "value": "13.16 TiB",
+              "rawvalue": "14474039281664",
+              "parsed": 14474039281664
+            },
+            "quota": {
+              "value": "0 B",
+              "rawvalue": "0",
+              "parsed": 0
+            },
+            "refquota": {
+              "value": "0 B",
+              "rawvalue": "0",
+              "parsed": 0
+            },
+            "compression": {
+              "value": "LZ4"
+            },
+            "compressratio": {
+              "value": "1.00x"
+            },
+            "recordsize": {
+              "value": "1M"
+            },
+            "deduplication": {
+              "value": "OFF"
+            },
+            "comments": {
+              "value": "Sonarr"
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "tank/virt",
+        "name": "tank/virt",
+        "pool": "tank",
+        "type": "FILESYSTEM",
+        "mountpoint": "/mnt/tank/virt",
+        "encrypted": false,
+        "used": {
+          "value": "100.00 GiB",
+          "rawvalue": "107374182400",
+          "parsed": 107374182400
+        },
+        "available": {
+          "value": "13.16 TiB",
+          "rawvalue": "14474039281664",
+          "parsed": 14474039281664
+        },
+        "quota": {
+          "value": "0 B",
+          "rawvalue": "0",
+          "parsed": 0
+        },
+        "refquota": {
+          "value": "0 B",
+          "rawvalue": "0",
+          "parsed": 0
+        },
+        "compression": {
+          "value": "LZ4"
+        },
+        "compressratio": {
+          "value": "1.00x"
+        },
+        "recordsize": {
+          "value": "128K"
+        },
+        "deduplication": {
+          "value": "OFF"
+        },
+        "comments": {
+          "value": "Incus instances"
+        },
+        "children": []
+      }
+    ]
+  }
+]

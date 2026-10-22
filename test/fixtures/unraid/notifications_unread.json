@@ -1,0 +1,45 @@
+{
+  "data": {
+    "notifications": {
+      "overview": {
+        "unread": {"info": 1, "warning": 1, "alert": 1, "total": 3},
+        "archive": {"info": 1, "warning": 0, "alert": 0, "total": 1}
+      },
+      "list": [
+        {
+          "id": "notification:cache-hot",
+          "title": "Warning [TOWER] - Cache drive temperature is 47 C",
+          "subject": "Cache drive temperature is 47 C",
+          "description": "The cache pool is above the 45 C warning threshold.",
+          "importance": "WARNING",
+          "link": "",
+          "type": "UNREAD",
+          "timestamp": "2026-10-21T18:40:07.004Z",
+          "formattedTimestamp": "2026-10-21 18:40:07"
+        },
+        {
+          "id": "notification:disk2-disabled",
+          "title": "Alert [TOWER] - Disk 2 in error state (disk dsbl)",
+          "subject": "Disk 2 in error state (disk dsbl)",
+          "description": "Disk 2 is disabled and being emulated from parity. Replace the drive, then rebuild.",
+          "importance": "ALERT",
+          "link": "",
+          "type": "UNREAD",
+          "timestamp": "2026-10-20T09:12:41.118Z",
+          "formattedTimestamp": "2026-10-20 09:12:41"
+        },
+        {
+          "id": "notification:parity-check",
+          "title": "Notice [TOWER] - Parity check finished",
+          "subject": "Parity check finished",
+          "description": "Parity check found 0 errors in 6 hours 12 minutes.",
+          "importance": "INFO",
+          "link": "",
+          "type": "UNREAD",
+          "timestamp": "2026-10-19T03:04:00.000Z",
+          "formattedTimestamp": "2026-10-19 03:04:00"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "pool": "tank",
+  "dataset": "tank/virt",
+  "state": "INITIALIZED",
+  "bridge": "br0"
+}

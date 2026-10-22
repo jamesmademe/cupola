@@ -1,0 +1,7 @@
+# Stack che resta fermo: Dockge ha il compose e nessun container, quindi legge
+# `Inactive` finché qualcuno non lo avvia.
+services:
+  sleeper:
+    image: cupola-lab/base:1
+    pull_policy: never
+    entrypoint: ["/bin/sh", "-c", "exec sleep 3600"]

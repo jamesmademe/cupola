@@ -1,0 +1,61 @@
+[
+  {
+    "id": 1,
+    "name": "tank",
+    "guid": "1000000000000001",
+    "status": "ONLINE",
+    "healthy": true,
+    "path": "/mnt/tank",
+    "size": 21990232555520,
+    "allocated": 7516192771840,
+    "free": 14474039783680,
+    "encrypt": 0,
+    "scan": {
+      "function": "SCRUB",
+      "state": "FINISHED",
+      "percentage": 100.0,
+      "bytes_processed": 21990232555520,
+      "total_secs_left": null,
+      "end_time": {
+        "$date": 1792552440000
+      }
+    },
+    "topology": {
+      "data": [
+        {
+          "type": "RAIDZ2",
+          "status": "ONLINE",
+          "children": [
+            {
+              "disk": "sda",
+              "status": "ONLINE"
+            },
+            {
+              "disk": "sdb",
+              "status": "ONLINE"
+            },
+            {
+              "disk": "sdc",
+              "status": "ONLINE"
+            },
+            {
+              "disk": "sdd",
+              "status": "ONLINE"
+            },
+            {
+              "disk": "sde",
+              "status": "ONLINE"
+            },
+            {
+              "disk": "sdf",
+              "status": "ONLINE"
+            }
+          ]
+        }
+      ],
+      "cache": [],
+      "log": [],
+      "spare": []
+    }
+  }
+]

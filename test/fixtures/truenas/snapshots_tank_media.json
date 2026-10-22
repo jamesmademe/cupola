@@ -1,0 +1,50 @@
+[
+  {
+    "id": "tank/media@manual-2026-10-20",
+    "name": "tank/media@manual-2026-10-20",
+    "snapshot_name": "manual-2026-10-20",
+    "dataset": "tank/media",
+    "type": "SNAPSHOT",
+    "properties": {
+      "creation": {
+        "parsed": {
+          "$date": 1792519320000
+        }
+      },
+      "used": {
+        "value": "0 B",
+        "rawvalue": "0",
+        "parsed": 0
+      },
+      "referenced": {
+        "value": "6.74 TiB",
+        "rawvalue": "7412345667584",
+        "parsed": 7412345667584
+      }
+    }
+  },
+  {
+    "id": "tank/media@auto-daily-2026-10-21",
+    "name": "tank/media@auto-daily-2026-10-21",
+    "snapshot_name": "auto-daily-2026-10-21",
+    "dataset": "tank/media",
+    "type": "SNAPSHOT",
+    "properties": {
+      "creation": {
+        "parsed": {
+          "$date": 1792555200000
+        }
+      },
+      "used": {
+        "value": "12.00 GiB",
+        "rawvalue": "12884901888",
+        "parsed": 12884901888
+      },
+      "referenced": {
+        "value": "6.74 TiB",
+        "rawvalue": "7412345667584",
+        "parsed": 7412345667584
+      }
+    }
+  }
+]

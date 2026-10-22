@@ -1,0 +1,33 @@
+{
+  "data": {
+    "shares": [
+      {
+        "id": "share:media",
+        "name": "media",
+        "used": "6000000000",
+        "size": "10000000000",
+        "cache": false,
+        "comment": "Movies, series and music",
+        "luksStatus": "NOT_ENCRYPTED"
+      },
+      {
+        "id": "share:backups",
+        "name": "backups",
+        "used": "1800000000",
+        "size": "5000000000",
+        "cache": false,
+        "comment": "Nightly backups",
+        "luksStatus": "ENCRYPTED"
+      },
+      {
+        "id": "share:appdata",
+        "name": "appdata",
+        "used": "40000000",
+        "size": "200000000",
+        "cache": true,
+        "comment": "Container appdata",
+        "luksStatus": "NOT_ENCRYPTED"
+      }
+    ]
+  }
+}

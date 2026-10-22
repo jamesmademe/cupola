@@ -1,0 +1,23 @@
+{
+  "data": {
+    "notifications": {
+      "overview": {
+        "unread": {"info": 1, "warning": 1, "alert": 1, "total": 3},
+        "archive": {"info": 1, "warning": 0, "alert": 0, "total": 1}
+      },
+      "list": [
+        {
+          "id": "notification:array-started",
+          "title": "Notice [TOWER] - Array started",
+          "subject": "Array started",
+          "description": "The array is started and all disks are online.",
+          "importance": "INFO",
+          "link": "",
+          "type": "ARCHIVE",
+          "timestamp": "2026-10-12T07:30:12.000Z",
+          "formattedTimestamp": "2026-10-12 07:30:12"
+        }
+      ]
+    }
+  }
+}

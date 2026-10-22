@@ -436,6 +436,50 @@ flutter test --tags e2e --run-skipped test/e2e/testlab_plex_e2e_test.dart
 flutter test --tags e2e --run-skipped test/e2e/testlab_stream_sessions_e2e_test.dart
 ~~~
 
+## TrueNAS, Unraid, NPM and Dockge
+
+TrueNAS and Unraid are stateful simulators, not fixture bags. `mock/server.py`
+serves the TrueNAS WebSocket JSON-RPC from a world built out of the lab's own
+datasets, pools (one healthy, one degraded), users, shares, apps and VMs; a
+scrub is a job that advances, apps and virt instances move through jobs, alerts
+dismiss, and a reboot drops every socket. `test-readonly` is a second key with
+the `READONLY_ADMIN` role and no write role, so every write is refused with the
+`EACCES`/`EPERM` the app knows. `mock_unraid/` serves the GraphQL the client
+uses: a disk disabled and emulated by parity, Docker containers, VMs with
+start/stop/resume/pause, notifications with an archive and shares; a view-only
+key is refused by the mutation path. Both have a contract script that compares
+the answers with `test/fixtures/`: 102 and 103 checks.
+
+NPM is the real container: two proxy hosts (one advanced block that answers on
+its own location, one disabled and enabled), an expiring self-signed
+certificate, an access list, the audit log and a view-only user. Dockge is the
+real container on its `docker:dind`; the dind now stores `/var/lib/docker` in a
+named volume, because overlayfs cannot write an upperdir on the Mac's virtiofs.
+Three compose stacks (a logger, a stopped one, one that crashes) live there;
+start/stop/restart/update/down, create/edit/delete and the action terminal are
+driven through the app's client.
+
+~~~bash
+python3 test/e2e/testlab/testlab.py scenario apply truenas-state
+python3 test/e2e/testlab/testlab.py scenario apply unraid-state
+python3 test/e2e/testlab/testlab.py scenario apply npm-lab
+python3 test/e2e/testlab/testlab.py scenario apply dockge-lab
+flutter test --tags e2e --run-skipped test/e2e/testlab_truenas_e2e_test.dart
+flutter test --tags e2e --run-skipped test/e2e/testlab_unraid_e2e_test.dart
+flutter test --tags e2e --run-skipped test/e2e/testlab_npm_e2e_test.dart
+flutter test --tags e2e --run-skipped test/e2e/testlab_dockge_e2e_test.dart
+~~~
+
+Declared limits: NPM renews only Let's Encrypt certificates, so the success
+branch is a 400 on the uploaded one; its audit log and access list can never be
+empty in a used lab. TrueNAS keeps its world in memory and leaves replication,
+cloudsync and rsync task operations unimplemented because the app never sees
+them; its reporting is synthetic. Unraid's emulated disk is `DISK_DSBL` plus
+the notification, not a query field; its containers are the fixture, not a real
+daemon. Dockge 1.5.0 never emits `stackStatusList`, `getStack` always reads
+`Unknown` for a managed stack, and the combined terminal only joins a terminal
+some action already opened.
+
 ## Published endpoint map
 
 

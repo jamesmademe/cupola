@@ -1,0 +1,64 @@
+[
+  {
+    "id": 950,
+    "gid": 950,
+    "name": "truenas_admin",
+    "builtin": false,
+    "users": [
+      "truenas_admin"
+    ],
+    "sudo_commands": []
+  },
+  {
+    "id": 1000,
+    "gid": 1000,
+    "name": "media",
+    "builtin": false,
+    "users": [
+      "cupola",
+      "anna",
+      "luca"
+    ],
+    "sudo_commands": []
+  },
+  {
+    "id": 3000,
+    "gid": 3000,
+    "name": "cupola",
+    "builtin": false,
+    "users": [
+      "cupola"
+    ],
+    "sudo_commands": []
+  },
+  {
+    "id": 3001,
+    "gid": 3001,
+    "name": "auditor",
+    "builtin": false,
+    "users": [
+      "auditor"
+    ],
+    "sudo_commands": []
+  },
+  {
+    "id": 41,
+    "gid": 41,
+    "name": "wheel",
+    "builtin": true,
+    "users": [
+      "truenas_admin"
+    ],
+    "sudo_commands": [
+      "ALL"
+    ]
+  },
+  {
+    "id": 4,
+    "gid": 4,
+    "name": "adm",
+    "builtin": true,
+    "users": [],
+    "sudo_commands": []
+  }
+]

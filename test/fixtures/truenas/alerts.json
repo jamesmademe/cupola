@@ -1,0 +1,46 @@
+[
+  {
+    "uuid": "alert-smart-sdh",
+    "level": "CRITICAL",
+    "klass": "SMART",
+    "dismissed": false,
+    "datetime": {
+      "$date": 1792654860000
+    },
+    "formatted": "8 uncorrectable errors reported for sdh (ZL2PQR7T).",
+    "text": "8 uncorrectable errors reported for sdh (ZL2PQR7T).",
+    "args": {
+      "ue": 8,
+      "name": "sdh",
+      "serial": "ZL2PQR7T",
+      "message": "Device: /dev/sdh [SAT], 8 Currently unreadable (pending) sectors"
+    }
+  },
+  {
+    "uuid": "alert-backup-degraded",
+    "level": "WARNING",
+    "klass": "VolumeStatus",
+    "dismissed": false,
+    "datetime": {
+      "$date": 1792654920000
+    },
+    "formatted": "Pool backup state is DEGRADED: One or more devices could not be used. Sufficient replicas exist for the pool to continue functioning in a degraded state.",
+    "args": {
+      "volume": "backup",
+      "state": "DEGRADED"
+    }
+  },
+  {
+    "uuid": "alert-update-available",
+    "level": "INFO",
+    "klass": "UpdateAvailable",
+    "dismissed": false,
+    "datetime": {
+      "$date": 1792654980000
+    },
+    "formatted": "A new update is available: 25.10.2.2",
+    "args": {
+      "version": "25.10.2.2"
+    }
+  }
+]

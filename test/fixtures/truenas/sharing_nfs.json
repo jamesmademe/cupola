@@ -1,0 +1,28 @@
+[
+  {
+    "id": 1,
+    "paths": [
+      "/mnt/tank/media/movies"
+    ],
+    "enabled": true,
+    "comment": "Films",
+    "ro": false,
+    "networks": [
+      "192.168.1.0/24"
+    ],
+    "hosts": []
+  },
+  {
+    "id": 2,
+    "paths": [
+      "/mnt/tank/media/series"
+    ],
+    "enabled": true,
+    "comment": null,
+    "ro": false,
+    "networks": [],
+    "hosts": [
+      "192.168.1.20"
+    ]
+  }
+]

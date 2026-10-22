@@ -1,0 +1,62 @@
+[
+  {
+    "id": 950,
+    "uid": 950,
+    "username": "truenas_admin",
+    "full_name": "Local Administrator",
+    "builtin": false,
+    "locked": false,
+    "shell": "/usr/bin/zsh",
+    "smb": false
+  },
+  {
+    "id": 1000,
+    "uid": 1000,
+    "username": "media",
+    "full_name": "Media service account",
+    "builtin": true,
+    "locked": true,
+    "shell": "/usr/sbin/nologin",
+    "smb": false
+  },
+  {
+    "id": 3000,
+    "uid": 3000,
+    "username": "cupola",
+    "full_name": "Cupola",
+    "builtin": false,
+    "locked": false,
+    "shell": "/usr/sbin/nologin",
+    "smb": true
+  },
+  {
+    "id": 3001,
+    "uid": 3001,
+    "username": "auditor",
+    "full_name": "Read-only auditor",
+    "builtin": false,
+    "locked": false,
+    "shell": "/usr/sbin/nologin",
+    "smb": false
+  },
+  {
+    "id": 3002,
+    "uid": 3002,
+    "username": "anna",
+    "full_name": "Anna",
+    "builtin": false,
+    "locked": false,
+    "shell": "/usr/sbin/nologin",
+    "smb": true
+  },
+  {
+    "id": 3003,
+    "uid": 3003,
+    "username": "luca",
+    "full_name": "Luca",
+    "builtin": false,
+    "locked": false,
+    "shell": "/usr/sbin/nologin",
+    "smb": true
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "data": {
+    "vms": {
+      "domains": [
+        {"id": "vm:homeassistant", "name": "Home Assistant", "state": "RUNNING"},
+        {"id": "vm:windows", "name": "Windows 11 lab", "state": "SHUTOFF"},
+        {"id": "vm:nasbackup", "name": "NAS backup", "state": "PAUSED"},
+        {"id": "vm:retro", "name": "Retro console", "state": "CRASHED"}
+      ]
+    }
+  }
+}

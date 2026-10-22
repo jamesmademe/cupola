@@ -1,0 +1,29 @@
+[
+  {
+    "id": 1,
+    "name": "media",
+    "path": "/mnt/tank/media",
+    "enabled": true,
+    "comment": "Films, series, music, books",
+    "ro": false,
+    "purpose": "DEFAULT_SHARE"
+  },
+  {
+    "id": 2,
+    "name": "downloads",
+    "path": "/mnt/tank/downloads",
+    "enabled": true,
+    "comment": null,
+    "ro": false,
+    "purpose": "DEFAULT_SHARE"
+  },
+  {
+    "id": 3,
+    "name": "scratch",
+    "path": "/mnt/tank/scratch",
+    "enabled": false,
+    "comment": "Temporary",
+    "ro": true,
+    "purpose": "DEFAULT_SHARE"
+  }
+]

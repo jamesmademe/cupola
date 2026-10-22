@@ -1,0 +1,12 @@
+[
+  {
+    "id": 1,
+    "dataset": "tank/media",
+    "recursive": true,
+    "naming_schema": "auto-%Y-%m-%d_%H-%M",
+    "enabled": true,
+    "keep_policy": "WEEKLY",
+    "lifetime_value": 4,
+    "lifetime_unit": "WEEK"
+  }
+]

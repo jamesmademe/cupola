@@ -318,7 +318,12 @@ services:
       - --host=unix:///var/run/docker.sock
       - --tls=false
     volumes:
-      - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/dind:/var/lib/docker"
+      # A named volume, not a bind mount: overlayfs inside the dind cannot
+      # write its upperdir on the Mac's virtiofs, and every `docker run` then
+      # fails with "mount callback failed ... read-only file system". Named
+      # volumes live in the Docker VM, where overlayfs works. The snapshots
+      # already skip the dind, so nothing is lost by leaving it out of state.
+      - cupola-dind:/var/lib/docker
     healthcheck:
       test: [CMD-SHELL, "docker info >/dev/null 2>&1"]
       interval: 5s
@@ -393,8 +398,11 @@ services:
       retries: 20
 
   unraid-mock:
+    # Its own build context, not the shared protocol mocks: Unraid is the one
+    # simulator whose answers depend on the answer before them, so it keeps a
+    # world (`test/e2e/testlab/mock_unraid/server.py`) instead of a reading.
     build:
-      context: test/e2e/testlab/mock
+      context: test/e2e/testlab/mock_unraid
     profiles: [core, infra, protocol-mocks]
     environment:
       MOCK_MODE: unraid
@@ -464,3 +472,8 @@ services:
       - "127.0.0.1:28989:28989"
       - "127.0.0.1:29091:29091"
       - "127.0.0.1:29696:29696"
+
+volumes:
+  # The dind's own disk. Named so overlayfs can write; not part of the lab's
+  # state directory, and the snapshots already ignore the dind.
+  cupola-dind:

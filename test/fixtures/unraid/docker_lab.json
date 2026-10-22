@@ -1,0 +1,20 @@
+{
+  "data": {
+    "dockerContainers": [
+      {"id": "3f1c9a2b7d10", "names": ["/plex"], "state": "running", "status": "Up 3 days", "autoStart": true},
+      {"id": "9a4e2c8f10b3", "names": ["/radarr"], "state": "running", "status": "Up 3 days", "autoStart": true},
+      {"id": "b7d210e5c4a8", "names": ["/sonarr"], "state": "running", "status": "Up 3 days", "autoStart": true},
+      {"id": "1c8f3a9d20e7", "names": ["/lidarr"], "state": "running", "status": "Up 2 days", "autoStart": true},
+      {"id": "5e2b7c1a9f04", "names": ["/readarr"], "state": "exited", "status": "Exited (0) 4 hours ago", "autoStart": true},
+      {"id": "8d3a1f6b2c95", "names": ["/prowlarr"], "state": "running", "status": "Up 2 days", "autoStart": true},
+      {"id": "c41e9b7a305d", "names": ["/bazarr"], "state": "running", "status": "Up 2 days (unhealthy)", "autoStart": true},
+      {"id": "2a7d5c8e1b46", "names": ["/qbittorrent"], "state": "running", "status": "Up 3 days", "autoStart": true},
+      {"id": "f9b1e4d6a273", "names": ["/sabnzbd"], "state": "running", "status": "Up 1 day", "autoStart": true},
+      {"id": "6c2e8a4f7b19", "names": ["/seerr"], "state": "running", "status": "Up 3 days", "autoStart": true},
+      {"id": "e7a3d1b9c582", "names": ["/jellyfin"], "state": "running", "status": "Up 3 days", "autoStart": true},
+      {"id": "4b9f2e7c1d68", "names": ["/dockge"], "state": "running", "status": "Up 2 days", "autoStart": true},
+      {"id": "a1d5c3e9b742", "names": ["/nginx-proxy-manager"], "state": "restarting", "status": "Restarting (1) 20 seconds ago", "autoStart": true},
+      {"id": "7e4b1a8d3c06", "names": ["/nzbget"], "state": "exited", "status": "Exited (137) 2 hours ago", "autoStart": true}
+    ]
+  }
+}

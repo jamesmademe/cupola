@@ -1,0 +1,18 @@
+[
+  {
+    "id": 1,
+    "pool_name": "tank",
+    "pool": 1,
+    "threshold": 35,
+    "description": "",
+    "enabled": true
+  },
+  {
+    "id": 2,
+    "pool_name": "backup",
+    "pool": 2,
+    "threshold": 35,
+    "description": "",
+    "enabled": true
+  }
+]
