@@ -508,9 +508,67 @@ token inviato.
 Il bordo è un processo dell'host (`edge_lab.py`, porta 8444) con un certificato autofirmato proprio davanti a Radarr:
 l'app legge l'impronta, la pin, e con la pin la connessione passa. La rotazione è a comando: il laboratorio rifà il
 certificato, l'impronta cambia, e il pin vecchio viene rifiutato (`Radarr has a certificate Cupola does not trust`)
-mentre quello nuovo funziona. Non è un Caddy: è la stessa forma del gateway, un processo dell'host, e porta la
-sostanza della riga (un'origine con certificato proprio che il laboratorio fa cambiare) senza un container da
-gestire. Gli indirizzi sbagliati del primo avvio sono i sei esiti che il gateway copre già.
+mentre quello nuovo funziona. Il bordo con Caddy (`## Il bordo con Caddy`) copre la stessa riga con tre origini e
+un certificato emesso da una CA interna; questo processo resta il caso di una sola origine e di una foglia
+autofirmata. Gli indirizzi sbagliati del primo avvio sono i sei esiti che il gateway copre già.
+
+## La configurazione dell'app per un profilo
+
+`testlab.py app-config <profilo>` scrive la configurazione dell'app per un
+profilo P1–P9 nello stato del laboratorio, nel formato che l'app legge: gli
+indirizzi, i nomi e la rosa delle connessioni nelle `SharedPreferences`, le
+chiavi, le password, i token e le sessioni nella memoria sicura, con le chiavi
+che `SettingsService` deriva dall'id di ogni connessione. Il file sta in
+`.ai/scratch/zz_testlab/state/app/<profilo>.json` con mode 600, accanto agli
+altri segreti usa e getta, e mai nel repository.
+
+~~~bash
+python3 test/e2e/testlab/testlab.py app-config P1
+python3 test/e2e/testlab/testlab.py app-config P7 --apply macos
+~~~
+
+L'app lo legge nel suo processo, perché la memoria sicura è il suo portachiavi
+e niente fuori dall'app può scriverla: `integration_test/testlab/seed_app.dart`
+consegna il file alle memorie dell'app e le rilegge. Il simulatore legge il
+file dove il laboratorio l'ha scritto; l'app macOS è in sandbox e non vede lo
+stato del laboratorio, quindi chiede lo stesso file all'API di controllo
+(`GET /app-config?profile=P1`, con il token).
+
+I profili sono quelli del catalogo del mondo
+(`test/test_helpers/profiles/profiles.dart`) portati su ciò che il laboratorio
+serve. Due hanno bisogno che il laboratorio sia in un certo stato:
+
+- P7 raggiunge i suoi server all'indirizzo fuori casa, il secondo ascoltatore
+  del Toxiproxy (la porta dopo quella del proxy), che lo scenario `away-home`
+  spegne a comando; le connessioni che il mondo tiene a casa non ne hanno uno;
+- P8 raggiunge Radarr, Sonarr e Seerr al gateway del laboratorio: Radarr
+  presenta il token di servizio che il gateway lascia passare, Sonarr non ne
+  presenta e Seerr ne presenta uno che nessuna policy ammette.
+
+Il secondo Radarr del mondo è il bordo del laboratorio, l'origine con
+certificato proprio davanti a Radarr; il secondo Sonarr è il Sonarr del
+laboratorio sotto un altro nome, perché il laboratorio ne ha uno solo e l'app
+ha bisogno di due istanze di un servizio per provare la lente.
+
+L'e2e (`test/e2e/testlab_app_config_e2e_test.dart`) legge il file con il
+`SettingsService` vero e prova che le connessioni, le chiavi, l'indirizzo
+fuori casa di P7 e il gateway di P8 sono quelli che il laboratorio scrive, e
+che una connessione inesistente è dichiarata non configurata invece di
+fingere.
+
+## Il bordo con Caddy
+
+Lo scenario `caddy-edge` alza un Caddy vero davanti a Radarr, Dockge e TrueNAS, un'origine per porta e un nome per origine (Caddy emette un certificato per nome dalla sua CA interna):
+
+| Origine | Indirizzo | A monte |
+|---|---|---|
+| Radarr | https://radarr.localhost:8445 | radarr:7878 |
+| Dockge | https://dockge.localhost:8446 | dockge:5001 |
+| TrueNAS | https://truenas.localhost:8447 | truenas-mock:8460 (TLS, verificato in modo lasco verso il mock) |
+
+`*.localhost` risolve a 127.0.0.1 su macOS e sul simulatore (RFC 6761), ma non dentro il container Alpine: l'healthcheck usa `curl --resolve`. Il bordo si accende e si spegne con lo scenario, e `caddy_lab.py --rotate` butta via la CA interna e riparte: le impronte cambiano, i pin vecchi non passano più.
+
+Il pin dell'app è il certificato che la verifica di piattaforma ha rifiutato: con un certificato autofirmato è la foglia, con una catena è l'intermedio della CA. Qui le tre foglie sono distinte, ma l'app legge lo stesso intermedio per tutte e tre le origini, quindi i tre pin coincidono e restano legati a host e porta. L'e2e (`test/e2e/testlab_caddy_e2e_test.dart`) legge i pin con il probe dell'app e le foglie dal socket, e prova la rotazione su tutte e tre.
 
 ## Published endpoint map
 
@@ -535,6 +593,9 @@ gestire. Gli indirizzi sbagliati del primo avvio sono i sei esiti che il gateway
 | Nginx Proxy Manager | http://127.0.0.1:8181 | admin@example.com / changeme | REST + JWT |
 | TrueNAS fixture | wss://127.0.0.1:8460 (self-signed; the app saves https://127.0.0.1:8460) | test-key | WebSocket JSON-RPC over TLS |
 | Unraid fixture | http://127.0.0.1:8480/graphql | test-key | GraphQL |
+| Caddy edge (Radarr) | https://radarr.localhost:8445 | test-key | HTTPS, certificate from Caddy's internal CA |
+| Caddy edge (Dockge) | https://dockge.localhost:8446 | the lab's Dockge account | Socket.IO over TLS |
+| Caddy edge (TrueNAS) | https://truenas.localhost:8447 | test-key | WebSocket JSON-RPC over TLS |
 
 The lab-only services are not app connections: `testlab-indexer` listens on
 host port 8188 for Torznab and tracker requests, the seeder's WebUI is on 8081,

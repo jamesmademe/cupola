@@ -32,12 +32,20 @@ import subprocess
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Any, Iterable
 
 TESTLAB_DIR = Path(__file__).resolve().parent
 REPO_ROOT = TESTLAB_DIR.parents[2]
+
+# The other modules of the lab import this one by name. When the CLI runs
+# this file as a script, that name would load a second copy of it, with a
+# second `LabError` the caller would not catch. One module, one error.
+if __name__ == "__main__":
+    sys.modules.setdefault("testlab", sys.modules[__name__])
+
 COMPOSE_FILE = REPO_ROOT / "docker-compose.testlab.yml"
 SCRATCH_ROOT = REPO_ROOT / ".ai" / "scratch" / "zz_testlab"
 STATE_ROOT = Path(
@@ -768,6 +776,60 @@ def doctor() -> dict[str, Any]:
     return {"ok": all(item["ok"] for item in checks), "checks": checks}
 
 
+def app_config(
+    profile: str, apply_to: str | None = None, udid: str | None = None
+) -> dict[str, Any]:
+    """Write the app's configuration for [profile] and answer what it holds.
+
+    The file is the app's own storage, key for key: the addresses and the
+    names in `SharedPreferences`, the keys and the sessions in the secure
+    storage. It lives in the lab's state with mode 600, beside the other
+    disposable secrets, and never in the repository.
+
+    The app reads it through the app-side writer, which hands the two maps
+    to the app's own stores: the secure storage is the app's own keychain
+    and nothing outside the app can write it. With [apply_to], the writer is
+    run on that target, which reads the file itself.
+    """
+    import app_config as writer
+
+    if profile.upper() not in writer.PROFILES:
+        raise LabError(
+            f"unknown profile {profile!r}; choose one of "
+            + ", ".join(sorted(writer.PROFILES))
+        )
+    chosen = profile.upper()
+    target = writer.write(chosen)
+    report = writer.summary(chosen)
+    report["file"] = str(target)
+    report["mode"] = "0600"
+    if apply_to:
+        report["applied"] = writer.apply_to_target(apply_to, chosen, udid)
+    return report
+
+
+def app_config_document(profile: str) -> dict[str, Any]:
+    """The configuration of [profile], as it was written.
+
+    What the app reads: the addresses and the names in `SharedPreferences`,
+    the keys and the sessions in the secure storage, with the keys
+    `SettingsService` writes. Served over the control API for an app the
+    sandbox keeps out of the lab's state directory.
+    """
+    import app_config as writer
+
+    chosen = profile.strip().upper()
+    if chosen not in writer.PROFILES:
+        raise LabError(
+            f"unknown profile {profile!r}; choose one of "
+            + ", ".join(sorted(writer.PROFILES))
+        )
+    target = writer.path_for(chosen)
+    if not target.is_file():
+        raise LabError(f"{chosen} has no configuration yet: {target}")
+    return json.loads(target.read_text(encoding="utf-8"))
+
+
 def dispatch(command: str, arguments: list[str]) -> dict[str, Any]:
     """Run one whitelisted command for the local control API."""
     if command == "status":
@@ -810,6 +872,10 @@ def dispatch(command: str, arguments: list[str]) -> dict[str, Any]:
         return fault(arguments[0], arguments[1], milliseconds)
     if command == "doctor":
         return doctor()
+    if command == "app-config":
+        if not arguments:
+            raise LabError("usage: app-config <profile>")
+        return app_config(arguments[0])
     if command == "spike":
         return spike()
     if command == "proxies":
@@ -852,6 +918,25 @@ class ControlHandler(http.server.BaseHTTPRequestHandler):
         if self.path == "/status":
             if self._authorised():
                 self._answer(200, dispatch("status", []))
+            return
+        if self.path.startswith("/app-config"):
+            # The configuration of a profile, for the app that has to read it:
+            # a sandboxed app cannot reach the lab's state directory, and the
+            # keys are in there. The token is the same one every other command
+            # asks for, and the file never leaves the state directory.
+            if not self._authorised():
+                return
+            query = urllib.parse.parse_qs(
+                urllib.parse.urlparse(self.path).query
+            )
+            profile = (query.get("profile") or [""])[0].strip().upper()
+            if not profile:
+                self._answer(400, {"error": "the profile is missing"})
+                return
+            try:
+                self._answer(200, app_config_document(profile))
+            except LabError as error:
+                self._answer(404, {"error": str(error)})
             return
         self._answer(404, {"error": "not found"})
 
@@ -929,8 +1014,20 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     serve_parser = commands.add_parser("serve", help="run the local control API")
     serve_parser.add_argument("--port", type=int, default=8799)
 
-    commands.add_parser(
-        "app-config", help="configure the app for a profile (arrives in L11)"
+    app_config_parser = commands.add_parser(
+        "app-config", help="write the app's configuration for a profile"
+    )
+    app_config_parser.add_argument(
+        "profile", help="the profile to configure the app for: P1 to P9"
+    )
+    app_config_parser.add_argument(
+        "--apply",
+        choices=("macos", "ios-simulator"),
+        default=None,
+        help="configure the app on that target, which reads the file itself",
+    )
+    app_config_parser.add_argument(
+        "--udid", default=None, help="the simulator's udid, for --apply"
     )
     play_parser = commands.add_parser(
         "play", help="start, pause or stop a playback session"
@@ -1008,7 +1105,14 @@ def main(argv: list[str] | None = None) -> int:
         elif arguments.command == "serve":
             serve(arguments.port)
         elif arguments.command == "app-config":
-            raise LabError("app-config arrives in L11")
+            print(
+                json.dumps(
+                    app_config(
+                        arguments.profile, arguments.apply, arguments.udid
+                    ),
+                    indent=2,
+                )
+            )
         elif arguments.command == "play":
             print(json.dumps(play(arguments), indent=2))
         elif arguments.command == "journeys":
