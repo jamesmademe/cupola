@@ -461,6 +461,10 @@ services:
       - "127.0.0.1:26767:26767"
       - "127.0.0.1:26789:26789"
       - "127.0.0.1:27878:27878"
+      # The away address of Radarr: a second listener on the same upstream,
+      # switched off on its own. The other services' away addresses are
+      # published the same way when a profile needs them.
+      - "127.0.0.1:27879:27879"
       - "127.0.0.1:28080:28080"
       - "127.0.0.1:28082:28082"
       - "127.0.0.1:28096:28096"

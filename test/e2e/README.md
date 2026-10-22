@@ -480,6 +480,29 @@ daemon. Dockge 1.5.0 never emits `stackStatusList`, `getStack` always reads
 `Unknown` for a managed stack, and the combined terminal only joins a terminal
 some action already opened.
 
+## Guasti e casa/fuori casa
+
+Ogni servizio del laboratorio ha già il Toxiproxy davanti, quindi un guasto è una toxica sul proxy che l'app usa e
+la porta diretta resta per l'harness di trasporto, che non deve dipendere dal livello dei guasti. Quattro scenari
+applicano una classe e la tolgono: `fault-down` (la connessione cade), `fault-timeout` (la connessione muore a
+metà), `fault-slow` (la risposta arriva troppo tardi) e `fault-flap` (il link sbatte). `away-home` spegne il
+secondo ascoltatore dello stesso upstream, l'indirizzo "fuori casa", che il compose pubblica su 27879.
+
+L'e2e chiede all'app di leggerle con il suo codice: `Radarr did not answer` per la connessione caduta, `Radarr
+was reached but did not reply in time` per la risposta in ritardo, il link che sbatte che prima o poi torna, e
+`Radarr only works at home` quando l'indirizzo di casa risponde e quello fuori no.
+
+~~~bash
+python3 test/e2e/testlab/testlab.py scenario apply fault-down
+python3 test/e2e/testlab/testlab.py fault radarr slow 4000
+flutter test --tags e2e --run-skipped test/e2e/testlab_faults_e2e_test.dart
+~~~
+
+Non è ancora costruito il resto di L10: il bordo Caddy con le origini TLS autofirmate e la rotazione del
+certificato, il simulatore di gateway (Cloudflare Access, Basic, header richiesti, pagina di accesso) e gli
+indirizzi sbagliati del primo avvio. Le righe del catalogo che restano scoperte sono I-22 e la seconda metà di
+G-02.
+
 ## Published endpoint map
 
 
