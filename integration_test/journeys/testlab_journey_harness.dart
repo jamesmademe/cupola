@@ -111,12 +111,20 @@ class LabEndpoints {
   };
 
   /// The address the app reaches [service] at, through the fault layer.
-  static String appUrlOf(ServiceKey service) =>
-      'http://127.0.0.1:${ports[service]!.proxy}';
+  ///
+  /// TrueNAS is the one service the lab serves over TLS with its own
+  /// certificate; the fault layer forwards the TLS stream untouched, so the
+  /// scheme and the pin are the upstream's.
+  static String appUrlOf(ServiceKey service) {
+    final scheme = service == ServiceKey.truenas ? 'https' : 'http';
+    return '$scheme://127.0.0.1:${ports[service]!.proxy}';
+  }
 
   /// The address a reading reaches [service] at, straight to the service.
-  static String directUrlOf(ServiceKey service) =>
-      'http://127.0.0.1:${ports[service]!.direct}';
+  static String directUrlOf(ServiceKey service) {
+    final scheme = service == ServiceKey.truenas ? 'https' : 'http';
+    return '$scheme://127.0.0.1:${ports[service]!.direct}';
+  }
 }
 
 /// The lab's own secrets, read from the disposable file the bootstrap wrote.
@@ -434,15 +442,33 @@ class Lab {
     ),
   };
 
+  /// The keys the lab's own Compose services declare, which are not secrets:
+  /// TrueNAS and Unraid read an API key, and their simulators fix it.
+  static const Map<ServiceKey, String> _fixedKeys = {
+    ServiceKey.truenas: 'test-key',
+    ServiceKey.unraid: 'test-key',
+  };
+
   /// The connection the app holds for [service] in this lab: its address
   /// through the fault layer, and the secret the lab's own state holds.
+  ///
+  /// [apiKey] overrides the key for this one connection, which is how the
+  /// read-only journeys open the app on a key that can only read.
   ///
   /// The next families (the media servers, the infrastructure) take their
   /// services from here, so no journey has to spell an address or a key
   /// again.
-  ServiceInstance connectionOf(ServiceKey service) {
+  ServiceInstance connectionOf(ServiceKey service, {String? apiKey}) {
     final id = ServiceInstance.primaryIdFor(service);
     final url = LabEndpoints.appUrlOf(service);
+    if (apiKey != null) {
+      return ServiceInstance(
+        id: id,
+        service: service,
+        url: url,
+        credential: apiKey,
+      );
+    }
     if (_secretNames[service] case final name?) {
       return ServiceInstance(
         id: id,
@@ -465,7 +491,7 @@ class Lab {
       id: id,
       service: service,
       url: url,
-      credential: arrKeys[service] ?? '',
+      credential: _fixedKeys[service] ?? arrKeys[service] ?? '',
     );
   }
 
@@ -551,10 +577,14 @@ class LabApp {
   /// [services] picks the connections the journey needs: the next families
   /// (the media servers, the infrastructure) name theirs here, and the
   /// defaults are the ones the requests and the approvals read.
+  ///
+  /// [apiKeys] overrides a service's key for this app, which is how I-15 and
+  /// the Unraid read-only copy open the same lab on a key that can only read.
   static Future<LabApp> asOperator(
     WidgetTester tester, {
     Lab? lab,
     Set<ServiceKey>? services,
+    Map<ServiceKey, String>? apiKeys,
   }) async {
     final theLab = lab ?? Lab.load();
     final wanted =
@@ -562,7 +592,20 @@ class LabApp {
         const {ServiceKey.seerr, ServiceKey.radarr, ServiceKey.sonarr};
     var settings = const SettingsModel();
     for (final service in wanted) {
-      settings = settings.copyWithInstance(theLab.connectionOf(service));
+      settings = settings.copyWithInstance(
+        theLab.connectionOf(service, apiKey: apiKeys?[service]),
+      );
+    }
+    if (wanted.contains(ServiceKey.truenas)) {
+      // The lab's TrueNAS presents its own certificate. The app reaches it
+      // through the fault layer, which forwards TLS untouched, so the pin is
+      // the one the bootstrap wrote from the upstream certificate.
+      settings = settings.copyWithTrustedCertificate(
+        url: LabEndpoints.appUrlOf(ServiceKey.truenas),
+        fingerprint: theLab.credentials.require(
+          'CUPOLA_TESTLAB_TRUENAS_CERT_FINGERPRINT',
+        ),
+      );
     }
     return LabApp._open(theLab, tester, settings);
   }

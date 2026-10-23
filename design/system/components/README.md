@@ -89,6 +89,8 @@ cards live in [`../motion/`](../motion/).
 | Service surfaces | [ServiceOverview](ServiceOverview/README.md) | `lib/core/widgets/service_overview.dart`, `lib/features/movies/presentation/radarr_overview_screen.dart` |
 | Service surfaces | [NowPlaying](NowPlaying/README.md) | `lib/features/stream/presentation/widgets/stream_session_slab.dart`, `lib/features/stream/presentation/widgets/stream_now_playing_section.dart` |
 | Service surfaces | [ServiceRing](ServiceRing/README.md) | `lib/core/widgets/service_ring.dart` |
+| Service surfaces | [TrueNasShares](TrueNasShares/README.md) | `lib/features/truenas/presentation/shares/truenas_shares_screen.dart`, `lib/core/widgets/floating_bottom_nav_bar.dart` |
+| Service surfaces | [TrueNasCredentials](TrueNasCredentials/README.md) | `lib/features/truenas/presentation/system/truenas_credentials_screen.dart`, `lib/core/widgets/floating_bottom_nav_bar.dart` |
 | Onboarding | [SetupDoors](SetupDoors/README.md) | `lib/core/widgets/setup_doors.dart` |
 | Onboarding | [PairReceive](PairReceive/README.md) | `lib/features/pairing/presentation/pair_receive_screen.dart`, `lib/features/pairing/presentation/pair_words.dart` |
 | Settings | [PairOffer](PairOffer/README.md) | `lib/features/pairing/presentation/pair_offer_screen.dart`, `lib/features/pairing/presentation/pair_words.dart` |

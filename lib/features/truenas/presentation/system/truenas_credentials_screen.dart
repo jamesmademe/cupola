@@ -333,7 +333,13 @@ class _CrudList extends ConsumerWidget {
         ),
         Positioned(
           right: AppSpacing.lg,
-          bottom: AppSpacing.lg,
+          // The shell's floating bar overlays this page: the section
+          // scaffold lifts its own FAB, and this body-owned one reserves the
+          // bar's height through the same bottom padding the list ends with,
+          // plus one more 16pt so the whole button sits above the glass.
+          bottom:
+              AppSpacing.lg +
+              FloatingNavBarMetrics.getScrollViewBottomPadding(context),
           // Gated at the tap that opens the form, never after it is filled.
           child: trueNasGatedButton(
             ref: ref,
