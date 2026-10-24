@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The testlab build's own App Group. It never shares a folder with the
+	     app Matt uses, so a seeded widget snapshot cannot reach it. -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.matthwlabs.cupola.testlab</string>
+	</array>
+	<!-- Simulator builds are ad hoc signed: the group is named literally so
+	     the testlab keychain cannot fall back to the house's default one. -->
+	<key>keychain-access-groups</key>
+	<array>
+		<string>com.matthwlabs.cupola.testlab</string>
+	</array>
+</dict>
+</plist>

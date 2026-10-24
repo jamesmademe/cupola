@@ -1,2 +1,6 @@
 // The app's version and build number, which an extension must carry too.
 #include "../Flutter/Generated.xcconfig"
+
+// The extension follows the app's testlab identity when the lab overrides it.
+CUPOLA_BUNDLE_SUFFIX =
+CUPOLA_APP_GROUP = group.com.matthwlabs.cupola

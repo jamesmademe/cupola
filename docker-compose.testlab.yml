@@ -461,10 +461,16 @@ services:
       - "127.0.0.1:26767:26767"
       - "127.0.0.1:26789:26789"
       - "127.0.0.1:27878:27878"
-      # The away address of Radarr: a second listener on the same upstream,
-      # switched off on its own. The other services' away addresses are
-      # published the same way when a profile needs them.
-      - "127.0.0.1:27879:27879"
+      # The away addresses: a second listener on the same upstream, switched
+      # off on its own. Every service P7 reaches away from home is published,
+      # not only the one the `away-home` scenario happens to name, or the
+      # profile would carry addresses the host cannot reach.
+      - "127.0.0.1:25056:25056"  # Seerr
+      - "127.0.0.1:27879:27879"  # Radarr
+      - "127.0.0.1:28081:28081"  # qBittorrent
+      - "127.0.0.1:28097:28097"  # Jellyfin
+      - "127.0.0.1:26768:26768"  # Bazarr
+      - "127.0.0.1:28990:28990"  # Sonarr
       - "127.0.0.1:28080:28080"
       - "127.0.0.1:28082:28082"
       - "127.0.0.1:28096:28096"

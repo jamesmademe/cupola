@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:cupola/core/network/cert_trust.dart';
+import 'package:cupola/core/network/observed_transport.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
 import 'package:cupola/core/router.dart';
 import 'package:cupola/core/utils/service_routes.dart';
@@ -160,11 +160,11 @@ final releaseSearchTransportProvider = Provider.autoDispose
           ),
         );
         dio.interceptors.add(SameOriginRedirectInterceptor(dio));
-        final adapter = pinnedHttpClientAdapterFor(
+        final adapter = observedHttpClientAdapterFor(
           url.toString(),
           pinnedFingerprint: pin,
         );
-        if (adapter != null) dio.httpClientAdapter = adapter;
+        dio.httpClientAdapter = adapter;
         try {
           return await dio.getUri<dynamic>(
             url,

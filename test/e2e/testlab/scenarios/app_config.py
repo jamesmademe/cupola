@@ -112,33 +112,25 @@ class AppConfig(Scenario):
     name = "app-config"
     profiles = ("core",)
 
-    def __init__(self) -> None:
-        self._started_gateway = False
-        self._started_edge = False
-
     def apply(self) -> None:
         chosen = profile()
         for instance in app_config.instances_for(chosen):
             if instance.away:
                 faults_lab.ensure_away(instance.service)
         if chosen == "P8" and not gateway_lab.listening():
-            gateway_lab.start()
-            self._started_gateway = True
+            gateway_lab.start(owner="app-config")
         if not edge_lab.listening(app_config.EDGE_PORT):
-            edge_lab.up(app_config.EDGE_PORT)
-            self._started_edge = True
+            edge_lab.up(app_config.EDGE_PORT, owner="app-config")
         app_config.write(chosen)
 
     def teardown(self) -> None:
         target = app_config.path_for(profile())
         if target.is_file():
             target.unlink()
-        if self._started_gateway:
-            gateway_lab.stop()
-            self._started_gateway = False
-        if self._started_edge:
-            edge_lab.stop(app_config.EDGE_PORT)
-            self._started_edge = False
+        # Ownership is persisted, so a teardown in another CLI invocation
+        # stops exactly what this scenario started and nothing else.
+        gateway_lab.stop(owner="app-config")
+        edge_lab.stop(app_config.EDGE_PORT, owner="app-config")
 
     def verify(self) -> None:
         chosen = profile()
@@ -171,7 +163,7 @@ class AppConfig(Scenario):
         document: dict[str, Any],
         connection: dict[str, Any],
     ) -> None:
-        """The address of one connection answers the lab."""
+        """The address of one connection answers the lab, and so does away."""
         url = str(connection.get("url", ""))
         service = str(connection.get("service", ""))
         if not url:
@@ -179,12 +171,30 @@ class AppConfig(Scenario):
 
         if chosen == "P8" and service in ("radarr", "sonarr", "seerr"):
             self._verify_gateway(url, connection)
-            return
+        else:
+            self._verify_url(document, connection, url)
 
+        away = str(connection.get("away", "") or "")
+        if away:
+            # The away address is a listener of its own: publishing it in the
+            # compose file is not proof that the host can reach it.
+            self._verify_url(document, connection, away, away=True)
+
+    def _verify_url(
+        self,
+        document: dict[str, Any],
+        connection: dict[str, Any],
+        url: str,
+        *,
+        away: bool = False,
+    ) -> None:
+        service = str(connection.get("service", ""))
         known = PROBES.get(service)
         if known is None:
             if not listening(url):
-                raise ScenarioError(f"{url} does not answer")
+                raise ScenarioError(
+                    f"{'away address ' if away else ''}{url} does not answer"
+                )
             return
 
         path, kind = known
@@ -196,7 +206,9 @@ class AppConfig(Scenario):
         else:
             status = probe(url, path)
         if status != 200:
-            raise ScenarioError(f"{url}{path} answered {status}")
+            raise ScenarioError(
+                f"{'away address ' if away else ''}{url}{path} answered {status}"
+            )
 
     def _secret_of(
         self, document: dict[str, Any], connection: dict[str, Any]

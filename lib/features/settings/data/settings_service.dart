@@ -18,6 +18,36 @@ SecureSettingsStore createSecureSettingsStore() {
   // Keychain accessibility to this device only. Without this the default
   // accessibility lets credentials sync to backups.
   const deviceOnly = KeychainAccessibility.first_unlock_this_device;
+  // An isolated build (the testlab) names a keychain service and, where the
+  // entitlement carries one, an access group of its own. The default build
+  // compiles neither and keeps the house's keychain untouched.
+  const keychainService = String.fromEnvironment(
+    'CUPOLA_TESTLAB_KEYCHAIN_SERVICE',
+  );
+  const keychainGroup = String.fromEnvironment('CUPOLA_TESTLAB_KEYCHAIN_GROUP');
+  if (keychainService.isNotEmpty) {
+    return FlutterSecureSettingsStore(
+      FlutterSecureStorage(
+        aOptions: AndroidOptions(migrateWithBackup: true),
+        iOptions: IOSOptions(
+          accessibility: deviceOnly,
+          accountName: keychainService,
+          groupId: keychainGroup.isEmpty ? null : keychainGroup,
+        ),
+        mOptions: MacOsOptions(
+          accessibility: deviceOnly,
+          accountName: keychainService,
+          groupId: keychainGroup.isEmpty ? null : keychainGroup,
+          // A Mac testlab build cannot carry a Keychain group without a
+          // provisioning profile Apple will not issue for a bundle id it has
+          // never seen. The data-protection Keychain refuses to work without
+          // that entitlement; the file-based Keychain does not, and the
+          // service name still gives the testlab its own items.
+          usesDataProtectionKeychain: keychainGroup.isNotEmpty,
+        ),
+      ),
+    );
+  }
   return FlutterSecureSettingsStore(
     FlutterSecureStorage(
       // flutter_secure_storage 10.x migrates away from the old
@@ -377,6 +407,13 @@ class SettingsService {
     final roster = _readRoster();
 
     await _secureStore.deleteAll();
+
+    // `deleteAll` on the macOS file-based Keychain can report success while
+    // leaving the trust map behind: it is written without a synchronizable
+    // attribute, and the plugin's "delete every item" query only tries the
+    // two explicit synchronizable states. The map is integrity-critical, so a
+    // wipe names it rather than trusting the sweep.
+    await _secureStore.delete(key: _kTrustedCertificates);
 
     for (final entry in roster) {
       await _forgetInstance(

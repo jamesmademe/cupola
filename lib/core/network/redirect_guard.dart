@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 
 import 'package:cupola/core/network/answer_guard.dart';
-import 'package:cupola/core/network/cert_trust.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/network/observed_transport.dart';
 import 'package:cupola/core/network/unanswered_addresses.dart';
 import 'package:cupola/core/network/unreached_origins.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -344,11 +344,11 @@ Dio guardedDio({
       ..add(const UnreachedReporter())
       ..add(const UnansweredMark());
   }
-  final adapter = pinnedHttpClientAdapterFor(
+  final adapter = observedHttpClientAdapterFor(
     baseUrl,
     pinnedFingerprint: certFingerprint,
   );
-  if (adapter != null) dio.httpClientAdapter = adapter;
+  dio.httpClientAdapter = adapter;
   return dio;
 }
 

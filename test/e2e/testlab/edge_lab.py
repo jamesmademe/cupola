@@ -14,11 +14,11 @@ import hashlib
 import http.client
 import json
 import os
-import signal
 import socket
 import socketserver
 import ssl
 import subprocess
+import process_ownership
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -35,6 +35,17 @@ PID_FILE = EDGE_DIR / "edge.pid"
 PORT = int(os.environ.get("CUPOLA_TESTLAB_EDGE_PORT", "8444"))
 UPSTREAM = ("127.0.0.1", 7878)
 UPSTREAM_KEY = "test-key"
+MARKER = "edge_lab.py"
+
+
+def _name(port: int) -> str:
+    return f"edge:{port}"
+
+
+def _pid_file(port: int) -> Path:
+    if port == PORT:
+        return PID_FILE
+    return EDGE_DIR / f"edge-{port}.pid"
 
 
 def write_certificate() -> None:
@@ -144,16 +155,40 @@ def _spawn(port: int) -> int:
         start_new_session=True,
     )
     EDGE_DIR.mkdir(parents=True, exist_ok=True)
-    PID_FILE.write_text(str(process.pid), encoding="utf-8")
+    _pid_file(port).write_text(str(process.pid), encoding="utf-8")
     return process.pid
 
 
-def up(port: int = PORT) -> None:
-    """Make a certificate, start the edge and wait for it."""
+def up(port: int = PORT, owner: str = "edge-lab") -> None:
+    """Make a certificate, start the edge and wait for it.
 
-    stop()
+    A listening edge is never restarted unless this owner already holds it:
+    the process may belong to another scenario, or to no lab at all.
+    """
+    held = process_ownership.record(_name(port))
+    if listening(port):
+        if held is not None and held.get("owner") == owner:
+            return
+        if held is not None:
+            raise RuntimeError(
+                f"the edge on {port} belongs to {held.get('owner')}; "
+                "tear that scenario down first"
+            )
+        raise RuntimeError(
+            f"the edge on {port} was not started by the testlab; "
+            "stop it before applying this scenario"
+        )
+    # A record can outlive its process (a crash, a reset). Clear only a
+    # matching process; anything else is left alone.
+    process_ownership.stop(
+        _name(port),
+        marker=MARKER,
+        port=port,
+        legacy_pid_file=_pid_file(port),
+    )
     write_certificate()
-    _spawn(port)
+    pid = _spawn(port)
+    process_ownership.claim(_name(port), pid, port, owner, MARKER)
     deadline = time.monotonic() + 30
     while time.monotonic() < deadline:
         try:
@@ -162,20 +197,29 @@ def up(port: int = PORT) -> None:
         except (OSError, ssl.SSLError):
             pass
         time.sleep(0.3)
+    process_ownership.stop(
+        _name(port), marker=MARKER, port=port, owner=owner
+    )
     raise RuntimeError("the edge did not present a certificate")
 
 
-def stop() -> None:
-    if PID_FILE.exists():
-        try:
-            os.kill(int(PID_FILE.read_text(encoding="utf-8").strip()), signal.SIGTERM)
-        except (ProcessLookupError, ValueError):
-            pass
-        finally:
-            PID_FILE.unlink(missing_ok=True)
+def stop(port: int = PORT, owner: str | None = None) -> None:
+    """Stop the edge this owner started, and nothing else.
+
+    Idempotent: no record, a dead process and a second teardown are all a
+    success. A record owned by another scenario is left in place.
+    """
+    process_ownership.stop(
+        _name(port),
+        marker=MARKER,
+        port=port,
+        owner=owner,
+        # A legacy PID file has no owner: only an unowned stop may use it.
+        legacy_pid_file=_pid_file(port) if owner is None else None,
+    )
     deadline = time.monotonic() + 10
     while time.monotonic() < deadline:
-        if not listening():
+        if not listening(port):
             return
         time.sleep(0.2)
 
@@ -183,7 +227,13 @@ def stop() -> None:
 def rotate(port: int = PORT) -> str:
     """A new certificate and a new edge; answers the new fingerprint."""
 
-    up(port)
+    held = process_ownership.record(_name(port))
+    if held is not None and held.get("owner") not in (None, "edge-lab"):
+        raise RuntimeError(
+            f"the edge on {port} belongs to {held.get('owner')}; cannot rotate it"
+        )
+    stop(port, owner="edge-lab")
+    up(port, owner="edge-lab")
     return fingerprint(port)
 
 

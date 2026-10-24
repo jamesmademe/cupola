@@ -41,6 +41,45 @@ import workmanager_apple
     SecureClipboardChannel.register(with: messenger)
     LocalNetworkAccessChannel.register(with: messenger)
     OutsideChannel.register(with: messenger)
+    TestlabIdentityChannel.register(with: messenger)
+  }
+}
+
+/// The identity a seeded build can prove from inside its own process.
+///
+/// `Platform.environment` carries no `HOME` on iOS, and the data container's
+/// path is a UUID rather than the bundle id, so neither can prove which app is
+/// running. `Bundle.main` and `NSHomeDirectory()` are the process's actual
+/// identity and destination, not a guess from an environment variable. The
+/// lab's seed refuses to write unless they name the testlab build and its own
+/// App Group.
+enum TestlabIdentityChannel {
+  static func register(with messenger: FlutterBinaryMessenger) {
+    let channel = FlutterMethodChannel(
+      name: "cupola/testlab",
+      binaryMessenger: messenger
+    )
+    channel.setMethodCallHandler { call, result in
+      guard call.method == "identity" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      let group =
+        (Bundle.main.object(forInfoDictionaryKey: "CupolaAppGroup") as? String)
+        ?? ""
+      let folder = FileManager.default
+        .containerURL(forSecurityApplicationGroupIdentifier: group)?
+        .path
+      result([
+        "bundle": Bundle.main.bundleIdentifier ?? "",
+        "home": NSHomeDirectory(),
+        "group": group,
+        "groupFolder": folder ?? "",
+        "preferences":
+          NSHomeDirectory() + "/Library/Preferences/"
+          + (Bundle.main.bundleIdentifier ?? "") + ".plist",
+      ])
+    }
   }
 }
 
@@ -52,8 +91,11 @@ enum OutsideChannel {
   /// The group the extension reads (`outsideGroup` in
   /// `CupolaWidgets/OutsideShelf.swift`) and both entitlements carry: change
   /// one and the others with it, or the widgets read a folder the app never
-  /// writes.
-  static let group = "group.com.matthwlabs.cupola"
+  /// writes. The build setting lets the testlab build carry an App Group of
+  /// its own, so it never reads or writes the house's widgets.
+  static let group =
+    (Bundle.main.object(forInfoDictionaryKey: "CupolaAppGroup") as? String)
+    ?? "group.com.matthwlabs.cupola"
 
   static func register(with messenger: FlutterBinaryMessenger) {
     let channel = FlutterMethodChannel(name: "cupola/outside", binaryMessenger: messenger)

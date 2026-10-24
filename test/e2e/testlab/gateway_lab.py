@@ -15,7 +15,6 @@ from __future__ import annotations
 import base64
 import json
 import os
-import signal
 import socket
 import subprocess
 import sys
@@ -25,11 +24,14 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+import process_ownership
+
 STATE_ROOT = Path(
     os.environ.get("CUPOLA_TESTLAB_STATE_DIR", ".ai/scratch/zz_testlab/state")
 ).resolve()
 PID_FILE = STATE_ROOT / "gateway-lab.pid"
 PORT = int(os.environ.get("CUPOLA_TESTLAB_GATEWAY_PORT", "8466"))
+MARKER = "gateway_lab.py"
 TOKEN_ID = "cupola-testlab-client-id"
 TOKEN_SECRET = "cupola-testlab-client-secret"
 BASIC_USER = "cupola"
@@ -140,11 +142,35 @@ def listening(port: int = PORT) -> bool:
         return sock.connect_ex(("127.0.0.1", port)) == 0
 
 
-def start(port: int = PORT) -> int:
-    """Start the gateway and wait for its port."""
+def _name(port: int) -> str:
+    return f"gateway:{port}"
 
+
+def start(port: int = PORT, owner: str = "gateway-lab") -> int:
+    """Start the gateway and wait for its port.
+
+    A gateway already on the port is never restarted here: it may belong to
+    another scenario, or to nobody in the lab.
+    """
+    held = process_ownership.record(_name(port))
     if listening(port):
-        stop()
+        if held is not None and held.get("owner") == owner:
+            return int(held.get("pid") or 0)
+        if held is not None:
+            raise RuntimeError(
+                f"the gateway on {port} belongs to {held.get('owner')}; "
+                "tear that scenario down first"
+            )
+        raise RuntimeError(
+            f"the gateway on {port} was not started by the testlab; "
+            "stop it before applying this scenario"
+        )
+    process_ownership.stop(
+        _name(port),
+        marker=MARKER,
+        port=port,
+        legacy_pid_file=PID_FILE,
+    )
     process = subprocess.Popen(
         [sys.executable, str(Path(__file__).resolve()), "--serve", "--port", str(port)],
         stdout=subprocess.DEVNULL,
@@ -153,27 +179,30 @@ def start(port: int = PORT) -> int:
     )
     STATE_ROOT.mkdir(parents=True, exist_ok=True)
     PID_FILE.write_text(str(process.pid), encoding="utf-8")
+    process_ownership.claim(
+        _name(port), process.pid, port, owner, MARKER
+    )
     deadline = time.monotonic() + 15
     while time.monotonic() < deadline:
         if listening(port):
             return process.pid
         time.sleep(0.2)
+    process_ownership.stop(_name(port), marker=MARKER, port=port, owner=owner)
     raise RuntimeError("the gateway did not open its port")
 
 
-def stop() -> None:
-    if not PID_FILE.exists():
-        return
-    try:
-        pid = int(PID_FILE.read_text(encoding="utf-8").strip())
-        os.kill(pid, signal.SIGTERM)
-    except (ProcessLookupError, ValueError):
-        pass
-    finally:
-        PID_FILE.unlink(missing_ok=True)
+def stop(port: int = PORT, owner: str | None = None) -> None:
+    """Stop the gateway this owner started; idempotent and never foreign."""
+    process_ownership.stop(
+        _name(port),
+        marker=MARKER,
+        port=port,
+        owner=owner,
+        legacy_pid_file=PID_FILE if owner is None else None,
+    )
     deadline = time.monotonic() + 10
     while time.monotonic() < deadline:
-        if not listening():
+        if not listening(port):
             return
         time.sleep(0.2)
 

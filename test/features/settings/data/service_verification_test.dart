@@ -647,6 +647,12 @@ class _Client implements HttpClient {
   @override
   Duration? connectionTimeout;
 
+  // The observed adapter installs a connection factory on every client so it
+  // can count the bytes a socket delivers. A fake that does not declare the
+  // setter throws before the request exists, which would read as a refusal.
+  @override
+  dynamic connectionFactory;
+
   @override
   Duration idleTimeout = const Duration(seconds: 3);
 
@@ -664,7 +670,11 @@ class _Client implements HttpClient {
   void close({bool force = false}) {}
 
   @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  dynamic noSuchMethod(Invocation invocation) {
+    // ignore: avoid_print
+    print('FAKE CLIENT MISS: ${invocation.memberName}');
+    return super.noSuchMethod(invocation);
+  }
 }
 
 class _Request implements HttpClientRequest {

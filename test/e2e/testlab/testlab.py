@@ -27,6 +27,7 @@ import http.server
 import importlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -34,6 +35,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -47,11 +49,14 @@ if __name__ == "__main__":
     sys.modules.setdefault("testlab", sys.modules[__name__])
 
 COMPOSE_FILE = REPO_ROOT / "docker-compose.testlab.yml"
-SCRATCH_ROOT = REPO_ROOT / ".ai" / "scratch" / "zz_testlab"
-STATE_ROOT = Path(
+SCRATCH_ROOT = (REPO_ROOT / ".ai" / "scratch" / "zz_testlab").resolve()
+_state_setting = Path(
     os.environ.get("CUPOLA_TESTLAB_STATE_DIR", SCRATCH_ROOT / "state")
-).resolve()
-SNAPSHOT_ROOT = SCRATCH_ROOT / "snapshots"
+)
+if not _state_setting.is_absolute():
+    _state_setting = REPO_ROOT / _state_setting
+STATE_ROOT = _state_setting.resolve()
+SNAPSHOT_ROOT = (SCRATCH_ROOT / "snapshots").resolve()
 CREDENTIALS = STATE_ROOT / "credentials.env"
 PORTS_FILE = SCRATCH_ROOT / "ports.json"
 PROJECT = os.environ.get("CUPOLA_TESTLAB_PROJECT", "cupola-testlab")
@@ -150,6 +155,7 @@ def ensure_docker() -> None:
 
 
 def ensure_state() -> None:
+    require_safe_state_root()
     STATE_ROOT.mkdir(parents=True, exist_ok=True)
     SCRATCH_ROOT.mkdir(parents=True, exist_ok=True)
 
@@ -493,16 +499,130 @@ def hash_tree(root: Path, *, ignore: Iterable[str] = ("dind",)) -> dict[str, str
     return digests
 
 
-def copy_state(destination: Path) -> None:
-    if destination.exists():
+_SNAPSHOT_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+
+
+def _is_within(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def _overlaps(a: Path, b: Path) -> bool:
+    return a == b or _is_within(a, b) or _is_within(b, a)
+
+
+def require_safe_state_root() -> None:
+    """Refuse a state root outside the disposable scratch or over a snapshot.
+
+    ``CUPOLA_TESTLAB_STATE_DIR`` is read before anything runs. A path that
+    resolves outside ``.ai/scratch/zz_testlab``, or that is (or contains) the
+    snapshot root, could make a reset delete work that is not the lab's.
+    """
+    if not _is_within(STATE_ROOT, SCRATCH_ROOT) or STATE_ROOT == SCRATCH_ROOT:
+        raise LabError(
+            f"refusing state directory outside {SCRATCH_ROOT}: {STATE_ROOT}"
+        )
+    if _overlaps(STATE_ROOT, SNAPSHOT_ROOT):
+        raise LabError(
+            "refusing a state directory that overlaps the snapshots: "
+            f"{STATE_ROOT} and {SNAPSHOT_ROOT}"
+        )
+
+
+def _snapshot_name(name: str) -> str:
+    if not name or not _SNAPSHOT_NAME.fullmatch(name):
+        raise LabError(
+            "a snapshot needs a simple name: letters, digits, dot, dash or "
+            "underscore, beginning with a letter or digit"
+        )
+    return name
+
+
+def require_safe_tree(root: Path, *, label: str) -> None:
+    """Refuse a tree whose links point outside itself.
+
+    A snapshot is copied back into the lab's state, so a link to ``/`` or to
+    the repository would turn a restore into a write outside the sandbox.
+    Broken links are refused too: they cannot be verified, and a later write
+    through one would land wherever the missing target would have been.
+    """
+    if not root.exists():
+        return
+    for directory, names, _ in os.walk(root, followlinks=False):
+        for name in names:
+            path = Path(directory) / name
+            if not path.is_symlink():
+                continue
+            relative = path.relative_to(root)
+            if relative.parts and relative.parts[0] == "dind":
+                continue
+            target = path.resolve()
+            if not target.exists():
+                raise LabError(f"{label} has a broken link: {relative}")
+            if not _is_within(target, root.resolve()):
+                raise LabError(
+                    f"{label} has a link outside itself: {relative} -> {target}"
+                )
+
+
+def snapshot_path(name: str) -> Path:
+    """The one directory a snapshot name may name, proved before any write."""
+    _snapshot_name(name)
+    target = SNAPSHOT_ROOT / name
+    if target.is_symlink():
+        raise LabError(f"snapshot {name!r} is a symbolic link")
+    if target.parent.resolve() != SNAPSHOT_ROOT:
+        raise LabError(f"snapshot {name!r} escapes {SNAPSHOT_ROOT}")
+    return target
+
+
+def reset_source(name: str) -> Path:
+    """The snapshot a reset may read, proved before services stop."""
+    source = snapshot_path(name)
+    if not source.is_dir():
+        raise LabError(f"snapshot {name!r} does not exist")
+    resolved = source.resolve()
+    if resolved.parent != SNAPSHOT_ROOT:
+        raise LabError(f"snapshot {name!r} escapes {SNAPSHOT_ROOT}")
+    if _overlaps(resolved, STATE_ROOT):
+        raise LabError(
+            f"snapshot {name!r} overlaps the state directory; reset would "
+            "destroy its own source"
+        )
+    require_safe_tree(resolved, label=f"snapshot {name!r}")
+    return resolved
+
+
+def copy_tree(
+    source: Path, destination: Path, *, keep_dind: bool = False, merge: bool = False
+) -> None:
+    if destination.exists() and not merge:
         shutil.rmtree(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(
-        STATE_ROOT,
+        source,
         destination,
-        ignore=shutil.ignore_patterns("dind"),
+        ignore=None if keep_dind else shutil.ignore_patterns("dind"),
         symlinks=True,
+        dirs_exist_ok=merge,
     )
+
+
+def copy_state(destination: Path) -> None:
+    copy_tree(STATE_ROOT, destination)
+
+
+def wipe_state_except_dind() -> None:
+    for child in STATE_ROOT.iterdir():
+        if child.name == "dind":
+            continue
+        if child.is_dir() and not child.is_symlink():
+            shutil.rmtree(child)
+        else:
+            child.unlink()
 
 
 def verify_restored(snapshot: Path) -> None:
@@ -523,13 +643,19 @@ def verify_restored(snapshot: Path) -> None:
 
 
 def snapshot(name: str, force: bool = False) -> dict[str, Any]:
-    if not name or "/" in name or name in (".", ".."):
-        raise LabError("snapshot needs a simple name")
-    target = SNAPSHOT_ROOT / name
+    require_safe_state_root()
+    require_safe_tree(STATE_ROOT, label="the state directory")
+    target = snapshot_path(name)
     if target.exists() and not force:
         raise LabError(f"snapshot {name!r} exists; pass --force to replace it")
     compose_down()
-    copy_state(target)
+    try:
+        copy_state(target)
+    except Exception:
+        # The snapshot could not be made; leave the lab running rather than
+        # down with no snapshot to show for it.
+        compose_up()
+        raise
     compose_up()
     return {
         "snapshot": name,
@@ -539,19 +665,66 @@ def snapshot(name: str, force: bool = False) -> dict[str, Any]:
 
 
 def reset(name: str = "golden") -> dict[str, Any]:
-    source = SNAPSHOT_ROOT / name
-    if not source.is_dir():
-        raise LabError(f"snapshot {name!r} does not exist")
+    """Replace the state with a snapshot, or leave the old state intact.
+
+    The snapshot is staged and verified before services stop. The current
+    state is copied to a backup before its first file is removed. A failed
+    copy or a verification mismatch restores the backup, so a reset can fail
+    without destroying the lab.
+    """
+    require_safe_state_root()
+    source = reset_source(name)
+    require_safe_tree(STATE_ROOT, label="the state directory")
+    STATE_ROOT.mkdir(parents=True, exist_ok=True)
+    token = uuid.uuid4().hex
+    staging = SCRATCH_ROOT / f".restore-{token}"
+    backup = SCRATCH_ROOT / f".restore-backup-{token}"
+
+    # Stage first: a broken snapshot fails with the old state untouched and
+    # the containers still up.
+    try:
+        copy_tree(source, staging)
+        if hash_tree(source) != hash_tree(staging):
+            raise LabError(f"snapshot {name!r} could not be staged faithfully")
+    except Exception:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise
+
     compose_down()
-    for child in STATE_ROOT.iterdir():
-        if child.name == "dind":
-            continue
-        if child.is_dir():
-            shutil.rmtree(child)
-        else:
-            child.unlink()
-    shutil.copytree(source, STATE_ROOT, dirs_exist_ok=True, symlinks=True)
-    verify_restored(source)
+    try:
+        try:
+            copy_state(backup)
+        except Exception:
+            # The backup failed before a single file was removed.
+            shutil.rmtree(staging, ignore_errors=True)
+            shutil.rmtree(backup, ignore_errors=True)
+            compose_up()
+            raise
+
+        try:
+            wipe_state_except_dind()
+            copy_tree(staging, STATE_ROOT, keep_dind=True, merge=True)
+            verify_restored(source)
+        except Exception as error:
+            # Put the lab back the way it was before trying the snapshot.
+            try:
+                wipe_state_except_dind()
+                copy_tree(backup, STATE_ROOT, keep_dind=True, merge=True)
+            except Exception as restore_error:
+                raise LabError(
+                    "the snapshot failed and the previous state could not be "
+                    f"restored; its copy is at {backup}: {restore_error}"
+                ) from error
+            shutil.rmtree(staging, ignore_errors=True)
+            shutil.rmtree(backup, ignore_errors=True)
+            compose_up()
+            raise
+    finally:
+        # On success these are no longer needed. On a failed restore the
+        # backup is kept above and this removes only the staging directory.
+        shutil.rmtree(staging, ignore_errors=True)
+
+    shutil.rmtree(backup, ignore_errors=True)
     compose_up()
     return {
         "snapshot": name,
@@ -716,6 +889,7 @@ def spike() -> dict[str, Any]:
 
 def doctor() -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
+    require_safe_state_root()
 
     def check(name: str, ok: bool, detail: str = "") -> None:
         checks.append({"check": name, "ok": ok, "detail": detail})
@@ -752,6 +926,36 @@ def doctor() -> dict[str, Any]:
         check("every proxy exists", not missing, ",".join(missing))
     except LabError as error:
         check("every proxy exists", False, str(error))
+    try:
+        sys.path.insert(0, str(TESTLAB_DIR))
+        import app_config as app_writer
+        import faults_lab
+
+        # P7 reaches these away from home. Creating the listener is not
+        # enough: the host must reach each published port, or the profile
+        # carries an address no app can use.
+        services = sorted(
+            {
+                instance.service
+                for instance in app_writer.instances_for("P7")
+                if instance.away
+            }
+        )
+        unreachable = []
+        for service in services:
+            faults_lab.ensure_away(service)
+            answered, _ = faults_lab.probe_proxy(
+                service, port=faults_lab.away_port(service)
+            )
+            if not answered:
+                unreachable.append(service)
+        check(
+            "every away address answers from the host",
+            not unreachable,
+            ",".join(unreachable) if unreachable else f"{len(services)} services",
+        )
+    except (LabError, OSError) as error:
+        check("every away address answers from the host", False, str(error))
     try:
         with urllib.request.urlopen(
             "http://127.0.0.1:8188/healthz", timeout=3
@@ -1057,6 +1261,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     arguments = parse_args(list(argv or sys.argv[1:]))
     try:
+        require_safe_state_root()
         if arguments.command == "up":
             compose_up(arguments.profile)
             ensure_proxies()

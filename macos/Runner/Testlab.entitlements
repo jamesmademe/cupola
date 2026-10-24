@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- A testlab Mac build cannot get a provisioning profile for a bundle id
+	     Apple has never seen. Sandboxing and the data-protection Keychain need
+	     that profile, so this build uses neither: its isolation is the bundle
+	     id, the preferences file and the Keychain service, never the app Matt
+	     uses. -->
+</dict>
+</plist>

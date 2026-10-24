@@ -1,2 +1,6 @@
 #include "../../Flutter/Flutter-Debug.xcconfig"
 #include "Warnings.xcconfig"
+
+// The production identity. The testlab build overrides it through
+// FLUTTER_XCODE_CUPOLA_BUNDLE_SUFFIX.
+CUPOLA_BUNDLE_SUFFIX =

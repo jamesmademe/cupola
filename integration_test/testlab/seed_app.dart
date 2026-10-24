@@ -1,9 +1,6 @@
 @Tags(['e2e'])
 library;
 
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -11,127 +8,90 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cupola/features/settings/data/settings_service.dart';
 
+import 'seed_writer.dart';
+
 /// The app's configuration for a profile, saved with the app's own code.
 ///
 /// The lab writes the configuration of a profile into its state directory,
 /// in the app's own storage: the addresses, the names and the roster in
 /// `SharedPreferences`, the keys, the passwords, the tokens and the sessions
 /// in the secure storage, with the keys `SettingsService` derives from the id
-/// of every connection. This entry point hands that file to the app's own
-/// stores, so the app on the device or in the simulator reads the lab's real
-/// connections, and reads them back to prove it.
+/// of every connection. This entry point replaces that state, using the app's
+/// own cleanup and reader, so the app on the device or in the simulator reads
+/// the lab's real connections and proves the readback.
 ///
-/// Nothing secret is compiled in: the configuration is read at run time, from
-/// the file the lab wrote or, for a sandboxed app that cannot reach the
-/// lab's state directory, from the lab's control API with its token.
+/// Nothing is presumed about the host's environment: the profile and the
+/// control API arrive as `--dart-define`, which the build compiles into the
+/// app process. The bundle is a literal ([testlabBundleId]), so no define can
+/// point the seed at the house's app. Before the first write the running
+/// container must prove it is the testlab bundle; the plain app refuses.
 ///
 /// Run it with the lab's profile:
 ///
 /// ```bash
-/// CUPOLA_TESTLAB_APP_CONFIG=.ai/scratch/zz_testlab/state/app/P1.json \
-///   flutter test integration_test/testlab/seed_app.dart -d <device>
+/// flutter test integration_test/testlab/seed_app.dart -d <device> \
+///   --tags e2e --run-skipped \
+///   --dart-define=CUPOLA_TESTLAB=1 \
+///   --dart-define=CUPOLA_TESTLAB_PROFILE=P1 \
+///   --dart-define=CUPOLA_TESTLAB_CONTROL_URL=http://127.0.0.1:8799 \
+///   --dart-define=CUPOLA_TESTLAB_CONTROL_TOKEN=...
 /// ```
+const _profile = String.fromEnvironment('CUPOLA_TESTLAB_PROFILE');
+const _controlUrl = String.fromEnvironment('CUPOLA_TESTLAB_CONTROL_URL');
+const _controlToken = String.fromEnvironment('CUPOLA_TESTLAB_CONTROL_TOKEN');
+const _bundleId = testlabBundleId;
+const _keychainService = String.fromEnvironment(
+  'CUPOLA_TESTLAB_KEYCHAIN_SERVICE',
+);
+const _appGroup = String.fromEnvironment(
+  'CUPOLA_TESTLAB_APP_GROUP',
+  defaultValue: 'group.com.matthwlabs.cupola.testlab',
+);
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('the configuration of a profile reaches the app', (tester) async {
-    final document = await _configuration();
+    if (_profile.isEmpty || _controlUrl.isEmpty || _controlToken.isEmpty) {
+      fail(
+        'The lab did not compile the profile into this build. Pass '
+        'CUPOLA_TESTLAB_PROFILE, CUPOLA_TESTLAB_CONTROL_URL and '
+        'CUPOLA_TESTLAB_CONTROL_TOKEN as --dart-define.',
+      );
+    }
+
+    // The first gate: the app must be the testlab build, in its own container,
+    // with the testlab keychain and App Group, before anything is read into
+    // the stores or wiped.
+    await requireTestlabIdentity(
+      bundleId: _bundleId,
+      keychainService: _keychainService,
+      appGroup: _appGroup,
+    );
+
+    final document = await fetchProfile(
+      controlUrl: _controlUrl,
+      controlToken: _controlToken,
+      profile: _profile,
+    );
     final prefs = await SharedPreferences.getInstance();
     final secure = createSecureSettingsStore();
-
-    for (final entry in (document['prefs'] as Map).entries) {
-      final key = entry.key as String;
-      final value = entry.value;
-      if (value is bool) {
-        await prefs.setBool(key, value);
-      } else if (value is List) {
-        await prefs.setStringList(key, value.cast<String>());
-      } else {
-        await prefs.setString(key, value as String);
-      }
-    }
-
-    for (final entry in (document['secure'] as Map).entries) {
-      await secure.write(
-        key: entry.key as String,
-        value: entry.value as String,
-      );
-    }
-
-    // What the app reads, with the app's own reader.
-    final settings = await SettingsService(prefs, secure).loadSettings();
-    final expected = (document['connections'] as List).cast<Map>();
-    expect(
-      settings.instances.map((instance) => instance.id),
-      expected.map((row) => row['id']),
-      reason: 'the app reads the connections the lab wrote',
+    final settings = await replaceAppConfiguration(
+      document: document,
+      prefs: prefs,
+      secure: secure,
+      expectedProfile: _profile,
+      expectedBundleId: _bundleId,
     );
-    for (final instance in settings.instances) {
-      final row = expected.firstWhere((row) => row['id'] == instance.id);
-      expect(instance.url, row['url'], reason: '${instance.id} at its address');
-      expect(
-        instance.away?.url ?? '',
-        row['away'],
-        reason: '${instance.id} at its address away from home',
-      );
-      expect(
-        instance.isConfigured,
-        isTrue,
-        reason: '${instance.id} is set up: the lab gave it its key',
-      );
-    }
 
     // The names, never the secrets.
     debugPrint(
-      '[testlab] the app reads ${settings.instances.length} connections: '
+      '[testlab] applied profile=$_profile bundle=$_bundleId '
+      'connections=${settings.instances.length}: '
       '${settings.instances.map((instance) => instance.id).join(', ')}',
     );
     expect(settings.instances, isNotEmpty);
+    expect(document['profile'], _profile);
+    expect(document['bundleId'], _bundleId);
   });
-}
-
-/// The configuration of the profile, as the lab wrote it.
-Future<Map<String, dynamic>> _configuration() async {
-  final path = Platform.environment['CUPOLA_TESTLAB_APP_CONFIG'];
-  if (path != null && path.isNotEmpty) {
-    final file = File(path);
-    try {
-      return jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
-    } on FileSystemException {
-      // A sandboxed app cannot reach the lab's state directory: the control
-      // API serves the same file, with the lab's token.
-    }
-  }
-  return await _fromControlApi();
-}
-
-/// The configuration of the profile, from the lab's control API.
-Future<Map<String, dynamic>> _fromControlApi() async {
-  final base = Platform.environment['CUPOLA_TESTLAB_CONTROL_URL'];
-  final token = Platform.environment['CUPOLA_TESTLAB_CONTROL_TOKEN'];
-  final profile = Platform.environment['CUPOLA_TESTLAB_PROFILE'] ?? 'P1';
-  if (base == null || base.isEmpty || token == null || token.isEmpty) {
-    fail(
-      'The configuration is not reachable: point '
-      'CUPOLA_TESTLAB_APP_CONFIG at the file the lab wrote, or pass '
-      'CUPOLA_TESTLAB_CONTROL_URL and CUPOLA_TESTLAB_CONTROL_TOKEN.',
-    );
-  }
-  final client = HttpClient();
-  try {
-    final request = await client.getUrl(
-      Uri.parse('$base/app-config?profile=$profile'),
-    );
-    request.headers.set('Authorization', 'Bearer $token');
-    final response = await request.close();
-    final text = await response
-        .transform(const SystemEncoding().decoder)
-        .join();
-    if (response.statusCode != 200) {
-      fail('The lab refused the configuration: ${response.statusCode} $text');
-    }
-    return jsonDecode(text) as Map<String, dynamic>;
-  } finally {
-    client.close();
-  }
 }

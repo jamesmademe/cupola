@@ -51,6 +51,7 @@ from __future__ import annotations
 import http.cookiejar
 import json
 import os
+import subprocess
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -71,6 +72,22 @@ APP_DIR = STATE_ROOT / "app"
 #: The bundle id of the testlab build of the app. Its own preferences and its
 #: own keychain, so the app of the house is never touched.
 BUNDLE_ID = "com.matthwlabs.cupola.testlab"
+
+#: Matt's configured simulator holds the house's real connections. The seed
+#: must never be launched on it, whatever the caller passes.
+CONFIGURED_SIMULATOR_UDID = "3275916D-565E-4B49-89A3-D87227209A7F"
+
+#: The only simulator the seed may use unless the environment names another
+#: one explicitly. The name is the authorization: a UDID copied by mistake is
+#: not enough.
+TESTLAB_SIMULATOR_UDID = os.environ.get(
+    "CUPOLA_TESTLAB_SIMULATOR_UDID", "403B5E0A-6A4E-4CB4-A151-87A6DA34E55F"
+)
+
+#: The testlab's own identity on Apple platforms.
+TESTLAB_APP_GROUP = "group.com.matthwlabs.cupola.testlab"
+TESTLAB_KEYCHAIN_SERVICE = "com.matthwlabs.cupola.testlab"
+TESTLAB_KEYCHAIN_GROUP = "com.matthwlabs.cupola.testlab"
 
 #: The gateway the lab plays on the host, and the edge in front of Radarr.
 GATEWAY_PORT = int(os.environ.get("CUPOLA_TESTLAB_GATEWAY_PORT", "8466"))
@@ -620,6 +637,158 @@ def summary(profile: str) -> dict[str, Any]:
 SEED_ENTRY_POINT = "integration_test/testlab/seed_app.dart"
 
 
+def authorised_simulator(udid: str | None) -> str:
+    """The simulator the seed may use, or a refusal before anything runs.
+
+    The house's simulator is refused by UDID even if someone names it. Any
+    other device must be the one the environment authorises, must exist in
+    ``simctl``'s list, and must be a simulator. A booted personal device or an
+    unknown UDID never receives the seed.
+    """
+    if not udid:
+        raise testlab.LabError(
+            "the simulator needs its udid: --udid <the testlab simulator>"
+        )
+    if udid == CONFIGURED_SIMULATOR_UDID:
+        raise testlab.LabError(
+            "refusing the configured Cupola simulator: it holds the house's "
+            "connections. Use the dedicated Cupola Testlab simulator."
+        )
+    if udid != TESTLAB_SIMULATOR_UDID:
+        raise testlab.LabError(
+            f"refusing unauthorised simulator {udid}; the testlab simulator is "
+            f"{TESTLAB_SIMULATOR_UDID} (override with "
+            "CUPOLA_TESTLAB_SIMULATOR_UDID)"
+        )
+    result = subprocess.run(
+        ["xcrun", "simctl", "list", "devices", "-j"],
+        cwd=testlab.REPO_ROOT,
+        text=True,
+        capture_output=True,
+        timeout=60,
+    )
+    if result.returncode != 0:
+        raise testlab.LabError(
+            "simctl could not list the simulators: "
+            + (result.stderr or result.stdout).strip()[-1000:]
+        )
+    try:
+        payload = json.loads(result.stdout)
+    except ValueError as error:
+        raise testlab.LabError("simctl did not answer JSON") from error
+    found = {
+        device.get("udid"): (runtime, device)
+        for runtime, devices in payload.get("devices", {}).items()
+        for device in devices
+    }
+    if udid not in found:
+        raise testlab.LabError(f"simulator {udid} does not exist")
+    runtime, device = found[udid]
+    if device.get("isAvailable") is False:
+        raise testlab.LabError(f"simulator {udid} is not available ({runtime})")
+    return str(device.get("name") or udid)
+
+
+#: The Flutter the seed runs with. It must know ``--no-uninstall``: without it
+#: an integration test removes the app, and its container with the seeded
+#: stores, as soon as it ends (Flutter 3.38.7 does exactly that on iOS).
+TESTLAB_FLUTTER = os.environ.get("CUPOLA_TESTLAB_FLUTTER", "flutter")
+
+
+def keeps_app_installed(flutter: str = TESTLAB_FLUTTER) -> bool:
+    """Whether ``flutter test`` can leave the seeded app installed."""
+    result = subprocess.run(
+        [flutter, "test", "-h"],
+        cwd=testlab.REPO_ROOT,
+        text=True,
+        capture_output=True,
+        timeout=120,
+    )
+    return "--[no-]uninstall" in (result.stdout or "")
+
+
+def _run_seed(
+    device: str,
+    profile: str,
+    entitlements: str,
+    environment: dict[str, str],
+) -> str:
+    values = testlab.credentials()
+    control_url = values.get("CUPOLA_TESTLAB_CONTROL_URL", "")
+    control_token = values.get("CUPOLA_TESTLAB_CONTROL_TOKEN", "")
+    if not control_url or not control_token:
+        raise testlab.LabError(
+            "the control API is not configured: run bootstrap.sh so that "
+            "credentials.env carries its URL and token"
+        )
+    # The build settings are read by Flutter and passed to xcodebuild. They
+    # make the .app a different identity, not a renamed preference domain.
+    environment.update(
+        {
+            "FLUTTER_XCODE_CUPOLA_BUNDLE_SUFFIX": ".testlab",
+            "FLUTTER_XCODE_CUPOLA_APP_GROUP": TESTLAB_APP_GROUP,
+            "FLUTTER_XCODE_CUPOLA_ENTITLEMENTS": entitlements,
+        }
+    )
+    if device == "macos":
+        # No provisioning profile exists for a bundle id Apple has never seen,
+        # and a sandboxed build cannot be signed without one. The testlab Mac
+        # app is therefore not sandboxed: its isolation is the bundle id, the
+        # preferences file and the Keychain service, not a container.
+        environment["FLUTTER_XCODE_ENABLE_APP_SANDBOX"] = "NO"
+    keeps = keeps_app_installed()
+    if not keeps and device != "macos":
+        raise testlab.LabError(
+            f"{TESTLAB_FLUTTER} has no --no-uninstall: it would remove the "
+            "seeded app from the simulator as soon as the seed ends. Point "
+            "CUPOLA_TESTLAB_FLUTTER at a Flutter that has it."
+        )
+    command = [
+        TESTLAB_FLUTTER,
+        "test",
+        SEED_ENTRY_POINT,
+        "-d",
+        device,
+        "--tags",
+        "e2e",
+        "--run-skipped",
+        *(["--no-uninstall"] if keeps else []),
+        f"--dart-define=CUPOLA_TESTLAB=1",
+        f"--dart-define=CUPOLA_TESTLAB_PROFILE={profile}",
+        f"--dart-define=CUPOLA_TESTLAB_CONTROL_URL={control_url}",
+        f"--dart-define=CUPOLA_TESTLAB_CONTROL_TOKEN={control_token}",
+        f"--dart-define=CUPOLA_TESTLAB_KEYCHAIN_SERVICE={TESTLAB_KEYCHAIN_SERVICE}",
+        # A macOS Keychain access group needs a provisioning profile, which a
+        # testlab bundle cannot get. The bundle id and the service name already
+        # give the app a Keychain of its own; the group stays empty here.
+        "--dart-define=CUPOLA_TESTLAB_KEYCHAIN_GROUP="
+        if device == "macos"
+        else f"--dart-define=CUPOLA_TESTLAB_KEYCHAIN_GROUP={TESTLAB_KEYCHAIN_GROUP}",
+        f"--dart-define=CUPOLA_TESTLAB_APP_GROUP={TESTLAB_APP_GROUP}",
+    ]
+    result = subprocess.run(
+        command,
+        cwd=testlab.REPO_ROOT,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=1800,
+    )
+    output = (result.stdout or "") + (result.stderr or "")
+    marker = f"[testlab] applied profile={profile} bundle={BUNDLE_ID}"
+    if result.returncode != 0:
+        raise testlab.LabError(
+            "the app did not apply the profile: its process failed with "
+            f"exit {result.returncode}. {output[-3000:]}"
+        )
+    if marker not in output:
+        raise testlab.LabError(
+            "the app exited zero but never confirmed the readback: "
+            f"{marker!r} is missing. {output[-3000:]}"
+        )
+    return output
+
+
 def apply_to_target(
     target: str, profile: str, udid: str | None = None
 ) -> dict[str, Any]:
@@ -628,49 +797,74 @@ def apply_to_target(
     The app reads the configuration in its own process, because the secure
     storage is the app's own keychain and nothing outside the app can write
     it. The entry point is `integration_test/testlab/seed_app.dart`, run on
-    the device or in the simulator: it hands the file to the app's stores and
-    reads them back.
-
-    A simulator reads the file where the lab wrote it. A sandboxed macOS app
-    cannot reach the lab's state directory, so it asks the lab's control API
-    for the same file, with the lab's token.
+    the device or in the simulator with the testlab build settings; it
+    replaces the stores and reads them back. The command fails if the app
+    failed, and a profile is never reported as applied without the app's own
+    readback marker.
     """
-    import subprocess
+    if profile not in PROFILES:
+        raise testlab.LabError(f"unknown profile {profile!r}")
+    document = read(profile)
+    if document.get("bundleId") != BUNDLE_ID:
+        raise testlab.LabError(
+            f"{profile} was written for {document.get('bundleId')!r}, not "
+            f"{BUNDLE_ID}"
+        )
 
     if target == "macos":
         device = "macos"
+        entitlements = "Runner/Testlab.entitlements"
+        container = None
+        preferences = Path.home() / "Library/Preferences" / f"{BUNDLE_ID}.plist"
     elif target == "ios-simulator":
-        if not udid:
-            raise testlab.LabError(
-                "the simulator needs its udid: --udid <the device's udid>"
-            )
-        device = udid
+        authorised_simulator(udid)
+        device = str(udid)
+        entitlements = "Runner/RunnerTestlab.entitlements"
+        container = None
+        preferences = None
     else:
         raise testlab.LabError(f"unknown target {target!r}")
 
-    values = testlab.credentials()
-    environment = os.environ.copy()
-    environment["CUPOLA_TESTLAB_PROFILE"] = profile
-    environment["CUPOLA_TESTLAB_APP_CONFIG"] = str(path_for(profile))
-    environment["CUPOLA_TESTLAB_CONTROL_URL"] = values.get(
-        "CUPOLA_TESTLAB_CONTROL_URL", ""
-    )
-    environment["CUPOLA_TESTLAB_CONTROL_TOKEN"] = values.get(
-        "CUPOLA_TESTLAB_CONTROL_TOKEN", ""
-    )
-
-    result = subprocess.run(
-        ["flutter", "test", SEED_ENTRY_POINT, "-d", device],
-        cwd=testlab.REPO_ROOT,
-        env=environment,
-        text=True,
-        capture_output=True,
-        timeout=1800,
-    )
+    output = _run_seed(device, profile, entitlements, os.environ.copy())
+    if target == "macos":
+        # The testlab Mac build is not sandboxed (it cannot get a provisioning
+        # profile for a bundle id Apple has never seen), so the destination it
+        # proves is the preferences file named by its own bundle id.
+        if preferences is None or not preferences.is_file():
+            raise testlab.LabError(
+                f"the seed ran but the testlab preferences are missing: "
+                f"{preferences}"
+            )
+        container = preferences.parent
+    elif target == "ios-simulator":
+        # `--no-uninstall` keeps the app (and its container) on the simulator:
+        # this is the app the next launch will actually read, not a test runner
+        # that wrote and vanished.
+        result = subprocess.run(
+            ["xcrun", "simctl", "get_app_container", device, BUNDLE_ID, "data"],
+            cwd=testlab.REPO_ROOT,
+            text=True,
+            capture_output=True,
+            timeout=60,
+        )
+        if result.returncode != 0:
+            raise testlab.LabError(
+                f"the seed ran but {BUNDLE_ID} is not installed in its own "
+                f"container: {(result.stderr or result.stdout).strip()}"
+            )
+        container = Path(result.stdout.strip())
+    if container is None or not container.is_dir():
+        raise testlab.LabError(
+            f"the seed ran but the testlab container is missing: {container}"
+        )
     return {
         "target": target,
         "device": device,
+        "profile": profile,
+        "bundleId": BUNDLE_ID,
+        "container": str(container),
+        "preferences": str(preferences) if preferences is not None else None,
         "entryPoint": SEED_ENTRY_POINT,
-        "exitCode": result.returncode,
-        "output": (result.stdout or "")[-4000:] + (result.stderr or "")[-4000:],
+        "applied": True,
+        "output": output[-4000:],
     }

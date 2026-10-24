@@ -5,7 +5,10 @@ import ImageIO
 /// The App Group the app and the extension both carry in their entitlements:
 /// the one folder they share. Kept in step with `OutsideChannel.group` in
 /// `Runner/AppDelegate.swift`, which names the same group for the app's side.
-let outsideGroup = "group.com.matthwlabs.cupola"
+/// The build setting gives the testlab build an App Group of its own.
+let outsideGroup =
+  (Bundle.main.object(forInfoDictionaryKey: "CupolaAppGroup") as? String)
+  ?? "group.com.matthwlabs.cupola"
 
 /// Where the app writes what the widgets draw (`outside_shelf.dart`): the
 /// snapshot, and the pictures it names beside it.

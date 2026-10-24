@@ -1,2 +1,13 @@
 #include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"
 #include "Generated.xcconfig"
+
+// The production identity. The testlab build overrides these through
+// FLUTTER_XCODE_* build settings.
+CUPOLA_BUNDLE_SUFFIX =
+CUPOLA_APP_GROUP = group.com.matthwlabs.cupola
+
+// The Runner target reads this. The testlab build overrides it through
+// FLUTTER_XCODE_CUPOLA_ENTITLEMENTS=Runner/RunnerTestlab.entitlements, so the
+// entitlement choice reaches the Runner target alone and not the Swift
+// packages.
+CUPOLA_ENTITLEMENTS = Runner/Runner.entitlements

@@ -165,7 +165,37 @@ void main() {
       );
     });
 
-    test('a socket closed before the first header did not answer', () {
+    test('the observed transport tells silence from a partial answer', () {
+      // The same `HttpException` sentence covers both; only the count of
+      // bytes the socket delivered can decide. Zero is red silence, one or
+      // more is an amber fault.
+      expect(
+        classifyConnectionFailure(
+          _wrapping(const ClosedBeforeHeaders(0), DioExceptionType.unknown),
+        ),
+        ServiceFailureReason.unreachable,
+      );
+      expect(
+        classifyConnectionFailure(
+          _wrapping(const ClosedBeforeHeaders(27), DioExceptionType.unknown),
+        ),
+        ServiceFailureReason.invalidResponse,
+      );
+      expect(
+        classifyConnectionFailure(const ClosedBeforeHeaders(0)),
+        ServiceFailureReason.unreachable,
+      );
+      expect(
+        classifyConnectionFailure(const ClosedBeforeHeaders(1)),
+        ServiceFailureReason.invalidResponse,
+      );
+    });
+
+    test('the wording of an HttpException is not evidence of silence', () {
+      // Dart uses this exact sentence for a peer that never sent a byte and
+      // for one that stopped halfway through its status line. Without the
+      // observed count, it is not proof of anything, and must never paint
+      // red on its own.
       expect(
         classifyConnectionFailure(
           _wrapping(
@@ -176,11 +206,8 @@ void main() {
             DioExceptionType.unknown,
           ),
         ),
-        ServiceFailureReason.unreachable,
+        ServiceFailureReason.invalidResponse,
       );
-    });
-
-    test('an HttpException about a truncated answer stays unknown', () {
       expect(
         classifyConnectionFailure(
           _wrapping(
@@ -191,7 +218,7 @@ void main() {
             DioExceptionType.unknown,
           ),
         ),
-        ServiceFailureReason.unknown,
+        ServiceFailureReason.invalidResponse,
       );
     });
 

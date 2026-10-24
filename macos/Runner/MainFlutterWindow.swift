@@ -70,7 +70,48 @@ class MainFlutterWindow: NSWindow {
       window: self
     )
 
+    TestlabIdentityChannel.register(
+      with: flutterViewController.engine.binaryMessenger
+    )
+
     super.awakeFromNib()
+  }
+}
+
+/// The identity a seeded build can prove from inside its own process.
+///
+/// `Platform.environment` carries no `HOME` on iOS, and the data container's
+/// path is a UUID rather than the bundle id, so neither can prove which app is
+/// running. `Bundle.main` and `NSHomeDirectory()` are the process's actual
+/// identity and destination, not a guess from an environment variable. The
+/// lab's seed refuses to write unless they name the testlab build.
+enum TestlabIdentityChannel {
+  static func register(with messenger: FlutterBinaryMessenger) {
+    let channel = FlutterMethodChannel(
+      name: "cupola/testlab",
+      binaryMessenger: messenger
+    )
+    channel.setMethodCallHandler { call, result in
+      guard call.method == "identity" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      let group =
+        (Bundle.main.object(forInfoDictionaryKey: "CupolaAppGroup") as? String)
+        ?? ""
+      let folder = FileManager.default
+        .containerURL(forSecurityApplicationGroupIdentifier: group)?
+        .path
+      result([
+        "bundle": Bundle.main.bundleIdentifier ?? "",
+        "home": NSHomeDirectory(),
+        "group": group,
+        "groupFolder": folder ?? "",
+        "preferences":
+          NSHomeDirectory() + "/Library/Preferences/"
+          + (Bundle.main.bundleIdentifier ?? "") + ".plist",
+      ])
+    }
   }
 }
 

@@ -96,7 +96,6 @@ def probe_proxy(
     """
 
     start = time.monotonic()
-    data = b""
     try:
         with socket.create_connection(
             ("127.0.0.1", port or proxy_port(service)), timeout=timeout
@@ -106,11 +105,10 @@ def probe_proxy(
                 b"GET /api/v3/system/status HTTP/1.1\r\n"
                 b"Host: radarr\r\nConnection: close\r\n\r\n"
             )
-            while True:
-                chunk = sock.recv(4096)
-                if not chunk:
-                    break
-                data += chunk
+            # The first chunk is the answer. Reading to EOF would make a
+            # keep-alive server (qBittorrent) look silent: it sends a complete
+            # status line and then waits for the next request, not a close.
+            data = sock.recv(4096)
     except OSError:
         return False, time.monotonic() - start
     return data.startswith(b"HTTP/"), time.monotonic() - start
