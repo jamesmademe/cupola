@@ -419,7 +419,7 @@ void main() {
       // a programmatic announcement would be dropped on Android.
       expect(
         find.semantics.byLabel(RegExp(r'^Connection test failed\. ')),
-        containsSemantics(isLiveRegion: true),
+        isSemantics(isLiveRegion: true),
       );
     });
 
@@ -522,7 +522,7 @@ void main() {
       // `_buildTestResult`.
       expect(
         find.semantics.byLabel(RegExp(r'^Connection test failed\. ')),
-        containsSemantics(isLiveRegion: true),
+        isSemantics(isLiveRegion: true),
       );
 
       // The fix is not in this form, so this is the one failure that earns a

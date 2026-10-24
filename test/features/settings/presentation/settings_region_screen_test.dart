@@ -37,7 +37,7 @@ void main() {
 
       expect(
         tester.getSemantics(_regionTile('US')),
-        containsSemantics(hasCheckedState: true, isChecked: true),
+        isSemantics(hasCheckedState: true, isChecked: true),
       );
     });
 
@@ -46,7 +46,7 @@ void main() {
 
       expect(
         tester.getSemantics(_regionTile('JP')),
-        containsSemantics(hasCheckedState: true, isChecked: true),
+        isSemantics(hasCheckedState: true, isChecked: true),
       );
     });
 
@@ -69,7 +69,7 @@ void main() {
 
       expect(
         tester.getSemantics(_regionTile('JP')),
-        containsSemantics(hasCheckedState: true, isChecked: true),
+        isSemantics(hasCheckedState: true, isChecked: true),
       );
     });
   });

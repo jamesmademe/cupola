@@ -311,7 +311,7 @@ void main() {
             matching: find.byType(IconButton),
           ),
         ),
-        containsSemantics(
+        isSemantics(
           isButton: true,
           isEnabled: true,
           hasTapAction: true,
@@ -320,7 +320,7 @@ void main() {
       );
       expect(
         tester.getSemantics(find.byWidgetPredicate((w) => w is FilledButton)),
-        containsSemantics(
+        isSemantics(
           isButton: true,
           isEnabled: true,
           hasTapAction: true,

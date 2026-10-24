@@ -31,10 +31,12 @@ void main() {
         await _pump(
           tester,
           const Size(1600, 900),
-          const DesktopContentWell(child: SizedBox.expand()),
+          const DesktopContentWell(
+            child: SizedBox.expand(key: Key('well-content')),
+          ),
         );
 
-        final box = tester.getRect(find.byType(SizedBox));
+        final box = tester.getRect(find.byKey(const Key('well-content')));
         expect(box.width, AppBreakpoints.contentWell);
         // Centred, so the eye travels the same distance either way.
         expect(box.center.dx, closeTo(800, 0.5));
@@ -46,10 +48,15 @@ void main() {
         await _pump(
           tester,
           const Size(400, 900),
-          const DesktopContentWell(child: SizedBox.expand()),
+          const DesktopContentWell(
+            child: SizedBox.expand(key: Key('well-content')),
+          ),
         );
 
-        expect(tester.getRect(find.byType(SizedBox)).width, 400);
+        expect(
+          tester.getRect(find.byKey(const Key('well-content'))).width,
+          400,
+        );
       });
     });
 
@@ -58,10 +65,15 @@ void main() {
         await _pump(
           tester,
           const Size(720, 450),
-          const DesktopContentWell(child: SizedBox.expand()),
+          const DesktopContentWell(
+            child: SizedBox.expand(key: Key('well-content')),
+          ),
         );
 
-        expect(tester.getRect(find.byType(SizedBox)).width, 720);
+        expect(
+          tester.getRect(find.byKey(const Key('well-content'))).width,
+          720,
+        );
       });
     });
   });

@@ -81,74 +81,58 @@ void main() {
     variant: TargetPlatformVariant.mobile(),
   );
 
-  testWidgets(
-    'CapabilityBanner: the fix verb is reachable',
-    (tester) async {
-      await _pump(
-        tester,
-        CapabilityBanner(
-          message: 'This key can read. Start and stop need write scope.',
-          onFix: () {},
-        ),
-      );
+  testWidgets('CapabilityBanner: the fix verb is reachable', (tester) async {
+    await _pump(
+      tester,
+      CapabilityBanner(
+        message: 'This key can read. Start and stop need write scope.',
+        onFix: () {},
+      ),
+    );
 
-      _expectReachable(tester, _textButton('Update the key'));
-    },
-    variant: TargetPlatformVariant.mobile(),
-  );
+    _expectReachable(tester, _textButton('Update the key'));
+  }, variant: TargetPlatformVariant.mobile());
 
-  testWidgets(
-    'FaultBand: both recovery verbs are reachable',
-    (tester) async {
-      await _pump(
-        tester,
-        FaultBand.section(
-          message: 'Calendar did not answer.',
-          onRetry: () {},
-          onOpenSettings: () {},
-        ),
-      );
+  testWidgets('FaultBand: both recovery verbs are reachable', (tester) async {
+    await _pump(
+      tester,
+      FaultBand.section(
+        message: 'Calendar did not answer.',
+        onRetry: () {},
+        onOpenSettings: () {},
+      ),
+    );
 
-      _expectReachable(tester, _textButton('Retry'));
-      _expectReachable(tester, _textButton('Settings'));
-    },
-    variant: TargetPlatformVariant.mobile(),
-  );
+    _expectReachable(tester, _textButton('Retry'));
+    _expectReachable(tester, _textButton('Settings'));
+  }, variant: TargetPlatformVariant.mobile());
 
-  testWidgets(
-    'AppBottomSheet: the close button is reachable',
-    (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: AppBottomSheet(
-              title: 'Releases',
-              showClose: true,
-              child: SizedBox(height: 40),
-            ),
+  testWidgets('AppBottomSheet: the close button is reachable', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: AppBottomSheet(
+            title: 'Releases',
+            showClose: true,
+            child: SizedBox(height: 40),
           ),
         ),
-      );
+      ),
+    );
 
-      _expectReachable(
-        tester,
-        find.ancestor(
-          of: find.byIcon(Icons.close_rounded),
-          matching: find.byType(IconButton),
-        ),
-      );
-    },
-    variant: TargetPlatformVariant.mobile(),
-  );
+    _expectReachable(
+      tester,
+      find.ancestor(
+        of: find.byIcon(Icons.close_rounded),
+        matching: find.byType(IconButton),
+      ),
+    );
+  }, variant: TargetPlatformVariant.mobile());
 
   // The whole row is the button, and a one-line title made it 36pt tall.
-  testWidgets(
-    'SectionHeader: a tappable header is reachable',
-    (tester) async {
-      await _pump(tester, SectionHeader(title: 'Popular movies', onTap: () {}));
+  testWidgets('SectionHeader: a tappable header is reachable', (tester) async {
+    await _pump(tester, SectionHeader(title: 'Popular movies', onTap: () {}));
 
-      _expectReachable(tester, find.byType(InkWell));
-    },
-    variant: TargetPlatformVariant.mobile(),
-  );
+    _expectReachable(tester, find.byType(InkWell));
+  }, variant: TargetPlatformVariant.mobile());
 }

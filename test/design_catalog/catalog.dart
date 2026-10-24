@@ -20,8 +20,15 @@
 /// Every card is drawn at the default reading size and, in at least one scene,
 /// at twice it (`CatalogScene.textScale`); the guard beside this file holds that.
 ///
+/// Beside each sheet, `<platform>.<theme>.scenes.json` says where every scene
+/// sits on it: `[{"index", "id", "caption", "rect": [x, y, w, h]}]`, in the
+/// image's pixels, the rectangle of the scene without its caption. It is how
+/// `tool/design_system/board.py` crops the same scene out of two revisions.
+///
 /// Rendering is deterministic on one machine (byte-identical across runs) but
-/// not across hosts, which is why the images are built, not committed.
+/// not across hosts, which is why the images are built, not committed. Within
+/// the hour, that is: a scene dates its records from [catalogNow], and the app
+/// reads the real clock to word them.
 ///
 /// What a sheet cannot show, and how the cards deal with it:
 /// - a modal opened on the root navigator: open it on a scene-local
@@ -30,6 +37,10 @@
 ///   the part in [CatalogPointer.hover] or [CatalogPointer.focus] and the
 ///   sheet puts a mouse over it, or Tab on it, before it is drawn; any other
 ///   pointer-only state the README describes;
+/// - the state after a tap, a drag or a scroll, unless the scene acts it:
+///   [CatalogScene.act] drives the scene with the [WidgetTester] once it has
+///   settled, and the sheet settles it again before it is drawn. A modal the
+///   act opens on the root navigator is still off the sheet;
 /// - a frame in the middle of a motion: the sheet is pumped in 400ms steps,
 ///   so it lands before or after; motion has its own cards in
 ///   `design/system/motion/`;
@@ -55,6 +66,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' show Client;
 
 import 'package:cupola/core/network/pinned_image_cache.dart';
+import 'package:cupola/core/status/read_clock.dart';
 import 'package:cupola/core/theme.dart';
 
 /// Where the sheets land. `build/` is ignored, and the catalog is rebuilt, not
@@ -86,7 +98,9 @@ class CatalogScene {
     this.platform = CatalogPlatform.phone,
     this.overrides = const [],
     this.textScale = 1,
-  });
+    String? id,
+    this.act,
+  }) : _id = id;
 
   /// What the scene shows: the constructor or variant, and the state. Written
   /// for a reader who has the README beside it.
@@ -112,6 +126,43 @@ class CatalogScene {
   /// person who raised it in Settings has it. 1 is the default size; 2 is the
   /// largest size the catalog holds every card to ([catalogTextScale]).
   final double textScale;
+
+  final String? _id;
+
+  /// The scene's stable name on its card: the one given, or the caption made
+  /// a slug (lower case, words joined by `-`, at most 60 characters). Two
+  /// revisions of a card are matched scene by scene on it, so name a scene
+  /// whose caption is still being worded.
+  String get id => _id ?? catalogSlug(caption);
+
+  /// Drives the scene before it is drawn: a tap, a drag, a scroll, with
+  /// [scene] finding the scene's own subtree, so `find.descendant(of: scene,
+  /// …)` never reaches a neighbour. Run once the sheet has settled; the sheet
+  /// settles again after it. An act that throws fails the card.
+  final Future<void> Function(WidgetTester tester, Finder scene)? act;
+}
+
+/// [caption] as a scene's id: lower case, every run of other characters one
+/// `-`, at most 60 characters, no `-` at either end.
+String catalogSlug(String caption) {
+  final slug = caption
+      .toLowerCase()
+      .replaceAll(RegExp('[^a-z0-9]+'), '-')
+      .replaceAll(RegExp(r'^-|-$'), '');
+  return slug.length <= 60
+      ? slug
+      : slug.substring(0, 60).replaceAll(RegExp(r'-$'), '');
+}
+
+/// The moment a scene dates its records from: now, to the hour. The app words
+/// a time against the real clock (`Today · 14:00`, `2 h ago`), so a record
+/// dated from `DateTime.now()` would draw a new minute on every render, and
+/// two renders of one revision would differ. The app's own clock
+/// (`readClockProvider`, which stamps when a service last answered) reads it
+/// too, on every card.
+DateTime get catalogNow {
+  final now = DateTime.now();
+  return DateTime(now.year, now.month, now.day, now.hour);
 }
 
 /// The reading size every card has to be seen at at least once: twice the
@@ -261,6 +312,15 @@ void catalogCard(
         if (scene.platform == platform) scene,
     ];
     if (group.isEmpty) continue;
+    final ids = <String>{};
+    for (final scene in group) {
+      if (!ids.add(scene.id)) {
+        throw ArgumentError(
+          '$card · ${platform.name}: two scenes are "${scene.id}"; give one '
+          'an `id:` of its own.',
+        );
+      }
+    }
 
     testWidgets('$card · ${platform.name}', (tester) async {
       CertTrustRegistry.update(const {
@@ -280,7 +340,10 @@ void catalogCard(
         CertTrustRegistry.reset();
       });
 
-      final shared = await overrides?.call() ?? const <Override>[];
+      final shared = [
+        readClockProvider.overrideWithValue(ReadClock(now: () => catalogNow)),
+        ...?await overrides?.call(),
+      ];
       debugDefaultTargetPlatformOverride = platform.target;
       try {
         // Built after the override: ThemeData reads the platform for its
@@ -386,7 +449,8 @@ Future<void> _paint(
   List<CatalogScene> scenes,
   List<Override> overrides,
 ) async {
-  tester.view.physicalSize = Size(width, 4000);
+  const windowHeight = 4000.0;
+  tester.view.physicalSize = Size(width, windowHeight);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   const sheet = ValueKey('catalog-sheet');
@@ -408,12 +472,19 @@ Future<void> _paint(
         debugShowCheckedModeBanner: false,
         theme: theme,
         // The app root's text height behaviour, or every measured line differs.
-        builder: (context, child) => DefaultTextHeightBehavior(
-          textHeightBehavior: const TextHeightBehavior(
-            applyHeightToFirstAscent: false,
-            applyHeightToLastDescent: false,
+        // The size is pinned to the window the scenes are laid out in, so the
+        // taller window an act may need to reach a scene changes nothing.
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(size: Size(width, windowHeight)),
+          child: DefaultTextHeightBehavior(
+            textHeightBehavior: const TextHeightBehavior(
+              applyHeightToFirstAscent: false,
+              applyHeightToLastDescent: false,
+            ),
+            child: child!,
           ),
-          child: child!,
         ),
         home: Material(
           color: Colors.transparent,
@@ -438,12 +509,53 @@ Future<void> _paint(
   // No pumpAndSettle: spinners and shimmers never settle. Pump a fixed stretch
   // of time instead, with real time in between so artwork read from disk
   // decodes.
-  for (var i = 0; i < 12; i++) {
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 100)),
-    );
-    await tester.pump(const Duration(milliseconds: 400));
+  Future<void> settle() async {
+    for (var i = 0; i < 12; i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 100)),
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+    }
   }
+
+  await settle();
+
+  if (scenes.any((scene) => scene.act != null)) {
+    // A pointer reaches only what lies inside the window, and a long sheet
+    // runs past it: the window grows to the sheet, the layout does not.
+    final height = tester.getSize(find.byKey(sheet)).height;
+    if (height > windowHeight) {
+      tester.view.physicalSize = Size(width, height.ceilToDouble());
+      await tester.pump();
+    }
+    for (final (index, scene) in scenes.indexed) {
+      await scene.act?.call(tester, find.byKey(_sceneKey(index)));
+    }
+  }
+  // Every sheet, acted or not, is drawn after the same stretch of time, so a
+  // spinner stands at the same turn whether or not a scene beside it acted.
+  await settle();
+
+  final origin = tester.getTopLeft(find.byKey(sheet));
+  final manifest = [
+    for (final (index, scene) in scenes.indexed)
+      if (tester.getRect(find.byKey(_sceneKey(index))).shift(-origin)
+          case final rect)
+        {
+          'index': index,
+          'id': scene.id,
+          'caption': scene.caption,
+          'rect': [
+            for (final v in [rect.left, rect.top, rect.width, rect.height])
+              (v * 2).round(),
+          ],
+        },
+  ];
+  io.File('$catalogOutput/$card/${platform.name}.$themeName.scenes.json')
+    ..createSync(recursive: true)
+    ..writeAsStringSync(
+      '${const JsonEncoder.withIndent('  ').convert(manifest)}\n',
+    );
 
   await tester.runAsync(() async {
     final render = tester.renderObject<RenderRepaintBoundary>(
@@ -456,6 +568,10 @@ Future<void> _paint(
       ..writeAsBytesSync(bytes!.buffer.asUint8List());
   });
 }
+
+/// The key of the [index]th scene on a sheet: what [CatalogScene.act] finds
+/// the scene by, and what the manifest measures.
+ValueKey<String> _sceneKey(int index) => ValueKey('catalog-scene-$index');
 
 class _Sheet extends StatelessWidget {
   const _Sheet({
@@ -485,8 +601,9 @@ class _Sheet extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (final scene in scenes) ...[
+          for (final (index, scene) in scenes.indexed) ...[
             _SceneScope(
+              key: _sceneKey(index),
               overrides: scene.overrides.isEmpty
                   ? const []
                   : [...shared, ...scene.overrides],
@@ -542,7 +659,7 @@ class _SceneClip extends CustomClipper<Rect> {
 /// A scene's own provider container, when it overrides anything; retries are
 /// off, since a sheet is drawn once and a retry timer would outlive the test.
 class _SceneScope extends StatefulWidget {
-  const _SceneScope({required this.overrides, required this.child});
+  const _SceneScope({super.key, required this.overrides, required this.child});
 
   final List<Override> overrides;
   final Widget child;

@@ -160,7 +160,7 @@ void main() {
       final handle = tester.ensureSemantics();
       expect(
         find.semantics.byLabel('Set up Radarr. Movies'),
-        containsSemantics(isButton: true, hasTapAction: true),
+        isSemantics(isButton: true, hasTapAction: true),
       );
       expect(
         tester

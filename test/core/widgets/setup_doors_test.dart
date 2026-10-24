@@ -126,7 +126,7 @@ void main() {
       }
       expect(
         find.semantics.byLabel('Copy from another device'),
-        containsSemantics(
+        isSemantics(
           isButton: true,
           hasTapAction: true,
           hint: SetupDoors.copyHint,

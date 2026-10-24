@@ -485,42 +485,40 @@ void main() {
     variant: _macOS,
   );
 
-  testWidgets(
-    'a sort click lets a held order go: the sorted table is drawn',
-    (tester) async {
-      var incoming = _queue(resumed: false);
-      final (harness, _, container) = await _app(
-        tester,
-        overrides: [
-          servicesQueueProvider.overrideWith(
-            (ref) async => (items: incoming, coverage: SourceCoverage.none),
-          ),
-        ],
-      );
+  testWidgets('a sort click lets a held order go: the sorted table is drawn', (
+    tester,
+  ) async {
+    var incoming = _queue(resumed: false);
+    final (harness, _, container) = await _app(
+      tester,
+      overrides: [
+        servicesQueueProvider.overrideWith(
+          (ref) async => (items: incoming, coverage: SourceCoverage.none),
+        ),
+      ],
+    );
 
-      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
-      await mouse.addPointer(location: Offset.zero);
-      addTearDown(mouse.removePointer);
-      await mouse.moveTo(
-        tester.getCenter(_inTable(find.text(_stoppedTitle)).first),
-      );
-      await tester.pump();
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: Offset.zero);
+    addTearDown(mouse.removePointer);
+    await mouse.moveTo(
+      tester.getCenter(_inTable(find.text(_stoppedTitle)).first),
+    );
+    await tester.pump();
 
-      incoming = _queue(resumed: true);
-      await _tap(tester, _moreOf(_stoppedTitle));
-      await _tap(tester, find.text('Resume'));
-      expect(_order(tester, _drawn), _drawn);
+    incoming = _queue(resumed: true);
+    await _tap(tester, _moreOf(_stoppedTitle));
+    await _tap(tester, find.text('Resume'));
+    expect(_order(tester, _drawn), _drawn);
 
-      await _tap(tester, _inTable(find.text('Title')));
-      expect(_order(tester, _drawn), [
-        'Cosmos Laundromat\u00A0· S2 E4',
-        _stoppedTitle,
-        'Elephants Dream',
-        'Sprite Fright',
-      ]);
+    await _tap(tester, _inTable(find.text('Title')));
+    expect(_order(tester, _drawn), [
+      'Cosmos Laundromat\u00A0· S2 E4',
+      _stoppedTitle,
+      'Elephants Dream',
+      'Sprite Fright',
+    ]);
 
-      await _close(tester, harness, container);
-    },
-    variant: _macOS,
-  );
+    await _close(tester, harness, container);
+  }, variant: _macOS);
 }

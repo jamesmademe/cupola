@@ -89,7 +89,7 @@ const _twoRadarrs = SettingsModel(
   ],
 );
 
-final _now = DateTime.now();
+final _now = catalogNow;
 
 /// A moment earlier today, never yesterday, so History today keeps it.
 String _earlierToday(Duration ago) {

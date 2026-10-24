@@ -398,6 +398,14 @@ void main() {
           UrlUtils.certOrigin('https://nas.local:8443'),
           isNot(UrlUtils.certOrigin('https://nas.local:9443')),
         );
+        // `Uri.host` drops the brackets of an IPv6 literal; the origin key has
+        // to put them back or no parser can turn the key into a host and port.
+        expect(UrlUtils.certOrigin('https://[::1]:8443'), 'https://[::1]:8443');
+        expect(UrlUtils.certOrigin('https://[::1]'), 'https://[::1]:443');
+        expect(
+          UrlUtils.certOrigin('https://[fe80::1%25en0]:8443'),
+          'https://[fe80::1%25en0]:8443',
+        );
       });
 
       test('http and ws cannot carry a certificate', () {

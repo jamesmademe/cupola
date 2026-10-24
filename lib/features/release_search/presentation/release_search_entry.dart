@@ -85,6 +85,31 @@ final releaseSearchLensReachProvider =
       );
     });
 
+/// Whether the lens connection for [service] presents a gateway credential.
+///
+/// The background transport cannot refuse a redirect, and a gateway answer is
+/// exactly a redirect. The setting stays available because the person chose it,
+/// but the settings screen names the trade-off only for the connections where
+/// it is real.
+final releaseSearchLensGatewayProvider = Provider.family<bool, ServiceKey>((
+  ref,
+  service,
+) {
+  final id =
+      ref.watch(activeInstanceProvider(service))?.id ??
+      ref.watch(
+        currentSettingsProvider.select((s) => s.primaryOf(service)?.id),
+      );
+  return ref.watch(
+    currentSettingsProvider.select((s) {
+      final instance = id == null ? null : s.instanceById(id);
+      if (instance == null) return false;
+      return !instance.access.isEmpty ||
+          !(instance.away?.access.isEmpty ?? true);
+    }),
+  );
+});
+
 /// What [reached] imposes on a search: where it goes, which is the address
 /// its connection's route is on (a cleartext address away from home is as
 /// much a reason to stay in the app as one at home), and whether that

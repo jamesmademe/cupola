@@ -98,8 +98,13 @@ class _ImportDoneCardState extends ConsumerState<ImportDoneCard> {
     final was = oldWidget.report.command;
     final now = widget.report.command;
     if (was.isActive && !now.isActive && now.isCompleted) {
-      // The downloads that went in leave the queue: read it again.
-      invalidateActivity(ref, ActivityTab.all);
+      // The downloads that went in leave the queue: read it again. Not here,
+      // though: `didUpdateWidget` runs while the tree builds, and invalidating
+      // a provider then asks the provider scope to rebuild in the middle of
+      // that build. Riverpod 3.3.1 let it pass; later versions assert.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) invalidateActivity(ref, ActivityTab.all);
+      });
     }
   }
 

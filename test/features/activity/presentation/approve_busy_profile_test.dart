@@ -47,7 +47,7 @@ void main() {
       tester.getSemantics(
         find.descendant(of: approve, matching: find.byType(FilledButton)),
       ),
-      containsSemantics(
+      isSemantics(
         label: 'Approve Charge',
         value: 'Checking where it goes',
         isButton: true,

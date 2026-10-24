@@ -256,6 +256,9 @@ String pairPlanCounts(PairPlan plan) => [
 
 /// The notes under the connections that arrive, only the ones that apply.
 List<String> pairPlanNotes(PairPlan plan) => [
+  if (plan.orphanCertificates > 0)
+    '${plan.orphanCertificates == 1 ? '1 certificate' : '${plan.orphanCertificates} certificates'} '
+        'in the copy were not for any connection in it, so they were left out.',
   if (plan.signInAgain.isNotEmpty)
     'Sign in to Seerr again here. A sign-in stays on the device it was made '
         'on.',

@@ -95,7 +95,7 @@ void main() {
       find.semantics.byLabel(
         '3 indexers failing, Atlas NZB, Beacon Usenet, Cedar Index',
       ),
-      containsSemantics(
+      isSemantics(
         isButton: true,
         hasTapAction: true,
         hint: 'opens the Prowlarr Indexers tab',
@@ -120,7 +120,7 @@ void main() {
     expect(find.textContaining('indexers failing'), findsNothing);
     expect(
       find.semantics.byHint('tests Beacon Usenet'),
-      containsSemantics(label: 'Test', isButton: true, hasTapAction: true),
+      isSemantics(label: 'Test', isButton: true, hasTapAction: true),
     );
 
     await tester.tap(find.text('Test'));
@@ -138,11 +138,9 @@ void main() {
     );
     await harness.settle(tester);
     expect(shell.location, '/stack/prowlarr/indexers/indexer/2');
-    expect(
-      _testRequests(harness),
-      [2],
-      reason: 'opening the page does not run the test again',
-    );
+    expect(_testRequests(harness), [
+      2,
+    ], reason: 'opening the page does not run the test again');
 
     await harness.unmount(tester);
   });

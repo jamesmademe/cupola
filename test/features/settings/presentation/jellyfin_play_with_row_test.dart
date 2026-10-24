@@ -95,14 +95,12 @@ void main() {
     );
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
-  testWidgets(
-    'on a desktop the row is not offered: the browser, as before',
-    (tester) async {
-      await _pumpJellyfin(tester, installed: {'streamyfin'});
-      await tester.pumpAndSettle();
+  testWidgets('on a desktop the row is not offered: the browser, as before', (
+    tester,
+  ) async {
+    await _pumpJellyfin(tester, installed: {'streamyfin'});
+    await tester.pumpAndSettle();
 
-      expect(find.text('Play with'), findsNothing);
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
-  );
+    expect(find.text('Play with'), findsNothing);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 }

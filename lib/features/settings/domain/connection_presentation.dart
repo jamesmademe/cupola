@@ -6,6 +6,7 @@ import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/settings/data/service_connection_provider.dart';
+import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 import 'package:cupola/features/truenas/domain/truenas_version.dart';
@@ -300,6 +301,18 @@ String? transportWarningFor(ServiceKey service, String rawUrl) {
   }
   return null;
 }
+
+/// Whether [service] will carry its API key in the request URL because the
+/// proxy in front of it owns the `Authorization` header.
+///
+/// Jellyfin wants `Authorization: MediaBrowser …`; when the connection's Access
+/// row already sends `Authorization` for a reverse proxy, the two cannot share
+/// the header. The client falls back to `?ApiKey=`, which every proxy access log
+/// records. The form names the trade-off and the fix: a proxy credential on a
+/// header of its own (`CF-Access-Client-Id` / `-Secret`, or a custom header).
+bool jellyfinKeyTravelsInQuery(ServiceKey service, ConnectionAccess access) =>
+    service == ServiceKey.jellyfin &&
+    access.headers().keys.any((name) => name.toLowerCase() == 'authorization');
 
 /// What an address field refuses, on every platform, when [rawUrl] would send
 /// [service]'s credential across the internet in plain `http://`: a host off

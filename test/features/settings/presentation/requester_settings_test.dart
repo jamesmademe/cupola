@@ -355,31 +355,27 @@ void main() {
       await unmount(tester, harness, container);
     });
 
-    testWidgets(
-      'on a Mac, her rail and her pane',
-      (tester) async {
-        final (harness, _, container) = await pumpApp(
-          tester,
-          size: const Size(1440, 900),
+    testWidgets('on a Mac, her rail and her pane', (tester) async {
+      final (harness, _, container) = await pumpApp(
+        tester,
+        size: const Size(1440, 900),
+      );
+
+      final rail = find.byType(SettingsMasterDetail);
+      for (final section in SettingsMasterDetail.requesterSections) {
+        expect(
+          find.descendant(of: rail, matching: find.text(section.label)),
+          findsWidgets,
+          reason: section.label,
         );
+      }
+      expect(find.text('Signed in as ${WorldPeople.anna}'), findsOne);
+      expect(find.text('Set up a service'), findsOne);
+      for (final row in operatorsRows) {
+        expect(find.text(row), findsNothing, reason: row);
+      }
 
-        final rail = find.byType(SettingsMasterDetail);
-        for (final section in SettingsMasterDetail.requesterSections) {
-          expect(
-            find.descendant(of: rail, matching: find.text(section.label)),
-            findsWidgets,
-            reason: section.label,
-          );
-        }
-        expect(find.text('Signed in as ${WorldPeople.anna}'), findsOne);
-        expect(find.text('Set up a service'), findsOne);
-        for (final row in operatorsRows) {
-          expect(find.text(row), findsNothing, reason: row);
-        }
-
-        await unmount(tester, harness, container);
-      },
-      variant: TargetPlatformVariant.only(TargetPlatform.macOS),
-    );
+      await unmount(tester, harness, container);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
   });
 }

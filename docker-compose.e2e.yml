@@ -13,7 +13,8 @@
 #  - Unraid has no OS container; it stays schema-only (tiers 2-3). See §7.6.
 services:
   sabnzbd:
-    image: lscr.io/linuxserver/sabnzbd:5.1.3-ls273
+    # Pinned by manifest-list digest; the tag is kept for readability.
+    image: lscr.io/linuxserver/sabnzbd:5.1.3-ls273@sha256:948ea3dc45d68943ec14b33ba37ffa1488da3e9837bf3ca0f75621e971614d85
     environment:
       - PUID=1000
       - PGID=1000
@@ -25,7 +26,7 @@ services:
       - ./test/e2e/seed/sabnzbd:/config
 
   nzbget:
-    image: lscr.io/linuxserver/nzbget:v26.3-ls263
+    image: lscr.io/linuxserver/nzbget:v26.3-ls263@sha256:24951ff9689ddbc0843e309ed16db74409a077541a8aeaecca606ae3565768f2
     environment:
       - PUID=1000
       - PGID=1000
@@ -38,7 +39,7 @@ services:
   readarr:
     # The floating LinuxServer tag was retired; keep the E2E lab on the last
     # published multi-arch develop image so the harness remains reproducible.
-    image: ghcr.io/linuxserver/readarr:develop-0.4.18.2805-ls157
+    image: ghcr.io/linuxserver/readarr:develop-0.4.18.2805-ls157@sha256:baf471a7101b58f361ef960de91cd15f23bae82d0126df6a9edbeaf5c5aa4392
     environment:
       - PUID=1000
       - PGID=1000

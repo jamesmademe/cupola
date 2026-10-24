@@ -205,7 +205,7 @@ void main() {
           matching: find.byType(PressableScale),
         ),
       ),
-      containsSemantics(label: 'Godspeed You! Black Emperor', isButton: true),
+      isSemantics(label: 'Godspeed You! Black Emperor', isButton: true),
     );
   });
 
@@ -235,7 +235,7 @@ void main() {
           matching: find.byType(PressableScale),
         ),
       ),
-      containsSemantics(label: 'Cindy Lee', value: ''),
+      isSemantics(label: 'Cindy Lee', value: ''),
     );
   });
 

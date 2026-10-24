@@ -157,11 +157,9 @@ void main() {
 
       final mine = await _singleRequest(anna.service, series.tmdbId);
       expect(mine.type, 'tv');
-      expect(
-        mine.seasons?.map((season) => season.seasonNumber),
-        [series.season],
-        reason: 'Seerr holds the season asked for, and only it',
-      );
+      expect(mine.seasons?.map((season) => season.seasonNumber), [
+        series.season,
+      ], reason: 'Seerr holds the season asked for, and only it');
       expect(
         mine.status,
         _autoApproves(anna, kind: SeerrMediaKind.tv)

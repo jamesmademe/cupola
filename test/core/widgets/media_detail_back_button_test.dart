@@ -444,7 +444,7 @@ void main() {
         // bar, so assistive tech never sees it appear or disappear mid-scroll.
         expect(
           tester.getSemantics(find.byType(IconButton)),
-          containsSemantics(
+          isSemantics(
             isButton: true,
             isEnabled: true,
             hasTapAction: true,

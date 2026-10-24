@@ -12,7 +12,7 @@ One native app for your entire self-hosted media stack, and the box it runs on.<
 [![CI](https://github.com/matthw-labs/seekarr/actions/workflows/ci.yml/badge.svg)](https://github.com/matthw-labs/seekarr/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/matthw-labs/seekarr?include_prereleases&label=release)](https://github.com/matthw-labs/seekarr/releases)
 ![Platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20Android%20%7C%20macOS-informational)
-![Flutter](https://img.shields.io/badge/Flutter-3.38.7-02569B?logo=flutter&logoColor=white)
+![Flutter](https://img.shields.io/badge/Flutter-3.47.7-02569B?logo=flutter&logoColor=white)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 [![Ko-fi](https://img.shields.io/badge/support-Ko--fi-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/matthwlabs)
 
@@ -440,7 +440,7 @@ The whole trust layer is one reviewable file: [`lib/core/network/cert_trust.dart
 
 **Prerequisites**
 
-- Flutter SDK compatible with Dart `^3.10.0` (CI pins stable **3.38.7**)
+- Flutter **3.47.7** stable (the SDK version is set in `pubspec.yaml` and read by CI)
 - **iOS / macOS**: current stable Xcode · **Android**: Android Studio, compileSdk 36
 - At least one reachable service from the [tables above](#supported-services)
 

@@ -149,13 +149,22 @@ void main() {
       final target = MediaSplit.targetOf(
         Uri.parse(
           '/stack/radarr/library/media/movie/10378'
-          '?i=radarr&heroTag=movie_2_0&posterUrl=https%3A%2F%2Fa%2Fp.jpg',
+          '?i=radarr&heroTag=movie_2_0&posterUrl=https%3A%2F%2Fimage.tmdb.org%2Fp.jpg',
         ),
       )!;
       expect(target.key, MediaKey.movie(10378));
       expect(target.focus, 'radarr');
       expect(target.heroTag, 'movie_2_0');
-      expect(target.posterUrl, 'https://a/p.jpg');
+      expect(target.posterUrl, 'https://image.tmdb.org/p.jpg');
+      expect(
+        MediaSplit.targetOf(
+          Uri.parse(
+            '/search/media/movie/603?posterUrl=http%3A%2F%2F192.168.1.1%2Fadmin',
+          ),
+        )?.posterUrl,
+        isNull,
+        reason: 'a link cannot make the app fetch a host on the network',
+      );
       expect(
         MediaSplit.targetOf(Uri.parse('/search/media/tv/1399'))?.key,
         MediaKey.tv(1399),
@@ -209,12 +218,15 @@ void main() {
     test('reads a person and a collection under a mount, with their query', () {
       final person = MediaSplit.pageOf(
         Uri.parse(
-          '/discover/media/person/90001?posterUrl=https%3A%2F%2Fa%2Fp.jpg',
+          '/discover/media/person/90001?posterUrl=https%3A%2F%2Fimage.tmdb.org%2Fp.jpg',
         ),
       );
       expect(person, isA<MediaPanePerson>());
       expect((person! as MediaPanePerson).id, 90001);
-      expect((person as MediaPanePerson).posterUrl, 'https://a/p.jpg');
+      expect(
+        (person as MediaPanePerson).posterUrl,
+        'https://image.tmdb.org/p.jpg',
+      );
       final collection = MediaSplit.pageOf(
         Uri.parse('/stack/seerr/requests/media/collection/90101'),
       );
@@ -496,7 +508,7 @@ void main() {
           matching: find.byType(PressableScale),
         )
         .first;
-    expect(tester.getSemantics(row), containsSemantics(isSelected: true));
+    expect(tester.getSemantics(row), isSemantics(isSelected: true));
 
     await _tapShelfControl(tester, 'Close');
     expect(
@@ -505,7 +517,7 @@ void main() {
     );
     expect(find.byType(PersonPage), findsNothing);
     expect(SidePaneSlots.instance.debugCount, 0);
-    expect(tester.getSemantics(row), containsSemantics(isSelected: false));
+    expect(tester.getSemantics(row), isSemantics(isSelected: false));
 
     semantics.dispose();
     await _close(tester, harness, container);

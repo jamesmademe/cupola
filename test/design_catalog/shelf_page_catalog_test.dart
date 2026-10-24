@@ -137,7 +137,7 @@ List<LidarrAlbum> _albums({bool art = true, bool wanted = false}) => [
     'id': 4,
     'title': 'Sintel (Anniversary Edition)',
     'monitored': true,
-    'releaseDate': DateTime.now()
+    'releaseDate': catalogNow
         .add(const Duration(days: 3))
         .toUtc()
         .toIso8601String(),

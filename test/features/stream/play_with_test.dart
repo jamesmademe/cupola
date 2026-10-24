@@ -180,138 +180,116 @@ void main() {
     );
   }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
-  testWidgets(
-    'ticking the box remembers the choice made in the sheet',
-    (tester) async {
-      final launcher = _FakeLauncher(installed: {'swiftfin'});
-      final container = await _pump(tester, launcher: launcher);
+  testWidgets('ticking the box remembers the choice made in the sheet', (
+    tester,
+  ) async {
+    final launcher = _FakeLauncher(installed: {'swiftfin'});
+    final container = await _pump(tester, launcher: launcher);
 
-      await _play(tester);
-      await tester.tap(find.text('Remember my choice'));
-      await tester.pump();
-      await tester.tap(find.text('Swiftfin'));
-      await tester.pumpAndSettle();
+    await _play(tester);
+    await tester.tap(find.text('Remember my choice'));
+    await tester.pump();
+    await tester.tap(find.text('Swiftfin'));
+    await tester.pumpAndSettle();
 
-      expect(container.read(streamPlayerChoiceProvider), StreamPlayer.swiftfin);
-      expect(launcher.opened.single.scheme, 'swiftfin');
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
-  );
+    expect(container.read(streamPlayerChoiceProvider), StreamPlayer.swiftfin);
+    expect(launcher.opened.single.scheme, 'swiftfin');
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
-  testWidgets(
-    'without the box, the choice is not remembered',
-    (tester) async {
-      final launcher = _FakeLauncher(installed: {'swiftfin'});
-      final container = await _pump(tester, launcher: launcher);
+  testWidgets('without the box, the choice is not remembered', (tester) async {
+    final launcher = _FakeLauncher(installed: {'swiftfin'});
+    final container = await _pump(tester, launcher: launcher);
 
-      await _play(tester);
-      await tester.tap(find.text('Swiftfin'));
-      await tester.pumpAndSettle();
+    await _play(tester);
+    await tester.tap(find.text('Swiftfin'));
+    await tester.pumpAndSettle();
 
-      expect(container.read(streamPlayerChoiceProvider), isNull);
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
-  );
+    expect(container.read(streamPlayerChoiceProvider), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
-  testWidgets(
-    'a launch that fails says which player could not open',
-    (tester) async {
-      final launcher = _FakeLauncher(installed: {'swiftfin'}, opens: false);
-      await _pump(
-        tester,
-        launcher: launcher,
-        remembered: StreamPlayer.swiftfin,
-      );
+  testWidgets('a launch that fails says which player could not open', (
+    tester,
+  ) async {
+    final launcher = _FakeLauncher(installed: {'swiftfin'}, opens: false);
+    await _pump(tester, launcher: launcher, remembered: StreamPlayer.swiftfin);
 
-      await _play(tester);
+    await _play(tester);
 
-      expect(find.text('Could not open Swiftfin'), findsOneWidget);
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
-  );
+    expect(find.text('Could not open Swiftfin'), findsOneWidget);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
-  testWidgets(
-    'Plex keeps its browser link, with no sheet',
-    (tester) async {
-      final launcher = _FakeLauncher(installed: {'swiftfin'});
-      await _pump(
-        tester,
-        launcher: launcher,
-        server: const ServiceInstance(
-          id: 'plex-1',
-          service: ServiceKey.plex,
-          url: 'https://plex.example.com',
-          credential: 'k',
-        ),
-      );
+  testWidgets('Plex keeps its browser link, with no sheet', (tester) async {
+    final launcher = _FakeLauncher(installed: {'swiftfin'});
+    await _pump(
+      tester,
+      launcher: launcher,
+      server: const ServiceInstance(
+        id: 'plex-1',
+        service: ServiceKey.plex,
+        url: 'https://plex.example.com',
+        credential: 'k',
+      ),
+    );
 
-      await _play(tester);
+    await _play(tester);
 
-      expect(find.text('Play with'), findsNothing);
-      expect(launcher.opened.single, _webUrl);
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.android),
-  );
+    expect(find.text('Play with'), findsNothing);
+    expect(launcher.opened.single, _webUrl);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
-  testWidgets(
-    'on a desktop there is no sheet: the browser, as today',
-    (tester) async {
-      final launcher = _FakeLauncher(installed: {'swiftfin'});
-      await _pump(tester, launcher: launcher);
+  testWidgets('on a desktop there is no sheet: the browser, as today', (
+    tester,
+  ) async {
+    final launcher = _FakeLauncher(installed: {'swiftfin'});
+    await _pump(tester, launcher: launcher);
 
-      await _play(tester);
+    await _play(tester);
 
-      expect(find.text('Play with'), findsNothing);
-      expect(launcher.opened.single, _webUrl);
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
-  );
+    expect(find.text('Play with'), findsNothing);
+    expect(launcher.opened.single, _webUrl);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
-  testWidgets(
-    'Swiftfin is not offered without the server id it needs',
-    (tester) async {
-      final launcher = _FakeLauncher(installed: {'swiftfin', 'streamyfin'});
-      final container = ProviderContainer(
-        overrides: [
-          streamAppLauncherProvider.overrideWithValue(launcher),
-          jellyfinServerIdProvider.overrideWith(
-            (ref, instanceId) async => null,
-          ),
-          streamPlayerChoiceProvider.overrideWith(() => _Remembered(null)),
-        ],
-      );
-      addTearDown(container.dispose);
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp(
-            theme: AppTheme.darkTheme(),
-            home: Scaffold(
-              body: Consumer(
-                builder: (context, ref, _) => Center(
-                  child: FilledButton(
-                    onPressed: () => playWith(
-                      context,
-                      ref,
-                      server: _jellyfin(),
-                      itemId: 'item1',
-                      title: 'Tears of Steel',
-                      webUrl: _webUrl,
-                    ),
-                    child: const Text('Play'),
+  testWidgets('Swiftfin is not offered without the server id it needs', (
+    tester,
+  ) async {
+    final launcher = _FakeLauncher(installed: {'swiftfin', 'streamyfin'});
+    final container = ProviderContainer(
+      overrides: [
+        streamAppLauncherProvider.overrideWithValue(launcher),
+        jellyfinServerIdProvider.overrideWith((ref, instanceId) async => null),
+        streamPlayerChoiceProvider.overrideWith(() => _Remembered(null)),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          theme: AppTheme.darkTheme(),
+          home: Scaffold(
+            body: Consumer(
+              builder: (context, ref, _) => Center(
+                child: FilledButton(
+                  onPressed: () => playWith(
+                    context,
+                    ref,
+                    server: _jellyfin(),
+                    itemId: 'item1',
+                    title: 'Tears of Steel',
+                    webUrl: _webUrl,
                   ),
+                  child: const Text('Play'),
                 ),
               ),
             ),
           ),
         ),
-      );
+      ),
+    );
 
-      await _play(tester);
+    await _play(tester);
 
-      expect(find.text('Swiftfin'), findsNothing);
-      expect(find.text('Streamyfin'), findsOneWidget);
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
-  );
+    expect(find.text('Swiftfin'), findsNothing);
+    expect(find.text('Streamyfin'), findsOneWidget);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 }

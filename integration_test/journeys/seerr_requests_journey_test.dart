@@ -43,56 +43,52 @@ import 'testlab_journey_harness.dart';
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets(
-    'G-15 · a household member asks for a movie',
-    (tester) async {
-      binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
-      final app = await LabApp.asRequester(tester);
-      final title = app.world.askTitle;
+  testWidgets('G-15 · a household member asks for a movie', (tester) async {
+    binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
+    final app = await LabApp.asRequester(tester);
+    final title = app.world.askTitle;
 
-      await app.openTitleFromSearch(
-        tester,
-        type: 'movie',
-        tmdbId: title.tmdbId,
-        title: title.title,
-      );
-      await app.surface.see('Request');
-      await tester.tap(find.widgetWithText(FilledButton, 'Request'));
+    await app.openTitleFromSearch(
+      tester,
+      type: 'movie',
+      tmdbId: title.tmdbId,
+      title: title.title,
+    );
+    await app.surface.see('Request');
+    await tester.tap(find.widgetWithText(FilledButton, 'Request'));
 
-      // The sheet of a requester: the title alone, with the quality the
-      // account may have, and no server, no profile and no folder.
-      await app.surface.see('Submit request');
-      await app.surface.see('Quality');
-      await app.surface.see('Standard');
-      expect(
-        app.surface.draws('Quality profile'),
-        isFalse,
-        reason: 'the requester is offered no profile',
-      );
-      expect(
-        app.surface.draws('Root folder'),
-        isFalse,
-        reason: 'the requester is offered no folder',
-      );
+    // The sheet of a requester: the title alone, with the quality the
+    // account may have, and no server, no profile and no folder.
+    await app.surface.see('Submit request');
+    await app.surface.see('Quality');
+    await app.surface.see('Standard');
+    expect(
+      app.surface.draws('Quality profile'),
+      isFalse,
+      reason: 'the requester is offered no profile',
+    );
+    expect(
+      app.surface.draws('Root folder'),
+      isFalse,
+      reason: 'the requester is offered no folder',
+    );
 
-      await tester.tap(find.text('Submit request'));
-      await app.surface.see('Request submitted');
+    await tester.tap(find.text('Submit request'));
+    await app.surface.see('Request submitted');
 
-      // The server's own record of the same fact, read through the app's
-      // client: her request, waiting.
-      final mine = await app.seerr.getRequests();
-      final made = mine
-          .where((request) => request.media?.tmdbId == title.tmdbId)
-          .toList();
-      expect(made, hasLength(1), reason: 'the server holds one request');
-      expect(made.single.status, RequestStatus.pendingApproval);
-      expect(made.single.requestedBy?.id, app.world.requesterId);
+    // The server's own record of the same fact, read through the app's
+    // client: her request, waiting.
+    final mine = await app.seerr.getRequests();
+    final made = mine
+        .where((request) => request.media?.tmdbId == title.tmdbId)
+        .toList();
+    expect(made, hasLength(1), reason: 'the server holds one request');
+    expect(made.single.status, RequestStatus.pendingApproval);
+    expect(made.single.requestedBy?.id, app.world.requesterId);
 
-      // The lab's cleanup, even when the journey fails halfway.
-      app.trackRequest(made.single.id);
-    },
-    timeout: const Timeout(Duration(minutes: 10)),
-  );
+    // The lab's cleanup, even when the journey fails halfway.
+    app.trackRequest(made.single.id);
+  }, timeout: const Timeout(Duration(minutes: 10)));
 
   testWidgets(
     'G-16 · a household member asks for a series, and says which season',
@@ -206,76 +202,72 @@ void main() {
     timeout: const Timeout(Duration(minutes: 10)),
   );
 
-  testWidgets(
-    'G-20 · a household member takes back her own request',
-    (tester) async {
-      binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
-      final app = await LabApp.asRequester(tester);
-      final title = app.world.askTitle;
+  testWidgets('G-20 · a household member takes back her own request', (
+    tester,
+  ) async {
+    binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
+    final app = await LabApp.asRequester(tester);
+    final title = app.world.askTitle;
 
-      // She asks first, the way she would: the journey takes back a request
-      // of her own that waits.
-      await app.openTitleFromSearch(
-        tester,
-        type: 'movie',
-        tmdbId: title.tmdbId,
-        title: title.title,
-      );
-      await app.surface.see('Request');
-      await tester.tap(find.widgetWithText(FilledButton, 'Request'));
-      await app.surface.see('Submit request');
-      await tester.tap(find.text('Submit request'));
-      await app.surface.see('Request submitted');
+    // She asks first, the way she would: the journey takes back a request
+    // of her own that waits.
+    await app.openTitleFromSearch(
+      tester,
+      type: 'movie',
+      tmdbId: title.tmdbId,
+      title: title.title,
+    );
+    await app.surface.see('Request');
+    await tester.tap(find.widgetWithText(FilledButton, 'Request'));
+    await app.surface.see('Submit request');
+    await tester.tap(find.text('Submit request'));
+    await app.surface.see('Request submitted');
 
-      final made = (await app.seerr.getRequests())
-          .where((request) => request.media?.tmdbId == title.tmdbId)
-          .single;
-      app.trackRequest(made.id);
+    final made = (await app.seerr.getRequests())
+        .where((request) => request.media?.tmdbId == title.tmdbId)
+        .single;
+    app.trackRequest(made.id);
 
-      // Her own list: the request that waits, with the one thing she may do.
-      await app.go(tester, ServiceRoutes.requests);
-      await app.surface.see(title.title);
-      expect(
-        app.surface.count(RequesterWaitingCard),
-        greaterThanOrEqualTo(1),
-        reason: 'her list draws no card for a request that waits',
-      );
+    // Her own list: the request that waits, with the one thing she may do.
+    await app.go(tester, ServiceRoutes.requests);
+    await app.surface.see(title.title);
+    expect(
+      app.surface.count(RequesterWaitingCard),
+      greaterThanOrEqualTo(1),
+      reason: 'her list draws no card for a request that waits',
+    );
 
-      // The question, and the way out of it: the request stays.
-      await app.tapIn(
-        tester,
-        find.widgetWithText(OutlinedButton, 'Cancel request').first,
-      );
-      await app.surface.see('Cancel request?');
-      await app.surface.see('Keep it');
-      await tester.tap(find.widgetWithText(TextButton, 'Keep it'));
-      await app.surface.unsee('Cancel request?');
-      expect(
-        (await app.seerr.getRequests())
-            .where((request) => request.id == made.id)
-            .length,
-        1,
-        reason: 'keeping the request took it away',
-      );
+    // The question, and the way out of it: the request stays.
+    await app.tapIn(
+      tester,
+      find.widgetWithText(OutlinedButton, 'Cancel request').first,
+    );
+    await app.surface.see('Cancel request?');
+    await app.surface.see('Keep it');
+    await tester.tap(find.widgetWithText(TextButton, 'Keep it'));
+    await app.surface.unsee('Cancel request?');
+    expect(
+      (await app.seerr.getRequests())
+          .where((request) => request.id == made.id)
+          .length,
+      1,
+      reason: 'keeping the request took it away',
+    );
 
-      // And the other answer: the request is gone.
-      await app.tapIn(
-        tester,
-        find.widgetWithText(OutlinedButton, 'Cancel request').first,
-      );
-      await app.surface.see('Cancel request?');
-      await tester.tap(find.widgetWithText(FilledButton, 'Cancel request'));
-      await app.surface.see('Request canceled');
+    // And the other answer: the request is gone.
+    await app.tapIn(
+      tester,
+      find.widgetWithText(OutlinedButton, 'Cancel request').first,
+    );
+    await app.surface.see('Cancel request?');
+    await tester.tap(find.widgetWithText(FilledButton, 'Cancel request'));
+    await app.surface.see('Request canceled');
 
-      expect(
-        (await app.seerr.getRequests()).where(
-          (request) => request.id == made.id,
-        ),
-        isEmpty,
-        reason: 'the server still holds the request',
-      );
-      expect(await app.server.request(made.id), isNull);
-    },
-    timeout: const Timeout(Duration(minutes: 10)),
-  );
+    expect(
+      (await app.seerr.getRequests()).where((request) => request.id == made.id),
+      isEmpty,
+      reason: 'the server still holds the request',
+    );
+    expect(await app.server.request(made.id), isNull);
+  }, timeout: const Timeout(Duration(minutes: 10)));
 }

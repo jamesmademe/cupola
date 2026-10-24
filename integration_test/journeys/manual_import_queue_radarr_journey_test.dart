@@ -7,6 +7,11 @@
 /// snapshot: a grab stays in Radarr's history, and `Add it anyway` replaces a
 /// movie's file, neither of which an API call can undo.
 ///
+/// M-11 closes the page from inside a confirmation and returns to Activity:
+/// with Riverpod 3.2.1 that resume tripped the paused-subscription assertion,
+/// and it runs since Riverpod 3.4.3 and the post-frame refresh of the import
+/// card.
+///
 /// ~~~bash
 /// flutter test integration_test/journeys/manual_import_queue_radarr_journey_test.dart \
 ///   -d 403B5E0A-6A4E-4CB4-A151-87A6DA34E55F --tags e2e --run-skipped
@@ -153,11 +158,5 @@ void main() {
       );
     },
     timeout: const Timeout(Duration(minutes: 15)),
-    // Everything up to the confirmation passes; closing the page after the
-    // removal trips Riverpod 3.2.1's paused-subscription assertion every
-    // time (`pausedActiveSubscriptionCount`), in the dashboard decisions'
-    // provider. Riverpod 3.3.2 fixes an unpause assertion: the upgrade is
-    // its own lot, and this case runs again with it.
-    skip: true,
   );
 }

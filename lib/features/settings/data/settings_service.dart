@@ -13,6 +13,24 @@ import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
+/// The Android half of the secure store.
+///
+/// `resetOnError` is the plugin's default `true`: a Keystore error on any read
+/// deletes every secret and pin on the device and answers as if none had ever
+/// been saved, so the app would quietly start with connections that lost their
+/// keys and certificates that are trusted no more. Off, the error reaches the
+/// load, where one unreadable secret marks its connection
+/// ([ServiceInstance.unreadSecret]) and a store that refuses every read stops
+/// the start on a page that offers to forget the keys, as a choice the person
+/// makes ([SecureStorageUnavailable]).
+const secureStorageAndroidOptions = AndroidOptions(
+  // flutter_secure_storage 10.x migrates away from the old
+  // encryptedSharedPreferences path. Keep migration enabled for existing
+  // installs and write a backup during algorithm upgrades.
+  migrateWithBackup: true,
+  resetOnError: false,
+);
+
 SecureSettingsStore createSecureSettingsStore() {
   // Keep secrets (API keys/passwords) out of iCloud/device backups by pinning
   // Keychain accessibility to this device only. Without this the default
@@ -50,10 +68,7 @@ SecureSettingsStore createSecureSettingsStore() {
   }
   return FlutterSecureSettingsStore(
     FlutterSecureStorage(
-      // flutter_secure_storage 10.x migrates away from the old
-      // encryptedSharedPreferences path. Keep migration enabled for existing
-      // installs and write a backup during algorithm upgrades.
-      aOptions: AndroidOptions(migrateWithBackup: true),
+      aOptions: secureStorageAndroidOptions,
       iOptions: const IOSOptions(accessibility: deviceOnly),
       mOptions: const MacOsOptions(accessibility: deviceOnly),
     ),

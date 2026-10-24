@@ -29,7 +29,7 @@ void main() {
 
       expect(
         find.semantics.byLabel('Authors, 42 in library'),
-        containsSemantics(
+        isSemantics(
           isHeader: true,
           isButton: true,
           hasTapAction: true,
@@ -48,7 +48,7 @@ void main() {
 
       expect(
         find.semantics.byLabel('Topology'),
-        containsSemantics(isHeader: true, isButton: false),
+        isSemantics(isHeader: true, isButton: false),
       );
     });
 
@@ -70,13 +70,10 @@ void main() {
         ),
       );
 
-      expect(
-        find.semantics.byLabel('Snapshots'),
-        containsSemantics(isHeader: true),
-      );
+      expect(find.semantics.byLabel('Snapshots'), isSemantics(isHeader: true));
       expect(
         find.semantics.byLabel('New'),
-        containsSemantics(isButton: true, hasTapAction: true),
+        isSemantics(isButton: true, hasTapAction: true),
       );
 
       await tester.tap(find.text('New'));
@@ -97,7 +94,7 @@ void main() {
 
       expect(
         find.semantics.byLabel('Radarr, 7 items'),
-        containsSemantics(isHeader: true),
+        isSemantics(isHeader: true),
       );
       expect(find.semantics.byLabel('7'), findsNothing);
     });
@@ -123,7 +120,7 @@ void main() {
         find.semantics.byLabel(
           'Missing subtitles, 3 missing\u00A0· 2 languages',
         ),
-        containsSemantics(isHeader: true),
+        isSemantics(isHeader: true),
       );
       // Uppercase belongs in the eye, not in the ear.
       expect(find.semantics.byLabel('MISSING SUBTITLES'), findsNothing);
@@ -149,7 +146,7 @@ void main() {
 
       expect(
         find.semantics.byLabel('S3 of 40'),
-        containsSemantics(isButton: true, hasTapAction: true),
+        isSemantics(isButton: true, hasTapAction: true),
       );
       await tester.tap(find.text('S3 of 40'));
       expect(pressed, isTrue);
@@ -190,7 +187,7 @@ void main() {
       // InkWell's action along with its labels, so the wrapper must forward it.
       expect(
         tester.getSemantics(find.byKey(const ValueKey('card'))),
-        containsSemantics(
+        isSemantics(
           label: 'Radarr',
           value: 'Online',
           isButton: true,
@@ -228,7 +225,7 @@ void main() {
 
       expect(
         find.semantics.byLabel('Furiosa, downloading'),
-        containsSemantics(isButton: true),
+        isSemantics(isButton: true),
       );
 
       // An icon button's accessible name comes from its tooltip, which lands in
@@ -238,7 +235,7 @@ void main() {
       // and the card has no tooltip.
       expect(
         tester.getSemantics(find.byTooltip('Search options')),
-        containsSemantics(
+        isSemantics(
           tooltip: 'Search options',
           isButton: true,
           hasTapAction: true,
@@ -274,7 +271,7 @@ void main() {
 
       expect(
         find.semantics.byLabel('Radarr, Connected, radarr.local:7878'),
-        containsSemantics(isHeader: false),
+        isSemantics(isHeader: false),
       );
       expect(find.semantics.byLabel('radarr.local:7878'), findsNothing);
     });
@@ -304,7 +301,7 @@ void main() {
 
       expect(
         find.semantics.byLabel('Radarr, radarr.local:7878'),
-        containsSemantics(isButton: true, hasTapAction: true),
+        isSemantics(isButton: true, hasTapAction: true),
       );
 
       // `trailing` is the one slot SettingsCard does not silence, so the delete
@@ -312,7 +309,7 @@ void main() {
       // getSemantics would return the row's node, which carries no tooltip.
       expect(
         tester.getSemantics(find.byTooltip('Remove credentials')),
-        containsSemantics(
+        isSemantics(
           tooltip: 'Remove credentials',
           isButton: true,
           hasTapAction: true,
@@ -363,10 +360,7 @@ void main() {
     testWidgets('is marked as a heading with the spoken label', (tester) async {
       await _pump(tester, const DomainSectionHeader(label: 'Downloads'));
 
-      expect(
-        find.semantics.byLabel('Downloads'),
-        containsSemantics(isHeader: true),
-      );
+      expect(find.semantics.byLabel('Downloads'), isSemantics(isHeader: true));
       expect(find.semantics.byLabel('DOWNLOADS'), findsNothing);
     });
   });

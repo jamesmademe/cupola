@@ -295,6 +295,17 @@ class SeerrServerState {
   /// have saved it: the `connect.sid` cookie value. Null without an account.
   String? savedSession;
 
+  /// What `PUT /api/v1/request/{id}` wrote, by request id: the server,
+  /// profile and folder the request carries from then on, so a read after
+  /// the edit, and the approval, see it.
+  final Map<int, ({Object? serverId, Object? profileId, Object? rootFolder})>
+  requestEdits = {};
+
+  /// Requests somebody decided on in Seerr itself since the app read them:
+  /// an edit of one is refused as Seerr refuses an edit of a request that no
+  /// longer waits.
+  final Set<int> decidedElsewhere = {};
+
   /// Every session this server has handed out, live or not.
   Iterable<SeerrSession> get sessions => _sessions.values;
 

@@ -400,6 +400,13 @@ const _exceptions = <String, ({int count, String reason})>{
         'The form: its field, the address it tests and asks to trust, the '
         'labels it derives for siblings and the hosts it lists them by.',
   ),
+  'lib/features/release_search/presentation/release_search_entry.dart  .access': (
+    count: 1,
+    reason:
+        'The settings screen names the connections behind a gateway so it can '
+        'warn about background search; the search itself goes through the '
+        'route.',
+  ),
   'lib/features/settings/presentation/service_settings_screen.dart  .access': (
     count: 3,
     reason:

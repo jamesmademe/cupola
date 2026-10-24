@@ -2,8 +2,8 @@ import 'package:cupola/core/status/media_status.dart';
 
 /// The product's state words: one word per state, the same on every screen.
 ///
-/// The brand book's lexicon (`design/system/README.md`, *Words*) as code, so
-/// a screen reaches for the state rather than spelling it. The tone is the
+/// The brand book's lexicon (`design/system/words.md`) as code, so a screen
+/// reaches for the state rather than spelling it. The tone is the
 /// one the word carries under the tone rule, and null for a word that carries
 /// no state. The failure words: `Did not answer`, `Radarr answered but
 /// refused the key` and the rest are the classification's

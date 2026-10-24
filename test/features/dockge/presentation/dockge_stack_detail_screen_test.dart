@@ -78,34 +78,30 @@ Future<_QuietClient> _pump(WidgetTester tester, {ThemeData? theme}) async {
 }
 
 void main() {
-  testWidgets(
-    'every stack action is a finger target',
-    (tester) async {
-      await _pump(tester);
+  testWidgets('every stack action is a finger target', (tester) async {
+    await _pump(tester);
 
-      // The chips measured 34pt: padding plus one labelMedium line.
-      for (final label in [
-        'Start',
-        'Stop',
-        'Restart',
-        'Update',
-        'Down',
-        'Delete stack',
-      ]) {
-        final chip = find.ancestor(
-          of: find.text(label),
-          matching: find.byType(InkWell),
-        );
-        expect(chip, findsOneWidget, reason: label);
-        expect(
-          tester.getSize(chip).height,
-          greaterThanOrEqualTo(44),
-          reason: '$label is ${tester.getSize(chip).height} tall',
-        );
-      }
-    },
-    variant: TargetPlatformVariant.mobile(),
-  );
+    // The chips measured 34pt: padding plus one labelMedium line.
+    for (final label in [
+      'Start',
+      'Stop',
+      'Restart',
+      'Update',
+      'Down',
+      'Delete stack',
+    ]) {
+      final chip = find.ancestor(
+        of: find.text(label),
+        matching: find.byType(InkWell),
+      );
+      expect(chip, findsOneWidget, reason: label);
+      expect(
+        tester.getSize(chip).height,
+        greaterThanOrEqualTo(44),
+        reason: '$label is ${tester.getSize(chip).height} tall',
+      );
+    }
+  }, variant: TargetPlatformVariant.mobile());
 
   group('a command that interrupts the stack asks first', () {
     // Stop, Restart, Update and Down fired on the tap here, while the same

@@ -272,27 +272,23 @@ void main() {
       'sonarr/queue.captured.json',
       'lidarr/queue.captured.json',
     ]) {
-      test(
-        '$path holds up against the resolvers',
-        () {
-          final records = _records(path);
+      test('$path holds up against the resolvers', () {
+        final records = _records(path);
 
-          for (final record in records) {
-            final entry = ArrQueueEntry.fromQueueItem(record);
-            if (entry == null) continue;
+        for (final record in records) {
+          final entry = ArrQueueEntry.fromQueueItem(record);
+          if (entry == null) continue;
 
-            final progress = entry.progress;
-            if (progress != null) {
-              expect(progress, inInclusiveRange(0.0, 1.0));
-            }
-            expect(
-              queueDisplayLabel(resolveQueueDisplayStatus(record)),
-              isNotEmpty,
-            );
+          final progress = entry.progress;
+          if (progress != null) {
+            expect(progress, inInclusiveRange(0.0, 1.0));
           }
-        },
-        skip: _missing(path) ? 'no capture at test/fixtures/$path' : false,
-      );
+          expect(
+            queueDisplayLabel(resolveQueueDisplayStatus(record)),
+            isNotEmpty,
+          );
+        }
+      }, skip: _missing(path) ? 'no capture at test/fixtures/$path' : false);
     }
   });
 }

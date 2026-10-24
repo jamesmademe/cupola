@@ -62,12 +62,12 @@ void main() {
 
       expect(
         find.semantics.byLabel('Downloads'),
-        containsSemantics(isButton: true, isSelected: true),
+        isSemantics(isButton: true, isSelected: true),
       );
       for (final view in [_View.all, _View.requests, _View.history]) {
         expect(
           find.semantics.byLabel(view.label),
-          containsSemantics(
+          isSemantics(
             isButton: true,
             hasSelectedState: true,
             isSelected: false,

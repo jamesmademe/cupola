@@ -6,6 +6,7 @@ import 'package:web_socket/io_web_socket.dart';
 import 'package:web_socket/web_socket.dart' as ws;
 
 import 'package:cupola/core/network/cert_trust.dart';
+import 'package:cupola/core/network/no_redirect_upgrade_client.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/idle_close.dart';
 import 'package:cupola/core/network/upgrade_gateway.dart';
@@ -247,7 +248,11 @@ class DockgeClient {
         uri.toString(),
         protocols: protocols,
         headers: {...?headers, ...accessHeaders},
-        customClient: httpClient,
+        // A redirect on the upgrade would carry the access headers to the
+        // target, and then the login frame with the Dockge credentials. The
+        // TrueNAS upgrade has the same guard; this transport is the other one
+        // `Dio` never sees.
+        customClient: NoRedirectUpgradeClient(httpClient),
       );
       return IOWebSocket.fromWebSocket(socket);
     } on io.WebSocketException catch (e) {

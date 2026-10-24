@@ -48,8 +48,8 @@ PairPlan _plan() => pairFixturePlan(
 /// Everything the sending device has is here already.
 PairPlan _allHere() => PairPlan.of(pairFixturePackage(), pairFixtureSender());
 
-/// Only a certificate is new, and a service this version does not know stays
-/// behind.
+/// The package carries a pin for a server this device already has, and a
+/// service this version does not know stays behind: the pin is not applied.
 PairPlan _onlyACertificate() => PairPlan.of(
   PairPackage(
     from: PairDevice.mac,
@@ -156,8 +156,8 @@ void main() {
         height: 840,
       ),
       _scene(
-        'PairReceive · only a certificate is new, and two services this '
-        'version does not know stay behind',
+        'PairReceive · a pin for a server already here is not applied, and two '
+        'services this version does not know stay behind',
         PairReceivePreview(_onlyACertificate()),
         height: 560,
       ),

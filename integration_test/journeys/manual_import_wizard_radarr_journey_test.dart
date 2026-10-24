@@ -67,19 +67,17 @@ void main() {
     timeout: const Timeout(Duration(minutes: 8)),
   );
 
-  testWidgets(
-    'M-01 · Radarr down: the wizard says it cannot import',
-    (tester) async {
-      final (:app, :wizard, radarr: _) = await open(tester, 'import-locate');
-      addTearDown(() => app.command(['fault', 'radarr', 'clear']));
-      await app.command(['fault', 'radarr', 'down']);
+  testWidgets('M-01 · Radarr down: the wizard says it cannot import', (
+    tester,
+  ) async {
+    final (:app, :wizard, radarr: _) = await open(tester, 'import-locate');
+    addTearDown(() => app.command(['fault', 'radarr', 'clear']));
+    await app.command(['fault', 'radarr', 'down']);
 
-      await wizard.openWizard(ServiceKey.radarr);
-      await app.surface.see('Manual import unavailable');
-      await app.surface.see('Retry');
-    },
-    timeout: const Timeout(Duration(minutes: 8)),
-  );
+    await wizard.openWizard(ServiceKey.radarr);
+    await app.surface.see('Manual import unavailable');
+    await app.surface.see('Retry');
+  }, timeout: const Timeout(Duration(minutes: 8)));
 
   testWidgets(
     'M-02 · M-15 · two ready files go in by copy, and the import is tracked',
@@ -147,73 +145,69 @@ void main() {
     timeout: const Timeout(Duration(minutes: 10)),
   );
 
-  testWidgets(
-    'M-08 · the sample is shown, never chosen, and stays out',
-    (tester) async {
-      final (:app, :wizard, :radarr) = await open(tester, 'import-sample');
+  testWidgets('M-08 · the sample is shown, never chosen, and stays out', (
+    tester,
+  ) async {
+    final (:app, :wizard, :radarr) = await open(tester, 'import-sample');
 
-      await wizard.openWizard(ServiceKey.radarr);
-      await wizard.reviewFolder(
-        '$_root/Elephants.Dream.2006.1080p.WEB-DL.DDP5.1.H.264-CUPOLA',
-      );
-      await app.surface.see('Sample');
-      // The scan chooses the feature and leaves the sample out.
-      await wizard.confirmImport(1);
-      await wizard.waitTrack('Completed');
+    await wizard.openWizard(ServiceKey.radarr);
+    await wizard.reviewFolder(
+      '$_root/Elephants.Dream.2006.1080p.WEB-DL.DDP5.1.H.264-CUPOLA',
+    );
+    await app.surface.see('Sample');
+    // The scan chooses the feature and leaves the sample out.
+    await wizard.confirmImport(1);
+    await wizard.waitTrack('Completed');
 
-      final movie = await radarr.movieWithFile(tester, 'Elephants Dream', 2006);
-      expect(ImportReadings.fileOf(movie).path, isNot(contains('sample')));
-    },
-    timeout: const Timeout(Duration(minutes: 10)),
-  );
+    final movie = await radarr.movieWithFile(tester, 'Elephants Dream', 2006);
+    expect(ImportReadings.fileOf(movie).path, isNot(contains('sample')));
+  }, timeout: const Timeout(Duration(minutes: 10)));
 
-  testWidgets(
-    'M-09 · a quality and a language chosen by hand reach Radarr',
-    (tester) async {
-      final (:app, :wizard, :radarr) = await open(
-        tester,
-        'import-unknown-quality',
-      );
+  testWidgets('M-09 · a quality and a language chosen by hand reach Radarr', (
+    tester,
+  ) async {
+    final (:app, :wizard, :radarr) = await open(
+      tester,
+      'import-unknown-quality',
+    );
 
-      await wizard.openWizard(ServiceKey.radarr);
-      await wizard.reviewFolder('$_root/l13-unknown-quality');
-      await app.surface.see('Coffee Run');
-      await app.tapIn(tester, find.text('Coffee Run').first);
-      await settle(tester, const Duration(milliseconds: 800));
+    await wizard.openWizard(ServiceKey.radarr);
+    await wizard.reviewFolder('$_root/l13-unknown-quality');
+    await app.surface.see('Coffee Run');
+    await app.tapIn(tester, find.text('Coffee Run').first);
+    await settle(tester, const Duration(milliseconds: 800));
 
-      await app.surface.see('Quality');
-      await tester.tap(find.text('Quality'));
-      await settle(tester, const Duration(milliseconds: 800));
-      await app.surface.see('Select quality');
-      await app.tapIn(tester, find.text('WEBDL-720p').last);
-      await settle(tester, const Duration(milliseconds: 800));
-      // A choice closes the sheet: the row is opened again for the language.
-      await app.surface.seePart('WEBDL-720p');
-      await app.tapIn(tester, find.text('Coffee Run').first);
-      await settle(tester, const Duration(milliseconds: 800));
+    await app.surface.see('Quality');
+    await tester.tap(find.text('Quality'));
+    await settle(tester, const Duration(milliseconds: 800));
+    await app.surface.see('Select quality');
+    await app.tapIn(tester, find.text('WEBDL-720p').last);
+    await settle(tester, const Duration(milliseconds: 800));
+    // A choice closes the sheet: the row is opened again for the language.
+    await app.surface.seePart('WEBDL-720p');
+    await app.tapIn(tester, find.text('Coffee Run').first);
+    await settle(tester, const Duration(milliseconds: 800));
 
-      await app.surface.see('Languages');
-      await tester.tap(find.text('Languages'));
-      await settle(tester, const Duration(milliseconds: 800));
-      await app.surface.see('Select languages');
-      await app.tapIn(tester, find.text('Italian').last);
-      await app.tapIn(tester, find.text('English').last);
-      // The button closes a long list of languages: brought into view first.
-      await app.tapIn(tester, find.text('Apply languages'));
-      await settle(tester, const Duration(milliseconds: 800));
-      await app.surface.seePart('Italian');
+    await app.surface.see('Languages');
+    await tester.tap(find.text('Languages'));
+    await settle(tester, const Duration(milliseconds: 800));
+    await app.surface.see('Select languages');
+    await app.tapIn(tester, find.text('Italian').last);
+    await app.tapIn(tester, find.text('English').last);
+    // The button closes a long list of languages: brought into view first.
+    await app.tapIn(tester, find.text('Apply languages'));
+    await settle(tester, const Duration(milliseconds: 800));
+    await app.surface.seePart('Italian');
 
-      await wizard.confirmImport(1);
-      await wizard.waitTrack('Completed');
+    await wizard.confirmImport(1);
+    await wizard.waitTrack('Completed');
 
-      final file = ImportReadings.fileOf(
-        await radarr.movieWithFile(tester, 'Coffee Run', 2020),
-      );
-      expect(file.quality, 'WEBDL-720p');
-      expect(file.languages, ['Italian']);
-    },
-    timeout: const Timeout(Duration(minutes: 10)),
-  );
+    final file = ImportReadings.fileOf(
+      await radarr.movieWithFile(tester, 'Coffee Run', 2020),
+    );
+    expect(file.quality, 'WEBDL-720p');
+    expect(file.languages, ['Italian']);
+  }, timeout: const Timeout(Duration(minutes: 10)));
 
   testWidgets(
     'M-14 · the search says when nothing matches, then a match goes in',
@@ -240,35 +234,29 @@ void main() {
     timeout: const Timeout(Duration(minutes: 10)),
   );
 
-  testWidgets(
-    'M-15 · the Track screen before any import',
-    (tester) async {
-      binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
-      final app = await LabApp.asOperator(
-        tester,
-        services: const {ServiceKey.radarr},
-      );
-      await app.go(tester, '/import/progress?service=radarr');
-      await app.surface.see('Import has not started');
-      await app.surface.see('Go back and confirm selected files to begin.');
-    },
-    timeout: const Timeout(Duration(minutes: 5)),
-  );
+  testWidgets('M-15 · the Track screen before any import', (tester) async {
+    binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
+    final app = await LabApp.asOperator(
+      tester,
+      services: const {ServiceKey.radarr},
+    );
+    await app.go(tester, '/import/progress?service=radarr');
+    await app.surface.see('Import has not started');
+    await app.surface.see('Go back and confirm selected files to begin.');
+  }, timeout: const Timeout(Duration(minutes: 5)));
 
-  testWidgets(
-    'M-15 · a file gone before the import: the import fails',
-    (tester) async {
-      final (:app, :wizard, radarr: _) = await open(tester, 'import-failed');
+  testWidgets('M-15 · a file gone before the import: the import fails', (
+    tester,
+  ) async {
+    final (:app, :wizard, radarr: _) = await open(tester, 'import-failed');
 
-      await wizard.openWizard(ServiceKey.radarr);
-      await wizard.reviewFolder('$_root/Jaws.1975.1080p.BluRay.x264-CUPOLA');
-      await app.surface.see('Jaws');
-      // The file leaves the server between the scan and the confirmation.
-      await app.command(['scenario', 'teardown', 'import-failed']);
-      await wizard.confirmImport(1);
-      await wizard.waitTrack('Failed');
-      await app.surface.see('Retry');
-    },
-    timeout: const Timeout(Duration(minutes: 10)),
-  );
+    await wizard.openWizard(ServiceKey.radarr);
+    await wizard.reviewFolder('$_root/Jaws.1975.1080p.BluRay.x264-CUPOLA');
+    await app.surface.see('Jaws');
+    // The file leaves the server between the scan and the confirmation.
+    await app.command(['scenario', 'teardown', 'import-failed']);
+    await wizard.confirmImport(1);
+    await wizard.waitTrack('Failed');
+    await app.surface.see('Retry');
+  }, timeout: const Timeout(Duration(minutes: 10)));
 }

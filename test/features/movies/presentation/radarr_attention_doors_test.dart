@@ -79,7 +79,7 @@ void main() {
     expect(row, findsOneWidget);
     expect(
       find.semantics.byLabel(RegExp(r'^Stuck, Big Buck Bunny, ')),
-      containsSemantics(
+      isSemantics(
         isButton: true,
         hasTapAction: true,
         hint: 'opens this download',
@@ -121,7 +121,7 @@ void main() {
       find.semantics.byLabel(
         '3 downloads stuck, Sprite Fright, Big Buck Bunny, Tears of Steel',
       ),
-      containsSemantics(isButton: true, hint: 'opens the Radarr Queue tab'),
+      isSemantics(isButton: true, hint: 'opens the Radarr Queue tab'),
     );
 
     await tester.tap(find.text('3 downloads stuck'));

@@ -404,7 +404,7 @@ void main() {
       expect(tester.widget<PopupMenuItem<String>>(item).enabled, isTrue);
       expect(
         tester.getSemantics(find.text('Disable…')),
-        containsSemantics(hint: 'requires an admin account', isEnabled: true),
+        isSemantics(hint: 'requires an admin account', isEnabled: true),
       );
 
       await tester.tap(find.text('Disable…'));
@@ -432,7 +432,7 @@ void main() {
       expect(tester.widget<TextButton>(renew).onPressed, isNotNull);
       expect(
         tester.getSemantics(renew),
-        containsSemantics(
+        isSemantics(
           label: 'Renew',
           hint: 'requires an admin account',
           isEnabled: true,

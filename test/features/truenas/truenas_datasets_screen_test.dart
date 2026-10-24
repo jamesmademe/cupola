@@ -66,68 +66,58 @@ void main() {
   // The tree used `dense`, `VisualDensity.compact` and a 40pt tile height,
   // which is the combination the 44pt floor exists to stop: compact silently
   // takes 8 off whatever was declared.
-  testWidgets(
-    'every dataset row a finger can reach is at least 44pt tall',
-    (tester) async {
-      await _pump(tester);
+  testWidgets('every dataset row a finger can reach is at least 44pt tall', (
+    tester,
+  ) async {
+    await _pump(tester);
 
-      expect(
-        _rowHeight(tester, 'tank'),
-        greaterThanOrEqualTo(_touchFloor),
-        reason: 'the branch row',
-      );
-      expect(
-        _rowHeight(tester, 'media'),
-        greaterThanOrEqualTo(_touchFloor),
-        reason: 'the leaf row',
-      );
-      for (final button in tester.widgetList<IconButton>(
-        find.widgetWithIcon(IconButton, Icons.info_outline_rounded),
-      )) {
-        expect(button.constraints?.minHeight, _touchFloor);
-        expect(button.constraints?.minWidth, _touchFloor);
-      }
-    },
-    variant: TargetPlatformVariant.mobile(),
-  );
+    expect(
+      _rowHeight(tester, 'tank'),
+      greaterThanOrEqualTo(_touchFloor),
+      reason: 'the branch row',
+    );
+    expect(
+      _rowHeight(tester, 'media'),
+      greaterThanOrEqualTo(_touchFloor),
+      reason: 'the leaf row',
+    );
+    for (final button in tester.widgetList<IconButton>(
+      find.widgetWithIcon(IconButton, Icons.info_outline_rounded),
+    )) {
+      expect(button.constraints?.minHeight, _touchFloor);
+      expect(button.constraints?.minWidth, _touchFloor);
+    }
+  }, variant: TargetPlatformVariant.mobile());
 
   // The floor is declared, not incidental: each row carries it as its own
   // minimum instead of reaching it only because the Details button inside
   // happens to be taller.
-  testWidgets(
-    'the rows declare the touch floor themselves',
-    (tester) async {
-      await _pump(tester);
+  testWidgets('the rows declare the touch floor themselves', (tester) async {
+    await _pump(tester);
 
-      final branch = tester.widget<ExpansionTile>(find.byType(ExpansionTile));
-      expect(branch.minTileHeight, _touchFloor);
-      expect(branch.visualDensity, isNot(VisualDensity.compact));
+    final branch = tester.widget<ExpansionTile>(find.byType(ExpansionTile));
+    expect(branch.minTileHeight, _touchFloor);
+    expect(branch.visualDensity, isNot(VisualDensity.compact));
 
-      final leaf = tester.widget<ListTile>(
-        find
-            .ancestor(of: find.text('media'), matching: find.byType(ListTile))
-            .first,
-      );
-      expect(leaf.minTileHeight, _touchFloor);
-      expect(leaf.visualDensity, isNot(VisualDensity.compact));
-    },
-    variant: TargetPlatformVariant.mobile(),
-  );
+    final leaf = tester.widget<ListTile>(
+      find
+          .ancestor(of: find.text('media'), matching: find.byType(ListTile))
+          .first,
+    );
+    expect(leaf.minTileHeight, _touchFloor);
+    expect(leaf.visualDensity, isNot(VisualDensity.compact));
+  }, variant: TargetPlatformVariant.mobile());
 
   // A desktop build is pointer-driven and keeps the denser tree, even in a
   // window narrow enough to paint the phone layout: the pointer is a property
   // of the build, not of the width.
-  testWidgets(
-    'a desktop build keeps the pointer-only 40',
-    (tester) async {
-      tester.view.physicalSize = const Size(600, 900);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-      await _pump(tester);
+  testWidgets('a desktop build keeps the pointer-only 40', (tester) async {
+    tester.view.physicalSize = const Size(600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await _pump(tester);
 
-      final branch = tester.widget<ExpansionTile>(find.byType(ExpansionTile));
-      expect(branch.minTileHeight, 40);
-    },
-    variant: TargetPlatformVariant.desktop(),
-  );
+    final branch = tester.widget<ExpansionTile>(find.byType(ExpansionTile));
+    expect(branch.minTileHeight, 40);
+  }, variant: TargetPlatformVariant.desktop());
 }

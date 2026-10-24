@@ -123,7 +123,7 @@ void main() {
 
       expect(
         find.semantics.byLabel('Nyaa, failing, disabled until 15:40'),
-        containsSemantics(
+        isSemantics(
           isButton: true,
           hasTapAction: true,
           hint: 'opens the Prowlarr Indexers tab',
@@ -143,7 +143,7 @@ void main() {
 
       expect(
         find.semantics.byLabel('Nyaa, failing, disabled until 15:40'),
-        containsSemantics(isButton: false, hasTapAction: false),
+        isSemantics(isButton: false, hasTapAction: false),
       );
       // And it draws no chevron: nothing in it opens.
       expect(find.byIcon(Icons.chevron_right_rounded), findsNothing);
@@ -213,7 +213,7 @@ void main() {
       // Annotated on the button's own child, so the hint lands on its node.
       expect(
         tester.getSemantics(find.byType(TextButton)),
-        containsSemantics(
+        isSemantics(
           label: 'Test',
           hint: 'tests Nyaa',
           isButton: true,
@@ -223,7 +223,7 @@ void main() {
       // The door is still one sentence, and it is not the verb's node.
       expect(
         find.semantics.byLabel('Nyaa, failing, disabled until 15:40'),
-        containsSemantics(isButton: true, hint: 'opens the indexer'),
+        isSemantics(isButton: true, hint: 'opens the indexer'),
       );
 
       await tester.tap(find.text('Test'));
@@ -263,7 +263,7 @@ void main() {
       );
       expect(
         tester.getSemantics(button),
-        containsSemantics(
+        isSemantics(
           label: 'Test',
           hint: 'tests Nyaa',
           isButton: true,
@@ -293,7 +293,7 @@ void main() {
       expect(find.text('Start'), findsOneWidget);
       expect(
         find.semantics.byLabel('Nyaa, failing, disabled until 15:40'),
-        containsSemantics(isButton: false),
+        isSemantics(isButton: false),
       );
     });
 
@@ -368,7 +368,7 @@ void main() {
         );
         expect(
           tester.getSemantics(find.byType(TextButton)),
-          containsSemantics(label: 'Look for peers again', isButton: true),
+          isSemantics(label: 'Look for peers again', isButton: true),
         );
       }
     });

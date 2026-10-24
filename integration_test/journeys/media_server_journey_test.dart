@@ -81,206 +81,196 @@ String _firstName(Map items, String kind) {
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets(
-    'S-01 · the Jellyfin libraries and a title',
-    (tester) async {
-      binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
-      final app = await LabApp.asOperator(
-        tester,
-        services: const {ServiceKey.jellyfin},
-      );
+  testWidgets('S-01 · the Jellyfin libraries and a title', (tester) async {
+    binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
+    final app = await LabApp.asOperator(
+      tester,
+      services: const {ServiceKey.jellyfin},
+    );
 
-      final folders = await _jellyfinList(app, '/Library/VirtualFolders');
-      final names = [
-        for (final folder in folders)
-          if ((folder as Map)['Name'] case final String name) name,
-      ];
-      expect(
-        names,
-        containsAll(['Films', 'Series', 'Music']),
-        reason: 'the lab seeded three libraries',
-      );
+    final folders = await _jellyfinList(app, '/Library/VirtualFolders');
+    final names = [
+      for (final folder in folders)
+        if ((folder as Map)['Name'] case final String name) name,
+    ];
+    expect(
+      names,
+      containsAll(['Films', 'Series', 'Music']),
+      reason: 'the lab seeded three libraries',
+    );
 
-      await app.go(tester, ServiceRoutes.jellyfinLibraries);
-      await app.surface.see('Libraries');
-      for (final name in names) {
-        await app.surface.see(name);
-      }
+    await app.go(tester, ServiceRoutes.jellyfinLibraries);
+    await app.surface.see('Libraries');
+    for (final name in names) {
+      await app.surface.see(name);
+    }
 
-      // The title's own page, opened on its own route: the libraries list
-      // opens this page for the same item.
-      final items = await _jellyfinMap(
-        app,
-        '/Items?IncludeItemTypes=Movie&Recursive=true&Limit=1',
-      );
-      final film = (items['Items'] as List).first as Map;
-      await app.go(tester, ServiceRoutes.jellyfinItem(film['Id'] as String));
-      await app.surface.see(film['Name'] as String);
-      await app.surface.seePart('Jellyfin');
-    },
-    timeout: const Timeout(Duration(minutes: 10)),
-  );
+    // The title's own page, opened on its own route: the libraries list
+    // opens this page for the same item.
+    final items = await _jellyfinMap(
+      app,
+      '/Items?IncludeItemTypes=Movie&Recursive=true&Limit=1',
+    );
+    final film = (items['Items'] as List).first as Map;
+    await app.go(tester, ServiceRoutes.jellyfinItem(film['Id'] as String));
+    await app.surface.see(film['Name'] as String);
+    await app.surface.seePart('Jellyfin');
+  }, timeout: const Timeout(Duration(minutes: 10)));
 
-  testWidgets(
-    'S-02 · the household users, devices and tasks Jellyfin holds',
-    (tester) async {
-      binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
-      final app = await LabApp.asOperator(
-        tester,
-        services: const {ServiceKey.jellyfin},
-      );
+  testWidgets('S-02 · the household users, devices and tasks Jellyfin holds', (
+    tester,
+  ) async {
+    binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
+    final app = await LabApp.asOperator(
+      tester,
+      services: const {ServiceKey.jellyfin},
+    );
 
-      final users = await _jellyfinList(app, '/Users');
-      final viewer = users
-          .cast<Map>()
-          .map((user) => user['Name'])
-          .whereType<String>()
-          .where((name) => name == 'cupola-viewer');
-      expect(viewer, isNotEmpty, reason: 'the lab seeded the viewer account');
+    final users = await _jellyfinList(app, '/Users');
+    final viewer = users
+        .cast<Map>()
+        .map((user) => user['Name'])
+        .whereType<String>()
+        .where((name) => name == 'cupola-viewer');
+    expect(viewer, isNotEmpty, reason: 'the lab seeded the viewer account');
 
-      await app.go(tester, ServiceRoutes.jellyfinUsers);
-      await app.surface.see('Users');
-      await app.surface.see('${users.length} users');
-      await _scrollUntil(tester, 'cupola-viewer');
-      await app.surface.see('cupola-viewer');
+    await app.go(tester, ServiceRoutes.jellyfinUsers);
+    await app.surface.see('Users');
+    await app.surface.see('${users.length} users');
+    await _scrollUntil(tester, 'cupola-viewer');
+    await app.surface.see('cupola-viewer');
 
-      final devices = await _jellyfinList(app, '/Devices');
-      final deviceNames = [
-        for (final device in devices)
-          if ((device as Map)['Name'] case final String name)
-            if (name.trim().isNotEmpty) name,
-      ];
-      await app.go(tester, ServiceRoutes.jellyfinDevices);
-      await app.surface.see('Devices');
-      await app.surface.see('${devices.length} devices');
-      expect(
-        deviceNames.where(app.surface.draws),
-        isNotEmpty,
-        reason:
-            'the Devices tab draws none of the names the server holds: '
-            '${app.surface.texts().join(' | ')}',
-      );
+    final devices = await _jellyfinList(app, '/Devices');
+    final deviceNames = [
+      for (final device in devices)
+        if ((device as Map)['Name'] case final String name)
+          if (name.trim().isNotEmpty) name,
+    ];
+    await app.go(tester, ServiceRoutes.jellyfinDevices);
+    await app.surface.see('Devices');
+    await app.surface.see('${devices.length} devices');
+    expect(
+      deviceNames.where(app.surface.draws),
+      isNotEmpty,
+      reason:
+          'the Devices tab draws none of the names the server holds: '
+          '${app.surface.texts().join(' | ')}',
+    );
 
-      final tasks = await _jellyfinList(app, '/ScheduledTasks');
-      final taskNames = [
-        for (final task in tasks)
-          if ((task as Map)['Name'] case final String name)
-            if (name.trim().isNotEmpty) name,
-      ];
-      await app.go(tester, ServiceRoutes.jellyfinTasks);
-      await app.surface.see('Tasks');
-      expect(
-        taskNames.where(app.surface.draws),
-        isNotEmpty,
-        reason:
-            'the Tasks tab draws none of the names the server holds: '
-            '${app.surface.texts().join(' | ')}',
-      );
+    final tasks = await _jellyfinList(app, '/ScheduledTasks');
+    final taskNames = [
+      for (final task in tasks)
+        if ((task as Map)['Name'] case final String name)
+          if (name.trim().isNotEmpty) name,
+    ];
+    await app.go(tester, ServiceRoutes.jellyfinTasks);
+    await app.surface.see('Tasks');
+    expect(
+      taskNames.where(app.surface.draws),
+      isNotEmpty,
+      reason:
+          'the Tasks tab draws none of the names the server holds: '
+          '${app.surface.texts().join(' | ')}',
+    );
 
-      // The app's fourth tab is the server's live sessions read: its own
-      // words, not a log's.
-      await app.go(tester, ServiceRoutes.jellyfinActivity);
-      await app.surface.see('Activity');
-      await app.surface.see('Now playing');
-    },
-    timeout: const Timeout(Duration(minutes: 10)),
-  );
+    // The app's fourth tab is the server's live sessions read: its own
+    // words, not a log's.
+    await app.go(tester, ServiceRoutes.jellyfinActivity);
+    await app.surface.see('Activity');
+    await app.surface.see('Now playing');
+  }, timeout: const Timeout(Duration(minutes: 10)));
 
-  testWidgets(
-    'S-06 · the Plex libraries, on deck, devices and playlists',
-    (tester) async {
-      binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
-      final app = await LabApp.asOperator(
-        tester,
-        services: const {ServiceKey.plex},
-      );
+  testWidgets('S-06 · the Plex libraries, on deck, devices and playlists', (
+    tester,
+  ) async {
+    binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
+    final app = await LabApp.asOperator(
+      tester,
+      services: const {ServiceKey.plex},
+    );
 
-      final sections = await _plexContainer(app, '/library/sections');
-      final titles = [
-        for (final directory in sections['Directory'] as List? ?? const [])
-          if ((directory as Map)['title'] case final String title) title,
-      ];
-      expect(titles, isNotEmpty, reason: 'the lab seeded Plex libraries');
+    final sections = await _plexContainer(app, '/library/sections');
+    final titles = [
+      for (final directory in sections['Directory'] as List? ?? const [])
+        if ((directory as Map)['title'] case final String title) title,
+    ];
+    expect(titles, isNotEmpty, reason: 'the lab seeded Plex libraries');
 
-      await app.go(tester, ServiceRoutes.plexLibraries);
-      for (final title in titles) {
-        await app.surface.see(title);
-      }
+    await app.go(tester, ServiceRoutes.plexLibraries);
+    for (final title in titles) {
+      await app.surface.see(title);
+    }
 
-      final onDeck = await _plexContainer(app, '/library/onDeck');
-      final deck = (onDeck['Metadata'] as List? ?? const []);
-      await app.go(tester, ServiceRoutes.plexOnDeck);
-      await app.surface.see('On deck');
-      if (deck.isNotEmpty) {
-        await app.surface.see((deck.first as Map)['title'] as String);
-      }
+    final onDeck = await _plexContainer(app, '/library/onDeck');
+    final deck = (onDeck['Metadata'] as List? ?? const []);
+    await app.go(tester, ServiceRoutes.plexOnDeck);
+    await app.surface.see('On deck');
+    if (deck.isNotEmpty) {
+      await app.surface.see((deck.first as Map)['title'] as String);
+    }
 
-      await app.go(tester, ServiceRoutes.plexDevices);
-      await app.surface.see('Devices');
-      await app.go(tester, ServiceRoutes.plexPlaylists);
-      await app.surface.see('Playlists');
-    },
-    timeout: const Timeout(Duration(minutes: 10)),
-  );
+    await app.go(tester, ServiceRoutes.plexDevices);
+    await app.surface.see('Devices');
+    await app.go(tester, ServiceRoutes.plexPlaylists);
+    await app.surface.see('Playlists');
+  }, timeout: const Timeout(Duration(minutes: 10)));
 
-  testWidgets(
-    'S-03 · pause, resume, message and stop a Jellyfin playback',
-    (tester) async {
-      binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
-      final app = await LabApp.asOperator(
-        tester,
-        services: const {ServiceKey.jellyfin},
-      );
-      final device = 'cupola-s03';
-      final film = await _movieTitle(app);
-      await _waitForSession(tester, app, device);
-      await app.go(tester, ServiceRoutes.jellyfinOverview);
-      await app.surface.see('Now playing');
-      await app.surface.seePart(film);
+  testWidgets('S-03 · pause, resume, message and stop a Jellyfin playback', (
+    tester,
+  ) async {
+    binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
+    final app = await LabApp.asOperator(
+      tester,
+      services: const {ServiceKey.jellyfin},
+    );
+    final device = 'cupola-s03';
+    final film = await _movieTitle(app);
+    await _waitForSession(tester, app, device);
+    await app.go(tester, ServiceRoutes.jellyfinOverview);
+    await app.surface.see('Now playing');
+    await app.surface.seePart(film);
 
-      // The controls sit at the card's edge, under the bottom bar at this
-      // height: lift the page before touching them.
-      await tester.dragFrom(const Offset(200, 400), const Offset(0, -240));
-      await settle(tester, const Duration(milliseconds: 800));
+    // The controls sit at the card's edge, under the bottom bar at this
+    // height: lift the page before touching them.
+    await tester.dragFrom(const Offset(200, 400), const Offset(0, -240));
+    await settle(tester, const Duration(milliseconds: 800));
 
-      // Pause: the app's command, and the server's own state behind it.
-      await tester.tap(find.byTooltip('Pause this playback'));
-      await app.surface.waitFor(find.byTooltip('Resume this playback'));
-      expect(
-        await _isPaused(app, device),
-        isTrue,
-        reason: 'the server did not pause the session',
-      );
+    // Pause: the app's command, and the server's own state behind it.
+    await tester.tap(find.byTooltip('Pause this playback'));
+    await app.surface.waitFor(find.byTooltip('Resume this playback'));
+    expect(
+      await _isPaused(app, device),
+      isTrue,
+      reason: 'the server did not pause the session',
+    );
 
-      await tester.tap(find.byTooltip('Resume this playback'));
-      await app.surface.waitFor(find.byTooltip('Pause this playback'));
-      expect(
-        await _isPaused(app, device),
-        isFalse,
-        reason: 'the server did not resume the session',
-      );
+    await tester.tap(find.byTooltip('Resume this playback'));
+    await app.surface.waitFor(find.byTooltip('Pause this playback'));
+    expect(
+      await _isPaused(app, device),
+      isFalse,
+      reason: 'the server did not resume the session',
+    );
 
-      // A message is the app's prompt, then the server's own channel.
-      await tester.tap(find.byTooltip('Send a message to this player'));
-      await app.surface.see('Send');
-      await tester.enterText(
-        find.byType(TextField).last,
-        'Dinner in ten minutes',
-      );
-      await settle(tester, const Duration(milliseconds: 500));
-      await tester.tap(find.widgetWithText(FilledButton, 'Send'));
-      await app.surface.seePart('Message sent to');
+    // A message is the app's prompt, then the server's own channel.
+    await tester.tap(find.byTooltip('Send a message to this player'));
+    await app.surface.see('Send');
+    await tester.enterText(
+      find.byType(TextField).last,
+      'Dinner in ten minutes',
+    );
+    await settle(tester, const Duration(milliseconds: 500));
+    await tester.tap(find.widgetWithText(FilledButton, 'Send'));
+    await app.surface.seePart('Message sent to');
 
-      // Stop: the question, the answer, and the session gone from the server.
-      await tester.tap(find.byTooltip('Stop this playback'));
-      await app.surface.see('Stop playback?');
-      await tester.tap(find.widgetWithText(FilledButton, 'Stop playback'));
-      await _waitForNoSession(tester, app, device);
-      await app.go(tester, ServiceRoutes.jellyfinOverview);
-      await app.surface.see('Nobody is watching right now');
-    },
-    timeout: const Timeout(Duration(minutes: 10)),
-  );
+    // Stop: the question, the answer, and the session gone from the server.
+    await tester.tap(find.byTooltip('Stop this playback'));
+    await app.surface.see('Stop playback?');
+    await tester.tap(find.widgetWithText(FilledButton, 'Stop playback'));
+    await _waitForNoSession(tester, app, device);
+    await app.go(tester, ServiceRoutes.jellyfinOverview);
+    await app.surface.see('Nobody is watching right now');
+  }, timeout: const Timeout(Duration(minutes: 10)));
 
   testWidgets(
     'S-09 · Now playing draws one and two playbacks, then its idle line',

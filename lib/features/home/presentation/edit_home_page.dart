@@ -91,7 +91,8 @@ class _EditHomePageState extends ConsumerState<EditHomePage> {
                         child: child,
                       ),
                       onReorderStart: (_) => setState(() => _lifted = null),
-                      onReorder: notifier.reorder,
+                      onReorderItem: (from, to) =>
+                          notifier.reorder(from, to > from ? to + 1 : to),
                       children: [
                         for (final (index, module) in layout.order.indexed)
                           _ModuleRow(

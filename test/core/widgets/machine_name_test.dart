@@ -249,7 +249,7 @@ void main() {
 
       expect(
         tester.getSemantics(find.byKey(host)),
-        containsSemantics(
+        isSemantics(
           label: 'Severance, downloading',
           customActions: const [
             CustomSemanticsAction(label: 'Copy release name'),
@@ -387,7 +387,7 @@ void main() {
               )
               .first,
         ),
-        containsSemantics(
+        isSemantics(
           label: 'Released as',
           value: _release,
           customActions: const [
@@ -415,7 +415,7 @@ void main() {
       expect(node.value, _file);
       expect(
         tester.getSemantics(find.byType(IconButton)),
-        containsSemantics(
+        isSemantics(
           tooltip: 'Copy file name',
           isButton: true,
           hasTapAction: true,

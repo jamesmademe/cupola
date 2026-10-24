@@ -50,7 +50,7 @@ void main() {
       find.semantics.byLabel(
         '1 stack is stopped, immich, Dockge does not say why',
       ),
-      containsSemantics(
+      isSemantics(
         isButton: true,
         hasTapAction: true,
         hint: 'opens immich, with its log and controls',
@@ -58,7 +58,7 @@ void main() {
     );
     expect(
       find.semantics.byHint('starts immich'),
-      containsSemantics(label: 'Start', isButton: true, hasTapAction: true),
+      isSemantics(label: 'Start', isButton: true, hasTapAction: true),
     );
 
     // Start is the stack's own command, and nothing else moved.
@@ -141,7 +141,7 @@ void main() {
         find.semantics.byLabel(
           '2 stacks are stopped, bazarr, immich, Dockge does not say why',
         ),
-        containsSemantics(isButton: true, hint: 'opens the Dockge Stacks tab'),
+        isSemantics(isButton: true, hint: 'opens the Dockge Stacks tab'),
       );
       // Nothing to start: which one would it be.
       expect(find.text('Start'), findsNothing);
@@ -175,7 +175,7 @@ void main() {
 
       expect(
         find.semantics.byLabel('media, running'),
-        containsSemantics(
+        isSemantics(
           isButton: true,
           hint: 'opens media, with its log and controls',
         ),

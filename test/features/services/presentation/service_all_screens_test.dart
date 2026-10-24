@@ -108,7 +108,7 @@ void main() {
 
       expect(
         find.semantics.byLabel('Shogun'),
-        containsSemantics(
+        isSemantics(
           value: 'On its way, being fetched, james',
           isButton: true,
           hasTapAction: true,

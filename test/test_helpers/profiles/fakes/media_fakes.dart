@@ -252,15 +252,33 @@ class SeerrFake extends ServiceFake {
     (int, WorldTitle, int, int, Duration, bool) row,
   ) {
     final (id, title, by, status, age, is4k) = row;
+    final edited = seerrStateOf(c.network, c.server.id).requestEdits[id];
+    // A request still waiting names no profile and no folder of its own, as
+    // Seerr keeps one asked for without the advanced options: the server's
+    // go with it. One that was handed on carries what it went with.
+    final waiting = status == 1;
     return {
       'id': id,
       'status': status,
       'type': title.isSeries ? 'tv' : 'movie',
       'is4k': is4k,
-      'serverId': _serverFor(c, title, is4k),
-      'profileId': 1,
-      'profileName': is4k ? 'Ultra-HD' : 'HD-1080p',
-      'rootFolder': is4k ? '/mnt/tank/media/films-4k' : '/mnt/tank/media/films',
+      'serverId': edited != null ? edited.serverId : _serverFor(c, title, is4k),
+      'profileId': edited != null
+          ? edited.profileId
+          : waiting
+          ? null
+          : 1,
+      if (edited == null && !waiting)
+        'profileName': is4k ? 'Ultra-HD' : 'HD-1080p',
+      'rootFolder': edited != null
+          ? edited.rootFolder
+          : waiting
+          ? null
+          : is4k
+          ? '/mnt/tank/media/films-4k'
+          : '/mnt/tank/media/films',
+      // Charge carries a tag, which an edit has to send back.
+      if (id == 1) 'tags': const [2],
       'createdAt': c.ago(age),
       'updatedAt': c.ago(age),
       'canRemove': true,
@@ -698,14 +716,12 @@ class SeerrFake extends ServiceFake {
         return NetworkReply.json({
           'server': _knownService(known),
           'profiles': [
-            {'id': known.activeProfileId, 'name': known.activeProfileName},
+            for (final profile in known.profiles)
+              {'id': profile.id, 'name': profile.name},
           ],
           'rootFolders': [
-            {
-              'id': 1,
-              'path': known.activeDirectory,
-              'freeSpace': 12400000000000,
-            },
+            for (final (i, folder) in known.rootFolders.indexed)
+              {'id': i + 1, 'path': folder.path, 'freeSpace': folder.freeSpace},
           ],
           'tags': const <Object?>[],
         });
@@ -893,7 +909,8 @@ class SeerrFake extends ServiceFake {
           'You do not have permission to modify this request.',
         );
       }
-      if (row.$4 != 1) {
+      if (row.$4 != 1 ||
+          seerrStateOf(c.network, c.server.id).decidedElsewhere.contains(id)) {
         return NetworkReply.json({
           'message': 'Only pending requests can be modified.',
         }, status: 409);
@@ -912,12 +929,14 @@ class SeerrFake extends ServiceFake {
               'the DELETE method.',
         }, status: 500);
       }
-      return NetworkReply.json({
-        ..._request(c, row),
-        'serverId': body['serverId'],
-        'profileId': body['profileId'],
-        'rootFolder': body['rootFolder'],
-      });
+      // The route writes every field from the body: one left out is
+      // written as missing.
+      seerrStateOf(c.network, c.server.id).requestEdits[id] = (
+        serverId: body['serverId'],
+        profileId: body['profileId'],
+        rootFolder: body['rootFolder'],
+      );
+      return NetworkReply.json(_request(c, row));
     }
     if (r.method == 'POST' &&
         RegExp(r'^/api/v1/request/\d+/(approve|decline)$').hasMatch(path)) {

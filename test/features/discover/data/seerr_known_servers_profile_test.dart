@@ -73,25 +73,25 @@ void main() {
       },
     );
 
-    test(
-      'P6: two Radarrs and two Sonarrs, the second Sonarr no default',
-      () async {
-        final seerr = await seerrOf(Profiles.p6.withDockerHostnames());
+    test('P6: three Radarrs and two Sonarrs, the archive and the second Sonarr '
+        'no default', () async {
+      final seerr = await seerrOf(Profiles.p6.withDockerHostnames());
 
-        final servers = serversIn(await seerr.knownServers());
+      final servers = serversIn(await seerr.knownServers());
 
-        expect(
-          [for (final s in servers) (s.name, s.address, s.isDefault)],
-          [
-            ('Radarr', WorldContainers.radarr, true),
-            ('Radarr 4K', WorldContainers.radarr4k, true),
-            ('Sonarr', WorldContainers.sonarr, true),
-            ('Sonarr Anime', WorldContainers.sonarrAnime, false),
-          ],
-        );
-        expect(servers[3].apiKey, worldKey(WorldIds.sonarrAnime));
-      },
-    );
+      expect(
+        [for (final s in servers) (s.name, s.address, s.isDefault)],
+        [
+          ('Radarr', WorldContainers.radarr, true),
+          ('Radarr 4K', WorldContainers.radarr4k, true),
+          // No container: Seerr reaches the archive at its own address.
+          ('Radarr Archive', WorldHosts.radarrArchive, false),
+          ('Sonarr', WorldContainers.sonarr, true),
+          ('Sonarr Anime', WorldContainers.sonarrAnime, false),
+        ],
+      );
+      expect(servers[4].apiKey, worldKey(WorldIds.sonarrAnime));
+    });
 
     test('a refused key throws, as the key refused', () async {
       final seerr = await seerrOf(

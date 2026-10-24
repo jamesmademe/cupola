@@ -27,7 +27,7 @@ void main() {
 
         expect(
           find.semantics.byLabel('Refreshing Dashboard'),
-          containsSemantics(isLiveRegion: true),
+          isSemantics(isLiveRegion: true),
         );
         expect(native.messages, isEmpty);
       },
@@ -80,7 +80,7 @@ void main() {
         find.semantics.byLabel(
           'Portal open. 2 services, none with a fault.\nRefreshing Dashboard',
         ),
-        containsSemantics(isLiveRegion: true),
+        isSemantics(isLiveRegion: true),
       );
     }, variant: android);
 
@@ -139,7 +139,7 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(
         find.semantics.byLabel('Laid out'),
-        containsSemantics(isLiveRegion: true),
+        isSemantics(isLiveRegion: true),
       );
     }, variant: android);
 
@@ -155,21 +155,19 @@ void main() {
   });
 
   group('where the engine has one', () {
-    testWidgets(
-      'the message goes out natively, and no live region is drawn',
-      (tester) async {
-        final native = SemanticsAnnouncementRecorder.install(tester);
-        final context = await _pumpApp(tester);
+    testWidgets('the message goes out natively, and no live region is drawn', (
+      tester,
+    ) async {
+      final native = SemanticsAnnouncementRecorder.install(tester);
+      final context = await _pumpApp(tester);
 
-        announce(context, 'Refreshing Dashboard');
-        await tester.pump();
+      announce(context, 'Refreshing Dashboard');
+      await tester.pump();
 
-        expect(native.messages, ['Refreshing Dashboard']);
-        // VoiceOver would otherwise read it twice.
-        expect(_liveRegionIds(), isEmpty);
-      },
-      variant: TargetPlatformVariant.only(TargetPlatform.iOS),
-    );
+      expect(native.messages, ['Refreshing Dashboard']);
+      // VoiceOver would otherwise read it twice.
+      expect(_liveRegionIds(), isEmpty);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
   });
 }
 

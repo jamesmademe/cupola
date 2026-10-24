@@ -1,11 +1,15 @@
 group = "com.matthwlabs.cupola.outside.channel"
 version = "1.0-SNAPSHOT"
 
-rootProject.allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
+// Repositories for this module only. The previous `rootProject.allprojects`
+// block rewrote dependency resolution for every project in the build, which
+// silently overrides any repository restriction or verification metadata the
+// app adds. The app already declares both repositories at the root; declaring
+// them here keeps a standalone plugin build working without reaching into the
+// host project.
+repositories {
+    google()
+    mavenCentral()
 }
 
 apply plugin: "com.android.library"

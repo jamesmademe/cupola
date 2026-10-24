@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -196,7 +197,7 @@ void main() {
 
     test('on the Wi-Fi, never a VPN, a cellular link or a bridge', () async {
       expect(
-        await pairingAddress(
+        (await pairingAddress(
           interfaces: lists({
             'utun4': '10.8.0.2',
             'pdp_ip0': '10.120.4.9',
@@ -204,17 +205,17 @@ void main() {
             'en0': '192.168.1.20',
             'en5': '192.168.2.40',
           }),
-        ),
-        InternetAddress('192.168.1.20'),
+        ))?.address,
+        '192.168.1.20',
       );
     });
 
     test('on the wire when there is no Wi-Fi', () async {
       expect(
-        await pairingAddress(
+        (await pairingAddress(
           interfaces: lists({'eth0': '10.0.0.7', 'wg0': '10.9.0.1'}),
-        ),
-        InternetAddress('10.0.0.7'),
+        ))?.address,
+        '10.0.0.7',
       );
     });
 
@@ -234,14 +235,33 @@ void main() {
 }
 
 final class _Interface implements NetworkInterface {
-  _Interface(this.name, this.addresses);
+  _Interface(this.name, List<InternetAddress> addresses)
+    : addresses = [for (final address in addresses) _Address(address)];
 
   @override
   final String name;
 
   @override
-  final List<InternetAddress> addresses;
+  final List<InterfaceAddress> addresses;
 
   @override
   int get index => 0;
+}
+
+final class _Address extends Fake implements InterfaceAddress {
+  _Address(this._value);
+
+  final InternetAddress _value;
+
+  @override
+  String get address => _value.address;
+
+  @override
+  InternetAddressType get type => _value.type;
+
+  @override
+  Uint8List get rawAddress => _value.rawAddress;
+
+  @override
+  bool get isLoopback => _value.isLoopback;
 }

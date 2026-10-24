@@ -21,6 +21,7 @@ Framed as the sign-in with an account is (`RequesterSignInScreen`): a `Scaffold`
   - **Headline**, `titleMedium` at 600, a header: *From your iPhone* (*your iPad*, *your Mac*, *your Android phone*, *your PC*, *your computer*).
   - **Counts**, `AppSpacing.xs` below, `bodySmall` in `dimText`: the ones that are not zero, joined by ` · `: *3 services* · *1 trusted certificate* · *1 already here*.
   - **The connections to add**, `AppSpacing.lg` below, in a `SettingsGroupCard`, one row each and none a door: the service's mark in its well, its title (the label after it when it has one: *Radarr · 4K*), and the host of its address under it. Each is one sentence for a reader: *Radarr at radarr.home.arpa*.
+  - **The certificates Add would trust**, `AppSpacing.lg` below, in a second `SettingsGroupCard`, one row each: `verified_user_outlined`, *Trusted certificate*, and the origin under it. Only for origins a connection being added actually uses: a pin for a server this device already has is not applied and gets no row.
   - **Notes**, `AppSpacing.md` below each, only when they apply: a 16pt `info_outline_rounded` and a `bodySmall` sentence in `dimText`, neutral since none is a fault: *Sign in to Seerr again here. A sign-in stays on the device it was made on.* · *Radarr arrives without its key. Paste it here once it's added.* (`password` or `token` as the service calls it; `access` for a gateway's) · *1 service this version of Cupola doesn't know stays behind.* (*N services … stay behind.*)
   - **Add**, `AppSpacing.xl` below: a filled **Add 14 services** (*Add 1 service*; with only certificates new, *Add 3 trusted certificates*), then a text **Start again** in ink. While it writes the primary is busy and cannot be tapped twice, and Start again waits.
   - When Add has nothing to write: *Everything from your iPhone is already here.* (or *Nothing to add from your iPhone.* when the package held nothing, or only services this version does not know), a filled **Done**, and Start again.
@@ -31,7 +32,7 @@ Back goes one step: from a notice or from what arrived, to waiting for a link (f
 
 ## Behaviour
 
-Nothing is written until Add, and Add only adds: a connection this device already has is left as it is, a certificate it already trusts keeps its pin, and nothing is removed (`PairPlan`). A connection arrives under an id this device mints. The link is held only while it can still be used: dropped once the package arrived, and with the screen.
+Nothing is written until Add, and Add only adds: a connection this device already has is left as it is, a certificate it already trusts keeps its pin, and nothing is removed (`PairPlan`). A pin travels only with a connection the package adds: a certificate for a server already here is not applied, because trusting that server is this device's decision, not the package's. A connection arrives under an id this device mints. The link is held only while it can still be used: dropped once the package arrived, and with the screen.
 
 ## The consumer provides
 
@@ -39,7 +40,7 @@ Nothing. The router takes a `cupola://pair` link off the location, holds it in `
 
 ## Semantics
 
-A header; the field labelled; a notice is one live node (`NoticeLine`); each connection is one node, `Title at host`; a note is one node. The busy line is the button, disabled.
+A header; the field labelled; a notice is one live node (`NoticeLine`); each connection is one node, `Title at host`; each certificate is one node, `Trusted certificate for origin`; a note is one node. The busy line is the button, disabled.
 
 ## States in the catalog
 
@@ -48,7 +49,7 @@ Each screen is drawn in the dark and the light room: the phone at 390pt, and the
 - Waiting for a link; fetching; on a Mac, where the link is pasted.
 - Each way a copy does not arrive: red, blue, and the three amber.
 - An invite shown in person: opening; red, with Retry; blue.
-- What arrived, with a Seerr account and a secret left behind; adding; only a certificate new and two unknown services staying behind; everything here already.
+- What arrived, with a Seerr account and a secret left behind; adding; a certificate for a server already here is not applied, and two unknown services stay behind; everything here already.
 - Text at 200%: what arrived.
 
 ## Do / don't

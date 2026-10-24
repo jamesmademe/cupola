@@ -77,7 +77,7 @@ void main() {
       // "IT" is read out as an initialism and is not a name.
       expect(
         tester.getSemantics(find.byType(DiscoverRegionChip)),
-        containsSemantics(label: 'Region, Italy'),
+        isSemantics(label: 'Region, Italy'),
       );
 
       handle.dispose();
@@ -92,7 +92,7 @@ void main() {
 
       expect(
         tester.getSemantics(find.byType(DiscoverRegionChip)),
-        containsSemantics(label: 'Region, ZZ'),
+        isSemantics(label: 'Region, ZZ'),
       );
 
       handle.dispose();
@@ -108,7 +108,7 @@ void main() {
       // is not a parameter on and cannot do.
       expect(
         tester.getSemantics(find.byType(DiscoverRegionChip)),
-        containsSemantics(
+        isSemantics(
           isButton: true,
           hasTapAction: true,
           isSelected: false,

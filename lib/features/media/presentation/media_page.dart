@@ -31,6 +31,7 @@ import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/utils/service_routes.dart';
+import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/failure_remedy.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -343,7 +344,10 @@ class _MediaPageState extends ConsumerState<MediaPage> {
       gate: gate,
       words: words,
       verdict: words.open ? roleGate.requestAction(kind) : const Live(),
-      watch: watchAt == null || !watchAt.hasScheme
+      // Seerr's field is server-controlled: `hasScheme` is true for
+      // `intent:`, `file:` and `javascript:` too, and every other server URL
+      // in the app goes through this allowlist before the OS sees it.
+      watch: watchAt == null || !UrlUtils.isLaunchableWebUri(watchAt)
           ? null
           : (label: SeerrMediaServer.watchLabel(player), url: watchAt),
     );

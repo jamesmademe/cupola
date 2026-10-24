@@ -43,15 +43,11 @@ void main() {
 
       expect(
         find.semantics.byLabel('history'),
-        containsSemantics(isButton: true, isSelected: true, hasTapAction: true),
+        isSemantics(isButton: true, isSelected: true, hasTapAction: true),
       );
       expect(
         find.semantics.byLabel('blocklist'),
-        containsSemantics(
-          isButton: true,
-          isSelected: false,
-          hasTapAction: true,
-        ),
+        isSemantics(isButton: true, isSelected: false, hasTapAction: true),
       );
     });
 

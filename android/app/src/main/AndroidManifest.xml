@@ -77,8 +77,11 @@
             </intent-filter>
             <!-- A widget's tap is not in this list on purpose. It opens
                  `cupola://open?to=<route>` through an explicit intent to this
-                 activity (`OutsideLink`), which needs no filter, and a filter
-                 would let any other app or web page open the same links. -->
+                 activity (`OutsideLink`), which needs no filter. The filter
+                 would not make it safer: an exported activity can be targeted
+                 by an explicit intent from any app, so the Dart router treats
+                 every arrival as untrusted and the pairing and invite screens
+                 ask before they write anything. -->
         </activity>
         <!-- The widgets (android/app/src/main/kotlin/…/outside/): one provider
              per kind, drawn by `RemoteViews` from the file the app writes. None

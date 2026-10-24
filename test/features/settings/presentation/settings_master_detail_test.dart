@@ -23,11 +23,11 @@ void main() {
 
       expect(
         find.semantics.byLabel('Connections'),
-        containsSemantics(isSelected: true),
+        isSemantics(isSelected: true),
       );
       expect(
         find.semantics.byLabel('Overview'),
-        containsSemantics(isSelected: false),
+        isSemantics(isSelected: false),
       );
     });
   });
@@ -40,7 +40,7 @@ void main() {
 
       expect(
         find.semantics.byLabel('Connections'),
-        containsSemantics(isSelected: true),
+        isSemantics(isSelected: true),
       );
     });
   });
@@ -55,10 +55,7 @@ void main() {
 
       expect(SettingsMasterDetail.sections.first.label, 'Overview');
       expect(find.text('Settings'), findsNothing);
-      expect(
-        find.semantics.byLabel('Overview'),
-        containsSemantics(isSelected: true),
-      );
+      expect(find.semantics.byLabel('Overview'), isSemantics(isSelected: true));
     });
   });
 
@@ -72,7 +69,7 @@ void main() {
         await _pumpRail(tester, location: section.location);
         expect(
           find.semantics.byLabel(section.label),
-          containsSemantics(isSelected: true),
+          isSemantics(isSelected: true),
           reason: '${section.label} cannot light itself',
         );
       }

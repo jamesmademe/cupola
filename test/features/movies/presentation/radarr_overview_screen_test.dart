@@ -174,7 +174,7 @@ void main() {
           matching: find.byType(PressableScale),
         ),
       ),
-      containsSemantics(label: 'Dune: Part Two', isButton: true),
+      isSemantics(label: 'Dune: Part Two', isButton: true),
     );
   });
 

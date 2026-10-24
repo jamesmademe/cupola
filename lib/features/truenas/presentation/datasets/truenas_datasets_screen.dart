@@ -56,7 +56,10 @@ class TrueNasDatasetsScreen extends ConsumerWidget {
                             horizontal: AppSpacing.sm,
                             vertical: AppSpacing.xs,
                           ),
-                          child: _DatasetNode(dataset: root, depth: 0),
+                          child: Material(
+                            type: MaterialType.transparency,
+                            child: _DatasetNode(dataset: root, depth: 0),
+                          ),
                         ),
                       ),
                   ],

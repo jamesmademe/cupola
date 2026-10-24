@@ -23,6 +23,15 @@ if [[ -z "$VERSION" ]]; then
   exit 1
 fi
 
+# The version reaches an AppleScript heredoc and `rm -rf "$DIST_DIR"`. A branch
+# whose `version:` was edited to carry quotes or `..` must fail here, before
+# either interpreter sees it.
+if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]] ||
+  [[ "$VERSION" == *..* ]]; then
+  printf 'Refusing a version that is not a release version: %s\n' "$VERSION" >&2
+  exit 1
+fi
+
 cd "$ROOT_DIR"
 
 # The macOS app ships exported for Developer ID (macos/ExportOptions.plist):
@@ -63,6 +72,9 @@ dart format --output=none --set-exit-if-changed .
 printf '==> Running flutter test...\n'
 flutter test
 
+printf '==> Verifying icon font subsetting...\n'
+flutter test test/tool/material_symbols_subset_test.dart
+
 printf '==> Verifying platform icons...\n'
 bash "$ROOT_DIR/scripts/verify_icons.sh"
 
@@ -72,7 +84,12 @@ if [[ "$TARGET" == "android" || "$TARGET" == "all" ]]; then
   cp build/app/outputs/flutter-apk/app-release.apk "$DIST_DIR/${APP_SLUG}-${VERSION}.apk"
 fi
 
-if [[ "$TARGET" == "web" || "$TARGET" == "all" ]]; then
+# `web` is a compile check, not a shipped target: the README says there is no
+# web client, and a browser build would keep the app's wrapping key beside its
+# ciphertext in `localStorage` and lose `badCertificateCallback` entirely.
+# `all` therefore packages the five native targets only; `release.sh web`
+# remains for a deliberate local build.
+if [[ "$TARGET" == "web" ]]; then
   printf '==> Building web release...\n'
   flutter build web --release
   cp -R build/web "$DIST_DIR/web"
@@ -139,11 +156,14 @@ if [[ "$TARGET" == "ios" || "$TARGET" == "all" ]]; then
   fi
 fi
 
-# TestFlight is never part of `all`: it uploads a build to App Store Connect,
-# signed for the store by the team in ios/ExportOptions-testflight.plist with
-# the Apple ID signed in to Xcode. Each upload needs a build number higher than
-# the last one, so it defaults to the UTC minute (CUPOLA_BUILD_NUMBER overrides
-# it); the version stays the one in pubspec.yaml.
+# TestFlight is never part of `all`: it uploads the iOS build and then the macOS
+# one to App Store Connect, signed for the store by the team in
+# ios/ExportOptions-testflight.plist and macos/ExportOptions-testflight.plist
+# with the Apple ID signed in to Xcode. Both platforms share one build number,
+# higher than the last upload: it defaults to the UTC minute
+# (CUPOLA_BUILD_NUMBER overrides it); the version stays the one in
+# pubspec.yaml. macOS goes second so a signing failure there never costs the
+# iOS upload.
 if [[ "$TARGET" == "testflight" ]]; then
   if [[ "$(uname -s)" != "Darwin" ]]; then
     printf 'TestFlight uploads can only be made on macOS\n' >&2
@@ -161,6 +181,18 @@ if [[ "$TARGET" == "testflight" ]]; then
   printf '==> Uploading to TestFlight...\n'
   xcodebuild -exportArchive -archivePath "$IOS_ARCHIVE" -exportOptionsPlist ios/ExportOptions-testflight.plist \
     -exportPath "build/ios/testflight" -allowProvisioningUpdates
+
+  printf '==> Archiving macOS %s (%s) for App Store Connect...\n' "$VERSION" "$BUILD_NUMBER"
+  flutter build macos --release --config-only --build-number "$BUILD_NUMBER"
+  MACOS_TF_ARCHIVE="build/macos/${APP_NAME}-testflight.xcarchive"
+  rm -rf "$MACOS_TF_ARCHIVE"
+  xcodebuild -workspace macos/Runner.xcworkspace -scheme Runner -configuration Release \
+    -archivePath "$MACOS_TF_ARCHIVE" -allowProvisioningUpdates -quiet archive
+
+  printf '==> Uploading macOS to TestFlight...\n'
+  xcodebuild -exportArchive -archivePath "$MACOS_TF_ARCHIVE" \
+    -exportOptionsPlist macos/ExportOptions-testflight.plist \
+    -exportPath "build/macos/testflight" -allowProvisioningUpdates
 fi
 
 if [[ "$TARGET" == "macos" || "$TARGET" == "all" ]]; then

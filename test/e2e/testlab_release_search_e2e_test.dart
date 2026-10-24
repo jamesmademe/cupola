@@ -48,75 +48,70 @@ void main() {
     await Future<void>.delayed(const Duration(seconds: 2));
   });
 
-  test(
-    'the indexer returns the catalogue, and a grab completes',
-    () async {
-      final movie = await _radarr('/movie?tmdbId=10378');
-      final id = movie.first['id'] as int;
-      final releases = (await _radarr('/release?movieId=$id')).cast<Map>();
-      expect(releases.length, greaterThanOrEqualTo(20));
-      final italian = releases.where(
-        (release) => release['title'].toString().contains('.ITA.'),
-      );
-      expect(italian, isNotEmpty);
-      expect(
-        italian.first['rejections'],
-        contains('English is wanted, but found Italian'),
-      );
+  test('the indexer returns the catalogue, and a grab completes', () async {
+    final movie = await _radarr('/movie?tmdbId=10378');
+    final id = movie.first['id'] as int;
+    final releases = (await _radarr('/release?movieId=$id')).cast<Map>();
+    expect(releases.length, greaterThanOrEqualTo(20));
+    final italian = releases.where(
+      (release) => release['title'].toString().contains('.ITA.'),
+    );
+    expect(italian, isNotEmpty);
+    expect(
+      italian.first['rejections'],
+      contains('English is wanted, but found Italian'),
+    );
 
-      final accepted = releases.firstWhere(
-        (release) =>
-            release['title'] ==
-                'Big.Buck.Bunny.2008.1080p.WEB-DL.DDP5.1.H.264-CUPOLA' &&
-            release['rejected'] == false,
-      );
-      await _radarr(
-        '/release',
-        method: 'POST',
-        payload: {'guid': accepted['guid'], 'indexerId': accepted['indexerId']},
-      );
-      // The tracker keeps peers in memory: the seeder announces first, then
-      // the app's client asks again and receives it.
-      await _reannounce('8081');
-      await Future<void>.delayed(const Duration(milliseconds: 500));
-      await _reannounce('8080');
+    final accepted = releases.firstWhere(
+      (release) =>
+          release['title'] ==
+              'Big.Buck.Bunny.2008.1080p.WEB-DL.DDP5.1.H.264-CUPOLA' &&
+          release['rejected'] == false,
+    );
+    await _radarr(
+      '/release',
+      method: 'POST',
+      payload: {'guid': accepted['guid'], 'indexerId': accepted['indexerId']},
+    );
+    // The tracker keeps peers in memory: the seeder announces first, then
+    // the app's client asks again and receives it.
+    await _reannounce('8081');
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    await _reannounce('8080');
 
-      final deadline = DateTime.now().add(const Duration(minutes: 3));
-      var completed = false;
-      while (DateTime.now().isBefore(deadline)) {
-        final torrents = await _torrents();
-        final torrent = torrents.where(
-          (item) =>
-              item['name'] ==
-              'The.Great.Bunny.2008.1080p.WEB-DL.DDP5.1.H.264-CUPOLA',
-        );
-        if (torrent.isNotEmpty && (torrent.first['progress'] as num) >= 1) {
-          completed = true;
-        }
-        if (completed) break;
-        await Future<void>.delayed(const Duration(seconds: 2));
+    final deadline = DateTime.now().add(const Duration(minutes: 3));
+    var completed = false;
+    while (DateTime.now().isBefore(deadline)) {
+      final torrents = await _torrents();
+      final torrent = torrents.where(
+        (item) =>
+            item['name'] ==
+            'The.Great.Bunny.2008.1080p.WEB-DL.DDP5.1.H.264-CUPOLA',
+      );
+      if (torrent.isNotEmpty && (torrent.first['progress'] as num) >= 1) {
+        completed = true;
       }
-      expect(
-        completed,
-        isTrue,
-        reason: 'qBittorrent never finished the download',
-      );
+      if (completed) break;
+      await Future<void>.delayed(const Duration(seconds: 2));
+    }
+    expect(
+      completed,
+      isTrue,
+      reason: 'qBittorrent never finished the download',
+    );
 
-      final historyPage = await _radarr('/history?page=1&pageSize=20');
-      final history = ((historyPage.first as Map)['records'] as List)
-          .cast<Map>();
-      expect(
-        history.any(
-          (item) =>
-              item['eventType'] == 'downloadFolderImported' ||
-              item['eventType'] == 'downloadFailed',
-        ),
-        isTrue,
-        reason: 'Radarr recorded no outcome for the download',
-      );
-    },
-    timeout: const Timeout(Duration(minutes: 6)),
-  );
+    final historyPage = await _radarr('/history?page=1&pageSize=20');
+    final history = ((historyPage.first as Map)['records'] as List).cast<Map>();
+    expect(
+      history.any(
+        (item) =>
+            item['eventType'] == 'downloadFolderImported' ||
+            item['eventType'] == 'downloadFailed',
+      ),
+      isTrue,
+      reason: 'Radarr recorded no outcome for the download',
+    );
+  }, timeout: const Timeout(Duration(minutes: 6)));
 }
 
 Future<List<dynamic>> _radarr(

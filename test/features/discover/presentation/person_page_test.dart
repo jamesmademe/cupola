@@ -305,7 +305,7 @@ void main() {
       expect(
         tester.getSemantics(plus),
         // Never `enabled: false`: a screen reader stops on it and hears why.
-        containsSemantics(
+        isSemantics(
           label: 'Add Project London',
           hint: 'requires Radarr',
           isButton: true,

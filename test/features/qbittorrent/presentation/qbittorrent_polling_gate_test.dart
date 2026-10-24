@@ -208,6 +208,11 @@ void main() {
       // Due by a wide margin, so the return is worth a fetch immediately rather
       // than three seconds of showing minute-old numbers.
       expect(listTicks(), 2);
+
+      // The immediate refresh is a request still on its way (Dio queues it
+      // on a timer). The test lets it land before it ends: since Riverpod
+      // 3.4 the rebuild that starts it runs a step later than it did.
+      await tester.pump(const Duration(seconds: 1));
     });
 
     testWidgets('a detail page on top stops the list, not just its own tab', (

@@ -14,6 +14,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/platform/secure_clipboard.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/service_routes.dart';
@@ -117,6 +118,13 @@ String? _clipboard;
 
 void _mockClipboard(WidgetTester tester) {
   _clipboard = null;
+  // The host declines the hardened copy here, so the fallback path is the one
+  // this test exercises; the hardened path has its own test in
+  // `test/core/platform/secure_clipboard_test.dart`.
+  tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+    SecureClipboard.channel,
+    (call) async => false,
+  );
   tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
     SystemChannels.platform,
     (call) async {
@@ -126,12 +134,16 @@ void _mockClipboard(WidgetTester tester) {
       return null;
     },
   );
-  addTearDown(
-    () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+  addTearDown(() {
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SecureClipboard.channel,
+      null,
+    );
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
       SystemChannels.platform,
       null,
-    ),
-  );
+    );
+  });
 }
 
 void main() {
@@ -280,6 +292,9 @@ void main() {
 
       await tester.tap(find.text('Copy link'));
       await tester.pump();
+      // The hardened copy is a platform-channel round trip, so the plain
+      // fallback lands a microtask after the tap's first frame.
+      await tester.pump(const Duration(milliseconds: 10));
 
       expect(_clipboard, open.link.toLink());
       expect(find.text('Link copied'), findsOneWidget);
@@ -287,6 +302,12 @@ void main() {
 
       await tester.pump(PairOfferScreen.copiedFor + const Duration(seconds: 1));
       expect(find.text('Copy link'), findsOneWidget);
+
+      // The link opens every secret on the device, so the timed clear is part
+      // of the copy, not a nicety.
+      expect(_clipboard, open.link.toLink());
+      await tester.pump(const Duration(seconds: 60));
+      expect(_clipboard, isEmpty);
     });
 
     const firewall =

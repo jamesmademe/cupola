@@ -20,6 +20,7 @@ import 'package:cupola/core/router.dart';
 import 'package:cupola/core/startup/startup_overrides.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/a11y_announce.dart';
+import 'package:cupola/core/widgets/app_snapshot_cover.dart';
 import 'package:cupola/core/widgets/themed_system_bars.dart';
 import 'package:cupola/features/discover/data/seerr_accounts.dart';
 import 'package:cupola/features/outside/data/outside_background.dart';
@@ -227,15 +228,17 @@ class CupolaApp extends ConsumerWidget {
       // route, so a TalkBack user hears what a VoiceOver user hears. The
       // system bars in the room's ink (`ThemedSystemBars`). And Android's back
       // claimed for Settings, above every navigator (`SettingsBackClaim`).
-      builder: (context, child) => ThemedSystemBars(
-        child: AnnouncementHost(
-          child: SettingsBackClaim(
-            child: DefaultTextHeightBehavior(
-              textHeightBehavior: const TextHeightBehavior(
-                applyHeightToFirstAscent: false,
-                applyHeightToLastDescent: false,
+      builder: (context, child) => AppSnapshotCover(
+        child: ThemedSystemBars(
+          child: AnnouncementHost(
+            child: SettingsBackClaim(
+              child: DefaultTextHeightBehavior(
+                textHeightBehavior: const TextHeightBehavior(
+                  applyHeightToFirstAscent: false,
+                  applyHeightToLastDescent: false,
+                ),
+                child: child ?? const SizedBox.shrink(),
               ),
-              child: child ?? const SizedBox.shrink(),
             ),
           ),
         ),

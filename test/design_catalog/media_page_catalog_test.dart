@@ -374,7 +374,7 @@ List<MediaRow> _askedFor() => [
                 'status': 1,
                 'type': 'movie',
                 'is4k': false,
-                'createdAt': DateTime.now()
+                'createdAt': catalogNow
                     .subtract(const Duration(hours: 2))
                     .toUtc()
                     .toIso8601String(),
@@ -555,7 +555,7 @@ CatalogScene _episodeScene() {
               seasons: mediaSeasonsOf(
                 rows,
                 audience: Audience.operator,
-                now: DateTime.now(),
+                now: catalogNow,
               ),
               season: 2,
               number: 3,
@@ -605,7 +605,7 @@ CatalogScene _episodeScene() {
             relativePath:
                 'Cosmos Laundromat - S02E03 - The Second Cycle WEBDL-720p.mkv',
             qualityName: 'WEBDL-720p',
-            dateAdded: DateTime.now().subtract(const Duration(hours: 2)),
+            dateAdded: catalogNow.subtract(const Duration(hours: 2)),
             cutoffNotMet: true,
           ),
         },
@@ -636,7 +636,7 @@ final _sonarr = _connection(ServiceKey.sonarr, 'sonarr');
 /// and missing, ten upgrades waiting on an import, and a third season
 /// starting in three days.
 List<MediaRow> _series() {
-  final now = DateTime.now();
+  final now = catalogNow;
   var id = 1000;
   final episodes = [
     for (final (season, count) in [(1, 10), (2, 10), (3, 8)])
@@ -811,12 +811,16 @@ Future<List<MediaEpisodeFacts>> _seasonFacts(int season) async {
   ];
 }
 
-/// The episodes graph open over its series.
-CatalogScene _graphScene() {
+/// The episodes graph open over its series; [act] may tap it first.
+CatalogScene _graphScene({
+  String caption =
+      'Episodes graph · TMDB\'s votes a season to a column, in the title\'s '
+      'light; dashed where few voted',
+  Future<void> Function(WidgetTester tester, Finder scene)? act,
+}) {
   final rows = _series();
   return CatalogScene(
-    'Episodes graph · TMDB\'s votes a season to a column, in the title\'s '
-    'light; dashed where few voted',
+    caption,
     (context) => Stack(
       fit: StackFit.expand,
       children: [
@@ -835,7 +839,7 @@ CatalogScene _graphScene() {
               seasons: mediaSeasonsOf(
                 rows,
                 audience: Audience.operator,
-                now: DateTime.now(),
+                now: catalogNow,
               ),
               light: _lights[CatalogArt.backdrop],
               onOpenEpisode: (_, _) {},
@@ -846,6 +850,7 @@ CatalogScene _graphScene() {
     ),
     width: 390,
     height: 1000,
+    act: act,
     overrides: [
       mediaRowsProvider.overrideWith((ref, key) => rows),
       audienceProvider.overrideWithValue(Audience.operator),
@@ -1058,6 +1063,22 @@ void main() {
       _addScene(),
       _episodeScene(),
       _graphScene(),
+      _graphScene(
+        caption:
+            'Episodes graph · S2 E3 tapped: the cell ringed, the card says it',
+        act: (tester, scene) async {
+          final semantics = tester.ensureSemantics();
+          await tester.tap(
+            find.descendant(
+              of: scene,
+              matching: find.bySemanticsLabel(
+                'Season 2 episode 3, 8.1 from 37 votes',
+              ),
+            ),
+          );
+          semantics.dispose();
+        },
+      ),
       CatalogScene(
         'Requester · Request, and what it means: the title is not on the '
         'server yet',

@@ -13,6 +13,7 @@ import 'package:flutter/foundation.dart';
 
 import 'package:cupola/core/models/rating_source.dart';
 import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/date_format.dart';
 import 'package:cupola/core/utils/dot_separator.dart';
@@ -131,7 +132,7 @@ class MyRequest {
   Uri? get watchAt {
     if (!stage.arrived) return null;
     final link = Uri.tryParse(request.watchUrl ?? '');
-    return link != null && link.hasScheme ? link : null;
+    return UrlUtils.isLaunchableWebUri(link) ? link : null;
   }
 
   /// TMDB's score, when enough people gave one.

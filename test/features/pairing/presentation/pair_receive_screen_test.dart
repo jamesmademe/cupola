@@ -581,7 +581,7 @@ void main() {
       expect(find.text('Radarr\u00A0· 4K'), findsOneWidget);
     });
 
-    testWidgets('only certificates new: Add says so', (tester) async {
+    testWidgets('a pin for a server already here is not added', (tester) async {
       final onlyPins = PairPackage(
         from: PairDevice.iphone,
         connections: const [
@@ -611,11 +611,12 @@ void main() {
         tester,
         overrides: [fixedReceive(PairReceivePreview(plan)).override],
       );
+      expect(find.text('1 already here'), findsOneWidget);
+      expect(find.text('Add 1 trusted certificate'), findsNothing);
       expect(
-        find.text('1 trusted certificate\u00A0· 1 already here'),
+        find.text('Everything from your iPhone is already here.'),
         findsOneWidget,
       );
-      expect(find.text('Add 1 trusted certificate'), findsOneWidget);
     });
 
     testWidgets('when nothing is new it says so, and offers Done', (

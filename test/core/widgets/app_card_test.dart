@@ -109,7 +109,7 @@ void main() {
 
       expect(
         tester.getSemantics(find.byType(AppCard)),
-        containsSemantics(
+        isSemantics(
           label: 'Radarr',
           value: 'Online',
           hint: 'opens the Radarr dashboard',

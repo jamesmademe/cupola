@@ -313,22 +313,18 @@ void main() {
         await harness.unmount(tester);
       }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
-      testWidgets(
-        'on a tablet, $name',
-        (tester) async {
-          final (harness, _) = await pumpApp(
-            tester,
-            size: const Size(1180, 820),
-            location: location,
-          );
+      testWidgets('on a tablet, $name', (tester) async {
+        final (harness, _) = await pumpApp(
+          tester,
+          size: const Size(1180, 820),
+          location: location,
+        );
 
-          expect(find.byType(FloatingNavRail), findsOne);
-          _expectNothingOfTheOperators(tester, 'P2 on a tablet, $name');
+        expect(find.byType(FloatingNavRail), findsOne);
+        _expectNothingOfTheOperators(tester, 'P2 on a tablet, $name');
 
-          await harness.unmount(tester);
-        },
-        variant: TargetPlatformVariant.only(TargetPlatform.iOS),
-      );
+        await harness.unmount(tester);
+      }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
     }
 
     testWidgets('the code another device copies from is not hers: its page '
@@ -363,30 +359,26 @@ void main() {
       await harness.unmount(tester);
     }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
-    testWidgets(
-      'the same keys open the operator\'s deck (P1)',
-      (tester) async {
-        // A keystroke that reached nothing would pass the test above.
-        final (harness, container) = await pumpApp(
-          tester,
-          size: const Size(1440, 900),
-          profile: Profiles.p1,
-        );
+    testWidgets('the same keys open the operator\'s deck (P1)', (tester) async {
+      // A keystroke that reached nothing would pass the test above.
+      final (harness, container) = await pumpApp(
+        tester,
+        size: const Size(1440, 900),
+        profile: Profiles.p1,
+      );
 
-        await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
-        await tester.sendKeyEvent(LogicalKeyboardKey.keyK);
-        await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
-        await harness.settle(tester);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyK);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+      await harness.settle(tester);
 
-        expect(find.byType(CommandDeck), findsOne);
+      expect(find.byType(CommandDeck), findsOne);
 
-        // Dockge's socket closes with its container, and leaves a timer that
-        // must run out before the test does.
-        await harness.unmount(tester);
-        container.dispose();
-        await tester.pump(const Duration(milliseconds: 1));
-      },
-      variant: TargetPlatformVariant.only(TargetPlatform.macOS),
-    );
+      // Dockge's socket closes with its container, and leaves a timer that
+      // must run out before the test does.
+      await harness.unmount(tester);
+      container.dispose();
+      await tester.pump(const Duration(milliseconds: 1));
+    }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
   });
 }

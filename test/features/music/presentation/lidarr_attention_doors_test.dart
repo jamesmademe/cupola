@@ -85,7 +85,7 @@ void main() {
     expect(row, findsOneWidget);
     expect(
       find.semantics.byLabel(RegExp(r'^Stuck, Alvvays, Blue Rev, ')),
-      containsSemantics(isButton: true, hint: 'opens this download'),
+      isSemantics(isButton: true, hint: 'opens this download'),
     );
 
     await tester.tap(row);
@@ -102,7 +102,7 @@ void main() {
     expect(row, findsOneWidget);
     expect(
       find.semantics.byLabel(RegExp(r'^2 missing monitored albums')),
-      containsSemantics(isButton: true, hint: 'opens the Lidarr Wanted tab'),
+      isSemantics(isButton: true, hint: 'opens the Lidarr Wanted tab'),
     );
 
     await tester.tap(row);

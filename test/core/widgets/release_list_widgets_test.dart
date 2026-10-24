@@ -145,25 +145,21 @@ void main() {
     // Both used to measure 40 on a phone: the grab button sat in a tight 40
     // box, and the copy button's `VisualDensity.compact` took 8 off its padded
     // target. The floor is iOS's 44pt; Android's 48dp lands above it.
-    testWidgets(
-      'grab and copy are reachable by a finger',
-      (tester) async {
-        await _pumpReleaseItem(tester, release: buildRelease());
-        await _expandRelease(tester);
+    testWidgets('grab and copy are reachable by a finger', (tester) async {
+      await _pumpReleaseItem(tester, release: buildRelease());
+      await _expandRelease(tester);
 
-        for (final tooltip in ['Grab release', 'Copy release name']) {
-          final size = tester.getSize(
-            find.ancestor(
-              of: find.byTooltip(tooltip),
-              matching: find.byType(IconButton),
-            ),
-          );
-          expect(size.width, greaterThanOrEqualTo(44), reason: tooltip);
-          expect(size.height, greaterThanOrEqualTo(44), reason: tooltip);
-        }
-      },
-      variant: TargetPlatformVariant.mobile(),
-    );
+      for (final tooltip in ['Grab release', 'Copy release name']) {
+        final size = tester.getSize(
+          find.ancestor(
+            of: find.byTooltip(tooltip),
+            matching: find.byType(IconButton),
+          ),
+        );
+        expect(size.width, greaterThanOrEqualTo(44), reason: tooltip);
+        expect(size.height, greaterThanOrEqualTo(44), reason: tooltip);
+      }
+    }, variant: TargetPlatformVariant.mobile());
 
     testWidgets('uses the success tone for approved releases', (tester) async {
       await _pumpReleaseItem(

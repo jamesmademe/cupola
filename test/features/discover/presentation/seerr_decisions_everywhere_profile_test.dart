@@ -29,6 +29,10 @@ void main() {
     await tester.pump();
     await tester.tap(button);
     await harness.settle(tester);
+    // The world's servers offer two profiles and two folders, so the sheet
+    // draws them as choices and the button can sit below the fold.
+    await tester.ensureVisible(find.widgetWithText(FilledButton, confirm));
+    await tester.pump();
     await tester.tap(find.widgetWithText(FilledButton, confirm));
     await harness.settle(tester);
   }
@@ -68,6 +72,12 @@ void main() {
         find.text('Charge goes to Radarr 1 and starts downloading.'),
         findsOneWidget,
       );
+      // The world's servers offer two profiles and two folders, so the sheet
+      // draws them as choices and the button can sit below the fold.
+      await tester.ensureVisible(
+        find.widgetWithText(FilledButton, 'Approve request'),
+      );
+      await tester.pump();
       await tester.tap(find.widgetWithText(FilledButton, 'Approve request'));
       await harness.settle(tester);
 
