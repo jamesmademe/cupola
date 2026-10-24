@@ -342,7 +342,11 @@ void main() {
 
         // Seed the flow with a radarr service and one item.
         final notifier = container.read(manualImportFlowProvider.notifier);
-        await notifier.start(ServiceKey.radarr, force: true);
+        await notifier.start(
+          ServiceKey.radarr,
+          force: true,
+          initialPath: '/downloads',
+        );
         // Reset error from the start() call.
         container.read(manualImportFlowProvider.notifier).state = container
             .read(manualImportFlowProvider)
@@ -473,7 +477,12 @@ void main() {
       addTearDown(container.dispose);
 
       final notifier = container.read(manualImportFlowProvider.notifier);
-      await notifier.start(ServiceKey.radarr, targetId: 42, force: true);
+      await notifier.start(
+        ServiceKey.radarr,
+        targetId: 42,
+        force: true,
+        initialPath: '/downloads',
+      );
       await notifier.loadSelectedFolderItems();
 
       final state = container.read(manualImportFlowProvider);
@@ -496,7 +505,12 @@ void main() {
       addTearDown(container.dispose);
 
       final notifier = container.read(manualImportFlowProvider.notifier);
-      await notifier.start(ServiceKey.radarr, targetId: 42, force: true);
+      await notifier.start(
+        ServiceKey.radarr,
+        targetId: 42,
+        force: true,
+        initialPath: '/downloads',
+      );
       await notifier.loadSelectedFolderItems();
 
       final state = container.read(manualImportFlowProvider);
@@ -524,7 +538,12 @@ void main() {
       addTearDown(container.dispose);
 
       final notifier = container.read(manualImportFlowProvider.notifier);
-      await notifier.start(ServiceKey.radarr, targetId: 42, force: true);
+      await notifier.start(
+        ServiceKey.radarr,
+        targetId: 42,
+        force: true,
+        initialPath: '/downloads',
+      );
       await notifier.loadSelectedFolderItems();
 
       final state = container.read(manualImportFlowProvider);
@@ -563,7 +582,12 @@ void main() {
       addTearDown(container.dispose);
 
       final notifier = container.read(manualImportFlowProvider.notifier);
-      await notifier.start(ServiceKey.radarr, targetId: 42, force: true);
+      await notifier.start(
+        ServiceKey.radarr,
+        targetId: 42,
+        force: true,
+        initialPath: '/downloads',
+      );
       await notifier.loadSelectedFolderItems();
 
       final state = container.read(manualImportFlowProvider);
@@ -588,7 +612,12 @@ void main() {
       addTearDown(container.dispose);
 
       final notifier = container.read(manualImportFlowProvider.notifier);
-      await notifier.start(ServiceKey.radarr, targetId: 42, force: true);
+      await notifier.start(
+        ServiceKey.radarr,
+        targetId: 42,
+        force: true,
+        initialPath: '/downloads',
+      );
       await notifier.loadSelectedFolderItems();
 
       // What the service identified itself is not a guess, so the ordinary
@@ -629,7 +658,11 @@ void main() {
       addTearDown(container.dispose);
 
       final notifier = container.read(manualImportFlowProvider.notifier);
-      await notifier.start(ServiceKey.radarr, force: true);
+      await notifier.start(
+        ServiceKey.radarr,
+        force: true,
+        initialPath: '/downloads',
+      );
       await notifier.loadSelectedFolderItems();
 
       final state = container.read(manualImportFlowProvider);
@@ -890,7 +923,11 @@ void main() {
       addTearDown(container.dispose);
 
       final notifier = container.read(manualImportFlowProvider.notifier);
-      await notifier.start(ServiceKey.radarr, force: true);
+      await notifier.start(
+        ServiceKey.radarr,
+        force: true,
+        initialPath: '/downloads',
+      );
       await notifier.loadSelectedFolderItems();
 
       final state = container.read(manualImportFlowProvider);
@@ -902,6 +939,41 @@ void main() {
       expect(state.selectedPaths, {
         '/downloads/Past.Lives.2023.1080p.BluRay.mkv',
       });
+    });
+
+    test('Select all ready files leaves it out, as the scan does', () async {
+      final container = _container(
+        client: FakeApiClient(),
+        service: ServiceKey.radarr,
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(manualImportFlowProvider.notifier);
+      final feature = ManualImportItem.fromJson({
+        'path': '/downloads/Past.Lives.2023.1080p.BluRay.mkv',
+        'movie': {'id': 42, 'title': 'Past Lives'},
+      });
+      final sample = ManualImportItem.fromJson({
+        'path': '/downloads/sample.mkv',
+        'movie': {'id': 42, 'title': 'Past Lives'},
+        'rejections': [
+          {'reason': 'Sample', 'type': 'permanent'},
+        ],
+      });
+      notifier.state = container
+          .read(manualImportFlowProvider)
+          .copyWith(service: ServiceKey.radarr, items: [feature, sample]);
+
+      notifier.toggleAllReady();
+      var state = container.read(manualImportFlowProvider);
+      // "All ready files" is the batch, not its trailer: the sample is ready
+      // (matched) but out of the sweep, as the scan's preselection leaves it.
+      expect(state.selectedPaths, {feature.path});
+      expect(state.allReadySelected, isTrue);
+
+      notifier.toggleAllReady();
+      state = container.read(manualImportFlowProvider);
+      expect(state.selectedPaths, isEmpty);
     });
 
     test('can still be ticked deliberately', () async {
@@ -927,6 +999,55 @@ void main() {
       expect(container.read(manualImportFlowProvider).selectedPaths, {
         '/downloads/sample.mkv',
       });
+    });
+  });
+
+  group('Locate', () {
+    test('opens the top folder to browse and chooses nothing', () async {
+      final client = FakeApiClient();
+      client.getResponseQueue.addAll([
+        [
+          {'id': 1, 'path': '/media/movies', 'accessible': true},
+        ],
+        {
+          'parent': null,
+          'directories': [
+            {'type': 'folder', 'name': 'downloads', 'path': '/downloads/'},
+          ],
+          'files': <dynamic>[],
+        },
+      ]);
+      final container = _container(client: client, service: ServiceKey.radarr);
+      addTearDown(container.dispose);
+
+      final notifier = container.read(manualImportFlowProvider.notifier);
+      await notifier.start(ServiceKey.radarr, force: true);
+
+      final state = container.read(manualImportFlowProvider);
+      // `/` is where browsing starts, never what gets scanned: it holds the
+      // system's folders, and `Scan "/"` would probe every file on the server.
+      expect(state.currentPath, '/');
+      expect(state.selectedFolder, isNull);
+    });
+
+    test('a path that came with the link is the folder to scan', () async {
+      final container = _container(
+        client: FakeApiClient(),
+        service: ServiceKey.radarr,
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(manualImportFlowProvider.notifier);
+      await notifier.start(
+        ServiceKey.radarr,
+        force: true,
+        initialPath: '/downloads/complete/Movie',
+      );
+
+      expect(
+        container.read(manualImportFlowProvider).selectedFolder,
+        '/downloads/complete/Movie',
+      );
     });
   });
 

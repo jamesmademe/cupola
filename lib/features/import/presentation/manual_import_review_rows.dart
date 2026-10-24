@@ -77,6 +77,13 @@ class ReadyGroupHeader extends StatelessWidget {
   final int importedCount;
 
   final int selectedCount;
+
+  /// The files the checkbox sweeps: [total] without the samples, which the
+  /// scan never preselects and a sweep never ticks either.
+  final int sweepTotal;
+
+  /// How many of those are selected.
+  final int sweepSelected;
   final bool expanded;
   final VoidCallback onToggleExpanded;
   final ValueChanged<bool> onSelectionChanged;
@@ -88,6 +95,8 @@ class ReadyGroupHeader extends StatelessWidget {
     required this.total,
     required this.importedCount,
     required this.selectedCount,
+    required this.sweepTotal,
+    required this.sweepSelected,
     required this.expanded,
     required this.onToggleExpanded,
     required this.onSelectionChanged,
@@ -97,7 +106,7 @@ class ReadyGroupHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final allSelected = selectedCount == total;
+    final allSelected = sweepTotal > 0 && sweepSelected == sweepTotal;
     final noneSelected = selectedCount == 0;
     final libraryNote = importedCount == 0 ? null : '$importedCount in library';
 
@@ -113,11 +122,11 @@ class ReadyGroupHeader extends StatelessWidget {
           // A group of nothing but already-imported files has no select-all to
           // offer, and a permanently empty checkbox beside it would read as a
           // control that does nothing.
-          if (total == 0)
+          if (sweepTotal == 0)
             const SizedBox(width: AppSpacing.lg)
           else
             Semantics(
-              label: 'Select all $total files of $title',
+              label: 'Select all $sweepTotal files of $title',
               child: Checkbox(
                 value: allSelected
                     ? true

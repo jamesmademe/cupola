@@ -281,9 +281,16 @@ class ManualImportFlowState {
       .where((item) => item.isAlreadyImported)
       .toList(growable: false);
 
+  /// What `Select all ready files` takes: the ready files without the
+  /// samples, the same set the scan preselects. A sample is ready (matched
+  /// as precisely as the rip beside it) and stays tickable by hand, but
+  /// "all ready files" is the batch the user means, not its trailer.
+  List<ManualImportItem> get selectAllItems =>
+      readyItems.where((item) => !item.isSample).toList(growable: false);
+
   bool get allReadySelected =>
-      readyItems.isNotEmpty &&
-      readyItems.every((item) => selectedPaths.contains(item.path));
+      selectAllItems.isNotEmpty &&
+      selectAllItems.every((item) => selectedPaths.contains(item.path));
 
   bool get canImportSelected =>
       service != null &&
@@ -430,15 +437,20 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
       final api = _api(service);
       final rootFolders = await api.getRootFolders();
       if (read != _browses) return;
+      // A path that came with the link (a queue row's download) is the
+      // folder to scan. Without one, Locate opens the server's top folder to
+      // browse and chooses nothing: `/` holds the system's folders, and a
+      // primary that read `Scan "/"` would probe every file on the server.
       final defaultPath = initialPath ?? '/';
+      final chosen = initialPath != null;
       state = state.copyWith(
         rootFolders: rootFolders,
         isLoadingBrowse: false,
         currentPath: defaultPath,
-        selectedFolder: defaultPath,
+        selectedFolder: chosen ? defaultPath : null,
         error: null,
       );
-      await selectFolder(defaultPath);
+      await selectFolder(defaultPath, choose: chosen);
     } catch (error) {
       if (read != _browses) return;
       state = state.copyWith(
@@ -526,6 +538,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
               item.path: needYouKindOf(service, item),
           },
           leftOut: split.leftOut,
+          wentIn: split.wentIn,
           unread: reads.where((read) => read == null).length,
           replacing: replacing,
         ),
@@ -630,7 +643,9 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
     }
   }
 
-  Future<void> selectFolder(String path) async {
+  /// Opens [path] in Locate and, unless [choose] is false, makes it the folder
+  /// to scan.
+  Future<void> selectFolder(String path, {bool choose = true}) async {
     final service = state.service;
     if (service == null || path.isEmpty) return;
 
@@ -640,7 +655,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
     _scans++;
     state = state.copyWith(
       currentPath: path,
-      selectedFolder: path,
+      selectedFolder: choose ? path : null,
       fileSystem: null,
       isLoadingBrowse: true,
       isLoadingItems: false,
@@ -894,7 +909,7 @@ class ManualImportFlowNotifier extends Notifier<ManualImportFlowState> {
     }
 
     state = state.copyWith(
-      selectedPaths: state.readyItems.map((item) => item.path).toSet(),
+      selectedPaths: state.selectAllItems.map((item) => item.path).toSet(),
     );
   }
 

@@ -179,6 +179,22 @@ class _ManualImportReviewScreenState
           initialPath: path,
         );
       }
+      // Reached with no folder chosen (an old link, a flow that started
+      // over): Locate chooses one. Scanning the server's top folder instead
+      // would probe every file on it.
+      if (ref.read(manualImportFlowProvider).selectedFolder == null) {
+        if (mounted) {
+          context.pushReplacement(
+            manualImportLocation(
+              manualImportBrowsePath,
+              widget.service,
+              targetId: widget.targetId,
+              instanceId: widget.instanceId,
+            ),
+          );
+        }
+        return;
+      }
       await notifier.loadSelectedFolderItems();
     });
   }
@@ -265,7 +281,7 @@ class _ManualImportReviewScreenState
                 ? Icons.deselect_rounded
                 : Icons.select_all_rounded,
           ),
-          onPressed: state.readyItems.isEmpty || state.isLoadingItems
+          onPressed: state.selectAllItems.isEmpty || state.isLoadingItems
               ? null
               : () => ref
                     .read(manualImportFlowProvider.notifier)
@@ -728,6 +744,14 @@ class _ManualImportReviewScreenState
       final selectedCount = groupReady
           .where((item) => state.selectedPaths.contains(item.path))
           .length;
+      // Nor does a sample, as with Select all ready files: it is counted with
+      // the group and ticked by hand.
+      final groupSweep = groupReady
+          .where((item) => !item.isSample)
+          .toList(growable: false);
+      final sweepSelected = groupSweep
+          .where((item) => state.selectedPaths.contains(item.path))
+          .length;
       final expanded =
           !hasHeader ||
           _isGroupExpanded(title, defaultExpanded: defaultExpanded);
@@ -740,11 +764,13 @@ class _ManualImportReviewScreenState
             total: groupReady.length,
             importedCount: group.length - groupReady.length,
             selectedCount: selectedCount,
+            sweepTotal: groupSweep.length,
+            sweepSelected: sweepSelected,
             expanded: expanded,
             onToggleExpanded: () => _toggleGroup(title, nowExpanded: !expanded),
             onSelectionChanged: (selected) => ref
                 .read(manualImportFlowProvider.notifier)
-                .setGroupSelected(groupReady, selected),
+                .setGroupSelected(groupSweep, selected),
           ),
         );
       }

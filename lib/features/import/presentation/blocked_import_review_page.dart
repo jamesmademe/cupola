@@ -172,13 +172,18 @@ class _BlockedImportReviewPageState
         onRetry: _read,
       );
     } else if (total == 0 && review != null && review.leftOut > 0) {
-      // The arr still lists them, and every file in them went in already.
+      // The arr still lists them, and nothing in them can go in any more:
+      // what could went in already, or there was only what it leaves out.
       final one = review.downloads.length == 1;
       body = AppEmptyStatePage(
         emptyState: AppEmptyState(
           icon: Icons.check_circle_outline_rounded,
           title: 'Nothing left to import',
-          message: blockedImportSpentWords(service, one: one),
+          message: blockedImportSpentWords(
+            service,
+            one: one,
+            wentIn: review.wentIn > 0,
+          ),
           action: one
               ? FilledButton(
                   style: remedyFillStyle(context),

@@ -13,6 +13,51 @@ ManualImportItem _clear(int season, int episode) =>
 ManualImportItem _tape(int n) => ManualImportItem.fromJson(cosmosTapeFile(n));
 
 void main() {
+  group('Sonarr 4 and the samples', () {
+    test('a file that is another episode than the grab has its own words', () {
+      // Sonarr 4's words when the file is another episode than the one it
+      // grabbed. The series name matches, so "the names don't match" would
+      // be untrue: the episode is what differs.
+      final cause = blockedImportCauseOf([
+        'Episode 1x03 was not found in the grabbed release: '
+            'Breaking.Bad.S01E01.1080p.WEB-DL.DDP5.1.H.264-CUPOLA',
+      ]);
+      expect(cause, BlockedImportCause.otherEpisode);
+      expect(
+        blockedImportExplanation(ServiceKey.sonarr, cause, one: true),
+        'The file is another episode than the one Sonarr grabbed, so Sonarr '
+        "won't import it on its own.",
+      );
+      expect(
+        blockedImportPlainWords(ServiceKey.sonarr, cause, total: 1, unnamed: 0),
+        'Adding it imports it as the episode its name says.',
+      );
+    });
+
+    test('a download of only samples never claims something went in', () {
+      final sample = ManualImportItem.fromJson({
+        'path': '/downloads/Elephants.Dream.2006.sample.mkv',
+        'movie': {'id': 7, 'title': 'Elephants Dream'},
+        'rejections': [
+          {'reason': 'Sample', 'type': 'permanent'},
+        ],
+      });
+      final split = splitBlockedImport(ServiceKey.radarr, [sample]);
+      expect(split.leftOut, 1);
+      expect(split.wentIn, 0);
+      expect(
+        blockedImportSpentWords(ServiceKey.radarr, one: true, wentIn: false),
+        "There's nothing Radarr can import in this download: it holds only "
+        'samples or files of other kinds.',
+      );
+      expect(
+        blockedImportSpentWords(ServiceKey.sonarr, one: true, wentIn: true),
+        "Sonarr took what this download had and waits for files that aren't "
+        'in it. Removing it keeps what went in.',
+      );
+    });
+  });
+
   group('blockedImportCauseOf', () {
     test("reads the arr's own messages", () {
       expect(
@@ -179,6 +224,7 @@ void main() {
     expect(split.needYou, isEmpty);
     expect(split.clear, isEmpty);
     expect(split.leftOut, 1);
+    expect(split.wentIn, 1);
   });
 
   test('eighteen downloads stopped for one reason say it once', () {
