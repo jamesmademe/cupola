@@ -48,9 +48,11 @@ the mapping says so rather than inventing one:
 
 from __future__ import annotations
 
+import contextlib
 import http.cookiejar
 import json
 import os
+import shutil
 import subprocess
 import urllib.error
 import urllib.request
@@ -707,6 +709,67 @@ def keeps_app_installed(flutter: str = TESTLAB_FLUTTER) -> bool:
     return "--[no-]uninstall" in (result.stdout or "")
 
 
+#: What a newer Flutter rewrites on its own when it builds the seed: the Swift
+#: Package Manager migration, the lockfile it resolves and the files it
+#: "upgrades". The project's gate is another Flutter, so none of it may stay.
+GENERATED_TRACKED = (
+    "analysis_options.yaml",
+    "pubspec.lock",
+    "ios/Flutter/AppFrameworkInfo.plist",
+    "ios/Podfile",
+    "ios/Podfile.lock",
+    "ios/Runner.xcodeproj/project.pbxproj",
+    "ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme",
+    "macos/Podfile",
+    "macos/Podfile.lock",
+    "macos/Runner.xcodeproj/project.pbxproj",
+    "macos/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme",
+)
+GENERATED_UNTRACKED = (
+    "ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm",
+    "ios/Runner.xcworkspace/xcshareddata/swiftpm",
+    "macos/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm",
+    "macos/Runner.xcworkspace/xcshareddata/swiftpm",
+)
+
+
+def _dirty(paths: tuple[str, ...]) -> set[str]:
+    result = subprocess.run(
+        ["git", "status", "--porcelain", "--", *paths],
+        cwd=testlab.REPO_ROOT,
+        text=True,
+        capture_output=True,
+        timeout=60,
+    )
+    return {line[3:].strip() for line in result.stdout.splitlines() if line}
+
+
+@contextlib.contextmanager
+def _keeping_generated_files():
+    """Undo what the seed's build generated, and only that.
+
+    A file already changed before the seed is someone's work and is left
+    alone; a file that was clean, or a folder that did not exist, is put back.
+    """
+    before = _dirty(GENERATED_TRACKED)
+    absent = [
+        path for path in GENERATED_UNTRACKED if not (testlab.REPO_ROOT / path).exists()
+    ]
+    try:
+        yield
+    finally:
+        changed = sorted(_dirty(GENERATED_TRACKED) - before)
+        if changed:
+            subprocess.run(
+                ["git", "checkout", "--", *changed],
+                cwd=testlab.REPO_ROOT,
+                check=True,
+                timeout=60,
+            )
+        for path in absent:
+            shutil.rmtree(testlab.REPO_ROOT / path, ignore_errors=True)
+
+
 def _run_seed(
     device: str,
     profile: str,
@@ -766,14 +829,15 @@ def _run_seed(
         else f"--dart-define=CUPOLA_TESTLAB_KEYCHAIN_GROUP={TESTLAB_KEYCHAIN_GROUP}",
         f"--dart-define=CUPOLA_TESTLAB_APP_GROUP={TESTLAB_APP_GROUP}",
     ]
-    result = subprocess.run(
-        command,
-        cwd=testlab.REPO_ROOT,
-        env=environment,
-        text=True,
-        capture_output=True,
-        timeout=1800,
-    )
+    with _keeping_generated_files():
+        result = subprocess.run(
+            command,
+            cwd=testlab.REPO_ROOT,
+            env=environment,
+            text=True,
+            capture_output=True,
+            timeout=1800,
+        )
     output = (result.stdout or "") + (result.stderr or "")
     marker = f"[testlab] applied profile={profile} bundle={BUNDLE_ID}"
     if result.returncode != 0:
