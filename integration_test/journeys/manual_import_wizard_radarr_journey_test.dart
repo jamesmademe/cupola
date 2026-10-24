@@ -53,9 +53,10 @@ void main() {
       const folder = 'Spring.2014.1080p.WEB-DL.DDP5.1.H.264-CUPOLA';
 
       await wizard.openWizard(ServiceKey.radarr);
-      // Locate opens on the server's top folder, already chosen, so the
-      // primary reads `Scan "/"` rather than `Choose a folder`.
-      await app.surface.see('Scan "/"');
+      // Locate opens the server's top folder to browse and chooses nothing:
+      // the primary waits for a folder rather than offering `Scan "/"`.
+      await app.surface.see('Choose a folder');
+      expect(find.text('Scan "/"'), findsNothing);
       await app.surface.seePart('Scanning parses and probes every file');
       await wizard.goTo(_root);
       await wizard.openFolder(folder);
