@@ -231,11 +231,52 @@ CatalogScene _scene(
   textScale: textScale,
 );
 
+/// A sheet of Material rows, as the manual import's language picker builds
+/// it: their ink is drawn on the nearest Material.
+Widget _languages() => AppBottomSheet(
+  title: 'Select languages',
+  icon: Icons.translate_rounded,
+  accent: ServiceKey.radarr.accent,
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      for (final language in const ['English', 'French', 'Italian'])
+        InkWell(
+          onTap: () {},
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
+            child: Text(language),
+          ),
+        ),
+    ],
+  ),
+);
+
 void main() {
   catalogCard(
     'AppBottomSheet',
     width: 880,
     scenes: [
+      CatalogScene(
+        'AppBottomSheet.show · a row of Material ink held down: its highlight '
+        'drawn over the sheet\'s fill',
+        (_) => _open(_languages()),
+        width: 390,
+        height: 420,
+        act: (tester, scene) async {
+          // Held, not released: the highlight stays while the finger does.
+          await tester.startGesture(
+            tester.getCenter(
+              find.descendant(of: scene, matching: find.text('Italian')),
+            ),
+          );
+          await tester.pump(const Duration(milliseconds: 400));
+        },
+      ),
       _scene(
         'AppBottomSheet.show · a picker with icon, accent and subtitle · the '
         'service\'s accent is the lamp: a soft glow behind the header, the '

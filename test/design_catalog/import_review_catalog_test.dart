@@ -119,6 +119,34 @@ void main() {
         ),
       ),
       CatalogScene(
+        'BlockedImportReviewPage() · nothing left to import: a download that '
+        'held only a sample, so nothing went in; Remove download',
+        (_) => const BlockedImportReviewPage(
+          service: ServiceKey.sonarr,
+          instanceId: blockedImportConnection,
+        ),
+        width: 390,
+        height: 844,
+        overrides: blockedImportOverrides(
+          sampleOnlyService(),
+          queue: sampleOnlyQueue(),
+        ),
+      ),
+      CatalogScene(
+        'BlockedImportReviewPage() · Sonarr grabbed S1 E1 and the file is '
+        'S1 E3: the sentence for what Sonarr 4 says',
+        (_) => const BlockedImportReviewPage(
+          service: ServiceKey.sonarr,
+          instanceId: blockedImportConnection,
+        ),
+        width: 390,
+        height: 844,
+        overrides: blockedImportOverrides(
+          wrongEpisodeService(),
+          queue: wrongEpisodeQueue(),
+        ),
+      ),
+      CatalogScene(
         "BlockedImportWhy() · open: what Sonarr says, word for word, and the "
         'same in plain words',
         (_) => BlockedImportWhy(

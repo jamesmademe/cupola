@@ -292,3 +292,74 @@ FakeBlockedImportService spentPackService() => FakeBlockedImportService()
       ],
     },
   ];
+
+/// A download that holds only a sample: nothing in it can go in, and nothing
+/// went in (live, Radarr and Sonarr say only `Sample`).
+List<ServiceQueueItem> sampleOnlyQueue() => const [
+  ServiceQueueItem(
+    service: ServiceKey.sonarr,
+    id: 'q-sample',
+    title: 'Cosmos Laundromat',
+    subject: 'Cosmos Laundromat S1 E1',
+    progress: 1,
+    clientLabel: 'qBittorrent',
+    fault: InFlightFault.needsImport,
+    warning: 'Sample',
+    downloadId: 'sample',
+    instanceId: blockedImportConnection,
+    mediaId: 7,
+  ),
+];
+
+/// The sample, matched to its episode like the rip it was cut from.
+FakeBlockedImportService sampleOnlyService() => FakeBlockedImportService()
+  ..files.clear()
+  ..files['sample'] = [
+    {
+      ...cosmosClearFile(1, 1),
+      'path':
+          '/downloads/Kosmische.Wasserette.S01E01.1080p.WEB/'
+          'Kosmische.Wasserette.S01E01.1080p.WEB.sample.mkv',
+      'size': 22000000,
+      'downloadId': 'sample',
+      'rejections': const [
+        {'type': 'permanent', 'reason': 'Sample'},
+      ],
+    },
+  ];
+
+/// Sonarr 4's words when the file is another episode than the one it
+/// grabbed (live, Sonarr 4.0.15).
+const wrongEpisodeMessage =
+    'Episode 1x03 was not found in the grabbed release: '
+    'Kosmische.Wasserette.S01E01.1080p.WEB';
+
+/// A grab of S1 E1 whose file is S1 E3.
+List<ServiceQueueItem> wrongEpisodeQueue() => const [
+  ServiceQueueItem(
+    service: ServiceKey.sonarr,
+    id: 'q-wrong',
+    title: 'Cosmos Laundromat',
+    subject: 'Cosmos Laundromat S1 E1',
+    progress: 1,
+    clientLabel: 'qBittorrent',
+    fault: InFlightFault.needsImport,
+    warning: wrongEpisodeMessage,
+    downloadId: 'wrong',
+    instanceId: blockedImportConnection,
+    mediaId: 7,
+  ),
+];
+
+/// The file: it names S1 E3, and Sonarr matched it to that episode.
+FakeBlockedImportService wrongEpisodeService() => FakeBlockedImportService()
+  ..files.clear()
+  ..files['wrong'] = [
+    {
+      ...cosmosClearFile(1, 3),
+      'downloadId': 'wrong',
+      'rejections': const [
+        {'type': 'permanent', 'reason': wrongEpisodeMessage},
+      ],
+    },
+  ];

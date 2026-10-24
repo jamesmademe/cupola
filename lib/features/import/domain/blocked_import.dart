@@ -39,6 +39,7 @@ class BlockedImportReview {
     this.needYouPaths = const [],
     this.needYouKinds = const {},
     this.leftOut = 0,
+    this.wentIn = 0,
     this.unread = 0,
     this.replacing = const {},
   });
@@ -58,6 +59,10 @@ class BlockedImportReview {
   /// they are.
   final int leftOut;
 
+  /// Of [leftOut], the files the arr already took: `Nothing left to import`
+  /// says something went in only when one did.
+  final int wentIn;
+
   /// Downloads whose files the arr would not list.
   final int unread;
 
@@ -74,6 +79,10 @@ enum BlockedImportCause {
 
   /// The file is no better than the one the library has.
   notAnUpgrade,
+
+  /// The file is another episode than the one the arr grabbed
+  /// (`Episode 1x03 was not found in the grabbed release`, Sonarr 4).
+  otherEpisode,
 
   /// The names do not say what the files are.
   unrecognised,
@@ -97,6 +106,10 @@ final _causes = <(RegExp, BlockedImportCause)>[
   (
     RegExp(r'not (a|an) (custom format )?upgrade', caseSensitive: false),
     BlockedImportCause.notAnUpgrade,
+  ),
+  (
+    RegExp(r'was not found in the grabbed release', caseSensitive: false),
+    BlockedImportCause.otherEpisode,
   ),
   (
     RegExp(
@@ -161,14 +174,33 @@ List<String> blockedImportMessages(
     for (final rejection in file.rejections) rejection.reason,
 ]);
 
-/// Under `Nothing left to import`, when the arr still holds downloads whose
-/// files all went in already: Sonarr keeps a season pack queued until every
-/// episode it expected arrives, and the rest are not in it.
-String blockedImportSpentWords(ServiceKey service, {required bool one}) => one
-    ? "${service.title} took what this download had and waits for files "
-          "that aren't in it. Removing it keeps what went in."
-    : "${service.title} took what these downloads had and waits for files "
-          "that aren't in them. Removing them keeps what went in.";
+/// Under `Nothing left to import`, when nothing in the arr's downloads can go
+/// in any more.
+///
+/// When some of it went in ([wentIn]): Sonarr keeps a season pack queued until
+/// every episode it expected arrives, and the rest are not in it. When none
+/// did, the downloads hold only samples or files of a kind the arr does not
+/// import, and saying "took what this download had" would claim an import
+/// that never happened.
+String blockedImportSpentWords(
+  ServiceKey service, {
+  required bool one,
+  required bool wentIn,
+}) {
+  final arr = service.title;
+  if (!wentIn) {
+    return one
+        ? "There's nothing $arr can import in this download: it holds only "
+              'samples or files of other kinds.'
+        : "There's nothing $arr can import in these downloads: they hold only "
+              'samples or files of other kinds.';
+  }
+  return one
+      ? "$arr took what this download had and waits for files that aren't in "
+            'it. Removing it keeps what went in.'
+      : "$arr took what these downloads had and waits for files that aren't "
+            'in them. Removing them keeps what went in.';
+}
 
 /// `Review 18 imports`: one import per file.
 String blockedImportTitle(int files) =>
@@ -208,6 +240,12 @@ String blockedImportExplanation(
                 'replace it.'
           : "They're no better than the files $arr already has, so $arr "
                 "won't replace them.",
+    BlockedImportCause.otherEpisode =>
+      one
+          ? 'The file is another episode than the one $arr grabbed, so $arr '
+                "won't import it on its own."
+          : 'The files are other episodes than the ones $arr grabbed, so '
+                "$arr won't import them on its own.",
     BlockedImportCause.unrecognised =>
       one
           ? "$arr can't tell what this file is from its name."
@@ -262,6 +300,10 @@ String? blockedImportPlainWords(
     BlockedImportCause.notAnUpgrade =>
       '$arr keeps the file it has unless the new one is better. Importing '
           '${total == 1 ? 'this one' : 'these'} replaces it anyway.',
+    BlockedImportCause.otherEpisode =>
+      total == 1
+          ? 'Adding it imports it as the episode its name says.'
+          : 'Adding them imports each as the episode its name says.',
     BlockedImportCause.incomplete => 'The files that are here can still go in.',
     BlockedImportCause.unknown => null,
   };
@@ -305,6 +347,7 @@ typedef BlockedImportSplit = ({
   List<ManualImportItem> clear,
   List<ManualImportItem> needYou,
   int leftOut,
+  int wentIn,
 });
 
 /// Sorts [items] for the Review. A file is clear only when the arr would
@@ -318,11 +361,12 @@ BlockedImportSplit splitBlockedImport(
   final clear = <ManualImportItem>[];
   final needYou = <ManualImportItem>[];
   var leftOut = 0;
+  var wentIn = 0;
   for (final item in items) {
-    if (!manualImportIsSupportedFile(service, item) ||
-        item.isSample ||
-        item.isAlreadyImported ||
-        item.wasImportedFromHere) {
+    if (item.isAlreadyImported || item.wasImportedFromHere) {
+      leftOut++;
+      wentIn++;
+    } else if (!manualImportIsSupportedFile(service, item) || item.isSample) {
       leftOut++;
     } else if (item.isReadyForImportFor(service) &&
         !item.rejections.any((rejection) => rejection.isPermanent)) {
@@ -331,7 +375,7 @@ BlockedImportSplit splitBlockedImport(
       needYou.add(item);
     }
   }
-  return (clear: clear, needYou: needYou, leftOut: leftOut);
+  return (clear: clear, needYou: needYou, leftOut: leftOut, wentIn: wentIn);
 }
 
 /// The explanation under `6 need you`: what each row asks for.

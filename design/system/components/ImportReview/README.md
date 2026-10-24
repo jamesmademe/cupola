@@ -54,8 +54,11 @@ The single import of a title, its room or the ⋯ menu stays the wizard (Locate 
   - on the left, `6 left for later` (or `12 clear · 1 picked by you`); on the right, `Imports can't be undone` in `inkTertiary`;
   - the import itself in the amber fill, the fault's remedy: `Import 12 clear matches`, `Import 13 selected`, or `Select something to import`, disabled.
 - **Under the parts**: what stays out (`2 other files stay where they are.`, samples, files the arr does not import and files it already took from this download) and a download that would not list its files.
+- **Another episode than the grab**: Sonarr 4 says `Episode 1x03 was not found in the grabbed release: …` when a download grabbed for one episode holds another. The sentence is `The file is another episode than the one Sonarr grabbed, so Sonarr won't import it on its own.`, and in plain words `Adding it imports it as the episode its name says.` The row is the refused file's, with `Add it anyway`.
 - **A season pack's unnamed file**: Sonarr maps a file whose name names no episode to every episode of the season (`Single episode file contains all episodes in seasons`). The Review reads no episode into it and asks `Which episode?`, never `Add it anyway`, which would import one file as the whole season. `Unknown Series` asks `Which series?`.
-- **Nothing left to import**: when the arr still lists the download and every file in it went in already (Sonarr keeps a season pack queued until each episode it expected arrives), the page says so, `Sonarr took what this download had and waits for files that aren't in it. Removing it keeps what went in.`, with `Remove download` in the amber fill and Needs you's neutral question before it.
+- **Nothing left to import**: when the arr still lists the download and nothing in it can go in any more, the page says why, with `Remove download` in the amber fill and Needs you's neutral question before it:
+  - some of it went in already (Sonarr keeps a season pack queued until each episode it expected arrives): `Sonarr took what this download had and waits for files that aren't in it. Removing it keeps what went in.`;
+  - nothing went in, because it holds only samples or files of a kind the arr does not import: `There's nothing Sonarr can import in this download: it holds only samples or files of other kinds.`
 - **While reading**: `Reading the files of each download…` above skeleton rows.
 
 ## After the import

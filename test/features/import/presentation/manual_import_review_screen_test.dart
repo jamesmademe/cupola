@@ -213,8 +213,10 @@ Future<void> _pumpRoutedReview(
     routes: [
       GoRoute(
         path: manualImportReviewPath,
-        builder: (_, _) =>
-            const ManualImportReviewScreen(service: ServiceKey.sonarr),
+        builder: (_, _) => const ManualImportReviewScreen(
+          service: ServiceKey.sonarr,
+          initialPath: '/downloads/complete',
+        ),
       ),
       GoRoute(
         path: manualImportProgressPath,
@@ -246,7 +248,9 @@ Future<void> _pumpReview(
   WidgetTester tester, {
   FakeApiClient? client,
   ThemeData? theme,
-  String? initialPath,
+  // A Review is always of a chosen folder: without one it sends the user to
+  // Locate rather than scanning the server's top folder.
+  String initialPath = '/downloads/complete',
 }) async {
   // A tall viewport so the whole grouped list is laid out: the list is lazily
   // built, so anything below the fold genuinely does not exist to a finder.
@@ -279,6 +283,45 @@ Future<void> _pumpReview(
 }
 
 void main() {
+  testWidgets('a Review reached without a folder goes to Locate', (
+    tester,
+  ) async {
+    final router = GoRouter(
+      initialLocation: manualImportReviewPath,
+      routes: [
+        GoRoute(
+          path: manualImportReviewPath,
+          builder: (_, _) =>
+              const ManualImportReviewScreen(service: ServiceKey.sonarr),
+        ),
+        GoRoute(
+          path: manualImportBrowsePath,
+          builder: (_, _) => const Scaffold(body: Text('Locate page')),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          manualImportServiceProvider(ServiceKey.sonarr).overrideWith(
+            (ref) => _FakeManualImportService(_scanClient(), ServiceKey.sonarr),
+          ),
+        ],
+        child: MaterialApp.router(
+          theme: AppTheme.darkTheme(),
+          routerConfig: router,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.pumpAndSettle();
+
+    // Scanning nothing chosen used to scan the server's top folder.
+    expect(find.text('Locate page'), findsOneWidget);
+  });
+
   testWidgets('sorts files into the four buckets the user must act on', (
     tester,
   ) async {
@@ -526,6 +569,52 @@ void main() {
     await tester.pump();
 
     expect(find.text('Import 2 files'), findsOneWidget);
+  });
+
+  testWidgets('the group select-all leaves the group\'s sample out', (
+    tester,
+  ) async {
+    final client = FakeApiClient();
+    client.getResponseQueue.addAll([
+      [
+        {'id': 1, 'path': '/downloads', 'accessible': true},
+      ],
+      {'parent': null, 'directories': <dynamic>[], 'files': <dynamic>[]},
+      [
+        _episode(
+          name: 'Boruto.S01E11.1080p.WEB-DL.mkv',
+          series: 'Boruto',
+          season: 1,
+          episode: 11,
+          episodeTitle: 'The Pain',
+        ),
+        _episode(
+          name: 'Boruto.S01E11.1080p.WEB-DL.sample.mkv',
+          series: 'Boruto',
+          season: 1,
+          episode: 11,
+          episodeTitle: 'The Pain',
+          rejections: [
+            {'reason': 'Sample', 'type': 'permanent'},
+          ],
+        ),
+      ],
+    ]);
+    await _pumpReview(tester, client: client);
+
+    // The scan ticked the episode, not the sample; the title's checkbox
+    // reaches the one file it sweeps, and its sweep stays the episode alone.
+    final header = find.descendant(
+      of: find.bySemanticsLabel('Select all 1 files of Boruto'),
+      matching: find.byType(Checkbox),
+    );
+    await tester.tap(header);
+    await tester.pump();
+    expect(find.text('Nothing selected to import'), findsOneWidget);
+
+    await tester.tap(header);
+    await tester.pump();
+    expect(find.text('Import 1 file'), findsOneWidget);
   });
 
   group('the count row is the filter', () {

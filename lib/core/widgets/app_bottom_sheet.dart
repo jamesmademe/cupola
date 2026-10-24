@@ -268,11 +268,18 @@ class AppBottomSheet extends StatelessWidget {
           borderRadius: const BorderRadius.vertical(
             top: Radius.circular(AppRadius.sheet),
           ),
-          child: Stack(
-            children: [
-              if (accent != null) _glow(accent!),
-              SafeArea(top: false, child: content),
-            ],
+          // The sheet paints its own fill above the route's Material, so
+          // ink drawn there (a ListTile's tap, its selected tint) would be
+          // hidden under it. A transparent Material of the sheet's own puts
+          // every row's ink back on top of the fill.
+          child: Material(
+            type: MaterialType.transparency,
+            child: Stack(
+              children: [
+                if (accent != null) _glow(accent!),
+                SafeArea(top: false, child: content),
+              ],
+            ),
           ),
         ),
       ),
