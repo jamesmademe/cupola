@@ -2712,12 +2712,22 @@ class IndexerHandler(BaseHTTPRequestHandler):
 """.encode("utf-8")
 
     def _torrent(self, name: str) -> None:
-        release = self._release()
-        expected = str(release.get("torrent", ""))
-        if not expected or name != expected:
+        """A torrent file the forge wrote, by its bare name.
+
+        Every forged release has its own torrent, so a grab of each one is a
+        download of its own (its own infohash, its own queue record). The name
+        is a single path segment ending in `.torrent`; nothing outside the
+        forge's torrent folder is ever read.
+        """
+        if (
+            not name.endswith(".torrent")
+            or "/" in name
+            or "\\" in name
+            or name.startswith(".")
+        ):
             self.send_error(404)
             return
-        path = os.path.join(FORGE_DIR, "torrents", expected)
+        path = os.path.join(FORGE_DIR, "torrents", name)
         try:
             with open(path, "rb") as handle:
                 body = handle.read()
