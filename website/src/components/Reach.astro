@@ -1,0 +1,163 @@
+---
+// Who Cupola talks to: your own services, directly, and two third parties
+// for one thing each. The box in the middle is the server Cupola does not have.
+import Mark from './Mark.astro';
+import Icon from './Icon.astro';
+---
+<figure class="reach">
+  <div class="node you">
+    <Mark size={44} file="cupola_launcher" />
+    <div>
+      <p class="name">Cupola</p>
+      <p class="t-meta">on your phone, tablet or Mac</p>
+    </div>
+  </div>
+
+  <div class="wire" aria-hidden="true"><i></i><span class="t-micro">at home, over your VPN or your proxy</span></div>
+
+  <div class="node server">
+    <p class="name">Your server</p>
+    <ul class="mono">
+      <li><span class="dot green"></span>radarr.lan:7878</li>
+      <li><span class="dot green"></span>sonarr.lan:8989</li>
+      <li><span class="dot green"></span>seerr.example.net</li>
+      <li><span class="dot green"></span>nas.home.arpa</li>
+    </ul>
+  </div>
+
+  <div class="none">
+    <Icon name="lock" size={18} />
+    <p><b>A Cupola server</b> <span>There isn't one. No account, no relay, no telemetry: there is nowhere for your data to go.</span></p>
+  </div>
+
+  <div class="third tmdb">
+    <p class="mono">image.tmdb.org</p>
+    <p class="t-meta">Poster and cast artwork, no credential</p>
+  </div>
+  <div class="third plex">
+    <p class="mono">plex.tv</p>
+    <p class="t-meta">Only to sign in to Seerr with Plex, once</p>
+  </div>
+  <figcaption class="sr-only">
+    Cupola connects directly to your own services. There is no Cupola server. The only other hosts it reaches are
+    TMDB's image CDN for artwork, and plex.tv once if you sign in to Seerr with a Plex account.
+  </figcaption>
+</figure>
+
+<style>
+  .reach {
+    margin: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(120px, 1.1fr) minmax(0, 1fr);
+    grid-template-areas:
+      'you wire server'
+      'none none none'
+      'tmdb . plex';
+    gap: 18px;
+    align-items: center;
+  }
+  .node {
+    padding: 22px;
+    border-radius: var(--r-slab);
+    background: rgb(18 18 24 / 0.86);
+    border: 1px solid var(--edge);
+  }
+  .you {
+    grid-area: you;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+  }
+  .server {
+    grid-area: server;
+  }
+  .name {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 22px;
+    font-variation-settings: 'wdth' 92, 'opsz' 22;
+  }
+  .server ul {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+    font-size: 14px;
+    color: var(--ink-2);
+  }
+  .server li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .wire {
+    grid-area: wire;
+    position: relative;
+    display: grid;
+    justify-items: center;
+    gap: 10px;
+    text-align: center;
+  }
+  .wire i {
+    display: block;
+    width: 100%;
+    height: 2px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, transparent, var(--light) 20%, var(--light) 80%, transparent);
+    box-shadow: 0 0 18px color-mix(in srgb, var(--light) 60%, transparent);
+  }
+  .none {
+    grid-area: none;
+    justify-self: center;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    max-width: 520px;
+    padding: 16px 20px;
+    border-radius: var(--r-door);
+    border: 1px dashed rgb(255 255 255 / 0.2);
+    color: var(--ink-2);
+    font-size: 15px;
+  }
+  .none :global(svg) {
+    margin-top: 2px;
+    flex: none;
+  }
+  .none b {
+    color: var(--ink);
+    font-weight: 600;
+    text-decoration: line-through;
+    text-decoration-color: var(--ink-3);
+  }
+  .none span {
+    display: block;
+    margin-top: 2px;
+  }
+  .third {
+    padding: 14px 18px;
+    border-radius: var(--r-door);
+    border: 1px solid var(--hair);
+    background: rgb(18 18 24 / 0.5);
+  }
+  .third .mono {
+    font-size: 14px;
+  }
+  .tmdb {
+    grid-area: tmdb;
+  }
+  .plex {
+    grid-area: plex;
+  }
+  @media (max-width: 760px) {
+    .reach {
+      grid-template-columns: 1fr;
+      grid-template-areas: 'you' 'wire' 'server' 'none' 'tmdb' 'plex';
+    }
+    .wire i {
+      width: 2px;
+      height: 56px;
+      background: linear-gradient(180deg, transparent, var(--light) 20%, var(--light) 80%, transparent);
+    }
+  }
+</style>

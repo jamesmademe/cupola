@@ -1,0 +1,128 @@
+---
+// Services as the README states them: what Cupola does with each, how it
+// signs in, how far it goes, and whether it ran against a real instance.
+import { services, glyph, type Service } from '../lib/repo';
+interface Props {
+  ids?: string[];
+  anchors?: boolean;
+}
+const { ids, anchors = false } = Astro.props;
+const rows: Service[] = ids ? ids.map((id) => services().find((s) => s.id === id)!).filter(Boolean) : services();
+const tested = {
+  verified: { mark: '✓', label: 'Verified on a real server', cls: 'v' },
+  partial: { mark: '◐', label: 'Partly verified', cls: 'p' },
+  untested: { mark: '○', label: 'Recorded answers only', cls: 'u' },
+} as const;
+---
+<div class="svc">
+  {rows.map((s) => (
+    <article class="row" id={anchors ? s.id : undefined}>
+      <div class="name">
+        <span class="g" set:html={glyph(s.id)} />
+        <div>
+          <h3>{s.name}</h3>
+          {s.aka && <p class="t-meta">{s.aka}</p>}
+        </div>
+      </div>
+      <p class="what">{s.what}</p>
+      <dl>
+        <div><dt>Signs in with</dt><dd>{s.auth}</dd></div>
+        <div><dt>Control</dt><dd>{s.control}</dd></div>
+        <div>
+          <dt>Tested</dt>
+          <dd class:list={['t', tested[s.tested].cls]}><span aria-hidden="true">{tested[s.tested].mark}</span> {tested[s.tested].label}</dd>
+        </div>
+      </dl>
+      {s.note && <p class="note t-meta">{s.note}</p>}
+    </article>
+  ))}
+</div>
+
+<style>
+  .svc {
+    display: grid;
+    gap: 12px;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr) 300px;
+    gap: 24px;
+    padding: 22px 24px;
+    border-radius: var(--r-group);
+    background: rgb(18 18 24 / 0.82);
+    border: 1px solid var(--hair);
+    scroll-margin-top: 110px;
+  }
+  .row:target {
+    border-color: color-mix(in srgb, var(--light) 60%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--light) 18%, transparent);
+  }
+  .name {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .g {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    flex: none;
+    border-radius: 12px;
+    background: var(--fill-strong);
+    border: 1px solid var(--edge);
+  }
+  .g :global(svg) {
+    width: 20px;
+    height: 20px;
+  }
+  h3 {
+    font-family: var(--display);
+    font-size: 21px;
+    line-height: 1.1;
+    font-variation-settings: 'wdth' 94, 'opsz' 21;
+    margin-top: 2px;
+  }
+  .what {
+    color: var(--ink-2);
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  dl {
+    margin: 0;
+    display: grid;
+    gap: 8px;
+    font-size: 14px;
+  }
+  dl div {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    gap: 10px;
+  }
+  dt {
+    color: var(--ink-3);
+  }
+  dd {
+    margin: 0;
+    color: var(--ink);
+  }
+  .t.v span {
+    color: var(--green);
+  }
+  .t.p span,
+  .t.u span {
+    color: var(--ink-2);
+  }
+  .note {
+    grid-column: 2 / -1;
+  }
+  @media (max-width: 1000px) {
+    .row {
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    .note {
+      grid-column: auto;
+    }
+  }
+</style>

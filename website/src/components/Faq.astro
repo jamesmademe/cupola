@@ -1,0 +1,64 @@
+---
+import type { Qa } from '../lib/seo';
+interface Props {
+  items: Qa[];
+  open?: number;
+}
+const { items, open = -1 } = Astro.props;
+---
+<div class="faq">
+  {items.map((x, i) => (
+    <details open={i === open}>
+      <summary><h3>{x.q}</h3><span class="chev" aria-hidden="true"></span></summary>
+      <div class="a" set:html={`<p>${x.a}</p>`} />
+    </details>
+  ))}
+</div>
+
+<style>
+  .faq {
+    border-top: 1px solid var(--hair);
+  }
+  details {
+    border-bottom: 1px solid var(--hair);
+  }
+  summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    min-height: 64px;
+    padding: 16px 0;
+    cursor: pointer;
+    list-style: none;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  summary h3 {
+    font-family: var(--text);
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+  .chev {
+    width: 12px;
+    height: 12px;
+    flex: none;
+    border-right: 2px solid var(--ink-3);
+    border-bottom: 2px solid var(--ink-3);
+    transform: rotate(45deg) translateY(-3px);
+    transition: transform var(--standard) var(--ease);
+  }
+  details[open] .chev {
+    transform: rotate(-135deg) translateY(-3px);
+  }
+  .a {
+    padding: 0 0 22px;
+    max-width: var(--prose);
+    color: var(--ink-2);
+  }
+  .a :global(p + p) {
+    margin-top: 0.8em;
+  }
+</style>

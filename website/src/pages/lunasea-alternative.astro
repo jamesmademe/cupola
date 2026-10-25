@@ -1,0 +1,27 @@
+---
+import Guide from '../layouts/Guide.astro';
+import { pick } from '../data/faq';
+---
+<Guide
+  page="lunasea"
+  lede="If you used LunaSea to look after Radarr, Sonarr and your download client from your phone, Cupola does that job and reaches further: Seerr, Prowlarr, Bazarr, Jellyfin, Plex and the server underneath. It is free, open source and actively developed, for iPhone, Android and Mac."
+  screen="home"
+  services={['radarr', 'sonarr', 'lidarr', 'sabnzbd', 'nzbget', 'qbittorrent']}
+  questions={pick('lunasea', 'account', 'free', 'arrApp')}
+  related={['arr', 'downloads', 'seerr']}
+>
+  <p class="t-meta">Updated October 2026.</p>
+
+  <h2>Where LunaSea stands</h2>
+  <p>LunaSea's author published a <a href="https://github.com/JagandeepBrar/LunaSea/releases" rel="noopener">final release</a> and archived the project. An archived app gets no more updates as the services it talks to change.</p>
+
+  <h2>Moving over</h2>
+  <ul>
+    <li><strong>Settings do not carry over.</strong> Cupola does not read LunaSea's configuration or backups. Each connection is set up again with the same address and API key you gave LunaSea.</li>
+    <li><strong>A guided first run.</strong> Cupola asks for the services you run one at a time and skips the rest. Each connection can be tested before you save it, with the reason when it fails: a wrong key, a wrong port, a certificate it does not trust yet.</li>
+    <li><strong>Two that are not here.</strong> There is no Tautulli integration, because Cupola reads sessions from Jellyfin and Plex directly, and there is no Wake on LAN.</li>
+  </ul>
+
+  <h2>What is different</h2>
+  <p>Cupola is built around what needs you rather than around each service's menus: Home says what arrived and what is stuck, Activity leads every fault with its remedy, and Discover searches every service at once. Each service still has its own room, with its own tabs, when you want the details.</p>
+</Guide>

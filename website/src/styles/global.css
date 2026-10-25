@@ -1,0 +1,433 @@
+/* The site is the app's dark room: a near-black ground lit from the title
+   in front, ink in four steps, and colour only from artwork and the five
+   tones. Values are the app's tokens (design/system/README.md). */
+
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  src: url('/fonts/BricolageGrotesque.woff2') format('woff2');
+  font-weight: 200 800;
+  font-stretch: 75% 100%;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Onest';
+  src: url('/fonts/Onest.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/GeistMono.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: dark;
+
+  --ground: #0a0a0d;
+  --slab: #121218;
+  --raised: #17171d;
+  --door: #16161c;
+  --enamel: #1a1a1f;
+
+  --ink: #f7f6f2;
+  --ink-2: rgb(247 246 242 / 0.72);
+  --ink-3: rgb(247 246 242 / 0.6);
+  --ink-on: #0a0a0d;
+
+  --hair: rgb(255 255 255 / 0.07);
+  --edge: rgb(255 255 255 / 0.1);
+  --fill-quiet: rgb(255 255 255 / 0.06);
+  --fill-control: rgb(255 255 255 / 0.08);
+  --fill-strong: rgb(255 255 255 / 0.12);
+
+  --green: #5fe39a;
+  --green-dot: #34d17f;
+  --amber: #f7c23a;
+  --amber-ink: #2a1e00;
+  --amber-wash: rgb(247 194 58 / 0.12);
+  --red: #ff8a7a;
+  --red-dot: #ff6b5b;
+  --blue: #9db8ff;
+
+  /* The title light: set per section by the room script. */
+  --light: #8a8a99;
+  --light-fill: #b9b9c6;
+
+  --r-thumb: 8px;
+  --r-chip: 12px;
+  --r-poster: 14px;
+  --r-control: 14px;
+  --r-button: 16px;
+  --r-door: 20px;
+  --r-group: 22px;
+  --r-slab: 26px;
+  --r-sheet: 30px;
+
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --press: 180ms;
+  --standard: 320ms;
+  --enter: 520ms;
+  --light-move: 1500ms;
+
+  --display: 'Bricolage Grotesque', 'Onest', ui-sans-serif, system-ui, sans-serif;
+  --text: 'Onest', ui-sans-serif, system-ui, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --gutter: clamp(16px, 4vw, 40px);
+  --well: 1180px;
+  --prose: 640px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-padding-top: 96px;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--text);
+  font-size: 17px;
+  line-height: 1.55;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'ss01' 0;
+  overflow-x: clip;
+}
+
+img,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+a {
+  color: inherit;
+  text-decoration-color: rgb(247 246 242 / 0.35);
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: 1px;
+  transition: text-decoration-color var(--press) var(--ease);
+}
+a:hover {
+  text-decoration-color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink-2);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+::selection {
+  background: var(--light);
+  color: var(--ink-on);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+p {
+  margin: 0;
+  text-wrap: pretty;
+}
+
+/* ---------- Type roles ---------- */
+
+.t-giant {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(52px, 10.4vw, 164px);
+  line-height: 0.88;
+  letter-spacing: -0.035em;
+  font-variation-settings: 'wdth' 76, 'opsz' 96;
+}
+.t-screen {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(40px, 6.2vw, 92px);
+  line-height: 0.94;
+  letter-spacing: -0.03em;
+  font-variation-settings: 'wdth' 80, 'opsz' 96;
+}
+.t-room {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(30px, 3.6vw, 48px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variation-settings: 'wdth' 88, 'opsz' 48;
+}
+.t-section {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 22px;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  font-variation-settings: 'wdth' 96, 'opsz' 22;
+}
+.t-lede {
+  font-size: clamp(18px, 1.6vw, 21px);
+  line-height: 1.5;
+  color: var(--ink-2);
+  max-width: 34em;
+}
+.t-meta {
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ink-3);
+  font-weight: 500;
+}
+.t-micro {
+  font-size: 12px;
+  line-height: 1.3;
+  font-weight: 600;
+  color: var(--ink-3);
+  letter-spacing: 0.01em;
+}
+.mono,
+code,
+kbd {
+  font-family: var(--mono);
+  font-size: 0.86em;
+  font-weight: 450;
+  font-variant-ligatures: none;
+  font-feature-settings: 'zero' 1;
+}
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Layout ---------- */
+
+.well {
+  width: 100%;
+  max-width: calc(var(--well) + 2 * var(--gutter));
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+.prose {
+  max-width: var(--prose);
+}
+.prose > * + * {
+  margin-top: 1em;
+}
+.prose h2 {
+  margin-top: 2.2em;
+}
+.prose h3 {
+  margin-top: 1.8em;
+}
+.prose p,
+.prose li {
+  color: var(--ink-2);
+}
+.prose strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.prose ul {
+  padding-left: 1.1em;
+}
+.prose li + li {
+  margin-top: 0.5em;
+}
+.prose li::marker {
+  color: var(--ink-3);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip {
+  position: fixed;
+  left: 16px;
+  top: -60px;
+  z-index: 100;
+  padding: 10px 16px;
+  border-radius: var(--r-button);
+  background: var(--ink);
+  color: var(--ink-on);
+  font-weight: 600;
+  text-decoration: none;
+}
+.skip:focus {
+  top: 16px;
+}
+
+/* ---------- Surfaces ---------- */
+
+.slab {
+  background: rgb(18 18 24 / 0.82);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-slab);
+}
+.door {
+  background: rgb(22 22 28 / 0.86);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-door);
+}
+
+/* ---------- Buttons ---------- */
+
+.btn {
+  --h: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: var(--h);
+  padding: 0 22px;
+  border-radius: var(--r-button);
+  border: 1px solid transparent;
+  font: 600 16px/1.2 var(--text);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    transform var(--press) var(--ease),
+    background-color var(--standard) var(--ease),
+    border-color var(--standard) var(--ease);
+}
+.btn:active {
+  transform: scale(0.96);
+}
+.btn svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+.btn-ink {
+  background: var(--ink);
+  color: var(--ink-on);
+}
+.btn-ink:hover {
+  background: #fff;
+}
+.btn-lit {
+  background: var(--light-fill);
+  color: var(--ink-on);
+  transition:
+    transform var(--press) var(--ease),
+    background-color var(--light-move) ease;
+}
+.btn-ghost {
+  background: var(--fill-control);
+  border-color: var(--edge);
+  color: var(--ink);
+}
+.btn-ghost:hover {
+  background: var(--fill-strong);
+}
+.btn-m {
+  --h: 44px;
+  padding: 0 16px;
+  font-size: 15px;
+  border-radius: var(--r-control);
+}
+.btn .count {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+  font-weight: 500;
+}
+.btn-ink .count,
+.btn-lit .count {
+  color: rgb(10 10 13 / 0.55);
+}
+
+/* ---------- Tones ---------- */
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+.dot.green {
+  background: var(--green-dot);
+}
+.dot.red {
+  background: var(--red-dot);
+}
+.dot.blue {
+  background: var(--blue);
+}
+.dot.amber {
+  background: var(--amber);
+}
+.dot.neutral {
+  border: 1.5px solid var(--ink-2);
+}
+.tone-amber {
+  color: var(--amber);
+}
+.tone-red {
+  color: var(--red);
+}
+.tone-blue {
+  color: var(--blue);
+}
+.tone-green {
+  color: var(--green);
+}
+
+/* ---------- Reveal ---------- */
+
+.rise {
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity var(--enter) var(--ease),
+    transform var(--enter) var(--ease);
+  transition-delay: calc(var(--i, 0) * 40ms);
+}
+.rise.in {
+  opacity: 1;
+  transform: none;
+}
+.no-js .rise {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+  .rise {
+    transform: none;
+    transition: opacity 150ms linear;
+  }
+}

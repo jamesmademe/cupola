@@ -1,0 +1,399 @@
+---
+// Cupola in a Mac window, drawn at 1280 × 800 and zoomed to its column:
+// the sidebar with the sections and their keys, every service with a light
+// only where it needs a look, Discover, and the Activity inspector.
+import Icon from './Icon.astro';
+import { services, glyph } from '../lib/repo';
+import { poster, backdrop, type TitleId } from '../data/titles';
+
+const list = services().filter((s) => !['readarr', 'nzbget', 'transmission', 'unraid', 'nginx_proxy_manager'].includes(s.id));
+const needsLook = new Set(['qbittorrent', 'lidarr']);
+---
+<figure class="desk" data-desk aria-label="Cupola on a Mac: the sidebar, Discover and the Activity inspector" role="group">
+  <div class="win">
+    <aside class="side">
+      <div class="lights" aria-hidden="true"><i></i><i></i><i></i></div>
+      <nav>
+        <span><Icon name="home" size={18} />Home<kbd>⌘1</kbd></span>
+        <span class="on"><Icon name="compass" size={18} />Discover<kbd>⌘2</kbd></span>
+        <span><Icon name="pulse" size={18} />Activity<kbd>⌘3</kbd></span>
+        <span><Icon name="stack" size={18} />Stack<kbd>⌘4</kbd></span>
+      </nav>
+      <p class="label">Services</p>
+      <ul>
+        {list.map((s) => (
+          <li><span class="g" set:html={glyph(s.id)} />{s.name}{needsLook.has(s.id) && <span class="dot amber" />}</li>
+        ))}
+      </ul>
+      <p class="settings"><Icon name="gear" size={18} />Settings<kbd>⌘,</kbd></p>
+    </aside>
+
+    <section class="main">
+      <div class="top">
+        <h3>Discover</h3>
+        <span class="jump"><Icon name="search" size={15} />Jump to…<kbd>⌘K</kbd></span>
+      </div>
+      <div class="field"><Icon name="search" size={18} />Movies, series, people</div>
+      <div class="cal" style={`background-image:linear-gradient(90deg, rgb(18 18 24 / .96) 35%, rgb(18 18 24 / .55)), url(${backdrop('tos', true)})`}>
+        <p class="h">Calendar</p>
+        <p class="sub">Wed 14 Oct · Sprite Fright · Fri 16 Oct · Tears of Steel</p>
+        <div class="week">
+          {['M 12', 'T 13', 'W 14', 'T 15', 'F 16', 'S 17', 'S 18'].map((d, i) => {
+            const [w, n] = d.split(' ');
+            return <span class:list={{ today: i === 2 }}><small>{w}</small>{n}</span>;
+          })}
+        </div>
+      </div>
+      <div class="doors">
+        <div class="door trend">
+          <p class="h">Trending</p><p class="sub">This week</p>
+          <div class="fan">{(['sprite', 'cosmos', 'charge'] as TitleId[]).map((t) => <img src={poster(t)} alt="" loading="lazy" width="54" height="81" />)}</div>
+        </div>
+        <div class="door"><p class="h">Genres</p><p class="sub">19</p><p class="k">Comedy<br />Fantasy</p></div>
+        <div class="door"><p class="h">Studios</p><p class="sub">Movies</p><p class="k">Blender<br />Studio</p></div>
+        <div class="door"><p class="h">Decades</p><p class="sub">1920s to now</p><p class="k">2010s</p></div>
+      </div>
+      <p class="h shelfh">Because you watched Sintel</p>
+      <div class="shelf">
+        {(['spring', 'tos', 'bbb', 'cosmos', 'charge', 'sprite', 'sintel'] as TitleId[]).map((t) => (
+          <img src={poster(t)} alt="" loading="lazy" width="120" height="180" />
+        ))}
+      </div>
+    </section>
+
+    <aside class="insp">
+      <p class="h"><Icon name="pulse" size={18} />Activity</p>
+      <div class="item">
+        <img src={poster('charge')} alt="" loading="lazy" width="36" height="54" />
+        <div><b>Charge is stuck at 47%</b><span class="tone-amber">Nothing for 3 h</span></div>
+      </div>
+      <span class="amber">Try another download</span>
+      <div class="item">
+        <img src={poster('tos')} alt="" loading="lazy" width="36" height="54" />
+        <div><b>Tears of Steel</b><span class="tone-blue tabular">64% · about 12 min left</span><i class="bar"><i style="width:64%"></i></i></div>
+      </div>
+      <div class="item">
+        <img src={poster('sintel')} alt="" loading="lazy" width="36" height="54" />
+        <div><b>Sintel</b><span class="tone-blue tabular">21% · about 40 min left</span><i class="bar"><i style="width:21%"></i></i></div>
+      </div>
+    </aside>
+  </div>
+</figure>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-desk]').forEach((desk) => {
+    const win = desk.querySelector<HTMLElement>('.win')!;
+    const fit = () => (win.style.zoom = String(desk.clientWidth / 1280));
+    new ResizeObserver(fit).observe(desk);
+    fit();
+  });
+</script>
+
+<style>
+  .desk {
+    margin: 0;
+    width: 100%;
+    aspect-ratio: 1280 / 800;
+  }
+  .win {
+    zoom: 0.7;
+    width: 1280px;
+    height: 800px;
+    display: grid;
+    grid-template-columns: 236px 1fr 300px;
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--ground);
+    border: 1px solid rgb(255 255 255 / 0.12);
+    box-shadow:
+      0 60px 120px -40px color-mix(in srgb, var(--light) 40%, transparent),
+      0 40px 80px -30px rgb(0 0 0 / 0.9);
+    font-size: 15px;
+    line-height: 20px;
+    text-align: left;
+    transition: box-shadow 1500ms ease;
+  }
+  kbd {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--ink-3);
+  }
+  .side {
+    display: flex;
+    flex-direction: column;
+    padding: 14px 12px;
+    background: #0e0e12;
+    border-right: 1px solid var(--hair);
+  }
+  .lights {
+    display: flex;
+    gap: 8px;
+    padding: 2px 6px 20px;
+  }
+  .lights i {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #ff5f57;
+  }
+  .lights i:nth-child(2) {
+    background: #febc2e;
+  }
+  .lights i:nth-child(3) {
+    background: #28c840;
+  }
+  .side nav {
+    display: grid;
+    gap: 2px;
+  }
+  .side nav span,
+  .settings {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 40px;
+    padding: 0 12px;
+    border-radius: 12px;
+    color: var(--ink-2);
+    font-weight: 600;
+  }
+  .side nav .on {
+    background: var(--fill-strong);
+    color: var(--ink);
+  }
+  .label {
+    margin: 22px 12px 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-3);
+  }
+  .side ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 2px;
+  }
+  .side li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 36px;
+    padding: 0 12px;
+    font-weight: 600;
+    color: var(--ink-2);
+  }
+  .side li .dot {
+    margin-left: auto;
+  }
+  .g {
+    width: 18px;
+    color: var(--ink-2);
+  }
+  .g :global(svg) {
+    width: 18px;
+    height: 18px;
+  }
+  .settings {
+    margin-top: auto;
+  }
+  .main {
+    padding: 18px 26px;
+    overflow: hidden;
+  }
+  .top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .top h3 {
+    font-size: 26px;
+    font-variation-settings: 'wdth' 92, 'opsz' 26;
+  }
+  .jump {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 220px;
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 10px;
+    background: var(--fill-quiet);
+    border: 1px solid var(--edge);
+    font-size: 14px;
+    color: var(--ink-3);
+  }
+  .field {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 48px;
+    margin-top: 16px;
+    padding: 0 16px;
+    border-radius: 16px;
+    background: var(--fill-quiet);
+    border: 1px solid var(--edge);
+    color: var(--ink-3);
+  }
+  .h {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 21px;
+    line-height: 24px;
+    font-variation-settings: 'wdth' 96, 'opsz' 21;
+  }
+  .sub {
+    margin-top: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-2);
+  }
+  .cal {
+    margin-top: 16px;
+    padding: 18px 20px;
+    border-radius: 22px;
+    background-size: cover;
+    background-position: center;
+    border: 1px solid var(--hair);
+  }
+  .week {
+    display: flex;
+    gap: 22px;
+    margin-top: 14px;
+  }
+  .week span {
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+    width: 36px;
+    font-weight: 600;
+  }
+  .week small {
+    font-size: 12px;
+    color: var(--ink-3);
+  }
+  .week span.today {
+    outline: 2px solid var(--ink);
+    outline-offset: -2px;
+    border-radius: 18px;
+    padding: 4px 0;
+  }
+  .doors {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr;
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .door {
+    position: relative;
+    height: 112px;
+    padding: 14px 16px;
+    border-radius: 20px;
+    background: rgb(22 22 28 / 0.92);
+    border: 1px solid var(--hair);
+    overflow: hidden;
+  }
+  .door .h {
+    font-size: 18px;
+  }
+  .k {
+    position: absolute;
+    right: 16px;
+    bottom: 12px;
+    text-align: right;
+    font-weight: 600;
+    color: var(--ink-2);
+  }
+  .fan {
+    position: absolute;
+    right: 10px;
+    bottom: -14px;
+    display: flex;
+  }
+  .fan img {
+    width: 54px;
+    height: 81px;
+    border-radius: 8px;
+    object-fit: cover;
+    margin-left: -18px;
+    box-shadow: 0 8px 18px rgb(0 0 0 / 0.6);
+  }
+  .fan img:nth-child(1) {
+    transform: rotate(-8deg);
+  }
+  .fan img:nth-child(3) {
+    transform: rotate(8deg);
+  }
+  .shelfh {
+    margin-top: 22px;
+  }
+  .shelf {
+    display: flex;
+    gap: 14px;
+    margin-top: 12px;
+  }
+  .shelf img {
+    width: 120px;
+    height: 180px;
+    border-radius: 14px;
+    object-fit: cover;
+    flex: none;
+  }
+  .insp {
+    padding: 18px 18px;
+    border-left: 1px solid var(--hair);
+    background: #0e0e12;
+  }
+  .item {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-top: 18px;
+  }
+  .item img {
+    width: 36px;
+    height: 54px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex: none;
+  }
+  .item div {
+    flex: 1;
+    display: grid;
+    gap: 2px;
+  }
+  .item b {
+    font-weight: 600;
+  }
+  .item span {
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .bar {
+    display: block;
+    height: 4px;
+    margin-top: 6px;
+    border-radius: 2px;
+    background: var(--fill-strong);
+    overflow: hidden;
+  }
+  .bar i {
+    display: block;
+    height: 100%;
+    background: var(--blue);
+  }
+  .amber {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+    margin-top: 12px;
+    border-radius: 14px;
+    background: var(--amber);
+    color: var(--amber-ink);
+    font-weight: 600;
+  }
+</style>

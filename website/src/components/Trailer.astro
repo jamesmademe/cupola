@@ -1,0 +1,90 @@
+---
+// The launch trailer, loaded from YouTube only when someone presses play,
+// so a visit alone sends nothing to Google.
+import { site } from '../config';
+const id = site.trailerYouTubeId;
+---
+{id && (
+  <div class="trailer" data-trailer={id}>
+    <button type="button" aria-label="Play the Cupola trailer, loads YouTube">
+      <img src={`https://i.ytimg.com/vi/${id}/maxresdefault.jpg`} alt="" loading="lazy" width="1280" height="720" />
+      <span class="play" aria-hidden="true"></span>
+      <span class="note t-meta">Plays from YouTube</span>
+    </button>
+  </div>
+)}
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-trailer]').forEach((box) => {
+    box.querySelector('button')?.addEventListener('click', () => {
+      const frame = document.createElement('iframe');
+      frame.src = `https://www.youtube-nocookie.com/embed/${box.dataset.trailer}?autoplay=1&rel=0`;
+      frame.title = 'Cupola trailer';
+      frame.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+      frame.allowFullscreen = true;
+      box.replaceChildren(frame);
+    });
+  });
+</script>
+
+<style>
+  .trailer {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    border-radius: var(--r-slab);
+    overflow: hidden;
+    background: var(--slab);
+    border: 1px solid var(--hair);
+    box-shadow: 0 50px 110px -40px color-mix(in srgb, var(--light) 50%, transparent);
+  }
+  button {
+    all: unset;
+    position: absolute;
+    inset: 0;
+    cursor: pointer;
+  }
+  button:focus-visible {
+    outline: 2px solid var(--ink-2);
+    outline-offset: -4px;
+  }
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .play {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 84px;
+    height: 84px;
+    margin: -42px 0 0 -42px;
+    border-radius: 50%;
+    background: rgb(247 246 242 / 0.94);
+    transition: transform var(--press) var(--ease);
+  }
+  .play::after {
+    content: '';
+    position: absolute;
+    left: 34px;
+    top: 27px;
+    border-left: 22px solid var(--ink-on);
+    border-top: 15px solid transparent;
+    border-bottom: 15px solid transparent;
+  }
+  button:hover .play {
+    transform: scale(1.06);
+  }
+  .note {
+    position: absolute;
+    left: 20px;
+    bottom: 16px;
+  }
+  .trailer :global(iframe) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+</style>

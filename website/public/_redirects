@@ -1,0 +1,13 @@
+# Words people type for the same page.
+/download        /install/            301
+/downloads       /install/            301
+/get             /install/            301
+/testflight      /install/#ios        302
+/android         /install/#android    302
+/mac             /install/#mac        302
+/sonarr          /radarr-sonarr-app/  301
+/radarr          /radarr-sonarr-app/  301
+/overseerr       /seerr-requests/     301
+/jellyseerr      /seerr-requests/     301
+/lunasea         /lunasea-alternative/ 301
+/github          https://github.com/matthw-labs/seekarr 302

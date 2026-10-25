@@ -1,0 +1,141 @@
+---
+// Where to get Cupola, per platform. A platform whose link is not set yet
+// says so instead of offering a button that leads nowhere. The visitor's own
+// platform, when the browser says which it is, comes first.
+import Icon from './Icon.astro';
+import { site } from '../config';
+
+const d = site.downloads;
+const platforms = [
+  {
+    id: 'ios',
+    icon: 'apple',
+    name: 'iPhone and iPad',
+    how: 'TestFlight beta, from Apple',
+    href: d.testflight,
+    action: 'Join the beta',
+  },
+  {
+    id: 'android',
+    icon: 'android',
+    name: 'Android',
+    how: 'APK from GitHub releases',
+    href: d.apk,
+    action: 'Download the APK',
+  },
+  {
+    id: 'mac',
+    icon: 'desktop',
+    name: 'Mac',
+    how: 'Signed and notarized .dmg',
+    href: d.macos,
+    action: 'Download for Mac',
+  },
+] as const;
+interface Props {
+  compact?: boolean;
+}
+const { compact = false } = Astro.props;
+---
+<div class:list={['get', { compact }]} data-get>
+  {platforms.map((p) => (
+    <div class="plat" data-platform={p.id}>
+      <div class="head">
+        <Icon name={p.icon} size={26} />
+        <div>
+          <h3 class="t-section">{p.name}</h3>
+          <p class="t-meta">{p.how}</p>
+        </div>
+      </div>
+      {p.href ? (
+        <a class="btn btn-lit" href={p.href} rel="noopener">{p.action}<Icon name="arrow" /></a>
+      ) : (
+        <p class="wait"><span class="dot neutral"></span> Not open yet. <a href={site.watch} rel="noopener">Watch releases</a> to hear when it is.</p>
+      )}
+    </div>
+  ))}
+  {!compact && (
+    <p class="rest t-meta">
+      Windows and Linux builds come with every <a href={site.releases} rel="noopener">GitHub release</a>, made by CI and not yet run by hand. Or <a href="/install/#source">build it from source</a>.
+    </p>
+  )}
+</div>
+
+<script>
+  const ua = navigator.userAgent;
+  const mine = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
+    ? 'ios'
+    : /Android/.test(ua)
+      ? 'android'
+      : /Macintosh/.test(ua)
+        ? 'mac'
+        : '';
+  if (mine) {
+    document.querySelectorAll<HTMLElement>('[data-get]').forEach((g) => {
+      const el = g.querySelector<HTMLElement>(`[data-platform="${mine}"]`);
+      if (!el) return;
+      el.classList.add('mine');
+      g.prepend(el);
+    });
+  }
+</script>
+
+<style>
+  .get {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .plat {
+    display: grid;
+    align-content: space-between;
+    gap: 22px;
+    padding: 22px;
+    border-radius: var(--r-slab);
+    background: rgb(18 18 24 / 0.82);
+    border: 1px solid var(--hair);
+    transition: border-color var(--standard) var(--ease);
+  }
+  .plat:global(.mine) {
+    border-color: color-mix(in srgb, var(--light) 50%, transparent);
+    box-shadow: 0 30px 70px -30px color-mix(in srgb, var(--light) 50%, transparent);
+  }
+  .head {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .head > :global(svg) {
+    margin-top: 2px;
+    color: var(--ink-2);
+  }
+  .head p {
+    margin-top: 4px;
+  }
+  .plat .btn {
+    justify-content: space-between;
+    width: 100%;
+  }
+  .wait {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+    min-height: 52px;
+    align-content: center;
+    font-size: 15px;
+    color: var(--ink-2);
+  }
+  .wait .dot {
+    transform: translateY(-1px);
+  }
+  .rest {
+    grid-column: 1 / -1;
+    margin-top: 6px;
+  }
+  @media (max-width: 860px) {
+    .get {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

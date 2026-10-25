@@ -1,0 +1,30 @@
+{
+  "bbb": {
+    "light": "#5fc9f2",
+    "fill": "#94ddf9"
+  },
+  "charge": {
+    "light": "#7baad5",
+    "fill": "#a8c8e6"
+  },
+  "cosmos": {
+    "light": "#cfa081",
+    "fill": "#e6c0a8"
+  },
+  "sintel": {
+    "light": "#81b2cf",
+    "fill": "#a8cfe6"
+  },
+  "spring": {
+    "light": "#81b6cf",
+    "fill": "#a8d1e6"
+  },
+  "sprite": {
+    "light": "#d08187",
+    "fill": "#e6a8ad"
+  },
+  "tos": {
+    "light": "#81b9cf",
+    "fill": "#a8d4e6"
+  }
+}

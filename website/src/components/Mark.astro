@@ -1,0 +1,33 @@
+---
+// The Cupola mark, served once from /brand/ and cached, never redrawn.
+interface Props {
+  size?: number | string;
+  file?: 'cupola_mark' | 'cupola_icon' | 'cupola_launcher';
+  class?: string;
+  /** Alt text; the mark is decorative when left out. */
+  label?: string;
+  eager?: boolean;
+}
+const { size = 28, file = 'cupola_mark', class: cls, label, eager = false } = Astro.props;
+const dim = typeof size === 'number' ? `${size}px` : size;
+---
+<img
+  class:list={['mark', cls]}
+  src={`/brand/${file}.svg`}
+  alt={label ?? ''}
+  width="1024"
+  height="1024"
+  style={`--size:${dim}`}
+  loading={eager ? 'eager' : 'lazy'}
+  decoding="async"
+  draggable="false"
+/>
+<style>
+  .mark {
+    display: inline-block;
+    width: var(--size);
+    height: var(--size);
+    flex: none;
+    user-select: none;
+  }
+</style>

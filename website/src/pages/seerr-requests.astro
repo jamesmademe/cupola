@@ -1,0 +1,34 @@
+---
+import Guide from '../layouts/Guide.astro';
+import { pick } from '../data/faq';
+---
+<Guide
+  page="seerr"
+  lede="Cupola is a native app for Seerr, Overseerr and Jellyseerr on iPhone, Android and Mac. Whoever runs the server gets Discover, requests and approvals. Everyone else at home signs in with their own account and gets a simpler app that only asks, and tells them when it is ready."
+  screen="requests"
+  services={['seerr', 'jellyfin', 'plex']}
+  questions={pick('seerr', 'household', 'player', 'leaves')}
+  related={['arr', 'stream', 'install']}
+>
+  <h2>For whoever runs the server</h2>
+  <ul>
+    <li><strong>Discover.</strong> Trending this week, a calendar of what is coming, and every way in: genres, networks, studios, people, decades, moods and languages, plus the collections you have only part of.</li>
+    <li><strong>Requests that need a decision.</strong> Approve or decline from the phone, resolve issues, keep a watchlist.</li>
+    <li><strong>One search.</strong> Seerr, Radarr, Sonarr, Jellyfin and Plex answer side by side, so you know whether you already have something before you ask for it.</li>
+  </ul>
+
+  <h2>For everyone else at home</h2>
+  <p>Not everyone at home runs the stack. A household member signs in to Seerr with their own account, by email, Jellyfin or Plex, and gets a Cupola with three tabs: Home, Discover and their requests.</p>
+  <ul>
+    <li><strong>Words about what will happen, never how.</strong> <em>Waiting for approval</em>, <em>Downloading 62% · ready around 21:10</em>, <em>On its way</em>, <em>Ready to watch</em>.</li>
+    <li><strong>No plumbing.</strong> No API keys, no queue, no service names beyond Jellyfin and Plex.</li>
+    <li><strong>Nothing they cannot do.</strong> Whatever the server would refuse their account is never offered as a button.</li>
+    <li><strong>A widget and a notification.</strong> <em>Requests</em> on the home screen, and <em>Ready to watch</em> when something they asked for arrives, if they turn it on.</li>
+  </ul>
+
+  <h2>Inviting someone</h2>
+  <p>From Seerr, <strong>Invite someone</strong> makes a link or a QR code that carries the server's address, never its API key. The person installs Cupola, opens the link, and signs in with their own account.</p>
+
+  <h2>Not a player</h2>
+  <p>Cupola tells you when something is ready to watch. You watch it where you always do: Jellyfin, Plex, or the player on your TV.</p>
+</Guide>

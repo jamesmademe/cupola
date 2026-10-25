@@ -1,0 +1,30 @@
+---
+import Guide from '../layouts/Guide.astro';
+import { pick } from '../data/faq';
+import { site } from '../config';
+---
+<Guide
+  page="seekarr"
+  lede="Seekarr, the Flutter client for Seerr, Radarr, Sonarr, Lidarr and qBittorrent, is now Cupola. Same repository, same people, a new name, a new design and seventeen services instead of five."
+  screen="home"
+  questions={pick('seekarr', 'account', 'free')}
+  related={['install', 'services', 'arr']}
+>
+  <h2>What changed</h2>
+  <ul>
+    <li><strong>Seventeen services.</strong> Seekarr covered Seerr, Radarr, Sonarr, Lidarr and qBittorrent. Cupola adds Bazarr, Readarr, Transmission, Prowlarr, SABnzbd, NZBGet, Jellyfin, Plex, TrueNAS, Dockge, Unraid and Nginx Proxy Manager. See <a href="/services/">every service</a>.</li>
+    <li><strong>A new app, built around what needs you.</strong> Home, Discover, Activity and Stack, a household version for people who only request, widgets and notifications.</li>
+    <li><strong>A new license.</strong> Cupola is under the Apache License 2.0. Copies obtained under Seekarr's MIT license keep it.</li>
+  </ul>
+
+  <h2>What stayed</h2>
+  <ul>
+    <li>The <a href={site.repo} rel="noopener">repository</a>, with its history, issues and stars.</li>
+    <li>No account, no server, no telemetry. The app still talks only to your own services.</li>
+    <li>Seekarr's releases, up to 0.8.0, remain on the <a href={site.releases} rel="noopener">releases page</a>.</li>
+  </ul>
+
+  <h2>Updating</h2>
+  <p>Cupola 1.0 is a new app rather than an update to Seekarr. Install it from the <a href="/install/">install page</a> and add your connections again: the same addresses and keys you gave Seekarr.</p>
+  <p>And yes, this site's address still says Seekarr. The app does not.</p>
+</Guide>

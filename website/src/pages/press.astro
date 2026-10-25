@@ -1,0 +1,85 @@
+---
+import Guide from '../layouts/Guide.astro';
+import Mark from '../components/Mark.astro';
+import { site } from '../config';
+import { services } from '../lib/repo';
+import { version } from '../lib/seo';
+
+const all = services();
+const verified = all.filter((s) => s.tested === 'verified').length;
+---
+<Guide
+  page="press"
+  lede="Everything needed to write about Cupola accurately: how to describe it, the mark, and the facts worth checking."
+  related={['services', 'privacy', 'contribute']}
+  get={false}
+>
+  <h2>In one line</h2>
+  <blockquote>Cupola is a free, open-source app for managing a self-hosted media stack (Radarr, Sonarr, Seerr, download clients, Jellyfin, Plex and the server underneath) from iPhone, Android and Mac.</blockquote>
+
+  <h2>In a paragraph</h2>
+  <blockquote>Cupola is a native client for the self-hosted media stack. It brings {all.length} services into one app: Seerr, Radarr, Sonarr, Lidarr, Bazarr, Readarr, qBittorrent, Transmission, Prowlarr, SABnzbd, NZBGet, Jellyfin, Plex, TrueNAS, Dockge, Unraid and Nginx Proxy Manager. It talks directly to the user's own instances, with no Cupola account, server or telemetry. Home shows what arrived and what needs attention, Activity explains stuck downloads with their remedy, and household members can sign in to Seerr with their own account to request titles. It is free and open source under the Apache License 2.0.</blockquote>
+
+  <h2>The name and the two sentences</h2>
+  <ul>
+    <li><strong>Cupola</strong>, capitalized, one word. It was called Seekarr until version 1.0.</li>
+    <li>The claim: <strong>{site.claim}</strong></li>
+    <li>The promise: <strong>{site.promise}</strong></li>
+    <li>Please quote these exactly, and do not add a tagline of your own in Cupola's voice.</li>
+  </ul>
+
+  <h2>The mark</h2>
+  <div class="marks not-prose">
+    <figure><Mark size={120} /><figcaption><a href="/brand/cupola_mark.svg" download>cupola_mark.svg</a><span>On a dark ground</span></figcaption></figure>
+    <figure><Mark size={120} file="cupola_icon" /><figcaption><a href="/brand/cupola_icon.svg" download>cupola_icon.svg</a><span>The app icon, for light grounds</span></figcaption></figure>
+  </div>
+  <p>The mark is the cupola seen from above: six window panes around a round window, with the Earth's light coming through. Do not recolor, outline or redraw it.</p>
+
+  <h2>Facts</h2>
+  <ul>
+    <li>Version {version}. Platforms: iOS, iPadOS, Android, macOS; Windows and Linux builds made by CI.</li>
+    <li>{all.length} services, {verified} verified end to end against real instances. <a href="/services/">Per service</a>.</li>
+    <li>Built with Flutter. Source: <a href={site.repo} rel="noopener">{site.repo.replace('https://', '')}</a>.</li>
+    <li>Free, Apache-2.0, no ads, no account, no telemetry.</li>
+    <li>Independent: not affiliated with the makers of any service it connects to.</li>
+  </ul>
+
+  <h2>Questions</h2>
+  <p>Ask on <a href={site.issues} rel="noopener">GitHub</a>.</p>
+</Guide>
+
+<style>
+  blockquote {
+    margin: 0;
+    padding: 18px 22px;
+    border-left: 2px solid var(--light);
+    border-radius: 0 var(--r-button) var(--r-button) 0;
+    background: rgb(18 18 24 / 0.7);
+    color: var(--ink);
+  }
+  .marks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .marks figure {
+    margin: 0;
+    display: grid;
+    justify-items: center;
+    gap: 12px;
+    padding: 24px;
+    min-width: 220px;
+    border-radius: var(--r-slab);
+    background: rgb(18 18 24 / 0.82);
+    border: 1px solid var(--hair);
+  }
+  figcaption {
+    display: grid;
+    justify-items: center;
+    gap: 2px;
+    font-size: 14px;
+  }
+  figcaption span {
+    color: var(--ink-3);
+  }
+</style>
