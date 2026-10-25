@@ -5,6 +5,7 @@ import Mark from './Mark.astro';
 import { services, glyph } from '../lib/repo';
 const all = services();
 ---
+<div class="box">
 <div class="ring" data-ring style={`--n:${all.length}`}>
   <div class="core">
     <Mark />
@@ -22,6 +23,7 @@ const all = services();
       </li>
     ))}
   </ul>
+</div>
 </div>
 
 <script>
@@ -51,8 +53,14 @@ const all = services();
 </script>
 
 <style>
+  /* The ring takes the width of its column, never more, so it never spills
+     past the edge of a two-column layout. */
+  .box {
+    container-type: inline-size;
+    width: 100%;
+  }
   .ring {
-    --ring: min(560px, 86vw);
+    --ring: min(560px, 100cqi);
     --r: calc(var(--ring) / 2 - 34px);
     position: relative;
     width: var(--ring);
@@ -105,7 +113,7 @@ const all = services();
     position: relative;
     display: grid;
     place-items: center;
-    width: clamp(44px, 8vw, 58px);
+    width: clamp(40px, 10cqi, 58px);
     aspect-ratio: 1;
     border-radius: 18px;
     background: rgb(22 22 28 / 0.92);
