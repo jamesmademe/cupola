@@ -51,7 +51,11 @@ class MediaSeriesManage extends ConsumerWidget {
     required this.onChanged,
     this.subtitles,
     this.now,
+    this.more = const [],
   }) : assert(copies.length > 0, 'nothing to manage');
+
+  /// The page's rows after Sonarr's own: what goes through Seerr.
+  final List<Widget> more;
 
   final List<MediaSeriesHeld> copies;
 
@@ -178,6 +182,7 @@ class MediaSeriesManage extends ConsumerWidget {
               onChoose: (copy) => _remove(context, ref, copy),
             ),
           ),
+        ...more,
       ],
     );
   }

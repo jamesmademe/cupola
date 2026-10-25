@@ -623,6 +623,87 @@ void main() {
     await harness.unmount(tester);
   });
 
+  testWidgets('Clear from Seerr asks, says what stays, then asks Seerr', (
+    tester,
+  ) async {
+    final harness = await _pump(tester, Profiles.p1, WorldTitles.tearsOfSteel);
+    final row = find.text('Clear from Seerr');
+    await tester.ensureVisible(row);
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Clear Tears of Steel from Seerr?'), findsOneWidget);
+    expect(
+      find.textContaining('Nothing is removed from your server.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Clear from Seerr'));
+    await _answer(tester);
+
+    final delete = harness.network
+        .requestsTo(WorldIds.seerr)
+        .where((r) => r.method == 'DELETE')
+        .single;
+    expect(delete.uri.path, '/api/v1/media/${WorldTitles.tearsOfSteel.tmdbId}');
+    expect(find.text('Cleared from Seerr'), findsOneWidget);
+    expect(
+      harness.network.requests.where(
+        (r) => r.method == 'DELETE' && r.server?.id != WorldIds.seerr,
+      ),
+      isEmpty,
+    );
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets("an account that may not manage media says why, and Clear "
+      "does nothing", (tester) async {
+    final harness = await _pump(tester, Profiles.p9, WorldTitles.tearsOfSteel);
+    final rows = find.textContaining(RegExp(r'^Clear from '));
+    await tester.ensureVisible(rows.last);
+    printOnFailure(
+      [for (final e in rows.evaluate()) (e.widget as Text).data].join('\n'),
+    );
+    expect(rows, findsNWidgets(2));
+    expect(find.textContaining("can't manage media."), findsOneWidget);
+    await tester.tap(rows.last);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Clear Tears of Steel from'), findsNothing);
+
+    await harness.unmount(tester);
+  });
+
+  testWidgets('a copy only Seerr reaches is removed through Seerr, with its '
+      'files', (tester) async {
+    final harness = await _pump(tester, Profiles.p5, WorldTitles.tearsOfSteel);
+    final row = find.textContaining(RegExp(r'^Remove from '));
+    await tester.ensureVisible(row);
+    expect(find.text('Through Seerr, with its files'), findsOneWidget);
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('to remove it and delete its files'),
+      findsOneWidget,
+    );
+    await tester.tap(
+      find.widgetWithText(FilledButton, 'Remove and delete its files'),
+    );
+    await _answer(tester);
+
+    final delete = harness.network
+        .requestsTo(WorldIds.seerr)
+        .where((r) => r.method == 'DELETE')
+        .single;
+    expect(
+      delete.uri.path,
+      '/api/v1/media/${WorldTitles.tearsOfSteel.tmdbId}/file',
+    );
+    expect(delete.uri.queryParameters, {'is4k': 'false'});
+
+    await harness.unmount(tester);
+  });
+
   testWidgets('with two copies, Remove asks which, and says which stays', (
     tester,
   ) async {

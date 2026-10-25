@@ -709,10 +709,16 @@ MediaRowView? _answeredView(
       );
       final request = _latestRequest(record.mediaInfo);
       return view(
-        // "Nobody" only where Seerr has no record at all: a record without
-        // its request list still means somebody asked.
+        // "Nobody" where Seerr has no record at all. A record whose request
+        // list is empty is one Seerr found on the server by itself (a library
+        // scan, an arr's sync): it says so beside the status, as Seerr does.
+        // A record without the list says nothing it cannot know.
         detail: request == null
-            ? (record.mediaInfo == null ? 'Nobody has asked for it' : '')
+            ? switch (record.mediaInfo) {
+                null => 'Nobody has asked for it',
+                {'requests': List()} => 'Not requested',
+                _ => '',
+              }
             : [
                 if (request.who.isNotEmpty) request.who,
                 // A row about a request says its day as the request rows

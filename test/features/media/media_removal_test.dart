@@ -76,4 +76,44 @@ void main() {
       'keep theirs.',
     );
   });
+
+  test('clearing from Seerr counts the requests it forgets, and says the '
+      'scan finds what is on the server again', () {
+    final cleared = seerrClearing(
+      title: 'Sintel',
+      name: 'Seerr',
+      requests: 2,
+      onServer: true,
+    );
+    expect(cleared.title, 'Clear Sintel from Seerr?');
+    expect(
+      cleared.message,
+      'Seerr forgets it and its 2 requests. Nothing is removed from your '
+      'server. Seerr finds it again at its next scan, as not requested.',
+    );
+    expect(cleared.confirm, 'Clear from Seerr');
+    expect(
+      seerrClearing(
+        title: 'Spring',
+        name: 'Seerr',
+        requests: 0,
+        onServer: false,
+      ).message,
+      'Seerr forgets what it knows of it. Nothing is removed from your server.',
+    );
+  });
+
+  test('removing through Seerr says the files go with it', () {
+    final removal = seerrArrRemoval(
+      title: 'Sintel',
+      server: 'Radarr 4K',
+      seerr: 'Seerr',
+    );
+    expect(removal.title, 'Remove Sintel from Radarr 4K?');
+    expect(
+      removal.message,
+      'Seerr asks Radarr 4K to remove it and delete its files. '
+      'This cannot be undone.',
+    );
+  });
 }

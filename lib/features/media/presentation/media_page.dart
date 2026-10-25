@@ -1424,6 +1424,13 @@ class _MediaPageState extends ConsumerState<MediaPage> {
   /// The operator's sections, closed: each says what it holds in one line
   /// ([mediaManageSummaries]).
   List<Widget> _manage(List<MediaRow> rows, SettingsModel settings) {
+    final seerr = _seerrManage(rows, settings);
+    List<Widget> onlySeerr() => seerr.isEmpty
+        ? const []
+        : [
+            MediaHeading('Manage', key: _manageKey),
+            MediaGroup(children: seerr),
+          ];
     if (!mediaKey.isMovie) {
       final held = [
         for (final row in rows)
@@ -1445,7 +1452,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                 episodes: episodes,
               ),
       ];
-      if (held.isEmpty) return const [];
+      if (held.isEmpty) return onlySeerr();
       return [
         MediaHeading('Manage', key: _manageKey),
         MediaSeriesManage(
@@ -1453,6 +1460,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
           title: MediaIdentity.of(rows)?.title ?? '',
           subtitles: _bazarrEpisodesOf(rows),
           onChanged: () => _readArrsAgain(rows),
+          more: seerr,
         ),
       ];
     }
@@ -1461,7 +1469,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
       title: (connection) =>
           settings.connectionTitle(connection.id, connection.service),
     );
-    if (summaries == null) return const [];
+    if (summaries == null) return onlySeerr();
     final searches = [
       for (final row in rows)
         if (row case MediaConnectionRow(
@@ -1557,9 +1565,170 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                 onChoose: remove,
               ),
             ),
+          ...seerr,
         ],
       ),
     ];
+  }
+
+  /// Manage's rows that go through Seerr, after the arrs' own: removing a
+  /// copy from a server only Seerr reaches, then clearing the title from each
+  /// Seerr that has a record of it. Each Seerr's account decides: a row it
+  /// may not act on says why, and does nothing.
+  List<Widget> _seerrManage(List<MediaRow> rows, SettingsModel settings) {
+    final title = MediaIdentity.of(rows)?.title ?? '';
+    String nameOf(ServiceInstance connection) =>
+        settings.connectionTitle(connection.id, connection.service);
+    String? cannot(ServiceInstance seerr) => switch (ref
+        .watch(roleGateProvider(seerr.id))
+        .operatorAction(SeerrAbility.manageMedia)) {
+      Live() => null,
+      Dimmed(:final reason) => reason,
+      Absent() => '',
+    };
+    Widget act({
+      required String label,
+      required String summary,
+      required String? reason,
+      required VoidCallback onTap,
+    }) => MediaManageRow(
+      title: label,
+      summary: reason ?? summary,
+      onTap: reason == null ? onTap : null,
+    );
+    return [
+      for (final row in rows)
+        if (row case MediaThroughSeerrRow(
+          :final seerr,
+          :final copy,
+          :final mediaInfo,
+        ))
+          if ((intOrNull(mediaInfo?['id']), cannot(seerr)) case (
+            final mediaId?,
+            final reason,
+          ) when reason != '')
+            act(
+              label: 'Remove from ${copy.serverName(connectionTitle: nameOf)}',
+              summary: 'Through ${nameOf(seerr)}, with its files',
+              reason: reason,
+              onTap: () => _removeThroughSeerr(
+                seerr,
+                mediaId,
+                is4k: copy.copy.is4k,
+                server: copy.serverName(connectionTitle: nameOf),
+                title: title,
+              ),
+            ),
+      for (final row in rows)
+        if (row case MediaConnectionRow(
+          :final connection,
+          reading: MediaReadingAnswered(:final answer),
+        ))
+          if (answer.value case MediaSeerrRecord(:final mediaInfo?))
+            if ((intOrNull(mediaInfo['id']), cannot(connection)) case (
+              final mediaId?,
+              final reason,
+            ) when reason != '')
+              act(
+                label: 'Clear from ${nameOf(connection)}',
+                summary: 'Forgets its requests and status',
+                reason: reason,
+                onTap: () => _clearFromSeerr(
+                  connection,
+                  mediaId,
+                  mediaInfo: mediaInfo,
+                  title: title,
+                ),
+              ),
+    ];
+  }
+
+  /// Clears the title from [seerr] (Seerr's "Clear data") after asking, then
+  /// reads every Seerr again.
+  Future<void> _clearFromSeerr(
+    ServiceInstance seerr,
+    int mediaId, {
+    required Map<String, dynamic> mediaInfo,
+    required String title,
+  }) async {
+    final name = ref
+        .read(currentSettingsProvider)
+        .connectionTitle(seerr.id, seerr.service);
+    final requests = mediaInfo['requests'];
+    // 4 and 5, partly and fully there, read the same in every numbering.
+    bool there(Object? code) => code == 4 || code == 5;
+    final clearing = seerrClearing(
+      title: title,
+      name: name,
+      requests: requests is List ? requests.length : 0,
+      onServer: there(mediaInfo['status']) || there(mediaInfo['status4k']),
+    );
+    await _seerrAct(
+      clearing,
+      failure: 'Could not clear $title from $name',
+      done: 'Cleared from $name',
+      act: () =>
+          ref.read(seerrServiceForProvider(seerr.id)).deleteMedia(mediaId),
+      readAgain: const {ServiceKey.seerr},
+    );
+  }
+
+  /// Removes the title's copy from [server] through [seerr], which deletes
+  /// its files with it, after asking; then reads Seerr and the arrs again.
+  Future<void> _removeThroughSeerr(
+    ServiceInstance seerr,
+    int mediaId, {
+    required bool is4k,
+    required String server,
+    required String title,
+  }) async {
+    final removal = seerrArrRemoval(
+      title: title,
+      server: server,
+      seerr: ref
+          .read(currentSettingsProvider)
+          .connectionTitle(seerr.id, seerr.service),
+    );
+    await _seerrAct(
+      removal,
+      failure: 'Could not remove $title from $server',
+      done: 'Removed from $server',
+      act: () => ref
+          .read(seerrServiceForProvider(seerr.id))
+          .deleteMediaFile(mediaId, is4k: is4k),
+      readAgain: const {ServiceKey.seerr, ServiceKey.radarr, ServiceKey.sonarr},
+    );
+  }
+
+  /// Asks [words]' question; on a yes does [act], says [done] or [failure],
+  /// and reads the rows of [readAgain] again.
+  Future<void> _seerrAct(
+    SeerrRemoval words, {
+    required String failure,
+    required String done,
+    required Future<void> Function() act,
+    required Set<ServiceKey> readAgain,
+  }) async {
+    final result = await showAppConfirmDialog(
+      context: context,
+      title: words.title,
+      message: words.message,
+      icon: Icons.delete_outline_rounded,
+      cancelLabel: 'Keep it',
+      confirmLabel: words.confirm,
+    );
+    if (!result.confirmed || !mounted) return;
+    try {
+      await act();
+      if (!mounted) return;
+      SnackBarHelper.success(context, done);
+    } catch (error) {
+      if (!mounted) return;
+      SnackBarHelper.error(context, failure, detail: error);
+    }
+    for (final row in ref.read(mediaRowsProvider(mediaKey))) {
+      if (readAgain.contains(row.service)) retryMediaRow(ref, mediaKey, row);
+    }
   }
 
   /// `Radarr`, `Radarr and Radarr 4K`, `A, B and C`.

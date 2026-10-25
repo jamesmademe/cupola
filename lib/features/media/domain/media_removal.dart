@@ -80,3 +80,45 @@ MediaRemoval mediaRemoval({
     files: sizeOnDisk > 0 ? formatBytes(sizeOnDisk) : null,
   );
 }
+
+/// What one Seerr's controls on a title say: a question, the sentence under
+/// it, and the confirm, which names the whole of what happens.
+typedef SeerrRemoval = ({String title, String message, String confirm});
+
+/// Clearing [title] from the Seerr called [name] (Seerr's "Clear data"):
+/// Seerr forgets its record and the [requests] made for it, and nothing
+/// leaves an arr or the server. [onServer] is whether Seerr says some of it
+/// is there: its next scan then finds it again, with no request.
+SeerrRemoval seerrClearing({
+  required String title,
+  required String name,
+  required int requests,
+  required bool onServer,
+}) => (
+  title: 'Clear $title from $name?',
+  message: [
+    switch (requests) {
+      0 => '$name forgets what it knows of it.',
+      1 => '$name forgets it and its request.',
+      _ => '$name forgets it and its $requests requests.',
+    },
+    'Nothing is removed from your server.',
+    if (onServer) '$name finds it again at its next scan, as not requested.',
+  ].join(' '),
+  confirm: 'Clear from $name',
+);
+
+/// Removing [title]'s copy from [server], a server Cupola has no connection
+/// to, through the Seerr called [seerr]: Seerr always deletes its files with
+/// it, and never keeps the arr from adding it again.
+SeerrRemoval seerrArrRemoval({
+  required String title,
+  required String server,
+  required String seerr,
+}) => (
+  title: 'Remove $title from $server?',
+  message:
+      '$seerr asks $server to remove it and delete its files. '
+      'This cannot be undone.',
+  confirm: 'Remove and delete its files',
+);

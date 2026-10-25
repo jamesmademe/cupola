@@ -236,12 +236,14 @@ List<MediaRow> _household({List<Object?> images = _art}) => [
 
 /// The household with Seerr in place of its setup row: TMDB's record names
 /// the title, and the collection it belongs to.
-List<MediaRow> _withSeerr() => [
+List<MediaRow> _withSeerr({
+  Map<String, dynamic> mediaInfo = const {'status': 5},
+}) => [
   ..._household().where((row) => row is! MediaNotSetUpRow),
   MediaConnectionRow<MediaSeerrRecord>(
     _seerr,
     _answered(
-      const MediaSeerrRecord(
+      MediaSeerrRecord(
         details: {
           'id': 653,
           'title': 'Nosferatu',
@@ -268,7 +270,7 @@ List<MediaRow> _withSeerr() => [
           },
           'watchProviders': _watchProviders,
           'releases': _releases,
-          'mediaInfo': {'status': 5},
+          'mediaInfo': mediaInfo,
         },
       ),
     ),
@@ -1036,6 +1038,14 @@ void main() {
         'Desktop and an upright tablet · full screen: two tracks, the '
         'servers and Manage beside',
         _withSeerr(),
+        width: 1180,
+        height: 1700,
+      ),
+      _scene(
+        'Found by Seerr · on the server and asked for by nobody: Seerr\'s '
+        'row says Not requested, and Manage clears the title from Seerr '
+        'after the arrs\' own rows',
+        _withSeerr(mediaInfo: const {'id': 41, 'status': 5, 'requests': []}),
         width: 1180,
         height: 1700,
       ),

@@ -54,6 +54,14 @@ void main() {
     );
   });
 
+  test(
+    "Seerr's row says when nobody asked for what it found on the server",
+    () async {
+      final words = await _words(Profiles.p1, WorldTitles.elephantsDream);
+      expect(words.last, startsWith('Seerr. Not requested. Available'));
+    },
+  );
+
   test("P5: Radarr is Seerr's claim, with a way to add it", () async {
     final words = await _words(Profiles.p5, WorldTitles.tearsOfSteel);
     expect(words[1], 'Radarr. through Seerr. Available. Add Radarr to Cupola');
