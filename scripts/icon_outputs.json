@@ -262,7 +262,7 @@
       "path": "ios/Runner.xcodeproj/project.pbxproj",
       "role": "Apple active project icon config",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "273d0b9348272e521869b88636c682e37dde28de86d926c0960abd0c75f2cf85"
+      "sha256": "9b108cf584deb8109d4d63af714275009d2ceb897eced6a04e714b03a5f5ed92"
     },
     {
       "path": "ios/Runner/cupola_icon.icon/Assets/cupola-core-dark.png",
@@ -370,7 +370,7 @@
       "path": "macos/Runner.xcodeproj/project.pbxproj",
       "role": "Apple active project icon config",
       "source_family": "cupola_icon.svg + cupola_launcher.svg",
-      "sha256": "5c544f2dd89e0ec355c754bbdeb024e9159a8012dee0055be49286fdadea7978"
+      "sha256": "8a5893bdae3b3a1f8a6d48749730e040b16d14e318b9bffdd72c9dbe9dcf08ce"
     },
     {
       "path": "macos/Runner/cupola_icon.icon/Assets/cupola-core-dark.png",
