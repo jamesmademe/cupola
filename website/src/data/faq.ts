@@ -51,7 +51,11 @@ export const faq = {
   },
   lunasea: {
     q: 'Is Cupola an alternative to LunaSea?',
-    a: 'It covers the same ground and more: Radarr, Sonarr, Lidarr, the download clients, plus Seerr, Jellyfin, Plex and the server underneath. LunaSea\'s author published a final release before archiving the project. Cupola does not import LunaSea\'s settings, so connections are set up again. See <a href="/lunasea-alternative/">coming from LunaSea</a>.',
+    a: 'It covers the same ground and more: Radarr, Sonarr, Lidarr, the download clients, plus Seerr, Jellyfin, Plex and the server underneath. LunaSea\'s author published a final release before archiving the project. Cupola does not import LunaSea\'s settings, so connections are set up again. See <a href="/alternatives/lunasea/">coming from LunaSea</a>.',
+  },
+  nzb360: {
+    q: 'Is there an nzb360 for iPhone?',
+    a: 'nzb360 is an Android app, with no iPhone version. Cupola covers much of the same ground (Sonarr, Radarr, Lidarr, Seerr, Prowlarr, Bazarr and the download clients) on iPhone, Android and Mac, free and open source. See <a href="/alternatives/nzb360/">Cupola and nzb360</a>.',
   },
   seekarr: {
     q: 'What happened to Seekarr?',

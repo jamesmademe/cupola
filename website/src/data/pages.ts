@@ -2,6 +2,7 @@
 // lights its card. The OG images, the sitemap order in llms.txt and the
 // related links all read from here.
 import type { LightId } from './titles';
+import { rivals } from './rivals';
 
 export interface Page {
   path: string;
@@ -107,14 +108,14 @@ export const pages = {
     description: 'Cupola reaches past the media apps to the box they run on: TrueNAS pools, disks and apps, Unraid arrays and VMs, Dockge compose stacks with a live terminal, and Nginx Proxy Manager hosts and certificates.',
     light: 'lamp',
   },
-  lunasea: {
-    path: '/lunasea-alternative/',
-    slug: 'lunasea-alternative',
-    name: 'Coming from LunaSea',
-    title: 'A LunaSea alternative for Radarr, Sonarr and more · Cupola',
-    heading: 'Coming from LunaSea.',
-    description: 'LunaSea has published its final release. Cupola is a free, open-source client that covers the same services and more, on iPhone, Android and Mac. What carries over, and what to set up again.',
-    light: 'spring',
+  alternatives: {
+    path: '/alternatives/',
+    slug: 'alternatives',
+    name: 'Alternatives',
+    title: 'Cupola compared with nzb360, Helmarr and LunaSea',
+    heading: 'Cupola and the other apps.',
+    description: 'How Cupola compares with nzb360, Helmarr and LunaSea: platforms, price, source code and services, from each app\'s own pages, with the date they were checked.',
+    light: 'lamp',
   },
   contribute: {
     path: '/contribute/',
@@ -146,3 +147,16 @@ export const pages = {
 } satisfies Record<string, Page>;
 
 export type PageId = keyof typeof pages;
+
+/** One page per app in rivals.ts, at /alternatives/<id>/. */
+export const rivalPages: Page[] = rivals.map((r) => ({
+  path: `/alternatives/${r.id}/`,
+  slug: `alternative-${r.id}`,
+  name: r.name,
+  title: r.title,
+  heading: r.heading,
+  description: r.description,
+  light: 'spring',
+}));
+
+export const allPages: Page[] = [...Object.values(pages), ...rivalPages];

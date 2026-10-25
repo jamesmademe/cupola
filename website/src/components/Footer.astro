@@ -2,6 +2,7 @@
 import Mark from './Mark.astro';
 import { site } from '../config';
 import { version } from '../lib/seo';
+import { rivals } from '../data/rivals';
 
 const cols = [
   {
@@ -25,10 +26,8 @@ const cols = [
     ],
   },
   {
-    title: 'Coming from',
-    links: [
-      ['LunaSea', '/lunasea-alternative/'],
-    ],
+    title: 'Compared with',
+    links: [...rivals.map((r) => [r.name, `/alternatives/${r.id}/`]), ['All alternatives', '/alternatives/']],
   },
   {
     title: 'Project',

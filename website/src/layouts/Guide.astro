@@ -9,25 +9,26 @@ import ServiceTable from '../components/ServiceTable.astro';
 import Faq from '../components/Faq.astro';
 import Get from '../components/Get.astro';
 import { site } from '../config';
-import { pages, type PageId } from '../data/pages';
+import { pages, type Page, type PageId } from '../data/pages';
 import { lit } from '../data/titles';
 import { breadcrumbs, faqPage, softwareApplication, type Qa } from '../lib/seo';
 
 interface Props {
-  page: PageId;
+  page: PageId | Page;
   /** The H1, when it should differ from the page's heading. */
   h1?: string;
   lede: string;
   screen?: Screen;
   services?: string[];
   questions?: Qa[];
-  related?: PageId[];
+  related?: (PageId | Page)[];
   get?: boolean;
   /** Draw the questions as a section; the FAQ page draws its own. */
   showQuestions?: boolean;
 }
 const { page: id, h1, lede, screen, services, questions = [], related = [], get = true, showQuestions = true } = Astro.props;
-const page = pages[id];
+const page = typeof id === 'string' ? pages[id] : id;
+const links = related.map((r) => (typeof r === 'string' ? pages[r] : r));
 const jsonld: object[] = [breadcrumbs([{ name: page.name, path: page.path }]), softwareApplication()];
 if (questions.length) jsonld.push(faqPage(questions));
 ---
@@ -80,15 +81,15 @@ if (questions.length) jsonld.push(faqPage(questions));
     </section>
   )}
 
-  {related.length > 0 && (
+  {links.length > 0 && (
     <nav class="well block" aria-labelledby="rel-h">
       <h2 id="rel-h" class="t-room">Also in Cupola</h2>
       <ul class="rel">
-        {related.map((r) => (
+        {links.map((r) => (
           <li>
-            <a href={pages[r].path}>
-              <span class="t-section">{pages[r].name}</span>
-              <span class="t-meta">{pages[r].heading}</span>
+            <a href={r.path}>
+              <span class="t-section">{r.name}</span>
+              <span class="t-meta">{r.heading}</span>
               <Icon name="arrow" size={18} />
             </a>
           </li>

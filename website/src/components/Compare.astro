@@ -1,0 +1,109 @@
+---
+// Two apps side by side, fact by fact, as each one's own pages state them.
+import type { Rival } from '../data/rivals';
+interface Props {
+  rival: Rival;
+}
+const { rival } = Astro.props;
+---
+<div class="cmp">
+  <table>
+    <caption class="t-meta">From {rival.name}'s own website and store listing, checked {rival.checked}.</caption>
+    <thead>
+      <tr>
+        <th scope="col"><span class="sr-only">Fact</span></th>
+        <th scope="col">{rival.name}</th>
+        <th scope="col" class="us">Cupola</th>
+      </tr>
+    </thead>
+    <tbody>
+      {rival.facts.map((f) => (
+        <tr>
+          <th scope="row">{f.label}</th>
+          <td data-app={rival.name}>{f.them}</td>
+          <td data-app="Cupola" class="us">{f.cupola}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+
+<style>
+  .cmp {
+    border-radius: var(--r-slab);
+    background: rgb(18 18 24 / 0.82);
+    border: 1px solid var(--hair);
+    overflow: hidden;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  caption {
+    caption-side: bottom;
+    text-align: left;
+    padding: 14px 22px 18px;
+    border-top: 1px solid var(--hair);
+  }
+  th,
+  td {
+    padding: 16px 22px;
+    text-align: left;
+    vertical-align: top;
+  }
+  thead th {
+    font-family: var(--display);
+    font-size: 21px;
+    font-weight: 600;
+    font-variation-settings: 'wdth' 94, 'opsz' 21;
+    padding-top: 20px;
+  }
+  tbody th {
+    width: 22%;
+    font-weight: 600;
+    color: var(--ink-3);
+    font-size: 14px;
+  }
+  tbody tr {
+    border-top: 1px solid var(--hair);
+  }
+  td {
+    color: var(--ink-2);
+    width: 39%;
+  }
+  td.us {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--light) 6%, transparent);
+  }
+  thead .us {
+    background: color-mix(in srgb, var(--light) 6%, transparent);
+  }
+  @media (max-width: 720px) {
+    thead {
+      display: none;
+    }
+    tbody tr {
+      display: grid;
+      padding: 14px 18px;
+      gap: 8px;
+    }
+    tbody th,
+    td {
+      width: auto;
+      padding: 0;
+      background: none !important;
+    }
+    td::before {
+      content: attr(data-app);
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink-3);
+    }
+    caption {
+      padding: 14px 18px;
+    }
+  }
+</style>

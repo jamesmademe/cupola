@@ -1,7 +1,7 @@
 // The site in plain Markdown, for language models and the assistants that
 // answer people's questions with them (https://llmstxt.org).
 import { site } from '../config';
-import { pages } from '../data/pages';
+import { allPages } from '../data/pages';
 import { faq } from '../data/faq';
 import { services } from './repo';
 import { abs, version } from './seo';
@@ -12,7 +12,7 @@ const text = (html: string) =>
     .replace(/<[^>]+>/g, '');
 
 export function llms(): string {
-  const list = Object.values(pages)
+  const list = allPages
     .filter((p) => p.path !== '/')
     .map((p) => `- [${p.name}](${abs(p.path)}): ${p.description}`)
     .join('\n');
