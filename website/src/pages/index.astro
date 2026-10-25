@@ -10,6 +10,7 @@ import Reach from '../components/Reach.astro';
 import Get from '../components/Get.astro';
 import Faq from '../components/Faq.astro';
 import Trailer from '../components/Trailer.astro';
+import Journey from '../components/Journey.astro';
 import { site } from '../config';
 import { lit, still } from '../data/titles';
 import { services, stars } from '../lib/repo';
@@ -26,7 +27,7 @@ const questions = pick('arrApp', 'account', 'away', 'player', 'household', 'free
 const story = [
   {
     screen: 'home',
-    light: 'tosbridge',
+    light: 'singslide',
     tab: 'Home',
     title: 'The evening, at a glance.',
     body: 'Home opens on today: what arrived on your server, what comes out next, what you were halfway through, and the one thing that needs you. Each part is a module you keep, order or leave out.',
@@ -69,7 +70,7 @@ const story = [
   <!-- The way in: down through the Cupola, into a room lit by a title. -->
   <section class="descent" data-descent data-light="lamp" aria-labelledby="claim">
     <div class="stage">
-      <div class="portal" aria-hidden="true" style={`background-image:url(${still('tosdome')})`}></div>
+      <div class="portal" aria-hidden="true" style={`background-image:url(${still('singopen')})`}></div>
       <div class="dome"><Mark size="100%" eager label="The Cupola mark: the window of a cupola seen from above, with the Earth's light coming through" /></div>
       <div class="copy">
         <h1 id="claim" class="t-giant">{site.claim}</h1>
@@ -108,6 +109,18 @@ const story = [
           <p class="t-meta hint">Try it: tap the tabs, a poster, a button.</p>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- One title, start to finish. -->
+  <section class="block journeyb" aria-labelledby="journey-h">
+    <div class="well">
+      <div class="head">
+        <h2 id="journey-h" class="t-screen rise">One title, from trending to tonight.</h2>
+        <p class="t-lede rise" style="--i:1">Follow Singularity through Cupola: found in Discover, added in one tap, followed to the disk, and ready when you sit down.</p>
+      </div>
+      <Journey />
+      <p class="t-meta credit">Frames from <a href="https://studio.blender.org/projects/singularity/" rel="noopener">Singularity</a> by Blender Studio, CC BY.</p>
     </div>
   </section>
 
@@ -238,7 +251,7 @@ const story = [
   </section>
 
   <!-- The close: the promise, and the way to get it. -->
-  <section class="close" {...lit('tosdome')} aria-labelledby="promise">
+  <section class="close" {...lit('singopen')} aria-labelledby="promise">
     <div class="well">
       <Mark size={72} />
       <h2 id="promise" class="t-giant">{site.promise}</h2>
@@ -394,7 +407,7 @@ const story = [
     inset: 0;
     z-index: 2;
     background-size: cover;
-    background-position: 64% center;
+    background-position: center;
     clip-path: circle(var(--r) at var(--cx) var(--cy));
     opacity: var(--portal);
     pointer-events: none;
@@ -470,7 +483,7 @@ const story = [
   @media (max-aspect-ratio: 4/5) {
     /* A tall screen sees a narrow slice of the skyline: keep the dome in it. */
     .portal {
-      background-position: 86% center;
+      background-position: 35% center;
     }
   }
   @media (max-width: 760px) {
@@ -752,6 +765,12 @@ const story = [
   }
   .help .btn {
     justify-self: start;
+  }
+  .journeyb {
+    padding-top: clamp(72px, 12vh, 140px);
+  }
+  .credit {
+    margin-top: 18px;
   }
   .faqgrid {
     align-items: start;

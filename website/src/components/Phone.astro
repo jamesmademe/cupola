@@ -22,7 +22,8 @@ const own = (id: LightId) => `--light:${lightOf(id).light};--light-fill:${lightO
 // The titles a poster or a Details button can open. Facts are the films'
 // own; the server state is the model's.
 const pagesOf = {
-  tos: { name: 'Tears of Steel', meta: 'Ian Hubert · 2012 · 12 min · Science Fiction', about: 'Warriors and scientists gather in Amsterdam to restage a moment from the past, and save the world from destructive robots.', hero: still('tosbridge', true), have: true },
+  singularity: { name: 'Singularity', meta: 'Andy Goralczyk · 2026 · Adventure', about: 'When a cosmic event swallows a small space critter\'s home, he finds refuge among others, watched over by a mysterious celestial being.', hero: still('singadd', true), have: true },
+  tos: { name: 'Tears of Steel', meta: 'Ian Hubert · 2012 · 12 min · Science Fiction', about: 'Warriors and scientists gather in Amsterdam to restage a moment from the past, and save the world from destructive robots.', hero: still('tosbridge', true), have: false },
   spring: { name: 'Spring', meta: 'Andy Goralczyk · 2019 · 8 min · Fantasy', about: 'A shepherd girl and her dog face ancient spirits in order to continue the cycle of life.', hero: backdrop('spring', true), have: false },
   sintel: { name: 'Sintel', meta: 'Colin Levy · 2010 · 15 min · Fantasy', about: 'A lonely young woman crosses a hostile world to find the baby dragon she once rescued.', hero: backdrop('sintel', true), have: false },
   cosmos: { name: 'Cosmos Laundromat', meta: 'Mathieu Auvray · 2015 · 12 min · Fantasy', about: 'On a desolate island, a weary sheep meets a mysterious salesman who offers him the gift of a lifetime.', hero: backdrop('cosmos', true), have: false },
@@ -54,8 +55,8 @@ const reqNav = [
       <div class="island" aria-hidden="true"></div>
 
       <!-- Home: the operator's day, lit by the slide in front -->
-      <section class="screen" data-screen="home" {...lit('tosbridge')} style={own('tosbridge')} aria-label="Home">
-        <div class="roomart" style={`background-image:url(${room('tosbridge')})`}></div>
+      <section class="screen" data-screen="home" {...lit('singslide')} style={own('singslide')} aria-label="Home">
+        <div class="roomart" style={`background-image:url(${room('singslide')})`}></div>
         <div class="status"><span>21:04</span><span class="sys"></span></div>
         <div class="scroll">
           <h3 class="s-screen">Sunday 11</h3>
@@ -66,10 +67,10 @@ const reqNav = [
             <span class="more">+1</span>
             <span class="act">Review</span>
           </button>
-          <div class="feature" style={`background-image:url(${still('tosbridge', true)})`}></div>
-          <h4 class="s-feature">Tears of Steel</h4>
+          <div class="feature" style={`background-image:url(${still('singslide', true)})`}></div>
+          <h4 class="s-feature">Singularity</h4>
           <p class="s-meta">New on your server · 2 h ago</p>
-          <button class="s-btn lit-fill" type="button" data-go="title-tos">Details</button>
+          <button class="s-btn lit-fill" type="button" data-go="title-singularity">Details</button>
           <div class="slab">
             <div class="slab-head"><span class="s-section">Coming up</span><span class="s-link">Calendar</span></div>
             <div class="row">
@@ -102,7 +103,7 @@ const reqNav = [
           <div class="field"><Icon name="search" size={18} /> Movies, series, people</div>
           <div class="slab-head bare"><span class="s-section">Trending this week</span><span class="s-link">All</span></div>
           <div class="shelf">
-            {(['spring', 'cosmos', 'sintel', 'tos'] as PageKey[]).map((t) => (
+            {(['singularity', 'spring', 'cosmos', 'sintel', 'tos'] as PageKey[]).map((t) => (
               <button type="button" class="poster" data-go={`title-${t}`} aria-label={`Open ${pagesOf[t].name}`}>
                 <img src={poster(t)} alt="" width="108" height="162" loading="lazy" />
               </button>

@@ -25,7 +25,7 @@ export const pages = {
     title: 'Cupola: Radarr, Sonarr and Seerr app for iPhone and Android',
     heading: 'A Cupola over your server.',
     description: '',
-    light: 'tos',
+    light: 'singularity',
   },
   services: {
     path: '/services/',

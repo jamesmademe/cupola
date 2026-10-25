@@ -7,7 +7,7 @@ most coloured cluster kept and moved to a fixed lightness. The app reads HCT;
 this reads HSL, which is close enough for a page lit from a few posters.
 
 Usage: python3 scripts/build_art.py <folder with p-<id>.jpg and b-<id>.jpg>
-                                     <folder with s-<still>.png>
+                                     <folder with s-<still>.png or .jpg>
 
 The stills are frames taken from the films themselves (ffmpeg, full 1080p),
 since the posters' backdrops are too small to fill a screen.
@@ -34,9 +34,22 @@ BACKDROPS = {
     "tos": "tos1",
 }
 # Frames that lead a screen on their own, lit by themselves, as the app lights
-# the Home by the slide in front: the opening (the Amsterdam skyline at 5:29 in
-# Tears of Steel) and the Home's slide (the bridge at 0:35).
-STILLS = ["tosdome", "tosbridge"]
+# the Home by the slide in front. Tears of Steel's come from the 1080p film
+# (the bridge at 0:35); Singularity's from the Blender
+# Studio's 4K "Film frames selection" (shot names 020_0040, 020_0030,
+# 060_0010, 090_0010, 100_0040, 080_0050).
+STILLS = ["tosbridge", "singopen", "singfind", "singadd", "singget", "singready", "singslide"]
+# Singularity has no free poster, so its artwork is cut from a frame (shot
+# 020_0060), centred on the critter: (still, horizontal centre of the crop).
+STILL_POSTERS = {"singularity": ("singcritter", 0.6)}
+OPENING = "singopen"
+
+
+def still_path(folder: Path, name: str) -> Path:
+    for ext in ("png", "jpg"):
+        if (folder / f"s-{name}.{ext}").exists():
+            return folder / f"s-{name}.{ext}"
+    raise FileNotFoundError(folder / f"s-{name}.png")
 
 
 def light_of(img: Image.Image) -> tuple[str, str]:
@@ -93,9 +106,25 @@ def main(src: Path, stills: Path) -> None:
         sq.save(OUT / f"{i}-room.webp", "WEBP", quality=70)
         light, fill = light_of(poster)
         lights[i] = {"light": light, "fill": fill}
+    for name, (file, centre) in STILL_POSTERS.items():
+        still = Image.open(still_path(stills, file)).convert("RGB")
+        w = round(still.height * 2 / 3)
+        left = min(max(round(still.width * centre - w / 2), 0), still.width - w)
+        poster = still.crop((left, 0, left + w, still.height))
+        save(poster, OUT / f"{name}-poster.webp", 342)
+        save(poster, OUT / f"{name}-poster@2x.webp", 500, 76)
+        poster.resize((300, 450), Image.Resampling.LANCZOS).save(
+            ROOT / "src" / "og" / f"{name}.jpg", "JPEG", quality=82, optimize=True
+        )
+        sq = poster.crop((0, (poster.height - w) // 2, w, (poster.height + w) // 2)).resize((64, 64))
+        sq = ImageEnhance.Color(sq.filter(ImageFilter.GaussianBlur(7))).enhance(2.2)
+        sq.save(OUT / f"{name}-room.webp", "WEBP", quality=70)
+        light, fill = light_of(poster)
+        lights[name] = {"light": light, "fill": fill}
     for name in STILLS:
-        still = Image.open(stills / f"s-{name}.png")
-        save(still, OUT / f"{name}-backdrop.webp", 1920, 80)
+        still = Image.open(still_path(stills, name))
+        # The opening fills a wide screen, so it keeps more of a 4K source.
+        save(still, OUT / f"{name}-backdrop.webp", 2560 if name == OPENING and still.width >= 2560 else 1920, 80)
         save(still, OUT / f"{name}-backdrop-s.webp", 640, 76)
         side = min(still.size)
         left = (still.width - side) // 2
