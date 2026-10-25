@@ -54,7 +54,14 @@
     light(rooms[0]);
     const io = new IntersectionObserver(
       (entries) => {
-        for (const e of entries) if (e.isIntersecting) light(e.target as HTMLElement);
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          // A section that lights itself under some condition (the tour on a
+          // phone, which is pinned) is left to its own script then.
+          const self = (e.target as HTMLElement).closest<HTMLElement>('[data-light-self]');
+          if (self && matchMedia(self.dataset.lightSelf ?? 'all').matches) continue;
+          light(e.target as HTMLElement);
+        }
       },
       { rootMargin: '-48% 0px -48% 0px' },
     );

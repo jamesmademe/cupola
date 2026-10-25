@@ -4,7 +4,7 @@
 // a poster opens its page, and each screen lights the room with its title as
 // the app does. Words and tones follow design/system/words.md.
 import Icon from './Icon.astro';
-import { poster, backdrop, lit, lightOf, type TitleId, type LightId } from '../data/titles';
+import { poster, backdrop, still, lit, room, lightOf, type TitleId, type LightId } from '../data/titles';
 
 export type Screen = 'home' | 'discover' | 'title' | 'activity' | 'requests';
 interface Props {
@@ -19,6 +19,23 @@ const { show = 'home', id, width = '320px', label = 'Cupola running on a phone' 
 const art = (t: TitleId) => `url(${poster(t)})`;
 // Inside the phone each screen keeps its own title's light.
 const own = (id: LightId) => `--light:${lightOf(id).light};--light-fill:${lightOf(id).fill}`;
+// The titles a poster or a Details button can open. Facts are the films'
+// own; the server state is the model's.
+const pagesOf = {
+  tos: { name: 'Tears of Steel', meta: 'Ian Hubert · 2012 · 12 min · Science Fiction', about: 'Warriors and scientists gather in Amsterdam to restage a moment from the past, and save the world from destructive robots.', hero: still('tosbridge', true), have: true },
+  spring: { name: 'Spring', meta: 'Andy Goralczyk · 2019 · 8 min · Fantasy', about: 'A shepherd girl and her dog face ancient spirits in order to continue the cycle of life.', hero: backdrop('spring', true), have: false },
+  sintel: { name: 'Sintel', meta: 'Colin Levy · 2010 · 15 min · Fantasy', about: 'A lonely young woman crosses a hostile world to find the baby dragon she once rescued.', hero: backdrop('sintel', true), have: false },
+  cosmos: { name: 'Cosmos Laundromat', meta: 'Mathieu Auvray · 2015 · 12 min · Fantasy', about: 'On a desolate island, a weary sheep meets a mysterious salesman who offers him the gift of a lifetime.', hero: backdrop('cosmos', true), have: false },
+} as const;
+type PageKey = keyof typeof pagesOf;
+const titleData = Object.fromEntries(
+  (Object.keys(pagesOf) as PageKey[]).map((k) => [
+    k,
+    { ...pagesOf[k], poster: poster(k), room: room(k), light: lightOf(k).light, fill: lightOf(k).fill },
+  ]),
+);
+const first = pagesOf.spring;
+
 const opNav = [
   { go: 'home', icon: 'home', label: 'Home' },
   { go: 'discover', icon: 'compass', label: 'Discover' },
@@ -31,14 +48,14 @@ const reqNav = [
   { go: 'requests-list', icon: 'bookmark', label: 'Requests' },
 ] as const;
 ---
-<figure class="phone" id={id} data-show={show} style={`--w:${width}`} aria-label={label} role="group">
+<figure class="phone" id={id} data-show={show} data-titles={JSON.stringify(titleData)} style={`--w:${width}`} aria-label={label} role="group">
   <div class="body">
     <div class="glass">
       <div class="island" aria-hidden="true"></div>
 
-      <!-- Home: the operator's day -->
-      <section class="screen" data-screen="home" {...lit('cosmos')} style={own('cosmos')} aria-label="Home">
-        <div class="roomart" style={`background-image:${art('cosmos')}`}></div>
+      <!-- Home: the operator's day, lit by the slide in front -->
+      <section class="screen" data-screen="home" {...lit('tosbridge')} style={own('tosbridge')} aria-label="Home">
+        <div class="roomart" style={`background-image:url(${room('tosbridge')})`}></div>
         <div class="status"><span>21:04</span><span class="sys"></span></div>
         <div class="scroll">
           <h3 class="s-screen">Sunday 11</h3>
@@ -49,10 +66,10 @@ const reqNav = [
             <span class="more">+1</span>
             <span class="act">Review</span>
           </button>
-          <div class="feature" style={`background-image:url(${backdrop('cosmos', true)})`}></div>
-          <h4 class="s-feature">Cosmos Laundromat</h4>
+          <div class="feature" style={`background-image:url(${still('tosbridge', true)})`}></div>
+          <h4 class="s-feature">Tears of Steel</h4>
           <p class="s-meta">New on your server · 2 h ago</p>
-          <button class="s-btn lit-fill" type="button" data-go="title-cosmos">Details</button>
+          <button class="s-btn lit-fill" type="button" data-go="title-tos">Details</button>
           <div class="slab">
             <div class="slab-head"><span class="s-section">Coming up</span><span class="s-link">Calendar</span></div>
             <div class="row">
@@ -62,8 +79,8 @@ const reqNav = [
             </div>
             <div class="row">
               <div class="when"><b>Fri</b><span>16 Oct</span></div>
-              <img class="thumb" src={poster('tos')} alt="" width="40" height="60" loading="lazy" />
-              <div class="grow"><b>Tears of Steel</b><span>on digital</span></div>
+              <img class="thumb" src={poster('cosmos')} alt="" width="40" height="60" loading="lazy" />
+              <div class="grow"><b>Cosmos Laundromat</b><span>on digital</span></div>
             </div>
           </div>
         </div>
@@ -85,8 +102,8 @@ const reqNav = [
           <div class="field"><Icon name="search" size={18} /> Movies, series, people</div>
           <div class="slab-head bare"><span class="s-section">Trending this week</span><span class="s-link">All</span></div>
           <div class="shelf">
-            {(['sprite', 'spring', 'charge', 'tos', 'sintel'] as TitleId[]).map((t) => (
-              <button type="button" class="poster" data-go={`title-${t}`} aria-label={`Open ${t}`}>
+            {(['spring', 'cosmos', 'sintel', 'tos'] as PageKey[]).map((t) => (
+              <button type="button" class="poster" data-go={`title-${t}`} aria-label={`Open ${pagesOf[t].name}`}>
                 <img src={poster(t)} alt="" width="108" height="162" loading="lazy" />
               </button>
             ))}
@@ -106,30 +123,33 @@ const reqNav = [
         </nav>
       </section>
 
-      <!-- A title's page -->
+      <!-- A title's page: filled from data-titles by the script below -->
       <section class="screen" data-screen="title" {...lit('spring')} style={own('spring')} aria-label="A movie's page">
-        <div class="roomart" style={`background-image:${art('spring')}`}></div>
+        <div class="roomart" data-t="room" style={`background-image:${art('spring')}`}></div>
         <div class="status"><span>21:05</span><span class="sys"></span></div>
         <div class="scroll">
-          <button type="button" class="backbtn" data-go="discover" aria-label="Back"><Icon name="back" size={20} /></button>
-          <div class="hero" style={`background-image:url(${backdrop('spring', true)})`}></div>
+          <button type="button" class="backbtn" data-go="back" aria-label="Back"><Icon name="back" size={20} /></button>
+          <div class="hero" data-t="hero" style={`background-image:url(${first.hero})`}></div>
           <div class="heroline">
-            <img class="heroposter" src={poster('spring')} alt="" width="118" height="177" loading="lazy" />
-            <h4 class="s-media">Spring</h4>
+            <img class="heroposter" data-t="poster" src={poster('spring')} alt="" width="118" height="177" loading="lazy" />
+            <h4 class="s-media" data-t="name">{first.name}</h4>
           </div>
-          <p class="s-meta big">Andy Goralczyk · 2019 · 8 min · Fantasy</p>
-          <button class="s-btn lit-fill split" type="button" data-added="Requested">
+          <p class="s-meta big" data-t="meta">{first.meta}</p>
+          <button class="s-btn lit-fill split" type="button" data-t="want" data-added="Added to Radarr">
             <span>Add to Radarr</span><Icon name="plus" size={20} />
+          </button>
+          <button class="s-btn lit-fill split" type="button" data-t="have" hidden>
+            <span>Open in Jellyfin</span><Icon name="out" size={20} />
           </button>
           <div class="pair">
             <span class="s-ghost"><Icon name="play" size={18} /> Trailer</span>
             <span class="s-ghost"><Icon name="bookmark" size={18} /> Watchlist</span>
           </div>
-          <p class="synopsis">A shepherd girl and her dog face ancient spirits in order to continue the cycle of life.</p>
+          <p class="synopsis" data-t="about">{first.about}</p>
           <div class="slab">
             <div class="slab-head"><span class="s-section">On your server</span><span class="s-meta">2 services</span></div>
-            <div class="row line"><b class="grow">Radarr</b><span class="s-meta"><span class="dot neutral"></span> Missing</span></div>
-            <div class="row line"><b class="grow">Jellyfin</b><span class="s-meta">Not there</span></div>
+            <div class="row line"><b class="grow">Radarr</b><span class="s-meta" data-t="radarr"><span class="dot neutral"></span> Missing</span></div>
+            <div class="row line"><b class="grow">Jellyfin</b><span class="s-meta" data-t="jellyfin">Not there</span></div>
           </div>
         </div>
         <nav class="tabs" aria-label="Phone tabs">
@@ -191,20 +211,16 @@ const reqNav = [
       </section>
 
       <!-- The household member's Home -->
-      <section class="screen" data-screen="requests" {...lit('bbb')} style={own('bbb')} aria-label="A household member's Home">
-        <div class="roomart" style={`background-image:${art('bbb')}`}></div>
+      <section class="screen" data-screen="requests" {...lit('sintel')} style={own('sintel')} aria-label="A household member's Home">
+        <div class="roomart" style={`background-image:${art('sintel')}`}></div>
         <div class="status"><span>21:07</span><span class="sys"></span></div>
         <div class="scroll">
           <h3 class="s-screen">Sunday 11</h3>
           <p class="s-meta">October · Signed in as Alex</p>
-          <div class="ready">
-            <img src={poster('bbb')} alt="" width="120" height="180" loading="lazy" />
-            <div>
-              <span class="s-meta"><span class="dot green"></span> Ready to watch</span>
-              <h4 class="s-feature">Big Buck Bunny</h4>
-              <p class="s-meta">You asked for it on Thursday</p>
-            </div>
-          </div>
+          <p class="s-meta ready-label"><span class="dot green"></span> Ready to watch</p>
+          <div class="feature" style={`background-image:url(${backdrop('sintel', true)})`}></div>
+          <h4 class="s-feature">Sintel</h4>
+          <p class="s-meta">You asked for it on Thursday</p>
           <div class="slab">
             <div class="slab-head"><span class="s-section">Your requests</span></div>
             <div class="row">
@@ -212,12 +228,12 @@ const reqNav = [
               <div class="grow"><b>Tears of Steel</b><span class="tone-blue tabular">Downloading 62% · ready around 21:40</span></div>
             </div>
             <div class="row">
-              <img class="thumb" src={poster('sintel')} alt="" width="40" height="60" loading="lazy" />
-              <div class="grow"><b>Sintel</b><span class="tone-blue">Waiting for approval</span></div>
+              <img class="thumb" src={poster('charge')} alt="" width="40" height="60" loading="lazy" />
+              <div class="grow"><b>Charge</b><span class="tone-blue">Waiting for approval</span></div>
             </div>
             <div class="row">
-              <img class="thumb" src={poster('sprite')} alt="" width="40" height="60" loading="lazy" />
-              <div class="grow"><b>Sprite Fright</b><span>On its way</span></div>
+              <img class="thumb" src={poster('spring')} alt="" width="40" height="60" loading="lazy" />
+              <div class="grow"><b>Spring</b><span>On its way</span></div>
             </div>
           </div>
         </div>
@@ -236,18 +252,63 @@ const reqNav = [
 <script>
   // The model's own navigation. A screen change lights the page's room too,
   // through the event the room listens for.
-  const LIGHTS: Record<string, { screen: string; title?: string }> = {
-    home: { screen: 'home' },
-    discover: { screen: 'discover' },
-    activity: { screen: 'activity' },
-    requests: { screen: 'requests' },
-    title: { screen: 'title' },
-  };
+  interface TitlePage {
+    name: string;
+    meta: string;
+    about: string;
+    hero: string;
+    poster: string;
+    room: string;
+    light: string;
+    fill: string;
+    have: boolean;
+  }
+  const SCREENS = new Set(['home', 'discover', 'title', 'activity', 'requests']);
+
   document.querySelectorAll<HTMLElement>('.phone').forEach((phone) => {
+    const pages = JSON.parse(phone.dataset.titles ?? '{}') as Record<string, TitlePage>;
+    const page = phone.querySelector<HTMLElement>('[data-screen="title"]')!;
+    const part = (name: string) => page.querySelector<HTMLElement>(`[data-t="${name}"]`)!;
+    let from = 'discover';
+
+    const fill = (id: string) => {
+      const t = pages[id];
+      if (!t) return;
+      part('name').textContent = t.name;
+      part('meta').textContent = t.meta;
+      part('about').textContent = t.about;
+      part('hero').style.backgroundImage = `url(${t.hero})`;
+      part('room').style.backgroundImage = `url(${t.poster})`;
+      (part('poster') as HTMLImageElement).src = t.poster;
+      part('want').hidden = t.have;
+      part('have').hidden = !t.have;
+      part('radarr').innerHTML = t.have ? '<span class="dot green"></span> Available' : '<span class="dot neutral"></span> Missing';
+      part('jellyfin').innerHTML = t.have ? '<span class="dot green"></span> Available' : 'Not there';
+      page.style.setProperty('--light', t.light);
+      page.style.setProperty('--light-fill', t.fill);
+      Object.assign(page.dataset, { light: id, room: t.room, l: t.light, f: t.fill });
+    };
+
     const show = (name: string) => {
-      const key = name.startsWith('title') ? 'title' : name;
-      const target = LIGHTS[key]?.screen ?? 'home';
-      if (phone.dataset.show === target) return;
+      if (name === 'back') name = from;
+      let target = name;
+      if (name.startsWith('title-')) {
+        fill(name.slice(6));
+        target = 'title';
+      }
+      if (!SCREENS.has(target)) target = 'home';
+      if (target !== 'title') from = target;
+      else if (phone.dataset.show !== 'title') from = phone.dataset.show ?? 'discover';
+      // A title stays in the tab it was opened from, as in the app.
+      if (target === 'title') {
+        page.querySelectorAll<HTMLElement>('.tabs button').forEach((b) => {
+          const on = b.dataset.go === from;
+          b.classList.toggle('on', on);
+          const label = b.querySelector('span');
+          if (on && !label) b.insertAdjacentHTML('beforeend', `<span>${b.getAttribute('aria-label')}</span>`);
+          if (!on && label) label.remove();
+        });
+      }
       phone.dataset.show = target;
       const screen = phone.querySelector<HTMLElement>(`[data-screen="${target}"]`);
       if (screen) {
@@ -255,6 +316,7 @@ const reqNav = [
         phone.dispatchEvent(new CustomEvent('cupola:light', { bubbles: true, detail: screen }));
       }
     };
+
     phone.addEventListener('click', (e) => {
       const el = (e.target as HTMLElement).closest<HTMLElement>('[data-go],[data-added],[data-done]');
       if (!el) return;
@@ -507,6 +569,9 @@ const reqNav = [
   .amberbtn:active {
     transform: scale(0.96);
   }
+  .s-btn[hidden] {
+    display: none;
+  }
   .s-btn.split {
     justify-content: space-between;
     padding: 0 18px 0 20px;
@@ -741,23 +806,12 @@ const reqNav = [
     border-radius: 2px;
   }
 
-  .ready {
-    display: flex;
-    gap: 16px;
-    align-items: flex-end;
+  .ready-label {
     margin-top: 20px;
   }
-  .ready img {
-    width: 120px;
-    height: 180px;
-    border-radius: var(--r-poster);
-    object-fit: cover;
-    box-shadow: 0 16px 30px -12px color-mix(in srgb, var(--light) 80%, transparent);
+  .ready-label + .feature {
+    margin-top: 8px;
   }
-  .ready .s-feature {
-    margin: 6px 0 4px;
-  }
-
   .tabs {
     position: absolute;
     left: 16px;

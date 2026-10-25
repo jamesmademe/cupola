@@ -34,6 +34,8 @@ export const lightOf = (id: LightId) =>
 export const poster = (id: TitleId) => `/art/${id}-poster.webp`;
 export const poster2x = (id: TitleId) => `/art/${id}-poster@2x.webp`;
 export const backdrop = (id: TitleId, small = false) => `/art/${id}-backdrop${small ? '-s' : ''}.webp`;
+/** A still that leads a screen by itself (scripts/build_art.py, STILLS). */
+export const still = (id: 'tosdome' | 'tosbridge', small = false) => `/art/${id}-backdrop${small ? '-s' : ''}.webp`;
 export const room = (id: LightId) => (id === 'lamp' ? '' : `/art/${id}-room.webp`);
 
 /** The attributes that make a section light the room with a title. */

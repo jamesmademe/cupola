@@ -11,7 +11,7 @@ import Get from '../components/Get.astro';
 import Faq from '../components/Faq.astro';
 import Trailer from '../components/Trailer.astro';
 import { site } from '../config';
-import { lit, backdrop } from '../data/titles';
+import { lit, still } from '../data/titles';
 import { services, stars } from '../lib/repo';
 import { softwareApplication, sourceCode, website, faqPage } from '../lib/seo';
 import { pick } from '../data/faq';
@@ -26,7 +26,7 @@ const questions = pick('arrApp', 'account', 'away', 'player', 'household', 'free
 const story = [
   {
     screen: 'home',
-    light: 'cosmos',
+    light: 'tosbridge',
     tab: 'Home',
     title: 'The evening, at a glance.',
     body: 'Home opens on today: what arrived on your server, what comes out next, what you were halfway through, and the one thing that needs you. Each part is a module you keep, order or leave out.',
@@ -39,7 +39,7 @@ const story = [
     body: 'Trending this week, a calendar of what is coming, and every way in: genres, networks, studios, people, decades. One search asks Seerr, Radarr, Sonarr, Jellyfin and Plex together, so “do I already have this?” is one search instead of five browser tabs.',
   },
   {
-    screen: 'title',
+    screen: 'title-spring',
     light: 'spring',
     tab: 'A title',
     title: 'Decide on one page.',
@@ -54,7 +54,7 @@ const story = [
   },
   {
     screen: 'requests',
-    light: 'bbb',
+    light: 'sintel',
     tab: 'The household',
     title: 'Everyone at home can ask.',
     body: 'A household member signs in to Seerr with their own account and gets a simpler Cupola: what is ready to watch, what they asked for, and when it will be there. No API keys, no plumbing, and no button the server would refuse them.',
@@ -69,7 +69,7 @@ const story = [
   <!-- The way in: down through the Cupola, into a room lit by a title. -->
   <section class="descent" data-descent data-light="lamp" aria-labelledby="claim">
     <div class="stage">
-      <div class="portal" aria-hidden="true" style={`background-image:url(${backdrop('cosmos')})`}></div>
+      <div class="portal" aria-hidden="true" style={`background-image:url(${still('tosdome')})`}></div>
       <div class="dome"><Mark size="100%" eager label="The Cupola mark: the window of a cupola seen from above, with the Earth's light coming through" /></div>
       <div class="copy">
         <h1 id="claim" class="t-giant">{site.claim}</h1>
@@ -90,16 +90,17 @@ const story = [
   </section>
 
   <!-- The app, as a working model beside what it does. -->
-  <section class="story" id="tour" aria-label="A tour of Cupola">
+  <section class="story" id="tour" aria-label="A tour of Cupola" data-light-self="(max-width: 860px)">
     <div class="well grid">
       <div class="steps">
         {story.map((s, i) => (
-          <article class="step" data-screen={s.screen} {...lit(s.light)}>
+          <article class:list={['step', { active: i === 0 }]} data-screen={s.screen} {...lit(s.light)}>
             <p class="t-micro"><span class="n tabular">{i + 1}/5</span> {s.tab}</p>
             <h2 class="t-room">{s.title}</h2>
             <p class="t-lede">{s.body}</p>
           </article>
         ))}
+        <ol class="dots" aria-hidden="true">{story.map((_, i) => <li class:list={{ on: i === 0 }}></li>)}</ol>
       </div>
       <div class="device">
         <div class="sticky">
@@ -111,7 +112,7 @@ const story = [
   </section>
 
   {site.trailerYouTubeId && (
-    <section class="block" {...lit('cosmos')} aria-labelledby="trailer-h">
+    <section class="block" {...lit('tos')} aria-labelledby="trailer-h">
       <div class="well">
         <h2 id="trailer-h" class="t-screen rise">Seventy-seven seconds of it.</h2>
         <div class="rise" style="--i:1; margin-top: 40px"><Trailer /></div>
@@ -237,7 +238,7 @@ const story = [
   </section>
 
   <!-- The close: the promise, and the way to get it. -->
-  <section class="close" {...lit('cosmos')} aria-labelledby="promise">
+  <section class="close" {...lit('tosdome')} aria-labelledby="promise">
     <div class="well">
       <Mark size={72} />
       <h2 id="promise" class="t-giant">{site.promise}</h2>
@@ -299,11 +300,46 @@ const story = [
     window.addEventListener('resize', measure);
   }
 
-  // The tour: the step in the middle of the screen picks the phone's screen.
+  // The tour. On a wide screen the steps scroll beside a pinned phone and the
+  // step in the middle of the screen picks the phone's screen. On a phone the
+  // whole tour is pinned: scrolling moves through the steps, and the step's
+  // words change in place under the phone instead of sliding over it.
   const phone = document.getElementById('tour-phone');
+  const tour = document.getElementById('tour');
+  const narrow = matchMedia('(max-width: 860px)');
+  if (phone && tour) {
+    const steps = Array.from(tour.querySelectorAll<HTMLElement>('.step'));
+    const dots = Array.from(tour.querySelectorAll<HTMLElement>('.dots li'));
+    let current = -1;
+    const pick = (i: number) => {
+      if (i === current) return;
+      current = i;
+      steps.forEach((s, j) => s.classList.toggle('active', j === i));
+      dots.forEach((d, j) => d.classList.toggle('on', j === i));
+      phone.dispatchEvent(new CustomEvent('cupola:show', { detail: steps[i].dataset.screen }));
+      document.dispatchEvent(new CustomEvent('cupola:light', { detail: steps[i] }));
+    };
+    let raf = 0;
+    const onScroll = () => {
+      raf = 0;
+      if (!narrow.matches) return;
+      const r = tour.getBoundingClientRect();
+      const span = r.height - window.innerHeight;
+      if (r.top > window.innerHeight || r.bottom < 0) return;
+      const p = Math.min(0.999, Math.max(0, -r.top / span));
+      pick(Math.floor(p * steps.length));
+    };
+    window.addEventListener('scroll', () => (raf ||= requestAnimationFrame(onScroll)), { passive: true });
+    narrow.addEventListener('change', () => {
+      current = -1;
+      onScroll();
+    });
+    onScroll();
+  }
   if (phone) {
     const io = new IntersectionObserver(
       (entries) => {
+        if (narrow.matches) return;
         for (const e of entries) {
           if (!e.isIntersecting) continue;
           const screen = (e.target as HTMLElement).dataset.screen;
@@ -358,7 +394,7 @@ const story = [
     inset: 0;
     z-index: 2;
     background-size: cover;
-    background-position: center;
+    background-position: 64% center;
     clip-path: circle(var(--r) at var(--cx) var(--cy));
     opacity: var(--portal);
     pointer-events: none;
@@ -369,7 +405,7 @@ const story = [
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(to top, rgb(10 10 13 / 0.92), rgb(10 10 13 / 0.2) 55%, rgb(10 10 13 / 0.35));
+    background: linear-gradient(to top, rgb(10 10 13 / 0.9), rgb(10 10 13 / 0.15) 45%, rgb(10 10 13 / 0) 75%, rgb(10 10 13 / 0.2));
     opacity: var(--arrive);
   }
   .copy {
@@ -431,6 +467,12 @@ const story = [
       max-width: none;
     }
   }
+  @media (max-aspect-ratio: 4/5) {
+    /* A tall screen sees a narrow slice of the skyline: keep the dome in it. */
+    .portal {
+      background-position: 86% center;
+    }
+  }
   @media (max-width: 760px) {
     /* Room for the floating tab bar. */
     .stage {
@@ -481,46 +523,104 @@ const story = [
     max-width: 260px;
   }
 
+  .dots {
+    display: none;
+  }
+
+  /* On a phone the tour is a pinned stage: the phone above, the step's words
+     below, five steps of scrolling to go through them. */
   @media (max-width: 860px) {
+    .story {
+      --ph: min(210px, 50vw, calc((100svh - 400px) * 414 / 868));
+      height: 520svh;
+      padding-top: 0;
+    }
     .grid {
-      grid-template-columns: 1fr;
+      position: sticky;
+      top: 0;
+      height: 100svh;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      padding-top: 84px;
+      padding-bottom: calc(96px + env(safe-area-inset-bottom));
     }
     .device {
       order: -1;
-      position: sticky;
-      top: 76px;
-      z-index: 2;
-      height: 0;
+      flex: none;
+      display: flex;
+      justify-content: center;
     }
     .sticky {
-      position: relative;
-      top: 0;
+      position: static;
     }
     .sticky :global(.phone) {
-      --w: min(220px, 52vw) !important;
+      --w: var(--ph) !important;
     }
     .hint {
       display: none;
     }
     .steps {
-      padding-top: calc(min(220px, 52vw) * 868 / 414 + 40px);
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      padding: 0;
     }
     .step {
-      min-height: 72svh;
-      align-content: end;
-      padding: 28px 0 0;
+      position: absolute;
+      inset: 0 0 auto;
+      min-height: 0;
+      display: grid;
+      align-content: start;
+      gap: 10px;
+      max-width: none;
+      opacity: 0;
+      transform: translateY(10px);
+      transition:
+        opacity var(--standard) var(--ease),
+        transform var(--standard) var(--ease);
+      pointer-events: none;
     }
-    .step > * {
-      position: relative;
-      z-index: 3;
+    .step:global(.active) {
+      opacity: 1;
+      transform: none;
+      pointer-events: auto;
     }
+    .step .t-room {
+      font-size: 26px;
+    }
+    .step .t-lede {
+      font-size: 16px;
+      line-height: 1.5;
+    }
+    .dots {
+      position: absolute;
+      top: 3px;
+      right: 0;
+      display: flex;
+      gap: 6px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .dots li {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--fill-strong);
+      transition:
+        background-color var(--standard) var(--ease),
+        width var(--standard) var(--ease);
+    }
+    .dots li:global(.on) {
+      width: 18px;
+      border-radius: 3px;
+      background: var(--ink);
+    }
+  }
+  @media (max-width: 860px) and (prefers-reduced-motion: reduce) {
     .step {
-      background: linear-gradient(to bottom, transparent 0 46%, rgb(10 10 13 / 0.95) 66%);
-      margin-inline: calc(-1 * var(--gutter));
-      padding-inline: var(--gutter);
-      padding-bottom: 24px;
-      position: relative;
-      z-index: 3;
+      transform: none;
     }
   }
 

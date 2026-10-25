@@ -24,7 +24,7 @@ export const pages = {
     title: 'Cupola: Radarr, Sonarr and Seerr app for iPhone and Android',
     heading: 'A Cupola over your server.',
     description: '',
-    light: 'cosmos',
+    light: 'tos',
   },
   services: {
     path: '/services/',
@@ -78,7 +78,7 @@ export const pages = {
     title: 'Overseerr and Jellyseerr app for iPhone and Android · Cupola',
     heading: 'Requests for everyone at home.',
     description: 'Cupola turns Seerr, Overseerr or Jellyseerr into a native app: Discover, requests and approvals for whoever runs the server, and a simpler app for household members who sign in with their own account.',
-    light: 'bbb',
+    light: 'sintel',
   },
   downloads: {
     path: '/download-clients/',

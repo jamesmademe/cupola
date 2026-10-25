@@ -7,6 +7,10 @@ most coloured cluster kept and moved to a fixed lightness. The app reads HCT;
 this reads HSL, which is close enough for a page lit from a few posters.
 
 Usage: python3 scripts/build_art.py <folder with p-<id>.jpg and b-<id>.jpg>
+                                     <folder with s-<still>.png>
+
+The stills are frames taken from the films themselves (ffmpeg, full 1080p),
+since the posters' backdrops are too small to fill a screen.
 Needs Pillow. Writes public/art/, src/og/<id>.jpg (posters for the social
 cards, which cannot read WebP) and src/data/light.json.
 """
@@ -29,6 +33,10 @@ BACKDROPS = {
     "spring": "spring",
     "tos": "tos1",
 }
+# Frames that lead a screen on their own, lit by themselves, as the app lights
+# the Home by the slide in front: the opening (the Amsterdam skyline at 5:29 in
+# Tears of Steel) and the Home's slide (the bridge at 0:35).
+STILLS = ["tosdome", "tosbridge"]
 
 
 def light_of(img: Image.Image) -> tuple[str, str]:
@@ -61,7 +69,7 @@ def save(img: Image.Image, path: Path, width: int, quality: int = 80) -> None:
     )
 
 
-def main(src: Path) -> None:
+def main(src: Path, stills: Path) -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     lights = {}
     for i in IDS:
@@ -85,9 +93,20 @@ def main(src: Path) -> None:
         sq.save(OUT / f"{i}-room.webp", "WEBP", quality=70)
         light, fill = light_of(poster)
         lights[i] = {"light": light, "fill": fill}
+    for name in STILLS:
+        still = Image.open(stills / f"s-{name}.png")
+        save(still, OUT / f"{name}-backdrop.webp", 1920, 80)
+        save(still, OUT / f"{name}-backdrop-s.webp", 640, 76)
+        side = min(still.size)
+        left = (still.width - side) // 2
+        sq = still.crop((left, 0, left + side, side)).convert("RGB").resize((64, 64))
+        sq = ImageEnhance.Color(sq.filter(ImageFilter.GaussianBlur(7))).enhance(2.2)
+        sq.save(OUT / f"{name}-room.webp", "WEBP", quality=70)
+        light, fill = light_of(still)
+        lights[name] = {"light": light, "fill": fill}
     (ROOT / "src" / "data" / "light.json").write_text(json.dumps(lights, indent=2) + "\n")
     print(json.dumps(lights, indent=2))
 
 
 if __name__ == "__main__":
-    main(Path(sys.argv[1]))
+    main(Path(sys.argv[1]), Path(sys.argv[2]))

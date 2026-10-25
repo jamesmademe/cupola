@@ -26,5 +26,13 @@
   "tos": {
     "light": "#81b9cf",
     "fill": "#a8d4e6"
+  },
+  "tosdome": {
+    "light": "#cfaf81",
+    "fill": "#e6cca8"
+  },
+  "tosbridge": {
+    "light": "#cfae81",
+    "fill": "#e6cca8"
   }
 }
