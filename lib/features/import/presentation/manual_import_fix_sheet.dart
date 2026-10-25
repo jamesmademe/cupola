@@ -717,6 +717,7 @@ class _MatchSheetState extends ConsumerState<_MatchSheet> {
       title: fileStem(item),
       value: current,
       currentLabel: current == null ? 'none' : _episodeTitle(current),
+      searchHint: 'Episode number or title',
       options: [
         for (final episode in _seasonEpisodes)
           MediaDetailValueOption(
@@ -741,6 +742,7 @@ class _MatchSheetState extends ConsumerState<_MatchSheet> {
       title: fileStem(item),
       value: current,
       currentLabel: current?.label ?? 'none',
+      searchHint: 'Track number or title',
       options: [
         for (final track in _tracks)
           MediaDetailValueOption(value: track, label: track.label),

@@ -4,6 +4,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/media_value_sheet.dart';
 import 'package:cupola/core/widgets/media_search_popup_menu.dart';
@@ -35,6 +36,31 @@ Widget _profileSheet() {
             onTap: _noop,
           ),
       ],
+    ),
+  );
+}
+
+/// The body of a long value sheet, the one-file episode picker of a manual
+/// import: Grey's twenty-four episodes of a season under the search field,
+/// drawn as [_profileSheet] is.
+Widget _episodeSheet() {
+  return AppBottomSheet(
+    title: "Grey's.Anatomy.S21E17.1080p.WEB",
+    subtitle: 'Currently none',
+    icon: Icons.tune_rounded,
+    bodyPadding: const EdgeInsets.only(bottom: AppSpacing.lg),
+    child: MediaValueSearchList<int>(
+      options: [
+        for (var n = 1; n <= 24; n++)
+          MediaDetailValueOption(value: n, label: 'E$n · Episode $n'),
+      ],
+      hint: 'Episode number or title',
+      row: (option) => MediaValueOptionRow(
+        label: option.label,
+        isSelected: false,
+        accent: null,
+        onTap: _noop,
+      ),
     ),
   );
 }
@@ -124,6 +150,25 @@ void main() {
         ),
         width: 280,
         height: 150,
+      ),
+      CatalogScene(
+        'Episode picker (showMediaValueSheet past 12 options) · the search '
+        'field over the season',
+        (_) => _episodeSheet(),
+        width: 390,
+        height: 900,
+      ),
+      CatalogScene(
+        'Episode picker · 17 typed: a number is a whole number, E17 alone',
+        (_) => _episodeSheet(),
+        width: 390,
+        height: 420,
+        act: (tester, scene) async {
+          await tester.enterText(
+            find.descendant(of: scene, matching: find.byType(TextField)),
+            '17',
+          );
+        },
       ),
       CatalogScene(
         'Text at 200% · the quality profile sheet body: the option rows keep '

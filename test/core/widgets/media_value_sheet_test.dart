@@ -112,6 +112,62 @@ void main() {
       expect(answers, [null]);
     });
   });
+  group('mediaValueMatches', () {
+    test('ignores case, and finds words anywhere in the label', () {
+      expect(mediaValueMatches('E4 · The Second Cycle', 'second'), isTrue);
+      expect(mediaValueMatches('E4 · The Second Cycle', 'SECOND C'), isTrue);
+      expect(mediaValueMatches('E4 · The Second Cycle', 'third'), isFalse);
+      expect(mediaValueMatches('anything', '  '), isTrue);
+    });
+
+    test('a number is a whole number', () {
+      expect(mediaValueMatches('E4 · Pilot', '4'), isTrue);
+      expect(mediaValueMatches('E14 · Pilot', '4'), isFalse);
+      expect(mediaValueMatches('E40 · Pilot', '4'), isFalse);
+      expect(mediaValueMatches('E14 · Pilot', '14'), isTrue);
+      expect(mediaValueMatches('E14 · Pilot', 'e1'), isFalse);
+      expect(mediaValueMatches('4. Intro', '4'), isTrue);
+    });
+  });
+
+  group('a long list (showMediaValueSheet)', () {
+    testWidgets('opens on a search that narrows the rows, and picks from '
+        'what is left', (tester) async {
+      MediaDetailValueOption<int>? answer;
+      await _pumpPicker(
+        tester,
+        profiles: [
+          for (var n = 1; n <= 24; n++) {'id': n, 'name': 'E$n · Episode $n'},
+        ],
+        onAnswer: (picked) => answer = picked,
+      );
+
+      expect(find.byType(SearchBar), findsOneWidget);
+      await tester.enterText(find.byType(TextField), '17');
+      await tester.pumpAndSettle();
+      expect(find.byType(PressableScale), findsOneWidget);
+      await tester.tap(find.text('E17 · Episode 17'));
+      await tester.pumpAndSettle();
+      expect(answer?.value, 17);
+    });
+
+    testWidgets('says when nothing matches', (tester) async {
+      await _pumpPicker(
+        tester,
+        profiles: [
+          for (var n = 1; n <= 13; n++) {'id': n, 'name': 'E$n'},
+        ],
+      );
+      await tester.enterText(find.byType(TextField), 'zebra');
+      await tester.pumpAndSettle();
+      expect(find.text('Nothing matches "zebra"'), findsOneWidget);
+    });
+
+    testWidgets('a short list has no search', (tester) async {
+      await _pumpPicker(tester);
+      expect(find.byType(SearchBar), findsNothing);
+    });
+  });
 }
 
 Future<void> _pumpPicker(

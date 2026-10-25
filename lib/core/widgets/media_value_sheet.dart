@@ -6,6 +6,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/header_action_row.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
+import 'package:cupola/core/widgets/search_bar_header.dart';
 
 /// One choice offered by [showMediaValueSheet].
 @immutable
@@ -30,6 +31,11 @@ class MediaDetailValueOption<T> {
 /// decides whether a pick equal to the current value is worth a write. It is
 /// not: a no-op write to a quality profile can still queue a library-wide
 /// upgrade sweep.
+///
+/// Past [mediaValueSearchFrom] options the sheet opens on a search field
+/// ([searchHint]), which narrows the rows as the user types
+/// ([mediaValueMatches]): a season of twenty-four episodes is not scrolled
+/// for E17.
 Future<MediaDetailValueOption<T>?> showMediaValueSheet<T>(
   BuildContext context, {
   required String title,
@@ -38,8 +44,10 @@ Future<MediaDetailValueOption<T>?> showMediaValueSheet<T>(
   required String currentLabel,
   Color? accent,
   IconData icon = Icons.tune_rounded,
+  String searchHint = 'Search',
 }) {
   if (options.isEmpty) return Future<MediaDetailValueOption<T>?>.value();
+  final searchable = options.length > mediaValueSearchFrom;
 
   return AppBottomSheet.show<MediaDetailValueOption<T>>(
     context: context,
@@ -49,22 +57,120 @@ Future<MediaDetailValueOption<T>?> showMediaValueSheet<T>(
     subtitle: 'Currently $currentLabel',
     icon: icon,
     accent: accent,
-    builder: (sheetContext) => Column(
+    // The search field keeps its own gutter, as it does on every screen.
+    bodyPadding: searchable
+        ? const EdgeInsets.only(bottom: AppSpacing.lg)
+        : null,
+    builder: (sheetContext) {
+      Widget row(MediaDetailValueOption<T> option) => MediaValueOptionRow(
+        label: option.label,
+        isSelected: option.value == value,
+        accent: accent,
+        onTap: () =>
+            Navigator.of(sheetContext).pop<MediaDetailValueOption<T>>(option),
+      );
+      if (searchable) {
+        return MediaValueSearchList<T>(
+          options: options,
+          hint: searchHint,
+          row: row,
+        );
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [for (final option in options) row(option)],
+      );
+    },
+  );
+}
+
+/// How many options a value sheet lists before it offers a search: twelve
+/// rows fit a phone's sheet, and a few more are still read at a glance.
+const mediaValueSearchFrom = 12;
+
+/// Whether [label] answers [query], ignoring case. A number is a whole
+/// number: `4` finds `E4` and `Track 4`, never `E14` or `E40`.
+bool mediaValueMatches(String label, String query) {
+  final words = query.trim().toLowerCase();
+  if (words.isEmpty) return true;
+  final pattern = [
+    if (RegExp(r'^\d').hasMatch(words)) r'(?<!\d)',
+    RegExp.escape(words),
+    if (RegExp(r'\d$').hasMatch(words)) r'(?!\d)',
+  ].join();
+  return RegExp(pattern).hasMatch(label.toLowerCase());
+}
+
+/// A long value sheet's body: the search field over the options, and the
+/// options that answer it ([mediaValueMatches]), or that none does.
+class MediaValueSearchList<T> extends StatefulWidget {
+  const MediaValueSearchList({
+    super.key,
+    required this.options,
+    required this.hint,
+    required this.row,
+  });
+
+  final List<MediaDetailValueOption<T>> options;
+
+  /// What the field asks for: `Episode number or title`.
+  final String hint;
+
+  /// The row an option is drawn as ([MediaValueOptionRow]).
+  final Widget Function(MediaDetailValueOption<T> option) row;
+
+  @override
+  State<MediaValueSearchList<T>> createState() =>
+      _MediaValueSearchListState<T>();
+}
+
+class _MediaValueSearchListState<T> extends State<MediaValueSearchList<T>> {
+  var _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final shown = [
+      for (final option in widget.options)
+        if (mediaValueMatches(option.label, _query)) option,
+    ];
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        for (final option in options)
-          MediaValueOptionRow(
-            label: option.label,
-            isSelected: option.value == value,
-            accent: accent,
-            onTap: () => Navigator.of(
-              sheetContext,
-            ).pop<MediaDetailValueOption<T>>(option),
+        SearchBarHeader(
+          hintText: widget.hint,
+          debounceDuration: Duration.zero,
+          onQueryChanged: (query) => setState(() => _query = query),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final option in shown) widget.row(option),
+              if (shown.isEmpty)
+                ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minHeight: MediaValueOptionRow.rowHeight,
+                  ),
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                      'Nothing matches "$_query"',
+                      style: Theme.of(context).textTheme.bodyLarge!.copyWith(
+                        color: CupolaThemeColors.of(context).dimText,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
+        ),
       ],
-    ),
-  );
+    );
+  }
 }
 
 /// Radarr/Sonarr/Lidarr quality profiles as picker options.
