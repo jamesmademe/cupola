@@ -33,7 +33,9 @@ const tested = {
           <dd class:list={['t', tested[s.tested].cls]}><span aria-hidden="true">{tested[s.tested].mark}</span> {tested[s.tested].label}</dd>
         </div>
       </dl>
-      {s.note && <p class="note t-meta">{s.note}</p>}
+      {s.tested === 'untested' && (
+        <p class="note t-meta">Tested against recorded answers from {s.name}'s API, not yet against a running server. If you run {s.name}, a report either way helps.</p>
+      )}
     </article>
   ))}
 </div>

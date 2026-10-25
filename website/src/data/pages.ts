@@ -116,15 +116,6 @@ export const pages = {
     description: 'LunaSea has published its final release. Cupola is a free, open-source client that covers the same services and more, on iPhone, Android and Mac. What carries over, and what to set up again.',
     light: 'spring',
   },
-  seekarr: {
-    path: '/seekarr/',
-    slug: 'seekarr',
-    name: 'Seekarr is now Cupola',
-    title: 'Seekarr is now Cupola',
-    heading: 'Seekarr is now Cupola.',
-    description: 'Seekarr, the Flutter client for Seerr, Radarr, Sonarr, Lidarr and qBittorrent, is now Cupola: seventeen services, a new design and the same repository.',
-    light: 'cosmos',
-  },
   contribute: {
     path: '/contribute/',
     slug: 'contribute',
@@ -140,16 +131,7 @@ export const pages = {
     name: 'Press kit',
     title: 'Press kit · Cupola',
     heading: 'Writing about Cupola?',
-    description: 'Cupola described in a line and in a paragraph, the mark, the two sentences and how to quote them, and the facts worth checking.',
-    light: 'lamp',
-  },
-  changelog: {
-    path: '/changelog/',
-    slug: 'changelog',
-    name: 'Changelog',
-    title: 'Changelog · Cupola',
-    heading: 'What changed, release by release.',
-    description: 'Every Cupola release and what it changed, from the repository changelog.',
+    description: 'Cupola described in a line and in a paragraph, the mark, the tagline, and the facts worth checking.',
     light: 'lamp',
   },
   credits: {

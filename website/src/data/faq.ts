@@ -55,7 +55,7 @@ export const faq = {
   },
   seekarr: {
     q: 'What happened to Seekarr?',
-    a: 'Seekarr is now Cupola. Releases up to 0.8.0 were published as Seekarr and covered five services; Cupola 1.0 covers seventeen and is a new app rather than an update. The source, the issues and the history are in the same repository. See <a href="/seekarr/">Seekarr is now Cupola</a>.',
+    a: 'Seekarr is now Cupola. Releases up to 0.8.0 were published as Seekarr and covered five services; Cupola 1.0 covers seventeen and is a new app rather than an update. The source, the issues and the history are in the same repository.',
   },
   widgets: {
     q: 'Are there widgets and notifications?',
@@ -63,11 +63,11 @@ export const faq = {
   },
   desktop: {
     q: 'Does it run on Windows and Linux?',
-    a: 'Every release carries a Windows and a Linux build made by GitHub Actions, with the same desktop window as on the Mac. Neither has been run by hand yet, so a report is welcome. There is no web version, by design.',
+    a: 'Every release includes a Windows and a Linux build, with the same desktop window as on the Mac. Neither has been tested on a real machine yet, so a report is welcome. There is no web version.',
   },
   english: {
     q: 'Why is Cupola only in English?',
-    a: 'It is a decision, not missing work: every word is written once, in one voice, and the app has no localization layer. Your titles, posters and metadata still come in whatever language your services hold them in.',
+    a: 'It is a choice rather than missing work: the app has no translations. Titles, posters and descriptions still come from your services, in whatever language they hold them.',
   },
 } satisfies Record<string, Qa>;
 

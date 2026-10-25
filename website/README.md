@@ -20,7 +20,7 @@ The site copies none of these, so it cannot drift from the app:
 
 - **The services table** comes from the README's *Supported services* section (`src/lib/repo.ts`). A change of shape there fails the build.
 - **The service marks** come from `tool/service_glyphs/svg/`, the **brand mark** from `assets/brand/`.
-- **The version** comes from `pubspec.yaml`, the **changelog** from `CHANGELOG.md`.
+- **The version** comes from `pubspec.yaml`.
 - **The claim and the promise** are quoted in `src/config.ts`, exactly as the brand book has them.
 
 ## Links that change

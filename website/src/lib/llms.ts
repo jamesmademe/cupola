@@ -65,7 +65,7 @@ ${rows}
 - iPhone and iPad: TestFlight beta.
 - Android: APK from GitHub releases.
 - Mac: signed and notarized .dmg.
-- Windows and Linux: builds made by GitHub Actions with every release, not yet tested by hand.
+- Windows and Linux: builds in every release, not yet tested on real machines.
 - From source: Flutter; see the repository.
 
 Details: ${abs('/install/')}
