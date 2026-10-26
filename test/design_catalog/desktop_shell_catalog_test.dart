@@ -18,8 +18,6 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/core/widgets/service_tab_bar.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
-import 'package:cupola/features/activity/domain/service_type.dart';
-import 'package:cupola/features/activity/presentation/activity_provider.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
@@ -171,51 +169,6 @@ class _StatusClient extends ApiClient {
   void close({bool force = false}) {}
 }
 
-GlobalActivityItem _transfer(
-  ServiceKey service,
-  String title,
-  String subtitle,
-  double progress, {
-  bool stalled = false,
-}) => GlobalActivityItem(
-  kind: GlobalActivityKind.queue,
-  service: service,
-  serviceType: ServiceType.movies,
-  title: title,
-  subtitle: subtitle,
-  status: MediaStatusInfo(
-    labelOverride: stalled ? 'Stuck' : 'Downloading',
-    toneOverride: stalled ? StatusTone.warning : StatusTone.info,
-    hasWarning: stalled,
-    progress: progress,
-  ),
-);
-
-final _queue = ActivityFeed(
-  items: [
-    _transfer(
-      ServiceKey.radarr,
-      'Nosferatu (1922)',
-      'Nosferatu.1922.1080p.BluRay.x264-GROUP',
-      0.71,
-    ),
-    _transfer(
-      ServiceKey.radarr,
-      'Metropolis (1927)',
-      'Metropolis.1927.1080p.BluRay.x264-GROUP',
-      0.18,
-      stalled: true,
-    ),
-    _transfer(
-      ServiceKey.sonarr,
-      'Severance',
-      "S2 E5 · Trojan's Horse · Severance.S02E05.1080p.WEB-DL-GROUP",
-      0.54,
-    ),
-  ],
-  results: const [],
-);
-
 /// The operator's bar, which the rail draws above Settings.
 final _bar = NavTab.barFor(Audience.operator);
 
@@ -334,7 +287,6 @@ class _WindowState extends State<_Window> {
           Map<String, String> accessHeaders = const {},
         }) => _StatusClient(),
       ),
-      globalNowItemsProvider.overrideWith((ref) async => _queue),
       unreachableServicesProvider.overrideWithValue(const [
         ServiceKey.sonarr,
         ServiceKey.prowlarr,
