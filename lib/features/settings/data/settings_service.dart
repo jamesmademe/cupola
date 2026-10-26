@@ -1232,11 +1232,10 @@ class SettingsService {
         headerValues = [for (final entry in entries) entry.value];
     }
 
-    if (public.isEmpty) {
-      await _prefs.remove(keys.public);
-    } else {
-      await _prefs.setString(keys.public, jsonEncode(public));
-    }
+    // Secrets first, the non-secret record last. The record is what says how
+    // many header values there are to find again, so an interrupted write that
+    // had already rewritten it would leave the values it no longer names behind
+    // for good; this way a save started again still sees them and finishes.
     if (secret == null || secret.isEmpty) {
       await _secureStore.delete(key: keys.secret);
     } else {
@@ -1252,6 +1251,11 @@ class SettingsService {
     }
     for (var index = headerValues.length; index < previousHeaders; index++) {
       await _secureStore.delete(key: keys.header(index));
+    }
+    if (public.isEmpty) {
+      await _prefs.remove(keys.public);
+    } else {
+      await _prefs.setString(keys.public, jsonEncode(public));
     }
   }
 
