@@ -245,7 +245,7 @@ class _MediaOverflowRow extends StatelessWidget {
           children: [
             Icon(
               action.icon,
-              size: ActionStateGlyph.glyphSize,
+              size: HeaderActionRow.glyphSize,
               color: glyphColor,
             ),
             const SizedBox(width: AppSpacing.md),
