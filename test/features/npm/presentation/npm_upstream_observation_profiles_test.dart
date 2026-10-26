@@ -55,6 +55,14 @@ void main() {
         },
       ]),
     );
+    // The world's NPM holds a certificate close to lapsing, which is a fault
+    // of its own under Needs attention: this one has none.
+    harness.network.on(
+      'npm',
+      'GET',
+      '/api/nginx/certificates',
+      (_) => NetworkReply.json(const <Object?>[]),
+    );
     await tester.binding.setSurfaceSize(const Size(430, 3000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     harness.network.followFakeTime(tester.binding);

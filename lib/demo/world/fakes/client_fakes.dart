@@ -168,9 +168,9 @@ class QbittorrentFake extends ServiceFake {
       case ('GET', '/api/v2/torrents/trackers'):
         return NetworkReply.json(const <Object?>[]);
       case ('GET', '/api/v2/rss/items'):
-        return NetworkReply.json(const <String, Object?>{});
+        return NetworkReply.json(_rssItems(c, withData: r.query['withData']));
       case ('GET', '/api/v2/rss/rules'):
-        return NetworkReply.json(const <String, Object?>{});
+        return NetworkReply.json(_rssRules(c));
       case ('GET', '/api/v2/torrents/categories'):
         return NetworkReply.json({
           'radarr': {'name': 'radarr', 'savePath': ''},
@@ -185,6 +185,83 @@ class QbittorrentFake extends ServiceFake {
     }
     return null;
   }
+
+  static const _rssFeedUrl = 'https://feeds.example.net/open-movies.xml';
+
+  /// The one feed the household follows, as `rss/items` sends it: the feed
+  /// is a leaf with its `url`, and with `withData=true` its articles, one
+  /// of them already read. Without `withData` a leaf is the bare URL, which
+  /// is what an older WebUI sends and what the app reads without a count.
+  static JsonMap _rssItems(ServerContext c, {String? withData}) {
+    if (withData != 'true') return {'Open Movies': _rssFeedUrl};
+    JsonMap article(
+      String id,
+      String title,
+      Duration age, {
+      bool read = false,
+    }) => {
+      'id': id,
+      'title': title,
+      'date': c.ago(age),
+      'description': '$title, released by the Open Movies feed.',
+      'torrentURL': 'https://feeds.example.net/torrent/$id.torrent',
+      'isRead': read,
+    };
+    return {
+      'Open Movies': {
+        'uid': '{6b1f3a52-0c7e-4d0b-9a55-2f0c4a7e91d3}',
+        'url': _rssFeedUrl,
+        'title': 'Open Movies',
+        'lastBuildDate': c.ago(const Duration(minutes: 40)),
+        'isLoading': false,
+        'hasError': false,
+        'articles': [
+          article(
+            'tears-of-steel-1080p',
+            'Tears.of.Steel.2012.1080p.BluRay',
+            const Duration(hours: 5),
+          ),
+          article(
+            'spring-1080p',
+            'Spring.2014.1080p.BluRay',
+            const Duration(days: 1, hours: 2),
+            read: true,
+          ),
+          article(
+            'charge-1080p',
+            'Charge.2022.1080p.WEB',
+            const Duration(days: 2, hours: 7),
+            read: true,
+          ),
+          article(
+            'coffee-run-720p',
+            'Coffee.Run.2020.720p.WEB',
+            const Duration(days: 3),
+          ),
+        ],
+      },
+    };
+  }
+
+  /// The rule that sends what the feed carries at 1080p to Radarr's
+  /// category, as `rss/rules` sends it.
+  static JsonMap _rssRules(ServerContext c) => {
+    'Open Movies 1080p': {
+      'enabled': true,
+      'mustContain': '1080p',
+      'mustNotContain': 'CAM|HDTS|TELESYNC',
+      'useRegex': true,
+      'episodeFilter': '',
+      'smartFilter': false,
+      'previouslyMatchedEpisodes': const <Object?>[],
+      'affectedFeeds': const [_rssFeedUrl],
+      'ignoreDays': 0,
+      'lastMatch': c.ago(const Duration(days: 1, hours: 2)),
+      'addPaused': null,
+      'assignedCategory': 'radarr',
+      'savePath': '',
+    },
+  };
 
   /// What a write does to a living world: pause, resume, delete. The rest
   /// (tags, limits, a recheck) is answered and changes nothing the world
@@ -599,14 +676,172 @@ class NzbgetFake extends ServiceFake {
       'version' => result(
         jsonFixture('nzbget/version.json')['result'] ?? '24.3',
       ),
-      'status' => result(status(rows, diskFull: diskFull, paused: paused)),
-      'listgroups' => result([
-        for (final (i, d) in rows.indexed)
-          group(d, nzbId: i + 1, paused: paused),
-      ]),
-      'history' => result(const <Object?>[]),
+      'status' => result(
+        rows.isEmpty
+            ? _ownStatus(diskFull: diskFull, paused: paused)
+            : status(rows, diskFull: diskFull, paused: paused),
+      ),
+      'listgroups' => result(
+        rows.isEmpty
+            ? _ownGroups(paused: paused)
+            : [
+                for (final (i, d) in rows.indexed)
+                  group(d, nzbId: i + 1, paused: paused),
+              ],
+      ),
+      'history' => result(_history(c)),
+      'config' => result(_config),
+      'log' => result(_log(c)),
       _ => result(_write(r, c, rows)),
     };
+  }
+
+  // The world holds no download for NZBGet, so its own screens would be
+  // empty. What it moves lives here, not in `WorldDownloads`: a download
+  // there is counted across the Dashboard and the arr queues, and the
+  // household's Sonarr and Radarr never sent these. One is moving, one waits.
+  static const _ownJobs = [
+    (
+      id: 3,
+      name: 'Tears.of.Steel.2012.1080p.BluRay',
+      sizeMb: 4200,
+      leftMb: 1500,
+    ),
+    (id: 4, name: 'Coffee.Run.2020.1080p.WEB', sizeMb: 1400, leftMb: 1400),
+  ];
+
+  static List<JsonMap> _ownGroups({required bool paused}) => [
+    for (final (i, job) in _ownJobs.indexed)
+      {
+        'NZBID': job.id,
+        'NZBName': job.name,
+        // A paused queue holds the moving job as queued, as it does a row
+        // of the world's.
+        'Status': i == 0 && !paused ? 'DOWNLOADING' : 'QUEUED',
+        'Category': 'movies',
+        'FileSizeMB': job.sizeMb,
+        'RemainingSizeMB': job.leftMb,
+        'Health': 1000,
+        'CriticalHealth': 898,
+        'Parameters': const <Object?>[],
+      },
+  ];
+
+  /// `status` for the jobs above: the fixture's 2 MiB/s on the one moving,
+  /// and what is left of both.
+  static JsonMap _ownStatus({required bool diskFull, required bool paused}) {
+    final base = status(const [], diskFull: diskFull, paused: paused);
+    return {
+      ...base,
+      'RemainingSizeMB': _ownJobs.fold<int>(0, (sum, j) => sum + j.leftMb),
+      if (paused) 'DownloadRate': 0,
+    };
+  }
+
+  /// `history`: what arrived, and one release that lost more articles than
+  /// its pars could repair, which the queue's Coffee Run is the retry of.
+  static List<JsonMap> _history(ServerContext c) {
+    int at(Duration age) => c.now.subtract(age).millisecondsSinceEpoch ~/ 1000;
+    JsonMap entry(int id, String name, String status, Duration age) => {
+      'ID': id,
+      'NZBID': id,
+      'Name': name,
+      'NZBName': name,
+      'Status': status,
+      'Category': 'movies',
+      'HistoryTime': at(age),
+    };
+    return [
+      entry(
+        2,
+        'Coffee.Run.2020.720p.WEB',
+        'FAILURE/HEALTH',
+        const Duration(hours: 6),
+      ),
+      entry(
+        1,
+        'Spring.2014.1080p.BluRay',
+        'SUCCESS/ALL',
+        const Duration(days: 1, hours: 2),
+      ),
+      entry(
+        0,
+        'Charge.2022.1080p.WEB',
+        'SUCCESS/ALL',
+        const Duration(days: 2, hours: 7),
+      ),
+    ];
+  }
+
+  /// `config`, cut to what the screens read: the one RSS feed the household
+  /// follows. The real answer is every option; the client keeps `FeedN.*`.
+  static const _config = [
+    {'Name': 'MainDir', 'Value': '/downloads'},
+    {'Name': 'Feed1.Name', 'Value': 'Open Movies (usenet)'},
+    {'Name': 'Feed1.URL', 'Value': 'https://indexer.example.net/rss?t=2000'},
+    {'Name': 'Feed1.Filter', 'Value': 'Accept: 1080p'},
+    {'Name': 'Feed1.Interval', 'Value': '15'},
+    {'Name': 'Feed1.Backlog', 'Value': 'no'},
+    {'Name': 'Feed1.PauseNzb', 'Value': 'no'},
+    {'Name': 'Feed1.Category', 'Value': 'movies'},
+    {'Name': 'Feed1.Priority', 'Value': '0'},
+  ];
+
+  /// `log`: the screen log, oldest first, the way the daemon keeps it.
+  static List<JsonMap> _log(ServerContext c) {
+    int at(Duration age) => c.now.subtract(age).millisecondsSinceEpoch ~/ 1000;
+    JsonMap line(int id, String kind, Duration age, String text) => {
+      'ID': id,
+      'Kind': kind,
+      'Time': at(age),
+      'Text': text,
+    };
+    return [
+      line(1, 'INFO', const Duration(hours: 9), 'nzbget 24.3 server-mode'),
+      line(
+        2,
+        'INFO',
+        const Duration(hours: 9),
+        'Using config-file /config/nzbget.conf',
+      ),
+      line(
+        3,
+        'INFO',
+        const Duration(days: 2, hours: 7),
+        'Successfully downloaded Charge.2022.1080p.WEB',
+      ),
+      line(
+        4,
+        'INFO',
+        const Duration(days: 1, hours: 2),
+        'Successfully downloaded Spring.2014.1080p.BluRay',
+      ),
+      line(
+        5,
+        'WARNING',
+        const Duration(hours: 6, minutes: 14),
+        'Download health for Coffee.Run.2020.720p.WEB is 64.0%, below the '
+            'critical health 89.8%',
+      ),
+      line(
+        6,
+        'ERROR',
+        const Duration(hours: 6),
+        'Failed Coffee.Run.2020.720p.WEB: not enough articles',
+      ),
+      line(
+        7,
+        'INFO',
+        const Duration(minutes: 52),
+        'Fetched 1 new item from feed Open Movies (usenet)',
+      ),
+      line(
+        8,
+        'INFO',
+        const Duration(minutes: 31),
+        'Collection Tears.of.Steel.2012.1080p.BluRay added to queue',
+      ),
+    ];
   }
 
   /// What a write does to a living world: the whole queue paused or
