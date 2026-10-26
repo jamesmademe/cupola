@@ -34,7 +34,6 @@ void main() {
   /// ago the stack was last checked. It reads the time of a check already made
   /// and asks no server, so a stale minute under a pushed page costs nothing.
   const uiClocks = {
-    'lib/core/widgets/interactive_search_sheet.dart',
     'lib/features/pairing/presentation/pair_code.dart',
     'lib/features/release_search/presentation/release_search_sheet.dart',
     'lib/features/services/presentation/stack_screen.dart',
