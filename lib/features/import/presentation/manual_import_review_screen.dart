@@ -52,7 +52,7 @@ class _VisibleFiles {
   /// deliberately outside the facet row (a batch in flight) still use it.
   final bool Function(ManualImportItem) matchesQuery;
 
-  const _VisibleFiles({
+  _VisibleFiles({
     required this.attention,
     required this.ready,
     required this.other,
@@ -63,7 +63,8 @@ class _VisibleFiles {
   int get length =>
       attention.length + ready.length + other.length + imported.length;
 
-  Set<String> get _paths => {
+  /// Built once per view: `offScreenSelectedCount` asks for it on every call.
+  late final Set<String> _paths = {
     for (final item in attention) item.path,
     for (final item in ready) item.path,
     for (final item in other) item.path,
@@ -159,6 +160,18 @@ class _ManualImportReviewScreenState
   /// that" became an unanswerable question.
   final _hidden = <ManualImportFacet>{ManualImportFacet.other};
 
+  /// The last [_visibleFiles] result and what it was built from. See there.
+  _VisibleFiles? _viewMemo;
+  (
+    List<ManualImportItem>,
+    List<ManualImportItem>,
+    List<ManualImportItem>,
+    List<ManualImportItem>,
+  )?
+  _viewMemoSources;
+  String? _viewMemoQuery;
+  Set<ManualImportFacet> _viewMemoHidden = const {};
+
   @override
   void initState() {
     super.initState();
@@ -252,6 +265,8 @@ class _ManualImportReviewScreenState
     final folder = state.selectedFolder;
     final folderName = folder == null ? '…' : manualImportPathName(folder);
     final view = _visibleFiles(state);
+    // Once per build: the footer and the section header both print it.
+    final offScreen = view.offScreenSelectedCount(state);
 
     final scanned = state.items.length;
 
@@ -305,13 +320,17 @@ class _ManualImportReviewScreenState
         targetId: widget.targetId,
         // The import button spends the whole selection, not the part of it on
         // screen, so a filtered view has to say how much of that it is hiding.
-        offScreenSelectedCount: view.offScreenSelectedCount(state),
+        offScreenSelectedCount: offScreen,
       ),
-      child: _buildBody(state, view),
+      child: _buildBody(state, view, offScreen),
     );
   }
 
-  Widget _buildBody(ManualImportFlowState state, _VisibleFiles view) {
+  Widget _buildBody(
+    ManualImportFlowState state,
+    _VisibleFiles view,
+    int offScreen,
+  ) {
     final service = widget.service;
 
     if (state.isLoadingItems) {
@@ -354,7 +373,7 @@ class _ManualImportReviewScreenState
       );
     }
 
-    final rows = _buildRows(state, view);
+    final rows = _buildRows(state, view, offScreen);
 
     return ListView.builder(
       // Lazy: a real downloads folder is hundreds of files, and building every
@@ -370,9 +389,31 @@ class _ManualImportReviewScreenState
   /// Computed once per build and handed to both the list and the footer, so the
   /// counts under the section headers and the warning above the import button
   /// can never disagree about what "in view" means.
+  ///
+  /// Memoised on the four classified lists (identical while the scan and the
+  /// service and the blocked paths are), the text filter and the chips. A
+  /// selection change touches none of them, so ticking a file reuses the view.
   _VisibleFiles _visibleFiles(ManualImportFlowState state) {
-    final service = widget.service;
+    final attention = state.attentionItems;
+    final ready = state.readyItems;
+    final other = state.otherItems;
+    final imported = state.importedItems;
     final query = _query;
+    final memo = _viewMemo;
+    final sources = _viewMemoSources;
+    if (memo != null &&
+        sources != null &&
+        identical(sources.$1, attention) &&
+        identical(sources.$2, ready) &&
+        identical(sources.$3, other) &&
+        identical(sources.$4, imported) &&
+        _viewMemoQuery == query &&
+        _viewMemoHidden.length == _hidden.length &&
+        _viewMemoHidden.containsAll(_hidden)) {
+      return memo;
+    }
+
+    final service = widget.service;
 
     bool matches(ManualImportItem item) =>
         manualImportMatchesQuery(service, item, query);
@@ -386,18 +427,28 @@ class _ManualImportReviewScreenState
         ? items.where(matches).toList(growable: false)
         : const <ManualImportItem>[];
 
-    return _VisibleFiles(
-      attention: visible(state.attentionItems, ManualImportFacet.attention),
-      ready: visible(state.readyItems, ManualImportFacet.ready),
-      other: visible(state.otherItems, ManualImportFacet.other),
-      imported: visible(state.importedItems, ManualImportFacet.imported),
+    final view = _VisibleFiles(
+      attention: visible(attention, ManualImportFacet.attention),
+      ready: visible(ready, ManualImportFacet.ready),
+      other: visible(other, ManualImportFacet.other),
+      imported: visible(imported, ManualImportFacet.imported),
       matchesQuery: matches,
     );
+    _viewMemo = view;
+    _viewMemoQuery = query;
+    _viewMemoHidden = {..._hidden};
+    // The memo keys on the classified lists it was built from.
+    _viewMemoSources = (attention, ready, other, imported);
+    return view;
   }
 
   /// Flattens the whole screen into a single row list so the list can stay lazy
   /// while still carrying headers, group headers and per-file rows.
-  List<Widget> _buildRows(ManualImportFlowState state, _VisibleFiles view) {
+  List<Widget> _buildRows(
+    ManualImportFlowState state,
+    _VisibleFiles view,
+    int offScreen,
+  ) {
     final service = widget.service;
     final query = _query;
 
@@ -539,7 +590,7 @@ class _ManualImportReviewScreenState
           view,
           ready: ready,
           imported: imported,
-          offScreenSelected: view.offScreenSelectedCount(state),
+          offScreenSelected: offScreen,
         ),
       );
     }
