@@ -179,23 +179,13 @@ class AppColors {
   static const Color surfaceDark = DesignTokensDark.colorSurface; // room ground
   static const Color surfaceContainerLowestDark =
       DesignTokensDark.colorSurfaceContainerLowest;
-  static const Color surfaceContainerLowDark =
-      DesignTokensDark.colorSurfaceContainerLow;
   static const Color surfaceContainerDark =
       DesignTokensDark.colorSurfaceContainer;
   static const Color surfaceContainerHighDark =
       DesignTokensDark.colorSurfaceContainerHigh;
-  static const Color surfaceContainerHighestDark =
-      DesignTokensDark.colorSurfaceContainerHighest;
 
   // === LIGHT THEME SURFACES ===
   static const Color surfaceLight = DesignTokensLight.colorSurface;
-  static const Color surfaceContainerLight =
-      DesignTokensLight.colorSurfaceContainer;
-  static const Color surfaceContainerHighLight =
-      DesignTokensLight.colorSurfaceContainerHigh;
-  static const Color surfaceContainerHighestLight =
-      DesignTokensLight.colorSurfaceContainerHighest;
 
   // === PLATE (artwork stand-ins) ===
   //
@@ -217,16 +207,10 @@ class AppColors {
   /// 6.6:1 on [plateSurface] and 7.3:1 on [plateWell].
   static const Color plateDimInk = DesignTokens.colorPlateDimInk;
 
-  /// Fill behind a selected segment/chip in light mode: the edge line
-  /// flattened on paper, far enough from it (1.23:1) to read at a glance.
-  static const Color selectedContainerLight =
-      DesignTokensLight.colorSecondaryContainer;
-
   // === TEXT COLORS - DARK ===
   //
   // The room's inks are white at 72 and 60%; the scheme carries them flattened
   // on the ground so that a contrast can be measured against any surface.
-  static const Color onSurfaceDark = DesignTokensDark.colorOnSurface;
   static const Color onSurfaceVariantDark =
       DesignTokensDark.colorOnSurfaceVariant; // secondary ink
   static const Color onSurfaceDimDark =
@@ -238,18 +222,10 @@ class AppColors {
   // on**, not against the scaffold: the chip and input fill
   // (`surfaceContainerHighest`) carries `onSurfaceVariant` as its label. On it
   // the secondary ink measures 5.9:1 and the tertiary 4.9:1.
-  static const Color onSurfaceLight = DesignTokensLight.colorOnSurface;
-  static const Color onSurfaceVariantLight =
-      DesignTokensLight.colorOnSurfaceVariant; // 5.9:1 worst
   static const Color onSurfaceDimLight =
       DesignTokensLight.colorDimText; // 4.9:1 worst
 
   // === OUTLINE / BORDER ===
-  static const Color outlineDark = DesignTokensDark.colorOutline;
-  static const Color outlineVariantDark = DesignTokensDark.colorOutlineVariant;
-  static const Color outlineLight = DesignTokensLight.colorOutline;
-  static const Color outlineVariantLight =
-      DesignTokensLight.colorOutlineVariant;
 
   // === SEMANTIC COLORS ===
   //
@@ -278,15 +254,6 @@ class AppColors {
   /// colour.
   static const Color lamp = DesignTokens.colorTitleLightFallback;
 
-  /// The ink a *bright* fill takes, when white loses the measurement: the
-  /// room's on-ink, the label of the ink button.
-  ///
-  /// The same value [ServiceTheme.foregroundOn] returns. It is a constant here
-  /// rather than a call so `theme.dart` stays a leaf: importing
-  /// `service_theme.dart` would pull a feature file into the palette, and
-  /// `theme_test.dart` re-measures every use of it against `foregroundOn`, so
-  /// the constant cannot quietly become the wrong answer.
-  static const Color inkOnBright = DesignTokens.colorInkOnBright;
 }
 
 /// The room's own vocabulary, for the theme in use: its steps, lines, fills,
@@ -966,18 +933,6 @@ class AppTheme {
   /// Each still takes a [Brightness], which the type no longer reads (tracking
   /// is the same in both rooms); the parameter is kept so the call sites stand.
   ///
-  /// **Subtitle**: a service's own name in its app bar: the section role.
-  static TextStyle subtitle(Brightness brightness) => _slot(
-    DesignTokens.typeTitleSubtitleFontFamily,
-    DesignTokens.typeTitleSubtitleFontFamilyFallback,
-    DesignTokens.typeTitleSubtitleFontSize,
-    DesignTokens.typeTitleSubtitleLineHeight,
-    DesignTokens.typeTitleSubtitleFontWeight,
-    DesignTokens.typeTitleSubtitleWght,
-    DesignTokens.typeTitleSubtitleFontWidth,
-    DesignTokens.typeTitleSubtitleLetterSpacing,
-  );
-
   /// **Panel header**: an `h2` inside a page: a Dockge stack, an NPM host, a
   /// TrueNAS console section. The section role.
   static TextStyle panelHeader(Brightness brightness) => _slot(
