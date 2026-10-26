@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:dio/dio.dart';
 
 import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/network/list_mapping.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 
 /// Configuration for *arr service activity endpoints.
@@ -91,6 +92,26 @@ Future<List<T>> _mapArrItems<T>(
   return Isolate.run(
     () => data.map((item) => fromJson(item as Map<String, dynamic>)).toList(),
   );
+}
+
+/// The mapper a list read hands to [ApiClient.getMappedList]: the same mapping
+/// as [_mapArrItems], run where the body is decoded. Captures only [fromJson],
+/// which is a top-level or static function at every call site.
+DecodedListMapper _listMapperOf<T>(T Function(Map<String, dynamic>) fromJson) {
+  return (decoded) => (decoded as List<dynamic>)
+      .map((item) => fromJson(item as Map<String, dynamic>))
+      .toList();
+}
+
+/// The records of a list read through [ApiClient.getMappedList]: the list the
+/// transformer already mapped, or the raw JSON a fake or an injected Dio
+/// answered with, mapped here.
+Future<List<T>> _recordsOf<T>(
+  Object? data,
+  T Function(Map<String, dynamic>) fromJson,
+) {
+  if (data is MappedList) return Future.value(data.value as List<T>);
+  return _mapArrItems(data as List<dynamic>, fromJson);
 }
 
 /// Pages [from] to [to], at most [_pageWalkLanes] requests in flight, answered
@@ -596,9 +617,11 @@ mixin ArrActivityMixin {
     T Function(Map<String, dynamic>) fromJson,
   ) async {
     try {
-      final response = await client.get('/api/${config.apiVersion}/$endpoint');
-      final data = response.data as List<dynamic>;
-      return await _mapArrItems(data, fromJson);
+      final response = await client.getMappedList(
+        '/api/${config.apiVersion}/$endpoint',
+        mapList: _listMapperOf(fromJson),
+      );
+      return await _recordsOf(response.data, fromJson);
     } catch (_) {
       return [];
     }
@@ -624,9 +647,11 @@ mixin ArrActivityMixin {
     String endpoint,
     T Function(Map<String, dynamic>) fromJson,
   ) async {
-    final response = await client.get('/api/${config.apiVersion}/$endpoint');
-    final data = response.data as List<dynamic>;
-    return _mapArrItems(data, fromJson);
+    final response = await client.getMappedList(
+      '/api/${config.apiVersion}/$endpoint',
+      mapList: _listMapperOf(fromJson),
+    );
+    return _recordsOf(response.data, fromJson);
   }
 
   /// Fetches a single item by id, or null if it cannot be read.
@@ -715,13 +740,13 @@ mixin ArrActivityMixin {
       // As typed: Dio encodes query values itself. Encoding it here too sent
       // `tvdb%253A121361`, which Sonarr matches to nothing, and turned
       // `Game of Thrones` into a search for `Game%20of%20Thrones`.
-      final response = await client.get(
+      final response = await client.getMappedList(
         '/api/${config.apiVersion}/$endpoint',
         queryParameters: {'term': term},
         cancelToken: cancelToken,
+        mapList: _listMapperOf(fromJson),
       );
-      final data = response.data as List<dynamic>;
-      return await _mapArrItems(data, fromJson);
+      return await _recordsOf(response.data, fromJson);
     } catch (_) {
       if (reportFailure) rethrow;
       return [];

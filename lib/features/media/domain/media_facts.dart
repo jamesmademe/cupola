@@ -26,7 +26,7 @@ typedef MediaReleases = ({
 MediaReleases? mediaReleasesOf(List<MediaRow> rows, String region) {
   for (final value in _answered(rows)) {
     if (value is MediaSeerrRecord) {
-      final releases = DiscoverDetailViewModel.fromResponse(
+      final releases = DiscoverDetailViewModel.of(
         value.details,
       ).releasesForRegion(region);
       String? dated(int type) {
@@ -69,7 +69,7 @@ MediaReleases? mediaReleasesOf(List<MediaRow> rows, String region) {
 WatchProviderRegion? mediaWatchProvidersOf(List<MediaRow> rows, String region) {
   for (final value in _answered(rows)) {
     if (value is MediaSeerrRecord) {
-      final providers = DiscoverDetailViewModel.fromResponse(
+      final providers = DiscoverDetailViewModel.of(
         value.details,
       ).watchProvidersForRegion(region);
       return providers != null && providers.hasAny ? providers : null;

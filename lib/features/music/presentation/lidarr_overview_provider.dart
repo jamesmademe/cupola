@@ -28,6 +28,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/utils/parallel_reads.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/status/lexicon.dart';
@@ -454,8 +455,11 @@ final lidarrMissingPageProvider = FutureProvider.autoDispose<ArrRecordPage>((
 /// outstanding.
 final lidarrNeedsAttentionProvider =
     FutureProvider.autoDispose<List<LidarrAttentionItem>>((ref) async {
-      final page = await ref.watch(lidarrQueueRecordsProvider.future);
-      final missing = await ref.watch(lidarrMissingPageProvider.future);
+      // Both reads start together (see radarrNeedsAttentionProvider).
+      final (page, missing) = await readTogether(
+        ref.watch(lidarrQueueRecordsProvider.future),
+        ref.watch(lidarrMissingPageProvider.future),
+      );
       final backlog = lidarrMissingAlbumsItem(missing);
       return [
         ...lidarrQueueFaults(

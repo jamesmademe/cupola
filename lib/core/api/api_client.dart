@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
+import 'package:cupola/core/network/list_mapping.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -154,6 +155,22 @@ class ApiClient {
       options: receiveTimeout == null
           ? null
           : Options(receiveTimeout: receiveTimeout),
+    );
+  }
+
+  /// [get] for a JSON list that is mapped where it is decoded: the answer's
+  /// `data` is a [MappedList] on a 2xx JSON body. See `ListMappingTransformer`.
+  Future<Response> getMappedList(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    CancelToken? cancelToken,
+    required DecodedListMapper mapList,
+  }) {
+    return _dio.get(
+      path,
+      queryParameters: queryParameters,
+      cancelToken: cancelToken,
+      options: Options(extra: {kListMapExtra: mapList}),
     );
   }
 

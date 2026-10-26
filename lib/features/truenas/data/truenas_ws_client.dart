@@ -274,7 +274,10 @@ class TrueNasWsClient {
     // provider's new client is the one to ask. Never a dial with what the
     // connection used to be.
     if (_closed) return Future.error(const TrueNasClientClosed());
-    if (_socket != null && _authed) return Future.value();
+    if (_socket != null && _authed) {
+      if (!_suspect) return Future.value();
+      return _verifying ??= _verifySocket();
+    }
     final existing = _connecting;
     if (existing != null) return existing.future;
 
@@ -285,6 +288,73 @@ class TrueNasWsClient {
         .catchError((Object e) => completer.completeError(e))
         .whenComplete(() => _connecting = null);
     return completer.future;
+  }
+
+  /// Set by [markSuspect]: the open socket may be half-open after a network
+  /// change, and the next call checks it before using it.
+  bool _suspect = false;
+  Future<void>? _verifying;
+
+  static const _pingTimeout = Duration(seconds: 3);
+
+  /// Marks the open socket as possibly dead after a network change. Nothing is
+  /// dropped here: a notice for a socket that is fine costs one short ping on
+  /// the next call, and a second notice for the same change costs nothing more.
+  void markSuspect() {
+    if (_socket != null) _suspect = true;
+  }
+
+  /// Pings the suspect socket with a short timeout. It is kept if the server
+  /// answers, in any form (a JSON-RPC error is an answer too), and dropped if
+  /// it does not, so the call that asked reconnects instead of waiting out the
+  /// full call timeout on a dead socket.
+  Future<void> _verifySocket() async {
+    try {
+      final socket = _socket;
+      if (socket != null) {
+        var alive = true;
+        try {
+          await _ping(socket);
+        } on _RpcError {
+          // The server answered with an error: the socket works.
+        } catch (_) {
+          alive = false;
+        }
+        if (alive) {
+          _suspect = false;
+        } else {
+          _dropConnection(
+            socket,
+            const TrueNasException(
+              'Connection lost',
+              reason: ServiceFailureReason.timeout,
+            ),
+          );
+        }
+      }
+    } finally {
+      _verifying = null;
+    }
+    return _ensureConnected();
+  }
+
+  Future<void> _ping(WebSocket socket) async {
+    final id = _nextId++;
+    final completer = Completer<dynamic>();
+    _pending[id] = completer;
+    try {
+      socket.add(
+        jsonEncode({
+          'jsonrpc': '2.0',
+          'id': id,
+          'method': 'core.ping',
+          'params': const <dynamic>[],
+        }),
+      );
+      await completer.future.timeout(_pingTimeout);
+    } finally {
+      _pending.remove(id);
+    }
   }
 
   Future<void> _connect() async {
@@ -310,6 +380,8 @@ class TrueNasWsClient {
         throw const TrueNasClientClosed();
       }
       _socket = socket;
+      // A fresh socket has nothing to verify yet.
+      _suspect = false;
       socket.listen(
         _onMessage,
         // Reset the socket state so the next call forces a fresh reconnection

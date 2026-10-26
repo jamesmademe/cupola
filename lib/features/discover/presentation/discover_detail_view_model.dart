@@ -171,6 +171,15 @@ class DiscoverDetailViewModel {
     return sortedReleases;
   }
 
+  static final _byDetails = Expando<DiscoverDetailViewModel>('detailsModel');
+
+  /// [fromResponse] for a record's details, parsed once per map. A title page
+  /// reads its model in several places in one build (identity, facts, rows),
+  /// and the parse walks the whole TMDB payload each time. The details are
+  /// never mutated, so the model for one map does not change.
+  static DiscoverDetailViewModel of(Map<String, dynamic> details) =>
+      _byDetails[details] ??= DiscoverDetailViewModel.fromResponse(details);
+
   factory DiscoverDetailViewModel.fromResponse(
     Map<String, dynamic> details, {
     String? initialPosterUrl,
