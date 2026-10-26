@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/network/list_mapping.dart';
 
 /// Shared in-memory fake [ApiClient] used by service tests.
 ///
@@ -55,6 +56,16 @@ class FakeApiClient extends ApiClient {
   dynamic lastDeleteData;
   Map<String, dynamic>? lastDeleteQueryParameters;
   int deleteCallCount = 0;
+
+  /// Answers with the canned JSON, unmapped: the reader maps it on the main
+  /// isolate, as it does for an injected Dio that skips the transformer.
+  @override
+  Future<Response<dynamic>> getMappedList(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    CancelToken? cancelToken,
+    required DecodedListMapper mapList,
+  }) => get(path, queryParameters: queryParameters, cancelToken: cancelToken);
 
   @override
   Future<Response<dynamic>> get(

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
+import 'package:cupola/core/network/list_mapping.dart';
 import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
 import 'package:cupola/features/series/domain/models/sonarr_episode_file.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
@@ -109,10 +110,17 @@ class SonarrService with ArrActivityMixin {
   /// library arrives in one response, so this is the list where that threshold
   /// is regularly crossed.
   Future<List<SonarrSeries>> getSeriesOrThrow() async {
-    final response = await client.get('/api/${config.apiVersion}/series');
-    final data = response.data as List<dynamic>;
-    if (data.length <= _seriesIsolateMapThreshold) return _mapSeries(data);
-    return Isolate.run(() => _mapSeries(data));
+    final response = await client.getMappedList(
+      '/api/${config.apiVersion}/series',
+      mapList: _mapSeriesDecoded,
+    );
+    final data = response.data;
+    // Mapped in the transformer's isolate for a large body; the raw list is
+    // mapped here only when the answer did not go through it.
+    if (data is MappedList) return data.value as List<SonarrSeries>;
+    final raw = data as List<dynamic>;
+    if (raw.length <= _seriesIsolateMapThreshold) return _mapSeries(raw);
+    return Isolate.run(() => _mapSeries(raw));
   }
 
   /// Fetches a single series by its Sonarr ID, with a failed fetch allowed to
@@ -448,6 +456,11 @@ class SonarrService with ArrActivityMixin {
 const int _seriesIsolateMapThreshold = 200;
 
 /// Top-level and pure, so it can cross an isolate port.
+/// The series list's mapper for [ApiClient.getMappedList]. Top-level, so it can
+/// run in the transformer's isolate.
+Object? _mapSeriesDecoded(Object? decoded) =>
+    _mapSeries(decoded as List<dynamic>);
+
 List<SonarrSeries> _mapSeries(List<dynamic> data) {
   return data
       .map((item) => SonarrSeries.fromJson(item as Map<String, dynamic>))
