@@ -766,9 +766,7 @@ void main() {
           // reach a real server would draw first) is not what leads the page.
           capabilityOverride(),
         ],
-        child: const NpmScreen.proxyHosts(
-          showAppBar: false,
-          topPadding: _hostedTopPadding,
+        child: const NpmScreen.proxyHosts(topPadding: _hostedTopPadding,
         ),
       );
 

@@ -2365,9 +2365,7 @@ GoRoute _npmBranchRoot(ServiceTab tab) => switch (tab) {
     (state) => const ServiceTabScaffold(
       service: ServiceKey.nginxProxyManager,
       tab: ServiceTab.proxyHosts,
-      child: NpmScreen.proxyHosts(
-        showAppBar: false,
-        topPadding: _serviceTabTopPadding,
+      child: NpmScreen.proxyHosts(topPadding: _serviceTabTopPadding,
       ),
     ),
     // A child, so the URL leaves the tab root and the service header steps
@@ -2390,9 +2388,7 @@ GoRoute _npmBranchRoot(ServiceTab tab) => switch (tab) {
     (state) => const ServiceTabScaffold(
       service: ServiceKey.nginxProxyManager,
       tab: ServiceTab.certificates,
-      child: NpmScreen.certificates(
-        showAppBar: false,
-        topPadding: _serviceTabTopPadding,
+      child: NpmScreen.certificates(topPadding: _serviceTabTopPadding,
       ),
     ),
   ),
@@ -2401,9 +2397,7 @@ GoRoute _npmBranchRoot(ServiceTab tab) => switch (tab) {
     (state) => const ServiceTabScaffold(
       service: ServiceKey.nginxProxyManager,
       tab: ServiceTab.accessLists,
-      child: NpmScreen.accessLists(
-        showAppBar: false,
-        topPadding: _serviceTabTopPadding,
+      child: NpmScreen.accessLists(topPadding: _serviceTabTopPadding,
       ),
     ),
   ),
@@ -2412,9 +2406,7 @@ GoRoute _npmBranchRoot(ServiceTab tab) => switch (tab) {
     (state) => const ServiceTabScaffold(
       service: ServiceKey.nginxProxyManager,
       tab: ServiceTab.auditLog,
-      child: NpmScreen.auditLog(
-        showAppBar: false,
-        topPadding: _serviceTabTopPadding,
+      child: NpmScreen.auditLog(topPadding: _serviceTabTopPadding,
       ),
     ),
   ),

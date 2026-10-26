@@ -72,7 +72,7 @@ final _pages = <_Page>[
     service: ServiceKey.nginxProxyManager,
     id: WorldConnections.npm.id,
     profile: Profiles.p1.withConnection(WorldConnections.npm),
-    screen: () => const NpmScreen(),
+    screen: () => const NpmScreen.proxyHosts(),
     type: NpmScreen,
   ),
 ];
