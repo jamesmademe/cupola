@@ -4,15 +4,18 @@ import 'package:flutter/foundation.dart'
     show LicenseEntryWithLineBreaks, LicenseRegistry;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'dart:async' show unawaited;
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart'
-    show getApplicationCacheDirectory;
+    show getApplicationCacheDirectory, getTemporaryDirectory;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cupola/core/app_identity.dart';
 import 'package:cupola/core/last_known/last_known_store.dart';
+import 'package:cupola/core/network/artwork_cache_migration.dart';
 
 import 'package:cupola/core/network/network_change.dart';
 import 'package:cupola/core/network/network_registries.dart';
@@ -67,6 +70,14 @@ Future<void> _start() async {
   final outcome = await attemptStartup((reach) async {
     reach(StartupStep.preferences);
     final prefs = await SharedPreferences.getInstance();
+    // Once per install, in the background: the default cache's posters are
+    // not reachable through the artwork cache any more.
+    unawaited(
+      removeLegacyArtworkCache(
+        prefs: prefs,
+        temporaryDirectory: getTemporaryDirectory,
+      ),
+    );
     final secureSettingsStore = createSecureSettingsStore();
     final settingsService = SettingsService(prefs, secureSettingsStore);
 
