@@ -237,6 +237,23 @@ class SonarrEpisodeNamesDontMatch(SonarrQueueCase):
     says = "Episode 1x03 was not found in the grabbed release"
 
 
+class SonarrSeasonIncomplete(SonarrQueueCase):
+    """M-13 on Sonarr: a season pack of which only two episodes are in it.
+
+    Sonarr expected the whole season and blocks the import; the two files that
+    are there can still go in, and the case takes them back out afterwards.
+    """
+
+    name = "import-sonarr-season-incomplete"
+    release = "Breaking.Bad.S01.1080p.WEB-DL.DDP5.1.H.264-CUPOLA"
+    files = (
+        Media("Breaking.Bad.S01E01.1080p.WEB-DL.DDP5.1.H.264-CUPOLA.mkv", seconds=600),
+        Media("Breaking.Bad.S01E02.1080p.WEB-DL.DDP5.1.H.264-CUPOLA.mkv", seconds=600),
+    )
+    imported = ((1, 1), (1, 2))
+    says = "One or more episodes expected in this release were not imported or missing from the release"
+
+
 class SonarrSampleOnly(SonarrQueueCase):
     """M-13 on Sonarr: a release holding only a sample."""
 

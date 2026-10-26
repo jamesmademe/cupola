@@ -169,4 +169,56 @@ void main() {
     },
     timeout: const Timeout(Duration(minutes: 15)),
   );
+
+  testWidgets(
+    'M-13 · a season pack missing episodes: the files that are there go in',
+    (tester) async {
+      final (:app, :wizard, :sonarr) = await open(
+        tester,
+        'import-sonarr-season-incomplete',
+      );
+
+      await review(tester, wizard);
+      // Sonarr took the two episodes that are in the pack by itself, so the
+      // Review has nothing left: the record is spent and waits to be removed.
+      await app.surface.see('Nothing left to import');
+      for (final number in [1, 2]) {
+        final episode = await sonarr.episode('Breaking Bad', 1, number);
+        expect(
+          await sonarr.episodeFilePath(episode),
+          contains('S01E0$number'),
+          reason: 'Sonarr holds no file for S01E0$number',
+        );
+      }
+      final missing = await sonarr.episode('Breaking Bad', 1, 3);
+      expect(
+        await sonarr.episodeFilePath(missing),
+        isNull,
+        reason: 'S01E03 is not in the pack and must have no file',
+      );
+
+      await app.tapIn(tester, find.text('Remove download'));
+      await settle(tester, const Duration(seconds: 1));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(Dialog),
+          matching: find.text('Remove download'),
+        ),
+      );
+      await settle(tester, const Duration(seconds: 2));
+      final end = DateTime.now().add(const Duration(minutes: 1));
+      var titles = await sonarr.queueTitles();
+      while (DateTime.now().isBefore(end) &&
+          titles.any((title) => title.startsWith('Breaking.Bad.S01.1080p'))) {
+        await settle(tester, const Duration(seconds: 2));
+        titles = await sonarr.queueTitles();
+      }
+      expect(
+        titles.where((title) => title.startsWith('Breaking.Bad.S01.1080p')),
+        isEmpty,
+        reason: 'Sonarr still holds the season pack',
+      );
+    },
+    timeout: const Timeout(Duration(minutes: 15)),
+  );
 }
