@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -417,6 +418,8 @@ class SettingsService {
   /// secure-storage entry. Clears secure storage first so a Keychain failure
   /// leaves prefs intact and the caller can surface an error.
   Future<void> clearAll() async {
+    // Whatever is saved next starts from an empty disk.
+    _swept = false;
     // Read before the wipe: the roster is the only thing that knows an extra
     // instance's id, and once it is gone its keys are unreachable by name.
     final roster = _readRoster();
@@ -579,6 +582,8 @@ class SettingsService {
   /// Throws what secure storage throws: a store that will not even be
   /// emptied is one Cupola cannot keep secrets in.
   Future<void> forgetSecrets() async {
+    // What the next save finds on disk is no longer what the last one wrote.
+    _swept = false;
     final ids = {
       for (final entry in _readRoster()) entry.id,
       for (final service in ServiceKey.values)
@@ -721,22 +726,63 @@ class SettingsService {
     return List.unmodifiable(ordered);
   }
 
-  Future<void> saveSettings(SettingsModel settings) async {
+  /// Whether a whole-model save has gone through in this process; see
+  /// [saveSettings].
+  bool _swept = false;
+
+  /// Persists [settings].
+  ///
+  /// With [previous], the model the last successful save wrote, only what
+  /// differs from it is written: a theme change no longer rewrites every
+  /// connection's keys and secrets. Without it, or on the first save of the
+  /// process whatever is passed, everything is written and the passes that
+  /// only a whole save can do run: forgetting the primary slots nothing
+  /// occupies, and clearing what a renamed service left under its old keys
+  /// (which the load still falls back to, so only after the values are
+  /// written under the new ones). A save that stops halfway leaves [previous]
+  /// where it was, so the next one writes the same difference again.
+  ///
+  /// [previous] must be what was last written, never a model that has not been
+  /// saved yet: the difference is all that is written.
+  ///
+  /// A save that throws leaves part of its difference on disk, so the next one
+  /// is a whole save whatever it is given: otherwise a value that the failed
+  /// save wrote and a later model no longer differs on would stay as written.
+  Future<void> saveSettings(
+    SettingsModel settings, {
+    SettingsModel? previous,
+  }) async {
+    final base = _swept ? previous : null;
+    _swept = false;
+    await _write(settings, base);
+    _swept = true;
+  }
+
+  Future<void> _write(SettingsModel settings, SettingsModel? base) async {
     final normalizedRegion = SettingsModel.normalizeRegion(settings.region);
 
-    await _saveInstances(settings);
-    await _prefs.setString(_kRegion, normalizedRegion);
-    await _prefs.setString(_kThemeMode, settings.themeMode.name);
-    await _prefs.remove('hidden_tabs');
+    await _saveInstances(settings, previous: base);
+    if (base == null ||
+        SettingsModel.normalizeRegion(base.region) != normalizedRegion) {
+      await _prefs.setString(_kRegion, normalizedRegion);
+    }
+    if (base == null || base.themeMode != settings.themeMode) {
+      await _prefs.setString(_kThemeMode, settings.themeMode.name);
+    }
+    if (base == null) await _prefs.remove('hidden_tabs');
 
-    await _saveTrustedCertificates(settings.trustedCertificates);
+    if (base == null ||
+        !mapEquals(base.trustedCertificates, settings.trustedCertificates)) {
+      await _saveTrustedCertificates(settings.trustedCertificates);
+    }
 
     // Deliberately *not* written from `settings`. The client id is owned by
     // `_loadOrCreatePlexClientId`, which mints it once; honouring an incoming
     // empty value here, which every `SettingsModel()` default carries, would
     // clear it on the next unrelated save and hand the user's Plex server a new
     // device row on the following load.
-    if (settings.plexClientId.isNotEmpty) {
+    if (settings.plexClientId.isNotEmpty &&
+        (base == null || base.plexClientId != settings.plexClientId)) {
       final plexKeys = _serviceStorageKeys[ServiceKey.plex]!;
       await _prefs.setString(plexKeys.clientId!, settings.plexClientId);
     }
@@ -1010,8 +1056,18 @@ class SettingsService {
   /// Replaces three per-service passes that each walked the enum. They could
   /// only ever see one connection per service, which is the limitation this
   /// whole change exists to remove.
-  Future<void> _saveInstances(SettingsModel settings) async {
+  Future<void> _saveInstances(
+    SettingsModel settings, {
+    required SettingsModel? previous,
+  }) async {
+    final written = {
+      for (final instance in previous?.instances ?? const <ServiceInstance>[])
+        instance.id: instance,
+    };
     for (final instance in settings.instances) {
+      // What is on disk already is what this instance is: its keys are
+      // independent of the others, so nothing else needs its write.
+      if (previous != null && written[instance.id] == instance) continue;
       await _prefs.setString(instance.urlStorageKey, instance.url);
       // A secret this run could not read is left where it is: written back,
       // the empty value it loaded as would delete it.
@@ -1055,11 +1111,25 @@ class SettingsService {
     // Everything the previous roster knew about and this one does not. Without
     // this pass a removed connection's API key stays in the keychain for the
     // life of the install: invisible, unreachable, and still a secret.
-    for (final entry in _readRoster()) {
-      if (live.contains(entry.id)) continue;
+    final gone = {
+      for (final entry in _readRoster())
+        if (!live.contains(entry.id)) entry.id: entry.service,
+      for (final instance in previous?.instances ?? const <ServiceInstance>[])
+        if (!live.contains(instance.id)) instance.id: instance.service,
+    };
+    for (final entry in gone.entries) {
       await _forgetInstance(
-        ServiceInstance(id: entry.id, service: entry.service),
+        ServiceInstance(id: entry.key, service: entry.value),
       );
+    }
+
+    // Only a whole save does what follows; a partial one has no business
+    // sweeping what it did not touch.
+    if (previous != null) {
+      if (!_sameRoster(previous.instances, settings.instances)) {
+        await _writeRoster(settings.instances);
+      }
+      return;
     }
 
     // Primary slots with nothing in them. They predate the roster, so no
@@ -1232,11 +1302,10 @@ class SettingsService {
         headerValues = [for (final entry in entries) entry.value];
     }
 
-    if (public.isEmpty) {
-      await _prefs.remove(keys.public);
-    } else {
-      await _prefs.setString(keys.public, jsonEncode(public));
-    }
+    // Secrets first, the non-secret record last. The record is what says how
+    // many header values there are to find again, so an interrupted write that
+    // had already rewritten it would leave the values it no longer names behind
+    // for good; this way a save started again still sees them and finishes.
     if (secret == null || secret.isEmpty) {
       await _secureStore.delete(key: keys.secret);
     } else {
@@ -1252,6 +1321,11 @@ class SettingsService {
     }
     for (var index = headerValues.length; index < previousHeaders; index++) {
       await _secureStore.delete(key: keys.header(index));
+    }
+    if (public.isEmpty) {
+      await _prefs.remove(keys.public);
+    } else {
+      await _prefs.setString(keys.public, jsonEncode(public));
     }
   }
 
@@ -1330,6 +1404,20 @@ class SettingsService {
     secret: instance.awayAccessSecretStorageKey,
     header: instance.awayAccessHeaderStorageKey,
   );
+
+  /// Whether [a] and [b] would be recorded as the same roster: the same
+  /// connections, in the same order, under the same labels.
+  bool _sameRoster(List<ServiceInstance> a, List<ServiceInstance> b) {
+    if (a.length != b.length) return false;
+    for (var index = 0; index < a.length; index++) {
+      if (a[index].id != b[index].id ||
+          a[index].service != b[index].service ||
+          a[index].label != b[index].label) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   Future<void> _writeRoster(List<ServiceInstance> instances) async {
     if (instances.isEmpty) {

@@ -137,7 +137,7 @@ class _SettingsRegionScreenState extends ConsumerState<SettingsRegionScreen> {
                     SettingsChoiceRow(
                       label: '${entry.value} (${entry.key})',
                       selected: entry.key == selected,
-                      onSelected: () => _select(settings, entry.key),
+                      onSelected: () => _select(entry.key),
                     ),
                 ],
               ),
@@ -159,9 +159,9 @@ class _SettingsRegionScreenState extends ConsumerState<SettingsRegionScreen> {
     return '$name ($code)';
   }
 
-  Future<void> _select(SettingsModel settings, String code) async {
+  Future<void> _select(String code) async {
     await ref
         .read(settingsProvider.notifier)
-        .updateSettings(settings.copyWith(region: code));
+        .update((current) => current.copyWith(region: code));
   }
 }
