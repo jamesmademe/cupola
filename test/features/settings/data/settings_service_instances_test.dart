@@ -46,10 +46,10 @@ void main() {
 
       final settings = await service.loadSettings();
 
-      expect(settings.radarrUrl, 'https://nas.lan:7878');
-      expect(settings.radarrApiKey, 'radarr-key');
-      expect(settings.qbittorrentUsername, 'matt');
-      expect(settings.qbittorrentPassword, 'qb-pass');
+      expect(settings.urlFor(ServiceKey.radarr), 'https://nas.lan:7878');
+      expect(settings.apiKeyFor(ServiceKey.radarr), 'radarr-key');
+      expect(settings.usernameFor(ServiceKey.qbittorrent), 'matt');
+      expect(settings.apiKeyFor(ServiceKey.qbittorrent), 'qb-pass');
       expect(settings.jellyfinUserId, 'viewer-1');
       expect(settings.instances.map((i) => i.id).toSet(), {
         'radarr',
@@ -246,7 +246,7 @@ void main() {
 
       final settings = await service.loadSettings();
 
-      expect(settings.radarrUrl, 'https://nas.lan:7878');
+      expect(settings.urlFor(ServiceKey.radarr), 'https://nas.lan:7878');
       expect(settings.instances, hasLength(4));
     });
 

@@ -94,22 +94,6 @@ String formatActivityDateTime(String? isoDate) {
   return parsed == null ? isoDate : formatDateTimeStamp(parsed);
 }
 
-/// `08:12`: the clock and nothing else.
-///
-/// A sibling of [formatActivityDateTime] rather than a change to it: every one
-/// of that function's callers wants the date, and the one surface that does not
-/// is "Finished today", where the date is in the heading. Repeating it on six
-/// consecutive rows is how a band that answers "when today" ends up answering
-/// "which day" six times instead.
-///
-/// 24-hour, like every other clock in the app, and zero-padded so the column
-/// stays a column.
-String formatActivityTimeOnly(String? isoDate) {
-  if (isoDate == null || isoDate.trim().isEmpty) return '—';
-  final parsed = DateTime.tryParse(isoDate);
-  return parsed == null ? isoDate : formatClockTime(parsed);
-}
-
 /// `2026-09-30`: the day an *instant* fell on, on this device's calendar. For a
 /// record that happened at a moment (a History event's `date`), so it names the
 /// same day as its clock time ([formatActivityDateTime]), its relative age and
@@ -320,30 +304,6 @@ String? historySubtitle(Map<String, dynamic> item, ServiceType serviceType) {
     serviceType,
     item,
     title: historyTitle(item, serviceType),
-    release: stringOrNull(item['sourceTitle']),
-  );
-}
-
-String blocklistTitle(Map<String, dynamic> item, ServiceType serviceType) {
-  return switch (serviceType) {
-    ServiceType.movies =>
-      arrPrimaryMediaTitle(item, includeMovieYear: true) ??
-          stringOrNull(item['sourceTitle']) ??
-          'Unknown release',
-    ServiceType.series || ServiceType.music =>
-      arrPrimaryMediaTitle(item) ??
-          stringOrNull(item['sourceTitle']) ??
-          'Unknown release',
-    ServiceType.discover =>
-      stringOrNull(item['sourceTitle']) ?? 'Unknown release',
-  };
-}
-
-String? blocklistSubtitle(Map<String, dynamic> item, ServiceType serviceType) {
-  return activitySecondaryLine(
-    serviceType,
-    item,
-    title: blocklistTitle(item, serviceType),
     release: stringOrNull(item['sourceTitle']),
   );
 }

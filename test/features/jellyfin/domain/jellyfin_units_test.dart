@@ -9,7 +9,6 @@ void main() {
   group('ticks', () {
     test('a tick is 100ns, so a millisecond is 10 000 of them', () {
       expect(kJellyfinTicksPerMillisecond, 10000);
-      expect(kJellyfinTicksPerSecond, 10000000);
     });
 
     test('a two-hour film is 7 200 000 ms, not 7 200 or 720 000 000', () {

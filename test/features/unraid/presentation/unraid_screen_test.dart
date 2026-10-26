@@ -152,7 +152,7 @@ void main() {
   testWidgets('the Array half draws the disks and not the containers', (
     tester,
   ) async {
-    await _pump(tester, const UnraidScreen.array(showAppBar: false));
+    await _pump(tester, const UnraidScreen.array());
 
     expect(find.text('Array disks'), findsOneWidget);
     expect(find.text('Disk 1'), findsOneWidget);
@@ -163,7 +163,7 @@ void main() {
   testWidgets('the Docker half draws the containers and not the disks', (
     tester,
   ) async {
-    await _pump(tester, const UnraidScreen.docker(showAppBar: false));
+    await _pump(tester, const UnraidScreen.docker());
 
     expect(find.text('Containers'), findsOneWidget);
     expect(find.text('immich'), findsOneWidget);
@@ -175,10 +175,7 @@ void main() {
     // `ServiceKpiPeek` sat on the single page because the single page was the
     // service. Under the tab model the Overview carries them, and a section tab
     // drawing them too would be the same figures twice in one scroll.
-    for (final screen in const [
-      UnraidScreen.array(showAppBar: false),
-      UnraidScreen.docker(showAppBar: false),
-    ]) {
+    for (final screen in const [UnraidScreen.array(), UnraidScreen.docker()]) {
       await _pump(tester, screen);
       expect(find.byType(ServiceKpiPeek), findsNothing, reason: '$screen');
     }
@@ -187,15 +184,15 @@ void main() {
   testWidgets('VMs, Notifications and Shares render separate documents', (
     tester,
   ) async {
-    await _pump(tester, const UnraidScreen.vms(showAppBar: false));
+    await _pump(tester, const UnraidScreen.vms());
     expect(find.text('Home Assistant'), findsOneWidget);
     expect(find.text('Disk warm'), findsNothing);
 
-    await _pump(tester, const UnraidScreen.notifications(showAppBar: false));
+    await _pump(tester, const UnraidScreen.notifications());
     expect(find.text('Disk warm'), findsOneWidget);
     expect(find.text('media'), findsNothing);
 
-    await _pump(tester, const UnraidScreen.shares(showAppBar: false));
+    await _pump(tester, const UnraidScreen.shares());
     expect(find.text('media'), findsOneWidget);
     expect(find.text('40% used'), findsOneWidget);
   });
@@ -205,7 +202,7 @@ void main() {
   ) async {
     await _pump(
       tester,
-      const UnraidScreen.vms(showAppBar: false),
+      const UnraidScreen.vms(),
       failingSection: UnraidSection.vms,
     );
     // An error nobody can attribute is a fault that answered, not silence:
@@ -220,7 +217,7 @@ void main() {
 
     await _pump(
       tester,
-      const UnraidScreen.notifications(showAppBar: false),
+      const UnraidScreen.notifications(),
       failingSection: UnraidSection.notifications,
     );
     expect(
@@ -233,7 +230,7 @@ void main() {
 
     await _pump(
       tester,
-      const UnraidScreen.shares(showAppBar: false),
+      const UnraidScreen.shares(),
       failingSection: UnraidSection.shares,
     );
     expect(
@@ -250,7 +247,7 @@ void main() {
     // The parity slot above reports no temperature. A missing figure rendered
     // as a number is the one failure this screen cannot recover from: 0 °C is a
     // reading, and nobody would doubt it.
-    await _pump(tester, const UnraidScreen.array(showAppBar: false));
+    await _pump(tester, const UnraidScreen.array());
 
     expect(find.textContaining('spun down'), findsOneWidget);
     expect(find.textContaining('0°C'), findsNothing);
@@ -264,11 +261,11 @@ void main() {
     // and a provider that throws schedules a retry for a condition no waiting
     // changes, which this test would report as a pending timer.
     for (final screen in const [
-      UnraidScreen.array(showAppBar: false),
-      UnraidScreen.docker(showAppBar: false),
-      UnraidScreen.vms(showAppBar: false),
-      UnraidScreen.notifications(showAppBar: false),
-      UnraidScreen.shares(showAppBar: false),
+      UnraidScreen.array(),
+      UnraidScreen.docker(),
+      UnraidScreen.vms(),
+      UnraidScreen.notifications(),
+      UnraidScreen.shares(),
     ]) {
       await tester.pumpWidget(
         ProviderScope(
@@ -290,14 +287,14 @@ void main() {
     for (final (section, screen, tooltip, copy, blocked) in [
       (
         'VMs',
-        const UnraidScreen.vms(showAppBar: false),
+        const UnraidScreen.vms(),
         'stop Home Assistant',
         unraidVmsCopy,
         'This Unraid key can\'t start or stop VMs.',
       ),
       (
         'Notifications',
-        const UnraidScreen.notifications(showAppBar: false),
+        const UnraidScreen.notifications(),
         'Archive notification',
         unraidNotificationsCopy,
         'This Unraid key can\'t archive notifications.',
@@ -356,7 +353,7 @@ void main() {
     final adapter = _adapter();
     await _pump(
       tester,
-      const UnraidScreen.notifications(showAppBar: false),
+      const UnraidScreen.notifications(),
       grant: const CapabilityGrant.readWrite(),
       adapter: adapter,
     );
@@ -367,7 +364,7 @@ void main() {
   });
 
   testWidgets('an unprobed key: no banner, controls live', (tester) async {
-    await _pump(tester, const UnraidScreen.vms(showAppBar: false));
+    await _pump(tester, const UnraidScreen.vms());
     expect(find.byType(CapabilityBanner), findsNothing);
     await tester.tap(find.byTooltip('stop Home Assistant'));
     await tester.pumpAndSettle();
@@ -380,7 +377,7 @@ void main() {
   ) async {
     await _pump(
       tester,
-      const UnraidScreen.vms(showAppBar: false),
+      const UnraidScreen.vms(),
       grant: const CapabilityGrant.partial({'vms'}),
     );
     expect(find.byType(CapabilityBanner), findsNothing);
@@ -388,7 +385,7 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await _pump(
       tester,
-      const UnraidScreen.notifications(showAppBar: false),
+      const UnraidScreen.notifications(),
       grant: const CapabilityGrant.partial({'vms'}),
     );
     expect(find.byType(CapabilityBanner), findsOneWidget);
@@ -408,11 +405,7 @@ void main() {
         'data': null,
       },
     );
-    await _pump(
-      tester,
-      const UnraidScreen.notifications(showAppBar: false),
-      adapter: adapter,
-    );
+    await _pump(tester, const UnraidScreen.notifications(), adapter: adapter);
     await tester.tap(find.byTooltip('Archive notification'));
     await tester.pumpAndSettle();
 

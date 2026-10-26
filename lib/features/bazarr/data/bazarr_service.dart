@@ -134,106 +134,6 @@ class BazarrService {
     return null;
   }
 
-  /// Client-side search across the Bazarr library.
-  ///
-  /// Bazarr exposes no search endpoint, so matching happens here, against a
-  /// cached snapshot of the library's titles. See [_libraryIndex].
-  ///
-  /// [cancelToken] is honoured *cooperatively*, and only after the snapshot
-  /// resolves: the download itself is shared with whatever query comes next, so
-  /// aborting it would abandon the request the successor is waiting on (again,
-  /// see [_libraryIndex]). What a superseded caller does skip is scanning a
-  /// thousand titles for an answer nobody will read.
-  Future<List<BazarrSearchHit>> searchLibrary(
-    String query, {
-    int length = _searchIndexLength,
-    CancelToken? cancelToken,
-  }) async {
-    final needle = query.trim().toLowerCase();
-    if (needle.isEmpty) return const [];
-
-    final index = await _libraryIndex(length);
-    if (cancelToken?.isCancelled ?? false) return const [];
-    return index
-        .where((hit) => hit.title.toLowerCase().contains(needle))
-        .toList(growable: false);
-  }
-
-  /// Every title Bazarr knows, as `(id, title, isMovie)` triples.
-  ///
-  /// Two mechanisms, both about the same problem: with no server-side search,
-  /// one query means downloading the whole series list *and* the whole movie
-  /// list, and the global search surface re-runs its query on every debounced
-  /// keystroke pause. That turned typing one title into several thousand
-  /// records over the wire.
-  ///
-  /// **The snapshot is reused for [_searchIndexTtl].** Library membership does
-  /// not churn on a typing timescale: a series added while the user is midway
-  /// through a word is not what the search is for, so after the first query a
-  /// keystroke costs nothing at all.
-  ///
-  /// **A fetch already in flight is shared, not restarted.** This is also why
-  /// the fetch deliberately takes no `CancelToken`: cancelling the in-flight
-  /// download when a superseded query is discarded would abort the very request
-  /// the *next* query is waiting on, and the round would start over. Sharing it
-  /// gets what cancellation was after: one download, not one per keystroke,
-  /// without that trade.
-  Future<List<BazarrSearchHit>> _libraryIndex(int length) {
-    final cached = _searchIndex;
-    final cachedAt = _searchIndexAt;
-    if (cached != null &&
-        cachedAt != null &&
-        _searchIndexLengthUsed == length &&
-        DateTime.now().difference(cachedAt) < _searchIndexTtl) {
-      return Future.value(cached);
-    }
-
-    return _searchIndexInFlight ??= _fetchLibraryIndex(length);
-  }
-
-  Future<List<BazarrSearchHit>> _fetchLibraryIndex(int length) async {
-    try {
-      final (series, movies) = await (
-        getSeries(length: length),
-        getMovies(length: length),
-      ).wait;
-
-      final hits = <BazarrSearchHit>[
-        for (final item in series.data)
-          if (item.title case final title? when title.isNotEmpty)
-            BazarrSearchHit(
-              id: item.sonarrSeriesId,
-              title: title,
-              isMovie: false,
-            ),
-        for (final item in movies.data)
-          if (item.title case final title? when title.isNotEmpty)
-            BazarrSearchHit(id: item.radarrId, title: title, isMovie: true),
-      ];
-
-      _searchIndex = hits;
-      _searchIndexAt = DateTime.now();
-      _searchIndexLengthUsed = length;
-      return hits;
-    } finally {
-      // Released whether the fetch succeeded or threw: a failed round must not
-      // leave every later query awaiting a future that already lost.
-      _searchIndexInFlight = null;
-    }
-  }
-
-  /// How long a library snapshot stays usable for search.
-  static const _searchIndexTtl = Duration(minutes: 2);
-
-  /// Page size of the snapshot. Large enough to hold an ordinary library in one
-  /// round trip; a smaller window would silently drop titles from the results.
-  static const _searchIndexLength = 500;
-
-  List<BazarrSearchHit>? _searchIndex;
-  DateTime? _searchIndexAt;
-  int? _searchIndexLengthUsed;
-  Future<List<BazarrSearchHit>>? _searchIndexInFlight;
-
   /// Paged list of missing episode subtitles.
   Future<BazarrPagedResult<BazarrWantedItem>> getWantedEpisodes({
     int start = 0,
@@ -418,22 +318,6 @@ class BazarrService {
   // missing languages and nothing that identifies an *existing* subtitle file,
   // so even once PATCH exists a row has no `path` to send. `GET
   // /api/episodes` (with `seriesid`/`episodeid`) is the read that supplies it.
-}
-
-/// A single global-search match from the Bazarr library.
-///
-/// [id] is the upstream Sonarr series id or Radarr movie id, matching the
-/// route parameters used by [ServiceRoutes.bazarrSeries] / `bazarrMovie`.
-class BazarrSearchHit {
-  final int id;
-  final String title;
-  final bool isMovie;
-
-  const BazarrSearchHit({
-    required this.id,
-    required this.title,
-    required this.isMovie,
-  });
 }
 
 /// Paged result from a Bazarr list endpoint.

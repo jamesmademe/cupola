@@ -35,8 +35,8 @@ void main() {
       );
 
       final loaded = await service.loadSettings();
-      expect(loaded.jellyfinUrl, 'https://jelly.local:8096');
-      expect(loaded.jellyfinApiKey, 'jf-key');
+      expect(loaded.urlFor(ServiceKey.jellyfin), 'https://jelly.local:8096');
+      expect(loaded.apiKeyFor(ServiceKey.jellyfin), 'jf-key');
       // The third value is the whole reason the credential model grew: an API key
       // authenticates as an administrator with no user attached, so watch state
       // is unreadable without it.
@@ -53,8 +53,8 @@ void main() {
       );
 
       final loaded = await service.loadSettings();
-      expect(loaded.plexUrl, 'https://plex.local:32400');
-      expect(loaded.plexToken, 'plex-device-token');
+      expect(loaded.urlFor(ServiceKey.plex), 'https://plex.local:32400');
+      expect(loaded.apiKeyFor(ServiceKey.plex), 'plex-device-token');
       // `apiKeyFor` is what every generic caller uses, so the token has to answer
       // to it, the same way qBittorrent's password does.
       expect(loaded.apiKeyFor(ServiceKey.plex), 'plex-device-token');

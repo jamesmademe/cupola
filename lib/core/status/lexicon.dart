@@ -125,9 +125,6 @@ abstract final class Lexicon {
 
   static final _floorFigure = RegExp(r'^(\d[\d,]*)\+$');
 
-  /// An empty answer, and only after the source answered.
-  static const noResults = 'No results';
-
   /// [StateWord.signedOut] as the requester reads it, a sentence about
   /// themselves.
   static const youWereSignedOut = 'You were signed out';
@@ -269,21 +266,6 @@ abstract final class Lexicon {
   /// The requester's Seerr, where its name would be: the global search's
   /// lane and its filter.
   static const requestsLane = 'Requests';
-
-  /// The requester's first search filter: they have no services, so it is
-  /// not `All services`.
-  static const allLanes = 'All';
-
-  /// The search for something to ask for, before a word is typed: the
-  /// requester's global search and Discover's own field.
-  static const searchToAsk = 'Search movies and series';
-
-  /// What the requester's search finds: titles to ask for, and on [players]
-  /// (`Jellyfin`, `Jellyfin or Plex`) titles to watch.
-  static String searchToAskHint(String? players) => players == null
-      ? 'Enter a title to find something to ask for.'
-      : 'Enter a title to find something to ask for, or to watch on '
-            '$players.';
 
   /// The requester's list of requests, while it is empty.
   static const yourRequestsAppearHere = 'Requests you make will appear here.';

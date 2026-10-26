@@ -33,14 +33,11 @@ import 'package:cupola/features/discover/presentation/discover_provider.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/data/seerr_session.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
-import 'package:cupola/features/movies/presentation/movies_provider.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/music/domain/lidarr_queue_snapshots.dart';
 import 'package:cupola/features/music/domain/models/lidarr_album.dart';
-import 'package:cupola/features/music/presentation/music_provider.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/domain/sonarr_queue_snapshots.dart';
-import 'package:cupola/features/series/presentation/series_provider.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_client_provider.dart';
 import 'package:cupola/features/qbittorrent/domain/models/parse_utils.dart';
 import 'package:cupola/features/qbittorrent/domain/models/torrent.dart';
@@ -774,9 +771,6 @@ Future<String?> _versionOrNull(
 }
 
 final servicesRequestsProvider = requestsProvider;
-final servicesMoviesProvider = moviesProvider;
-final servicesSeriesProvider = seriesProvider;
-final servicesMusicProvider = musicProvider;
 
 /// The Radarr queue of one named connection, indexed by movie id.
 ///
@@ -881,16 +875,6 @@ final sonarrQueueSnapshotsForProvider =
             SonarrQueueSnapshots.failed(error);
       }
     });
-
-/// [sonarrQueueSnapshotsForProvider]'s three snapshots as a screen reads them
-/// off the provider: see [queueSnapshotOf].
-SonarrQueueSnapshots sonarrQueueSnapshotsOf(
-  AsyncValue<SonarrQueueSnapshots> queue,
-) => switch (queue) {
-  AsyncValue(:final value?) => value,
-  AsyncValue(:final error?) => SonarrQueueSnapshots.failed(error),
-  _ => SonarrQueueSnapshots.unknown,
-};
 
 /// The Sonarr queue of one named connection, indexed by series id. See
 /// [radarrQueueSnapshotForProvider]. A view of
@@ -4158,7 +4142,7 @@ DashboardDecision _failedImportDecision(ArrHistoryEntry entry) =>
 
 /// The two live figures one stack card shows.
 ///
-/// Lives here rather than beside `serviceSignalProvider` because it is a
+/// Lives here rather than beside the KPI providers because it is a
 /// Dashboard concern: the Portal's picker and the aggregate lines all want
 /// exactly one figure and are right to. The card wants two, and reduces the same
 /// KPI list through the same ranking (see `resolveServiceSignalPair`), so the

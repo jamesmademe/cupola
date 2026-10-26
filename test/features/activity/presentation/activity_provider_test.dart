@@ -234,61 +234,9 @@ void main() {
       expect(items.single.subtitle, isEmpty);
     });
 
-    test('wanted provider combines missing and cutoff items', () async {
-      final container = createContainer(
-        radarrService: _ActivityRadarrService(
-          missing: const [
-            {'title': 'Kingdom of the Planet of the Apes', 'year': 2024},
-          ],
-          cutoff: const [
-            {'title': 'Inception', 'year': 2010},
-          ],
-        ),
-      );
-
-      final feed = await _loadPagedFeed(container, _wantedFeed);
-      final items = feed.items;
-
-      expect(items.map((item) => item.kind), [
-        GlobalActivityKind.missing,
-        GlobalActivityKind.cutoff,
-      ]);
-      expect(items.map((item) => item.title), [
-        'Kingdom of the Planet of the Apes',
-        'Inception',
-      ]);
-    });
-
     // APP-05: the merge that folds a connection's two Wanted halves together
     // dropped their totals, so every connection on Wanted › All came out
     // "unanswered" and its tile could only count loaded rows.
-    test('wanted adds the two halves\' totals for one connection', () async {
-      final container = createContainer(
-        radarrService: _TotalledWantedRadarrService(missing: 30, cutoff: 12),
-      );
-
-      final feed = await _loadPagedFeed(container, _wantedFeed);
-      final radarr = feed.results.singleWhere(
-        (result) => result.service == ServiceKey.radarr,
-      );
-
-      expect(radarr.items, hasLength(2));
-      expect(radarr.total, 42);
-    });
-
-    test('a half that named no total leaves the sum unsaid', () async {
-      final container = createContainer(
-        radarrService: _TotalledWantedRadarrService(missing: 30, cutoff: null),
-      );
-
-      final feed = await _loadPagedFeed(container, _wantedFeed);
-      final radarr = feed.results.singleWhere(
-        (result) => result.service == ServiceKey.radarr,
-      );
-
-      // Not 30: that is the known half stated as the whole.
-      expect(radarr.total, isNull);
-    });
 
     test('a Seerr leg reports the size of its set', () async {
       final container = createContainer(
@@ -466,16 +414,6 @@ void main() {
       expect(item.figures, isNot(contains('Dune.Part.Two')));
       expect(item.subtitle, contains('Dune.Part.Two'));
     });
-
-    test('a kind with no measurement carries no figures', () async {
-      // An em dash per row would draw a ladder of nothing down the column. A
-      // wanted row is a title and a date; it has no measurement to line up.
-      final container = createContainer(radarrService: _MissingRadarrService());
-
-      final feed = await _loadPagedFeed(container, _missingFeed);
-
-      expect(feed.items.single.figures, isEmpty);
-    });
   });
 
   group('finishedTodayProvider', () {
@@ -547,8 +485,7 @@ GlobalActivityItem _historyItem(String title, DateTime at) =>
 /// A history feed whose contents the test dictates, so "today" can be asserted
 /// without three services and a clock.
 class _StubHistoryFeed extends PagedArrFeedNotifier {
-  _StubHistoryFeed(this.items)
-    : super(kinds: const [GlobalActivityKind.history]);
+  _StubHistoryFeed(this.items);
 
   /// Null stands for "the first page has not landed yet".
   final List<GlobalActivityItem>? items;
@@ -581,64 +518,6 @@ class _QueueRadarrService extends FakeRadarrService {
   ];
 }
 
-class _MissingRadarrService extends FakeRadarrService {
-  @override
-  Future<List<dynamic>> getMissing({
-    int page = 1,
-    int pageSize = 20,
-    Map<String, dynamic>? queryParameters,
-  }) async => page == 1
-      ? [
-          {'id': 3, 'title': 'Cool Movie', 'year': 2024, 'monitored': true},
-        ]
-      : const [];
-}
-
-/// A Radarr whose Wanted endpoints answer with the envelope's total, one half
-/// of which may be absent.
-class _TotalledWantedRadarrService extends FakeRadarrService {
-  _TotalledWantedRadarrService({required this.missing, required this.cutoff});
-
-  final int? missing;
-  final int? cutoff;
-
-  @override
-  Future<ArrRecordPage> getMissingPage({
-    int page = 1,
-    int pageSize = 20,
-    Map<String, dynamic>? queryParameters,
-  }) async => ArrRecordPage(
-    records: const [
-      {'title': 'Kingdom of the Planet of the Apes', 'year': 2024},
-    ],
-    total: missing,
-  );
-
-  @override
-  Future<ArrRecordPage> getCutoffPage({
-    int page = 1,
-    int pageSize = 20,
-    Map<String, dynamic>? queryParameters,
-  }) async => ArrRecordPage(
-    records: const [
-      {'title': 'Inception', 'year': 2010},
-    ],
-    total: cutoff,
-  );
-}
-
-/// Wanted, as the old Activity read it: the paged feed still pages any kind,
-/// and these two hold what it does with Wanted's two halves.
-final _wantedFeed = NotifierProvider<PagedArrFeedNotifier, PagedArrFeedState>(
-  () => PagedArrFeedNotifier(
-    kinds: const [GlobalActivityKind.missing, GlobalActivityKind.cutoff],
-  ),
-);
-
-final _missingFeed = NotifierProvider<PagedArrFeedNotifier, PagedArrFeedState>(
-  () => PagedArrFeedNotifier(kinds: const [GlobalActivityKind.missing]),
-);
-
 Future<ActivityFeed> _loadPagedFeed(
   ProviderContainer container,
   NotifierProvider<PagedArrFeedNotifier, PagedArrFeedState> provider,
@@ -649,15 +528,9 @@ Future<ActivityFeed> _loadPagedFeed(
 }
 
 class _ActivityRadarrService extends FakeRadarrService {
-  _ActivityRadarrService({
-    this.history = const [],
-    this.missing = const [],
-    this.cutoff = const [],
-  });
+  _ActivityRadarrService({this.history = const []});
 
   final List<dynamic> history;
-  final List<dynamic> missing;
-  final List<dynamic> cutoff;
 
   @override
   Future<List<dynamic>> getHistory({
@@ -673,38 +546,6 @@ class _ActivityRadarrService extends FakeRadarrService {
 
   @override
   Future<List<dynamic>> getBlocklist() async => const [];
-
-  @override
-  Future<List<dynamic>> getMissing({
-    int page = 1,
-    int pageSize = 20,
-    Map<String, dynamic>? queryParameters,
-  }) async {
-    expect(page, 1);
-    expect(pageSize, 50);
-    return missing;
-  }
-
-  @override
-  Future<List<dynamic>> getAllMissing({
-    Map<String, dynamic>? queryParameters,
-  }) async => missing;
-
-  @override
-  Future<List<dynamic>> getCutoff({
-    int page = 1,
-    int pageSize = 20,
-    Map<String, dynamic>? queryParameters,
-  }) async {
-    expect(page, 1);
-    expect(pageSize, 50);
-    return cutoff;
-  }
-
-  @override
-  Future<List<dynamic>> getAllCutoff({
-    Map<String, dynamic>? queryParameters,
-  }) async => cutoff;
 }
 
 class _ActivitySonarrService extends FakeSonarrService {

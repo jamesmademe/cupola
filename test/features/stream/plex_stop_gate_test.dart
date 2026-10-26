@@ -1,11 +1,10 @@
 /// One Stop gate for a Plex playback, read by every surface that draws Stop.
 ///
-/// Plex's Now playing and Activity's Streaming each derived their own. Now
-/// playing treated a capability sheet that had not answered, or that did not
-/// say whether the server has Plex Pass, as available; Activity treated both
-/// as refused. So the same session had Stop in Now playing and none on
-/// Activity until the sheet answered, and never on a build that leaves the
-/// attribute out. Both now read `plexStopOfferedProvider`.
+/// Plex's Now playing and the Activity list that used to sit beside it each
+/// derived their own. Now playing treated a capability sheet that had not
+/// answered, or that did not say whether the server has Plex Pass, as
+/// available; the list treated both as refused. Stop now comes from
+/// `plexStopOfferedProvider`, the one gate, and these pin it on Now playing.
 library;
 
 import 'dart:async';
@@ -19,7 +18,6 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/plex/domain/models/plex_models.dart';
 import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
-import 'package:cupola/features/stream/presentation/widgets/stream_activity_section.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_now_playing_section.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_session_card.dart';
 
@@ -81,19 +79,6 @@ Future<ProfileHarness> _start({
   return harness;
 }
 
-Future<void> _pumpActivity(WidgetTester tester, ProfileHarness harness) async {
-  await tester.pumpWidget(
-    ProviderScope(
-      overrides: harness.overrides,
-      child: MaterialApp(
-        theme: AppTheme.darkTheme(),
-        home: const Scaffold(body: StreamActivitySection(bottomPadding: 0)),
-      ),
-    ),
-  );
-  await harness.settle(tester);
-}
-
 Future<void> _pumpNowPlaying(
   WidgetTester tester,
   ProfileHarness harness,
@@ -124,8 +109,7 @@ Finder get _plexCard => find.ancestor(
   matching: find.byType(StreamSessionCard),
 );
 
-/// The Stop on the Plex session's own card: on Activity, Jellyfin's cards
-/// carry theirs beside it.
+/// The Stop on the Plex session's own card.
 Finder get _plexStop =>
     find.descendant(of: _plexCard, matching: find.byTooltip(_stopTooltip));
 
@@ -134,15 +118,6 @@ void _expectAnnaWatching() => expect(_plexCard, findsOneWidget);
 
 void main() {
   group('a sheet that does not say whether the server has Plex Pass', () {
-    testWidgets('Activity offers Stop', (tester) async {
-      final harness = await _start(sheet: _sheet());
-      await _pumpActivity(tester, harness);
-
-      _expectAnnaWatching();
-      expect(_plexStop, findsOneWidget);
-      await harness.unmount(tester);
-    });
-
     testWidgets('Now playing offers Stop', (tester) async {
       final harness = await _start(sheet: _sheet());
       await _pumpNowPlaying(tester, harness);
@@ -160,11 +135,11 @@ void main() {
       plexCapabilitiesProvider.overrideWith((ref) => sheet.future),
     ];
 
-    testWidgets('Activity offers Stop, and keeps it once the sheet says the '
-        'server has Plex Pass', (tester) async {
+    testWidgets('Now playing offers Stop, and keeps it once the sheet says '
+        'the server has Plex Pass', (tester) async {
       final sheet = Completer<PlexServerCapabilities>();
       final harness = await _start(overrides: holdSheet(sheet));
-      await _pumpActivity(tester, harness);
+      await _pumpNowPlaying(tester, harness);
 
       _expectAnnaWatching();
       expect(_plexStop, findsOneWidget);
@@ -179,28 +154,9 @@ void main() {
       expect(_plexStop, findsOneWidget);
       await harness.unmount(tester);
     });
-
-    testWidgets('Now playing offers Stop', (tester) async {
-      final sheet = Completer<PlexServerCapabilities>();
-      final harness = await _start(overrides: holdSheet(sheet));
-      await _pumpNowPlaying(tester, harness);
-
-      _expectAnnaWatching();
-      expect(_plexStop, findsOneWidget);
-      await harness.unmount(tester);
-    });
   });
 
   group('a server that says it has no Plex Pass', () {
-    testWidgets('Activity draws no Stop', (tester) async {
-      final harness = await _start(sheet: _sheet(subscription: false));
-      await _pumpActivity(tester, harness);
-
-      _expectAnnaWatching();
-      expect(_plexStop, findsNothing);
-      await harness.unmount(tester);
-    });
-
     testWidgets('Now playing draws no Stop', (tester) async {
       final harness = await _start(sheet: _sheet(subscription: false));
       await _pumpNowPlaying(tester, harness);

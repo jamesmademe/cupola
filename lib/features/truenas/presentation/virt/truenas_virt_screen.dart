@@ -67,28 +67,11 @@ enum TrueNasVirtKind {
 /// transport it speaks arrived with it), so below that the section says so and
 /// offers nothing rather than half-working.
 class TrueNasVirtScreen extends ConsumerStatefulWidget {
-  const TrueNasVirtScreen({
-    super.key,
-    required this.type,
-    this.title,
-    this.experimental = false,
-  });
+  const TrueNasVirtScreen({super.key, required this.type});
 
   /// Which pill this screen opens on, so the two old paths still land where
   /// they used to point. Deep links keep working; the door is one.
   final String type;
-
-  /// Accepted and unused. The two old routes still pass the labels of the two
-  /// doors they used to be ("Containers", "Virtual Machines"); this page names
-  /// itself now. Owed outside this feature: `router.dart` collapsing
-  /// `/containers` and `/vms` into one `virtualization` route with a `?kind=`
-  /// query parameter, after which this parameter and [experimental] go.
-  final String? title;
-
-  /// Accepted and unused: see [title]. The LXC-is-experimental note moved onto
-  /// the Containers pill's own list, where it belongs, so it no longer has to
-  /// be threaded in from the route table.
-  final bool experimental;
 
   @override
   ConsumerState<TrueNasVirtScreen> createState() => _TrueNasVirtScreenState();

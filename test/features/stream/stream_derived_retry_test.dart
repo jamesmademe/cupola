@@ -84,7 +84,6 @@ void main() {
 
     for (final future in [
       container.read(jellyfinLibrariesProvider.future),
-      container.read(jellyfinViewersProvider.future),
       container.read(jellyfinItemProvider('42').future),
       container.read(jellyfinItemChildrenProvider('42').future),
     ]) {

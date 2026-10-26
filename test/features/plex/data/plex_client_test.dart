@@ -243,10 +243,9 @@ void main() {
       await client.getChildren('41000');
       await client.getContinueWatching();
       await client.search('inter');
-      await client.refreshLibrary('1');
       await client.stopSession('u7k2m9x4qp1zvb3n');
 
-      expect(adapter.requests, hasLength(9));
+      expect(adapter.requests, hasLength(8));
       for (final request in adapter.requests) {
         expect(request.uri.toString(), isNot(contains(_kToken)));
         expect(request.headers['X-Plex-Token'], _kToken);
@@ -329,10 +328,6 @@ void main() {
 
       await expectLater(
         client.stopSession('u7k2m9x4qp1zvb3n'),
-        throwsA(isA<PlexException>()),
-      );
-      await expectLater(
-        client.refreshLibrary('1'),
         throwsA(isA<PlexException>()),
       );
       expect(adapter.requests, isEmpty);
@@ -724,23 +719,6 @@ void main() {
       // than inventing one.
       expect(libraries[3].lastScannedAt, isNull);
     });
-
-    test(
-      'refreshLibrary is a GET, and a write action surfaces failure',
-      () async {
-        final adapter = CapturingHttpAdapter(response: '');
-        final client = _client(adapter);
-
-        await client.refreshLibrary('2');
-        expect(adapter.lastUri!.path, '/library/sections/2/refresh');
-        expect(adapter.lastRequest!.method, 'GET');
-
-        await expectLater(
-          _client(_FailingAdapter()).refreshLibrary('2'),
-          throwsA(isA<PlexException>()),
-        );
-      },
-    );
 
     test('the item count costs one request and reads totalSize', () async {
       final adapter = CapturingHttpAdapter(
@@ -1868,146 +1846,6 @@ void main() {
         isNull,
       );
       expect(adapter.callCount, 0);
-    });
-  });
-
-  group('findByExternalId', () {
-    Map<String, dynamic> row(
-      String ratingKey,
-      String title, {
-      String type = 'movie',
-      List<String> guids = const [],
-      String? guid,
-    }) => {
-      'ratingKey': ratingKey,
-      'key': '/library/metadata/$ratingKey',
-      'title': title,
-      'type': type,
-      'year': 1999,
-      'guid': ?guid,
-      if (guids.isNotEmpty)
-        'Guid': [
-          for (final id in guids) {'id': id},
-        ],
-    };
-
-    Map<String, dynamic> container(List<Map<String, dynamic>> rows) => {
-      'MediaContainer': {'size': rows.length, 'Metadata': rows},
-    };
-
-    test('asks with its Guids included and a bounded page', () async {
-      final adapter = _GuidAdapter({'tmdb://603': container(const [])});
-
-      await _client(adapter).findByExternalId(tmdbId: '603');
-
-      final query = adapter.probes.single.uri.queryParameters;
-      expect(query['guid'], 'tmdb://603');
-      expect(query['includeGuids'], '1');
-      // A server that ignores `?guid=` answers with the whole library.
-      expect(int.parse(query['X-Plex-Container-Size']!), greaterThan(0));
-    });
-
-    test('a server that ignored ?guid= links nothing', () async {
-      // Every probe answers 200 with the start of the library, each row with
-      // its own, different Guids.
-      final library = container([
-        row('1', 'Alien', guids: ['tmdb://348', 'imdb://tt0078748']),
-        row('2', 'Amélie', guids: ['tmdb://194']),
-      ]);
-      final adapter = _GuidAdapter({
-        'tmdb://1396': library,
-        'tvdb://81189': library,
-      });
-
-      final item = await _client(
-        adapter,
-      ).findByExternalId(tmdbId: '1396', tvdbId: '81189');
-
-      expect(item, isNull);
-      // Both ids were tried before giving up.
-      expect(adapter.probes, hasLength(2));
-    });
-
-    test('skips a wrong first row and returns the verified one', () async {
-      final adapter = _GuidAdapter({
-        'tmdb://603': container([
-          row('1', 'Alien', guids: ['tmdb://348']),
-          row('2', 'The Matrix', guids: ['imdb://tt0133093', 'tmdb://603']),
-        ]),
-      });
-
-      final item = await _client(adapter).findByExternalId(tmdbId: '603');
-
-      expect(item?.id, '2');
-      expect(
-        item?.externalIds,
-        const StreamExternalIds(tmdb: '603', imdb: 'tt0133093'),
-      );
-    });
-
-    test(
-      'a film under the TMDB probe does not stand in for the show',
-      () async {
-        // Sonarr offers the show's TMDB number and its TVDB id; the TMDB probe
-        // finds a film that shares the number, the TVDB probe finds the show.
-        final adapter = _GuidAdapter({
-          'tmdb://1396': container([
-            row(
-              'film',
-              'Some Film',
-              guids: ['tmdb://1396', 'imdb://tt0000001'],
-            ),
-          ]),
-          'tvdb://81189': container([
-            row(
-              'show',
-              'Breaking Bad',
-              type: 'show',
-              guids: ['tmdb://1396', 'tvdb://81189', 'imdb://tt0903747'],
-            ),
-          ]),
-        });
-
-        final item = await _client(
-          adapter,
-        ).findByExternalId(tmdbId: '1396', tvdbId: '81189');
-
-        expect(item?.id, 'show');
-      },
-    );
-
-    test('an answer every id confirms ends the search', () async {
-      final adapter = _GuidAdapter({
-        'tmdb://1396': container([
-          row(
-            'show',
-            'Breaking Bad',
-            type: 'show',
-            guids: ['tmdb://1396', 'tvdb://81189'],
-          ),
-        ]),
-      });
-
-      final item = await _client(
-        adapter,
-      ).findByExternalId(tmdbId: '1396', tvdbId: '81189');
-
-      expect(item?.id, 'show');
-      expect(adapter.probes, hasLength(1));
-    });
-
-    test('a legacy agent guid is read as the item\'s id', () async {
-      final adapter = _GuidAdapter({
-        'tmdb://603': container([
-          row(
-            '2',
-            'The Matrix',
-            guid: 'com.plexapp.agents.themoviedb://603?lang=en',
-          ),
-        ]),
-      });
-
-      expect((await _client(adapter).findByExternalId(tmdbId: '603'))?.id, '2');
     });
   });
 

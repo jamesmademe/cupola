@@ -19,7 +19,7 @@ import 'package:cupola/features/services/domain/dashboard_decision.dart';
 /// What a declined request's row says.
 const String declinedLine = 'Declined';
 
-enum _Look { row, card, compact }
+enum _Look { row, card }
 
 /// Approve and Decline for one request that waits, the same wherever it is
 /// listed: the Home's Requests module, the Activity feed, a requests list,
@@ -81,19 +81,6 @@ class RequestAnswerControls extends ConsumerWidget {
   }) : _look = _Look.card,
        decision = null;
 
-  /// The pair as two small plates in a dense row, a 28pt plate in a 44pt
-  /// target: the desktop's Activity table.
-  const RequestAnswerControls.compact({
-    super.key,
-    required this.instanceId,
-    required this.requestId,
-    required this.title,
-    this.request,
-  }) : _look = _Look.compact,
-       decision = null,
-       approveStyle = null,
-       onDone = null;
-
   /// The Seerr the request lives on, empty for the lens's own. A request id
   /// is per server: the answer goes to this connection and no other.
   final String instanceId;
@@ -134,7 +121,7 @@ class RequestAnswerControls extends ConsumerWidget {
         (answered) => answered[seerrRequestKey(instanceId, requestId)]?.outcome,
       ),
     );
-    if (outcome != null) return _Outcome(text: outcome, look: _look);
+    if (outcome != null) return _Outcome(text: outcome);
 
     final phase = ref.watch(
       requestAnswersInFlightProvider.select(
@@ -190,14 +177,6 @@ class RequestAnswerControls extends ConsumerWidget {
           decline,
         ],
       ),
-      _Look.compact => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          approve,
-          const SizedBox(width: AppSpacing.sm),
-          decline,
-        ],
-      ),
     };
   }
 
@@ -237,7 +216,6 @@ class RequestAnswerControls extends ConsumerWidget {
     final ringSize = switch (_look) {
       _Look.row => 18.0,
       _Look.card => 20.0,
-      _Look.compact => 14.0,
     };
     // The glyph a button wears at rest, if any: only a title's page has one.
     final Widget? glyph = _look == _Look.card && approve
@@ -279,9 +257,7 @@ class RequestAnswerControls extends ConsumerWidget {
         final child = waits
             ? Opacity(opacity: GatedAffordance.dimmedOpacity, child: annotated)
             : annotated;
-        final style = _look == _Look.compact
-            ? _compactStyle(context)
-            : (approve ? approveStyle : null);
+        final style = approve ? approveStyle : null;
         return Tooltip(
           message: named,
           excludeFromSemantics: true,
@@ -296,21 +272,6 @@ class RequestAnswerControls extends ConsumerWidget {
       },
     );
   }
-
-  /// A 28pt plate: [MaterialTapTargetSize.padded] keeps the 44pt target
-  /// around it, and the density is pinned because the desktop's compact one
-  /// would take 8pt off the minimum.
-  static ButtonStyle _compactStyle(BuildContext context) => ButtonStyle(
-    visualDensity: VisualDensity.standard,
-    tapTargetSize: MaterialTapTargetSize.padded,
-    minimumSize: const WidgetStatePropertyAll(Size(0, 28)),
-    padding: const WidgetStatePropertyAll(
-      EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-    ),
-    textStyle: WidgetStatePropertyAll(
-      AppTheme.chrome(context, size: 11, weight: FontWeight.w600),
-    ),
-  );
 
   Future<void> _approve(BuildContext context, WidgetRef ref) async {
     // Held before the wait: the control goes once Seerr's list is read
@@ -386,21 +347,14 @@ class _AnswerRing extends StatelessWidget {
 
 /// What an answered request says in place of its pair.
 class _Outcome extends StatelessWidget {
-  const _Outcome({required this.text, required this.look});
+  const _Outcome({required this.text});
 
   final String text;
-  final _Look look;
 
   @override
   Widget build(BuildContext context) {
     final room = CupolaRoom.of(context);
-    final style = look == _Look.compact
-        ? AppTheme.chrome(
-            context,
-            size: 11,
-            color: CupolaThemeColors.of(context).dimText,
-          )
-        : AppType.meta.copyWith(color: room.inkSecondary);
+    final style = AppType.meta.copyWith(color: room.inkSecondary);
     return Text(
       text,
       maxLines: 2,

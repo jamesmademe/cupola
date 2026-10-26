@@ -650,17 +650,6 @@ class PlexClient implements StreamServerClient {
     return libraries;
   }
 
-  /// Queues a scan. `GET`, not `POST`: Plex's refresh is a GET.
-  @override
-  Future<void> refreshLibrary(String libraryId) async {
-    _assertUsableToken();
-    try {
-      await _api.get('/library/sections/${_pathSegment(libraryId)}/refresh');
-    } on DioException catch (e) {
-      throw _mapDioError(e);
-    }
-  }
-
   /// How many items a section holds, without downloading any of them.
   ///
   /// `X-Plex-Container-Size=0` returns a page of nothing alongside the
@@ -854,31 +843,6 @@ class PlexClient implements StreamServerClient {
   }
 
   @override
-  Future<StreamItem?> findByExternalId({
-    String? tmdbId,
-    String? tvdbId,
-    String? imdbId,
-    StreamItemKind? kind,
-    String? title,
-    int? year,
-    CancelToken? cancelToken,
-  }) async {
-    try {
-      return (await lookupByExternalId(
-        tmdbId: tmdbId,
-        tvdbId: tvdbId,
-        imdbId: imdbId,
-        kind: kind,
-        title: title,
-        year: year,
-        cancelToken: cancelToken,
-      )).item;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  @override
   Future<StreamExternalLookup> lookupByExternalId({
     String? tmdbId,
     String? tvdbId,
@@ -998,7 +962,7 @@ class PlexClient implements StreamServerClient {
     return const StreamExternalLookup.notVerified();
   }
 
-  /// How many rows one `?guid=` probe reads: see [findByExternalId].
+  /// How many rows one `?guid=` probe reads: see [lookupByExternalId].
   static const int _kExternalMatchCandidates = 10;
 
   /// The item each section type's matcher asks through, by type (`movie`,

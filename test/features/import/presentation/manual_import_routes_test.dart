@@ -55,57 +55,6 @@ void main() {
     });
   });
 
-  group('manualImportFolderFromFailedImport', () {
-    test('prefers the folder the download client dropped', () {
-      expect(
-        manualImportFolderFromFailedImport(
-          droppedPath: '/downloads/complete/Movie (2024)',
-          importedPath: '/library/movies/Movie (2024)/Movie.mkv',
-        ),
-        '/downloads/complete/Movie (2024)',
-      );
-    });
-
-    test('a dropped single file is browsed by its parent', () {
-      // The filesystem endpoint lists folders; handed a file it returns
-      // nothing, and the wizard would open on an empty folder list.
-      expect(
-        manualImportFolderFromFailedImport(
-          droppedPath: '/downloads/complete/Movie.2024.1080p.mkv',
-        ),
-        '/downloads/complete',
-      );
-    });
-
-    test('falls back to the parent of the imported file', () {
-      // The opposite default to the dropped path: this one always names a
-      // file, so it is always trimmed rather than tested.
-      expect(
-        manualImportFolderFromFailedImport(
-          importedPath: '/library/movies/Movie (2024)/Movie.mkv',
-        ),
-        '/library/movies/Movie (2024)',
-      );
-    });
-
-    test('keeps Windows separators on both fields', () {
-      expect(
-        manualImportFolderFromFailedImport(
-          importedPath: r'C:\library\Movie (2024)\Movie.mkv',
-        ),
-        r'C:\library\Movie (2024)',
-      );
-    });
-
-    test('answers null when the record named neither', () {
-      expect(manualImportFolderFromFailedImport(), isNull);
-      expect(
-        manualImportFolderFromFailedImport(droppedPath: '  ', importedPath: ''),
-        isNull,
-      );
-    });
-  });
-
   group('manualImportFolderFromOutputPath', () {
     test('keeps a folder path as-is', () {
       expect(

@@ -95,11 +95,3 @@ String formatEpochDate(int seconds) {
     DateTime.fromMillisecondsSinceEpoch(seconds * 1000),
   );
 }
-
-/// Same rendering as [formatDuration] but reserved for "relative time"
-/// call-sites (e.g. "Reannounce in" countdowns). Identical for now; the split
-/// keeps the door open for a future locale-aware variant.
-String formatRelativeSeconds(int seconds) {
-  if (seconds <= 0) return '';
-  return formatDuration(seconds);
-}

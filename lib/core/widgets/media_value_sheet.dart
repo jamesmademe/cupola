@@ -239,7 +239,7 @@ class MediaValueOptionRow extends StatelessWidget {
           children: [
             Icon(
               isSelected ? Icons.check_circle_rounded : Icons.circle_outlined,
-              size: ActionStateGlyph.glyphSize,
+              size: HeaderActionRow.glyphSize,
               color: isSelected ? selectedInk : colorScheme.onSurfaceVariant,
             ),
             const SizedBox(width: AppSpacing.md),

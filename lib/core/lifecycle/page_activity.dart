@@ -147,9 +147,6 @@ class BranchActivityScope extends InheritedWidget {
           ?.isActive ??
       true;
 
-  static int? branchIndexOf(BuildContext context) =>
-      context.getInheritedWidgetOfExactType<BranchActivityScope>()?.branchIndex;
-
   @override
   bool updateShouldNotify(BranchActivityScope oldWidget) =>
       isActive != oldWidget.isActive || branchIndex != oldWidget.branchIndex;

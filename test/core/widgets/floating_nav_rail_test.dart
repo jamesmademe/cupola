@@ -101,12 +101,6 @@ void main() {
     expect(wide, greaterThan(normal));
     // Every name still fits on its one line.
     expect(tester.takeException(), isNull);
-    // As wide as the gutter says, so the page beside it starts after it.
-    final context = tester.element(surface());
-    expect(
-      FloatingNavRail.gutterOf(context, destinationsOf(Audience.operator)),
-      wide + FloatingNavRail.margin * 2,
-    );
   });
 
   testWidgets('the lit section is the one selected, and a tap reports its '

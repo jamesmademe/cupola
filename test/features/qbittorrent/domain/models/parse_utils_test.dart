@@ -209,15 +209,4 @@ void main() {
     });
   });
 
-  group('formatRelativeSeconds', () {
-    test('non-positive is empty', () {
-      expect(formatRelativeSeconds(0), '');
-      expect(formatRelativeSeconds(-5), '');
-    });
-
-    test('positive defers to formatDuration', () {
-      expect(formatRelativeSeconds(90), '00:01:30');
-      expect(formatRelativeSeconds(2 * 86400), '2\u00A0d 00:00:00');
-    });
-  });
 }

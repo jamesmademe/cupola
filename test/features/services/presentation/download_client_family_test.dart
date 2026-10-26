@@ -578,10 +578,6 @@ void main() {
 
       expect(job.totalBytes, 4 * _gb);
       expect(job.doneBytes, _gb);
-      expect(
-        formatDoneOfTotal(doneBytes: job.doneBytes, totalBytes: job.totalBytes),
-        '1.0 of 4.0\u00A0GB',
-      );
     });
 
     testWidgets('P1 on Home, SABnzbd\'s disk full: the stops are counted '

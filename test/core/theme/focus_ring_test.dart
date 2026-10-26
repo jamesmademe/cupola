@@ -93,18 +93,6 @@ void main() {
             styles = [
               HeaderActionRow.expandedButtonStyle(context),
               HeaderActionRow.iconOnlyButtonStyle(context),
-              HeaderActionRow.tonalIconButtonStyle(
-                context,
-                foregroundColor: Colors.white,
-                backgroundColor: Colors.black,
-                borderColor: Colors.grey,
-              ),
-              HeaderActionRow.tonalExpandedButtonStyle(
-                context,
-                foregroundColor: Colors.white,
-                backgroundColor: Colors.black,
-                borderColor: Colors.grey,
-              ),
             ];
             return const SizedBox();
           },

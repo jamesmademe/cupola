@@ -617,38 +617,48 @@ GoRoute _seerrBranchRoot(ServiceTab tab) => switch (tab) {
   ),
 };
 
-/// The pre-tab-model `/movies` tree, which now exists only to redirect.
-///
-/// Radarr itself lives in [_radarrRoutes]. This kept its `:id` child so the
-/// redirect can carry a deep link's own parameters across in ONE hop:
-/// `/movies/42?heroTag=x` lands directly on the film inside the Library tab
-/// rather than bouncing through the service root and losing where it was going.
-GoRoute _moviesRoutes({required String path}) {
+/// The pre-tab-model `/movies`, `/series` and `/music` trees, which now exist
+/// only to redirect. Each keeps its `:id` child so the redirect can carry a
+/// deep link's own parameters across in ONE hop: `/movies/42?heroTag=x` lands
+/// directly on the film inside the Library tab rather than bouncing through
+/// the service root and losing where it was going. The arr's own tree lives in
+/// `_radarrRoutes`, `_sonarrRoutes` and `_lidarrRoutes`.
+GoRoute _legacyLibraryRoute<T>({
+  required String path,
+  required String legacyBase,
+  required String serviceBase,
+  required String fallbackLocation,
+  required String heroPrefix,
+  required Widget screen,
+  required Widget Function(
+    int id,
+    String heroTag,
+    T? initialItem,
+    String? instanceId,
+  )
+  buildChild,
+}) {
   return GoRoute(
     path: path,
     redirect: (context, state) => _redirectLegacyLibrary(
       state,
-      legacyBase: '/movies',
-      serviceBase: ServiceRoutes.radarrMovieBase,
-      fallbackLocation: ServiceRoutes.radarrLibrary,
+      legacyBase: legacyBase,
+      serviceBase: serviceBase,
+      fallbackLocation: fallbackLocation,
     ),
-    builder: (context, state) => const MoviesScreen(),
+    builder: (context, state) => screen,
     routes: [
       GoRoute(
         path: ':id',
         redirect: (context, state) =>
             RouteUtils.safeIntParam(state, 'id') == null
-            ? ServiceRoutes.radarrLibrary
+            ? fallbackLocation
             : null,
-        pageBuilder: (context, state) => _libraryDetailPage<RadarrMovie>(
+        pageBuilder: (context, state) => _libraryDetailPage<T>(
           state,
-          heroPrefix: 'movie',
-          fallbackLocation: ServiceRoutes.radarrLibrary,
-          buildChild: (id, heroTag, movie, instanceId) => ArrTitleOpener.radarr(
-            movieId: id,
-            heroTag: heroTag,
-            instanceId: instanceId,
-          ),
+          heroPrefix: heroPrefix,
+          fallbackLocation: fallbackLocation,
+          buildChild: buildChild,
         ),
       ),
     ],
@@ -830,38 +840,6 @@ GoRoute _radarrBranchRoot(ServiceTab tab) => switch (tab) {
 /// child so a deep link crosses in ONE hop: `/series/55?heroTag=x` lands on
 /// the show inside the Library tab rather than bouncing through the service
 /// root and losing where it was going.
-GoRoute _seriesRoutes({required String path}) {
-  return GoRoute(
-    path: path,
-    redirect: (context, state) => _redirectLegacyLibrary(
-      state,
-      legacyBase: '/series',
-      serviceBase: ServiceRoutes.sonarrSeriesBase,
-      fallbackLocation: ServiceRoutes.sonarrLibrary,
-    ),
-    builder: (context, state) => const SeriesScreen(),
-    routes: [
-      GoRoute(
-        path: ':id',
-        redirect: (context, state) =>
-            RouteUtils.safeIntParam(state, 'id') == null
-            ? ServiceRoutes.sonarrLibrary
-            : null,
-        pageBuilder: (context, state) => _libraryDetailPage<SonarrSeries>(
-          state,
-          heroPrefix: 'series',
-          fallbackLocation: ServiceRoutes.sonarrLibrary,
-          buildChild: (id, heroTag, series, instanceId) =>
-              ArrTitleOpener.sonarr(
-                seriesId: id,
-                heroTag: heroTag,
-                instanceId: instanceId,
-              ),
-        ),
-      ),
-    ],
-  );
-}
 
 /// Sonarr: the same shell as Radarr, and deliberately the same bar.
 ///
@@ -1034,38 +1012,6 @@ GoRoute _sonarrBranchRoot(ServiceTab tab) => switch (tab) {
 ///
 /// Lidarr itself lives in [_lidarrRoutes]. Like `/movies` and `/series` it
 /// keeps its `:id` child so a deep link crosses in ONE hop.
-GoRoute _musicRoutes({required String path}) {
-  return GoRoute(
-    path: path,
-    redirect: (context, state) => _redirectLegacyLibrary(
-      state,
-      legacyBase: '/music',
-      serviceBase: ServiceRoutes.lidarrArtistBase,
-      fallbackLocation: ServiceRoutes.lidarrLibrary,
-    ),
-    builder: (context, state) => const MusicScreen(),
-    routes: [
-      GoRoute(
-        path: ':id',
-        redirect: (context, state) =>
-            RouteUtils.safeIntParam(state, 'id') == null
-            ? ServiceRoutes.lidarrLibrary
-            : null,
-        pageBuilder: (context, state) => _libraryDetailPage<LidarrArtist>(
-          state,
-          heroPrefix: 'artist',
-          fallbackLocation: ServiceRoutes.lidarrLibrary,
-          buildChild: (id, heroTag, artist, instanceId) => ArtistPage(
-            artistId: id,
-            heroTag: heroTag,
-            initialArtist: artist,
-            instanceId: instanceId,
-          ),
-        ),
-      ),
-    ],
-  );
-}
 
 /// Lidarr: the third of the four \*arr on one shell and one bar.
 ///
@@ -1595,7 +1541,7 @@ GoRoute _dockgeBranchRoot(ServiceTab tab) => switch (tab) {
     (state) => const ServiceTabScaffold(
       service: ServiceKey.dockge,
       tab: ServiceTab.stacks,
-      child: DockgeScreen(showAppBar: false, topPadding: _serviceTabTopPadding),
+      child: DockgeScreen(topPadding: _serviceTabTopPadding),
     ),
     routes: [
       // `new` before `stack/:name`, though nothing here forces it: both are
@@ -1632,10 +1578,7 @@ GoRoute _dockgeBranchRoot(ServiceTab tab) => switch (tab) {
     (state) => const ServiceTabScaffold(
       service: ServiceKey.dockge,
       tab: ServiceTab.terminal,
-      child: DockgeTerminalScreen(
-        showAppBar: false,
-        topPadding: _serviceTabTopPadding,
-      ),
+      child: DockgeTerminalScreen(topPadding: _serviceTabTopPadding),
     ),
   ),
   _ => throw UnsupportedError(
@@ -2197,10 +2140,7 @@ GoRoute _unraidBranchRoot(ServiceTab tab) => switch (tab) {
     (state) => const ServiceTabScaffold(
       service: ServiceKey.unraid,
       tab: ServiceTab.array,
-      child: UnraidScreen.array(
-        showAppBar: false,
-        topPadding: _serviceTabTopPadding,
-      ),
+      child: UnraidScreen.array(topPadding: _serviceTabTopPadding),
     ),
   ),
   ServiceTab.docker => _page(
@@ -2208,10 +2148,7 @@ GoRoute _unraidBranchRoot(ServiceTab tab) => switch (tab) {
     (state) => const ServiceTabScaffold(
       service: ServiceKey.unraid,
       tab: ServiceTab.docker,
-      child: UnraidScreen.docker(
-        showAppBar: false,
-        topPadding: _serviceTabTopPadding,
-      ),
+      child: UnraidScreen.docker(topPadding: _serviceTabTopPadding),
     ),
   ),
   ServiceTab.vms => _page(
@@ -2219,10 +2156,7 @@ GoRoute _unraidBranchRoot(ServiceTab tab) => switch (tab) {
     (state) => const ServiceTabScaffold(
       service: ServiceKey.unraid,
       tab: ServiceTab.vms,
-      child: UnraidScreen.vms(
-        showAppBar: false,
-        topPadding: _serviceTabTopPadding,
-      ),
+      child: UnraidScreen.vms(topPadding: _serviceTabTopPadding),
     ),
   ),
   ServiceTab.notifications => _page(
@@ -2230,10 +2164,7 @@ GoRoute _unraidBranchRoot(ServiceTab tab) => switch (tab) {
     (state) => const ServiceTabScaffold(
       service: ServiceKey.unraid,
       tab: ServiceTab.notifications,
-      child: UnraidScreen.notifications(
-        showAppBar: false,
-        topPadding: _serviceTabTopPadding,
-      ),
+      child: UnraidScreen.notifications(topPadding: _serviceTabTopPadding),
     ),
   ),
   ServiceTab.shares => _page(
@@ -2241,10 +2172,7 @@ GoRoute _unraidBranchRoot(ServiceTab tab) => switch (tab) {
     (state) => const ServiceTabScaffold(
       service: ServiceKey.unraid,
       tab: ServiceTab.shares,
-      child: UnraidScreen.shares(
-        showAppBar: false,
-        topPadding: _serviceTabTopPadding,
-      ),
+      child: UnraidScreen.shares(topPadding: _serviceTabTopPadding),
     ),
   ),
   _ => throw UnsupportedError(
@@ -2419,10 +2347,7 @@ GoRoute _npmBranchRoot(ServiceTab tab) => switch (tab) {
     (state) => const ServiceTabScaffold(
       service: ServiceKey.nginxProxyManager,
       tab: ServiceTab.proxyHosts,
-      child: NpmScreen.proxyHosts(
-        showAppBar: false,
-        topPadding: _serviceTabTopPadding,
-      ),
+      child: NpmScreen.proxyHosts(topPadding: _serviceTabTopPadding),
     ),
     // A child, so the URL leaves the tab root and the service header steps
     // aside for the page's own app bar (`isServiceTabRoot`).
@@ -2444,10 +2369,7 @@ GoRoute _npmBranchRoot(ServiceTab tab) => switch (tab) {
     (state) => const ServiceTabScaffold(
       service: ServiceKey.nginxProxyManager,
       tab: ServiceTab.certificates,
-      child: NpmScreen.certificates(
-        showAppBar: false,
-        topPadding: _serviceTabTopPadding,
-      ),
+      child: NpmScreen.certificates(topPadding: _serviceTabTopPadding),
     ),
   ),
   ServiceTab.accessLists => _page(
@@ -2455,10 +2377,7 @@ GoRoute _npmBranchRoot(ServiceTab tab) => switch (tab) {
     (state) => const ServiceTabScaffold(
       service: ServiceKey.nginxProxyManager,
       tab: ServiceTab.accessLists,
-      child: NpmScreen.accessLists(
-        showAppBar: false,
-        topPadding: _serviceTabTopPadding,
-      ),
+      child: NpmScreen.accessLists(topPadding: _serviceTabTopPadding),
     ),
   ),
   ServiceTab.auditLog => _page(
@@ -2466,10 +2385,7 @@ GoRoute _npmBranchRoot(ServiceTab tab) => switch (tab) {
     (state) => const ServiceTabScaffold(
       service: ServiceKey.nginxProxyManager,
       tab: ServiceTab.auditLog,
-      child: NpmScreen.auditLog(
-        showAppBar: false,
-        topPadding: _serviceTabTopPadding,
-      ),
+      child: NpmScreen.auditLog(topPadding: _serviceTabTopPadding),
     ),
   ),
   _ => throw UnsupportedError(
@@ -2788,10 +2704,7 @@ GoRoute _truenasRoutes({required String path}) {
     path,
     (state) => ServiceHomeScreen(
       service: ServiceKey.truenas,
-      child: const TrueNasHubScreen(
-        showAppBar: false,
-        topPadding: _serviceHomeTopPadding,
-      ),
+      child: const TrueNasHubScreen(topPadding: _serviceHomeTopPadding),
     ),
     routes: _truenasSectionRoutes(),
   );
@@ -2831,11 +2744,7 @@ List<GoRoute> _truenasSectionRoutes() => <GoRoute>[
   _page('data-protection', (state) => const TrueNasDataProtectionScreen()),
   _page(
     'containers',
-    (state) => const TrueNasVirtScreen(
-      type: 'CONTAINER',
-      title: 'Containers',
-      experimental: true,
-    ),
+    (state) => const TrueNasVirtScreen(type: 'CONTAINER'),
     routes: [
       _page(
         'instance/:id',
@@ -2848,7 +2757,7 @@ List<GoRoute> _truenasSectionRoutes() => <GoRoute>[
   ),
   _page(
     'vms',
-    (state) => const TrueNasVirtScreen(type: 'VM', title: 'Virtual machines'),
+    (state) => const TrueNasVirtScreen(type: 'VM'),
     routes: [
       _page(
         'instance/:id',
@@ -3462,9 +3371,46 @@ final routerProvider = Provider<GoRouter>((ref) {
         'media/person/:id',
         'media/collection/:id',
       ], (uri) => _toDiscover(uri, '/search')),
-      _moviesRoutes(path: '/movies'),
-      _seriesRoutes(path: '/series'),
-      _musicRoutes(path: '/music'),
+      _legacyLibraryRoute<RadarrMovie>(
+        path: '/movies',
+        legacyBase: '/movies',
+        serviceBase: ServiceRoutes.radarrMovieBase,
+        fallbackLocation: ServiceRoutes.radarrLibrary,
+        heroPrefix: 'movie',
+        screen: const MoviesScreen(),
+        buildChild: (id, heroTag, movie, instanceId) => ArrTitleOpener.radarr(
+          movieId: id,
+          heroTag: heroTag,
+          instanceId: instanceId,
+        ),
+      ),
+      _legacyLibraryRoute<SonarrSeries>(
+        path: '/series',
+        legacyBase: '/series',
+        serviceBase: ServiceRoutes.sonarrSeriesBase,
+        fallbackLocation: ServiceRoutes.sonarrLibrary,
+        heroPrefix: 'series',
+        screen: const SeriesScreen(),
+        buildChild: (id, heroTag, series, instanceId) => ArrTitleOpener.sonarr(
+          seriesId: id,
+          heroTag: heroTag,
+          instanceId: instanceId,
+        ),
+      ),
+      _legacyLibraryRoute<LidarrArtist>(
+        path: '/music',
+        legacyBase: '/music',
+        serviceBase: ServiceRoutes.lidarrArtistBase,
+        fallbackLocation: ServiceRoutes.lidarrLibrary,
+        heroPrefix: 'artist',
+        screen: const MusicScreen(),
+        buildChild: (id, heroTag, artist, instanceId) => ArtistPage(
+          artistId: id,
+          heroTag: heroTag,
+          initialArtist: artist,
+          instanceId: instanceId,
+        ),
+      ),
       // Where Activity's per-service pages lived: a queue is its arr's own
       // tab now, and Seerr's requests are Activity's Requests. One hop, the
       // query kept; anything else under `/activity` that no view names lands

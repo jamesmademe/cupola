@@ -139,15 +139,6 @@ final jellyfinLibrariesProvider = FutureProvider<List<StreamLibrary>>((
   return ref.watch(jellyfinServerProvider).getLibraries();
 }, retry: noProviderRetry);
 
-/// Household members whose watch state a library can be read through.
-///
-/// Sourced from `/Users`, which is the only place a user id exists: the API key
-/// authenticates as an administrator with no user attached, so this list is what
-/// the settings picker fills `jellyfinUserId` from.
-final jellyfinViewersProvider = FutureProvider<List<StreamViewer>>((ref) async {
-  return ref.watch(jellyfinServerProvider).getViewers();
-}, retry: noProviderRetry);
-
 /// The server's own id, per connection: what a Jellyfin app needs to open an
 /// item on it. Null while the server does not say.
 final jellyfinServerIdProvider = FutureProvider.autoDispose

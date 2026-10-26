@@ -14,6 +14,7 @@ import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 final testSearchQueryProvider = StateProvider<String>((ref) => '');
 final testLibraryProvider = FutureProvider<List<String>>(
@@ -1286,8 +1287,11 @@ Future<void> _pumpLargeWall(
               subtitleExtractor: subtitle ?? (_) => '',
               imagesExtractor: (_) => null,
               idExtractor: (item) => item.hashCode,
-              settingsSelector: (settings) =>
-                  (settings.radarrUrl, settings.radarrApiKey, const NoAccess()),
+              settingsSelector: (settings) => (
+                settings.urlFor(ServiceKey.radarr),
+                settings.apiKeyFor(ServiceKey.radarr),
+                const NoAccess(),
+              ),
               onItemTap: (_, item, heroTag) => onTap?.call('$item|$heroTag'),
               sorts: [
                 MediaBrowseSort<String>(
@@ -1334,8 +1338,11 @@ Widget _buildTestScaffold() {
     idExtractor: (item) => item.hashCode,
     statusExtractor: (_) =>
         const MediaStatusInfo(availability: MediaAvailability.available),
-    settingsSelector: (settings) =>
-        (settings.radarrUrl, settings.radarrApiKey, const NoAccess()),
+    settingsSelector: (settings) => (
+      settings.urlFor(ServiceKey.radarr),
+      settings.apiKeyFor(ServiceKey.radarr),
+      const NoAccess(),
+    ),
     onItemTap: (_, _, _) {},
   );
 }
@@ -1375,8 +1382,11 @@ Widget _buildCustomTestApp({
         imagesExtractor: (_) => null,
         idExtractor: (item) => item.hashCode,
         statusExtractor: statusExtractor,
-        settingsSelector: (settings) =>
-            (settings.radarrUrl, settings.radarrApiKey, const NoAccess()),
+        settingsSelector: (settings) => (
+          settings.urlFor(ServiceKey.radarr),
+          settings.apiKeyFor(ServiceKey.radarr),
+          const NoAccess(),
+        ),
         onItemTap: onItemTap ?? (_, _, _) {},
         sorts: sorts,
         cutoffUnmetIds: cutoffUnmetIds,

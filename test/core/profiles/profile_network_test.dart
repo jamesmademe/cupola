@@ -485,14 +485,14 @@ void main() {
         final harness = await ProfileHarness.start(Profiles.p1);
         final jellyfin = harness.container().read(jellyfinClientProvider);
 
-        final unverified = await jellyfin.findByExternalId(
+        final unverified = (await jellyfin.lookupByExternalId(
           tmdbId: '${WorldTitles.elephantsDream.tmdbId}',
           kind: StreamItemKind.movie,
-        );
-        final verified = await jellyfin.findByExternalId(
+        )).item;
+        final verified = (await jellyfin.lookupByExternalId(
           tmdbId: '${WorldTitles.sintel.tmdbId}',
           kind: StreamItemKind.movie,
-        );
+        )).item;
 
         expect(unverified, isNull);
         expect(verified?.title, WorldTitles.sintel.title);

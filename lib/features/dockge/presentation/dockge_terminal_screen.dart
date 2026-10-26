@@ -12,13 +12,8 @@ import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 class DockgeTerminalScreen extends ConsumerStatefulWidget {
-  const DockgeTerminalScreen({
-    super.key,
-    this.showAppBar = true,
-    this.topPadding = 0,
-  });
+  const DockgeTerminalScreen({super.key, this.topPadding = 0});
 
-  final bool showAppBar;
   final double topPadding;
 
   @override
@@ -36,9 +31,6 @@ class _DockgeTerminalScreenState extends ConsumerState<DockgeTerminalScreen> {
         .isServiceConfigured(ServiceKey.dockge);
     return AmbientScaffold(
       accent: ServiceKey.dockge.accent,
-      appBar: widget.showAppBar
-          ? const GlassAppBar(title: Text('Terminal'))
-          : null,
       // The inset is consumed here with or without an app bar: with one the
       // `Scaffold` has already taken it off the body, and without one (the tab
       // shell) the band above consumes it and the tab bar sits an inset lower

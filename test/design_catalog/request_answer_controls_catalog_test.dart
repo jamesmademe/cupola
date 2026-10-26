@@ -117,59 +117,6 @@ Widget _row(int id, String title, String detail) => _Slab(
   ),
 );
 
-/// The dense row of a desktop table: the title, the pair, a status.
-class _Strip extends StatelessWidget {
-  const _Strip({required this.id, required this.title});
-
-  final int id;
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final room = CupolaRoom.of(context);
-    return Container(
-      constraints: const BoxConstraints(minHeight: 48),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: room.hair)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              style: AppTheme.chrome(
-                context,
-                size: 14,
-                weight: FontWeight.w600,
-                color: room.ink,
-              ),
-            ),
-          ),
-          RequestAnswerControls.compact(
-            instanceId: '',
-            requestId: id,
-            title: title,
-          ),
-          const SizedBox(width: 16),
-          SizedBox(
-            width: 72,
-            child: Text(
-              'Pending',
-              textAlign: TextAlign.end,
-              style: AppTheme.chrome(
-                context,
-                size: 11,
-                color: room.inkSecondary,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 void main() {
   catalogCard(
     'RequestAnswerControls',
@@ -293,47 +240,6 @@ void main() {
             }),
           ),
         ],
-      ),
-      CatalogScene(
-        'RequestAnswerControls.compact · a desktop table row: idle (Charge), '
-        'Approve busy (Metropolis), Decline busy (Sprite Fright), answered '
-        '(Spring, Tears of Steel)',
-        (_) => const Column(
-          children: [
-            _Strip(id: 1, title: 'Charge'),
-            _Strip(id: 2, title: 'Metropolis'),
-            _Strip(id: 3, title: 'Sprite Fright'),
-            _Strip(id: 4, title: 'Spring'),
-            _Strip(id: 5, title: 'Tears of Steel'),
-          ],
-        ),
-        width: 840,
-        platform: CatalogPlatform.desktop,
-        overrides: [
-          requestAnswersInFlightProvider.overrideWith(
-            () => _InFlight({
-              (instanceId: '', requestId: 2): RequestAnswerPhase.checking,
-              (instanceId: '', requestId: 3): RequestAnswerPhase.declining,
-            }),
-          ),
-          answeredRequestsProvider.overrideWith(
-            () => _Answered({
-              'seerr--4': (
-                decision: null,
-                outcome: 'Approved · sent to Radarr',
-              ),
-              'seerr--5': (decision: null, outcome: 'Declined'),
-            }),
-          ),
-        ],
-      ),
-      CatalogScene(
-        'RequestAnswerControls.compact · an account that may not approve: '
-        'dimmed, and it says why when pressed',
-        (_) => const _Strip(id: 1, title: 'Charge'),
-        width: 840,
-        platform: CatalogPlatform.desktop,
-        overrides: [_mayNotApprove],
       ),
       CatalogScene(
         'Approve sheet · where Charge goes, with another Radarr of its copy '

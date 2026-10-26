@@ -11,7 +11,6 @@ import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
-import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart'
@@ -587,7 +586,7 @@ final globalBlocklistItemsProvider = FutureProvider<ActivityFeed>((ref) async {
 /// (the cursors), not the whole set.
 final globalHistoryFeedProvider =
     NotifierProvider<PagedArrFeedNotifier, PagedArrFeedState>(
-      () => PagedArrFeedNotifier(kinds: const [GlobalActivityKind.history]),
+      PagedArrFeedNotifier.new,
     );
 
 /// How many rows "Finished today" shows.
@@ -792,11 +791,6 @@ class PagedArrFeedState {
 /// pages come back. The merged feed is sorted whole, so the severity-first
 /// order stays an order, not a per-connection concatenation.
 class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
-  PagedArrFeedNotifier({required this.kinds});
-
-  /// The record kinds this bucket pages over, in display order.
-  final List<GlobalActivityKind> kinds;
-
   /// Accumulated items per (kind, connection) pair.
   final Map<ActivityPageKey, List<GlobalActivityItem>> _items = {};
 
@@ -833,9 +827,8 @@ class PagedArrFeedNotifier extends Notifier<PagedArrFeedState> {
     final connections = activityArrConnections(ref.read(settingsProvider));
 
     await Future.wait([
-      for (final kind in kinds)
-        for (final connection in connections)
-          _loadFirstPage(kind, connection, cursors, loaded),
+      for (final connection in connections)
+        _loadFirstPage(GlobalActivityKind.history, connection, cursors, loaded),
     ]);
 
     if (generation != _generation) return;
@@ -1223,10 +1216,6 @@ Future<ArrRecordPage> _loadPage(
     // `includeEpisode`, since both services hang those off this primitive.
     case GlobalActivityKind.history:
       return service.getHistoryPage(page: page, pageSize: pageSize);
-    case GlobalActivityKind.missing:
-      return service.getMissingPage(page: page, pageSize: pageSize);
-    case GlobalActivityKind.cutoff:
-      return service.getCutoffPage(page: page, pageSize: pageSize);
     // Seerr answers this kind on its own leg; nothing here asked a server. The
     // total is therefore **unknown**, not zero: a confident "0 requests" from
     // a question that was never put is exactly the failure this type exists to
@@ -1293,8 +1282,6 @@ MediaNames? _namesFor(GlobalActivityKind kind, Map<String, dynamic> item) =>
         machineName: stringOrNull(item['sourceTitle']),
         fallback: 'Blocked release',
       ),
-      GlobalActivityKind.missing ||
-      GlobalActivityKind.cutoff ||
       GlobalActivityKind.request => null,
     };
 
@@ -1364,8 +1351,6 @@ String _titleFor(
       arrPrimaryMediaTitle(item) ?? arrReleaseTitle(item) ?? 'History item',
     GlobalActivityKind.blocklist =>
       arrPrimaryMediaTitle(item) ?? arrReleaseTitle(item) ?? 'Blocked release',
-    GlobalActivityKind.missing ||
-    GlobalActivityKind.cutoff => _wantedTitle(serviceType, item),
     GlobalActivityKind.request => 'Request',
   };
 }
@@ -1402,10 +1387,6 @@ String _subtitleFor(
             release: stringOrNull(item['sourceTitle']),
           ) ??
           '',
-    GlobalActivityKind.missing || GlobalActivityKind.cutoff => [
-      _serviceKeyFor(serviceType).title,
-      _wantedContext(serviceType, item),
-    ].whereType<String>().join(dotSeparator),
     GlobalActivityKind.request => _serviceKeyFor(serviceType).title,
   };
 }
@@ -1438,8 +1419,6 @@ String _figuresFor(GlobalActivityKind kind, Map<String, dynamic> item) {
       final size = formatActivitySize(mapOrNull(item['data'])?['size']);
       return size == '—' ? '' : size;
     case GlobalActivityKind.blocklist:
-    case GlobalActivityKind.missing:
-    case GlobalActivityKind.cutoff:
     case GlobalActivityKind.request:
       return '';
   }
@@ -1452,49 +1431,6 @@ DateTime? _sortDateFor(GlobalActivityKind kind, Map<String, dynamic> item) {
     ),
     GlobalActivityKind.history || GlobalActivityKind.blocklist =>
       DateTime.tryParse(stringOrNull(item['date']) ?? ''),
-    GlobalActivityKind.missing ||
-    GlobalActivityKind.cutoff => DateTime.tryParse(
-      stringOrNull(
-            item['airDateUtc'] ?? item['releaseDate'] ?? item['added'],
-          ) ??
-          '',
-    ),
     GlobalActivityKind.request => null,
   };
-}
-
-String _wantedTitle(ServiceType serviceType, Map<String, dynamic> item) {
-  return switch (serviceType) {
-    ServiceType.movies => stringOrNull(item['title']) ?? 'Missing movie',
-    ServiceType.series =>
-      stringOrNull(mapOrNull(item['series'])?['title']) ??
-          stringOrNull(item['title']) ??
-          'Missing episode',
-    ServiceType.music =>
-      stringOrNull(item['title']) ??
-          stringOrNull(mapOrNull(item['album'])?['title']) ??
-          'Missing album',
-    ServiceType.discover => 'Request',
-  };
-}
-
-String? _wantedContext(ServiceType serviceType, Map<String, dynamic> item) {
-  return switch (serviceType) {
-    ServiceType.movies => _yearLabel(item),
-    ServiceType.series => _episodeLabel(item),
-    ServiceType.music => stringOrNull(mapOrNull(item['artist'])?['artistName']),
-    ServiceType.discover => null,
-  };
-}
-
-String? _yearLabel(Map<String, dynamic> item) {
-  final year = item['year'];
-  if (year == null) return null;
-  return year.toString();
-}
-
-String? _episodeLabel(Map<String, dynamic> item) {
-  final season = intOrNull(item['seasonNumber']);
-  final episode = intOrNull(item['episodeNumber']);
-  return formatArrEpisodeCode(season, episode) ?? stringOrNull(item['title']);
 }

@@ -46,7 +46,6 @@ import 'package:cupola/features/qbittorrent/domain/torrent_list_order.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/features/services/domain/download_client_faults.dart';
 import 'package:cupola/features/services/domain/kpi_aggregate.dart';
-import 'package:cupola/features/services/domain/service_signal.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
@@ -452,20 +451,6 @@ Future<bool> _connectionAnswers(Ref ref, InstanceRef key) async {
 /// The single live figure a service contributes to the stack matrix on
 /// `/services`.
 ///
-/// Reads [serviceKpiProvider] and reduces it through [resolveServiceSignal], so
-/// the matrix costs nothing beyond what the KPI rails already fetch and the
-/// hub's cell agrees with the service page's peek by construction.
-///
-/// Note the deliberate lack of error handling: an unreachable service leaves
-/// this in `AsyncError`, and the cell renders its reachability instead of a
-/// signal. Swallowing the error into a null signal here would make "no metric to
-/// report" and "this service is down" the same value.
-final serviceSignalProvider = FutureProvider.autoDispose
-    .family<ServiceSignal?, ServiceKey>((ref, service) async {
-      final kpis = await ref.watch(serviceKpiProvider(service).future);
-      return resolveServiceSignal(kpis);
-    }, retry: noProviderRetry);
-
 int _statInt(Map<String, dynamic>? stats, String key) =>
     (stats?[key] as num?)?.toInt() ?? 0;
 
@@ -532,7 +517,7 @@ String _notAnswering(ServiceKey service, Object? error) =>
 /// The shared KPI set for a media server, identical for Jellyfin and Plex.
 ///
 /// Three metrics, and the order is load-bearing in two ways that
-/// `resolveServiceSignal` depends on.
+/// `resolveServiceSignalPair` depends on.
 ///
 /// **`Streams` is first, so it is the resting fallback.** With nothing flagged
 /// the matrix cell shows `kpis.first`, and `0 streams` is both true and live:
@@ -572,7 +557,7 @@ Future<List<ServiceKpi>> _streamKpis(
   // endpoint before asking the other. `Future.wait` is important here rather
   // than two sequential awaits: when an unreachable server rejects both
   // requests, it observes both failures while still propagating the first one
-  // to `serviceKpiProvider` and `serviceSignalProvider`.
+  // to `serviceKpiProvider`.
   final results = await Future.wait<Object?>([
     sessionsFuture ?? Future<Object?>.value(),
     librariesFuture ?? Future<Object?>.value(),

@@ -24,9 +24,6 @@ abstract interface class ReleaseSearchTransport {
   /// Whether a search under this transport survives the app being backgrounded.
   /// Drives the phase-accurate promise the sheet makes.
   bool get survivesBackgrounding;
-
-  /// A ceiling the platform imposes regardless of the user's own timeout, or null.
-  Duration? get platformCeiling;
 }
 
 /// The foreground transport: the app's own Dio, guard and all.
@@ -51,9 +48,6 @@ class ForegroundReleaseSearchTransport implements ReleaseSearchTransport {
 
   @override
   bool get survivesBackgrounding => false;
-
-  @override
-  Duration? get platformCeiling => null;
 
   @override
   Future<List<dynamic>> run({
@@ -99,8 +93,7 @@ class ForegroundReleaseSearchTransport implements ReleaseSearchTransport {
 ///
 /// One limit is carried honestly rather than hidden: Android's WorkManager
 /// stops the job at nine minutes and the library's foreground escape is not
-/// wired for this task type, so [platformCeiling] reports it and the verdict
-/// names it.
+/// wired for this task type, so this transport cannot lift that limit.
 class BackgroundReleaseSearchTransport implements ReleaseSearchTransport {
   /// [transmit], [cancelTask] and [grace] exist so the task's whole lifetime:
   /// the watchdog, the cancellation and the refusals, all testable offline.
@@ -123,7 +116,6 @@ class BackgroundReleaseSearchTransport implements ReleaseSearchTransport {
   /// never applied to a `DataTask`. Lifting it would cost a Play-restricted
   /// foreground-service permission and a review video, to gain headroom above a
   /// five-minute default, so the ceiling is accepted and stated instead.
-  static const androidCeiling = Duration(minutes: 9);
 
   /// How long past the user's own ceiling the watchdog waits before it gives up
   /// on a task the plugin has stopped talking about.
@@ -133,11 +125,14 @@ class BackgroundReleaseSearchTransport implements ReleaseSearchTransport {
   /// exactly the ceiling would turn that latency into a phantom timeout.
   static const watchdogGrace = Duration(seconds: 30);
 
-  @override
-  bool get survivesBackgrounding => true;
+  /// WorkManager stops a job here, and the library's `runInForeground` escape is
+  /// never applied to a `DataTask`. Lifting it would cost a Play-restricted
+  /// foreground-service permission and a review video, to gain headroom above a
+  /// five-minute default, so the ceiling is accepted and stated instead.
+  static const androidCeiling = Duration(minutes: 9);
 
   @override
-  Duration? get platformCeiling => Platform.isAndroid ? androidCeiling : null;
+  bool get survivesBackgrounding => true;
 
   @override
   Future<List<dynamic>> run({

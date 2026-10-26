@@ -1,243 +1,12 @@
 import 'dart:async';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/interactive_search_sheet.dart';
-import 'package:cupola/features/settings/domain/service_key.dart';
 
 void main() {
-  group('InteractiveSearchSheet.showAsync', () {
-    testWidgets('cancels the in-flight fetch when the sheet is dismissed', (
-      tester,
-    ) async {
-      final completer = Completer<List<dynamic>>();
-      final navigatorKey = GlobalKey<NavigatorState>();
-      CancelToken? capturedToken;
-
-      await tester.pumpWidget(
-        MaterialApp(
-          navigatorKey: navigatorKey,
-          home: _InteractiveSearchSheetLauncher(
-            fetchReleases: (token) {
-              capturedToken = token;
-              return completer.future;
-            },
-          ),
-        ),
-      );
-      await _pumpSheetEntrance(tester);
-
-      expect(find.text('Searching for releases…'), findsOneWidget);
-      expect(capturedToken, isNotNull);
-      expect(capturedToken!.isCancelled, isFalse);
-
-      navigatorKey.currentState!.pop();
-      await tester.pumpAndSettle();
-
-      expect(capturedToken!.isCancelled, isTrue);
-      expect(find.text('LauncherPage'), findsOneWidget);
-
-      completer.complete(const []);
-      await tester.pump();
-    });
-
-    testWidgets('withholds the elapsed readout until the search is slow', (
-      tester,
-    ) async {
-      // A clock on a search that answers in two seconds is noise, so the
-      // readout arms itself at three. Note the explicit `pump(Duration)`:
-      // `pumpAndSettle` cannot be used while the ticker is running, because a
-      // periodic setState means there is always another frame scheduled.
-      final completer = Completer<List<dynamic>>();
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: _InteractiveSearchSheetLauncher(
-            fetchReleases: (_) => completer.future,
-          ),
-        ),
-      );
-      await _pumpSheetEntrance(tester);
-
-      expect(find.text('Searching for releases…'), findsOneWidget);
-      expect(find.text('0:00'), findsNothing);
-
-      await tester.pump(const Duration(seconds: 2));
-      expect(find.text('0:02'), findsNothing);
-
-      await tester.pump(const Duration(seconds: 1));
-      expect(find.text('0:03'), findsOneWidget);
-
-      await tester.pump(const Duration(seconds: 1));
-      expect(find.text('0:04'), findsOneWidget);
-      expect(find.text('0:03'), findsNothing);
-
-      completer.complete(const []);
-      await tester.pumpAndSettle();
-    });
-
-    testWidgets('the readout stops once the search resolves', (tester) async {
-      final completer = Completer<List<dynamic>>();
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: _InteractiveSearchSheetLauncher(
-            fetchReleases: (_) => completer.future,
-          ),
-        ),
-      );
-      await _pumpSheetEntrance(tester);
-      await tester.pump(const Duration(seconds: 4));
-      expect(find.text('0:04'), findsOneWidget);
-
-      completer.complete(const []);
-      // Settling at all proves the ticker was cancelled: a live periodic
-      // setState would keep scheduling frames and time this out.
-      await tester.pumpAndSettle();
-
-      expect(find.text('Searching for releases…'), findsNothing);
-    });
-
-    testWidgets('Cancel closes the sheet and cancels the fetch', (
-      tester,
-    ) async {
-      final completer = Completer<List<dynamic>>();
-      CancelToken? capturedToken;
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: _InteractiveSearchSheetLauncher(
-            fetchReleases: (token) {
-              capturedToken = token;
-              return completer.future;
-            },
-          ),
-        ),
-      );
-      await _pumpSheetEntrance(tester);
-
-      expect(capturedToken!.isCancelled, isFalse);
-
-      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
-      await tester.pumpAndSettle();
-
-      // Dismissing already cancelled the fetch; Cancel only makes that exit
-      // visible, so the observable outcome has to be identical.
-      expect(capturedToken!.isCancelled, isTrue);
-      expect(find.text('LauncherPage'), findsOneWidget);
-
-      completer.complete(const []);
-      await tester.pump();
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('suppresses fetch errors after the sheet is dismissed', (
-      tester,
-    ) async {
-      final completer = Completer<List<dynamic>>();
-      final navigatorKey = GlobalKey<NavigatorState>();
-      CancelToken? capturedToken;
-
-      await tester.pumpWidget(
-        MaterialApp(
-          navigatorKey: navigatorKey,
-          home: _InteractiveSearchSheetLauncher(
-            fetchReleases: (token) {
-              capturedToken = token;
-              return completer.future;
-            },
-          ),
-        ),
-      );
-      await _pumpSheetEntrance(tester);
-
-      navigatorKey.currentState!.pop();
-      await tester.pumpAndSettle();
-
-      completer.completeError(Exception('boom'));
-      await tester.pump();
-
-      expect(capturedToken, isNotNull);
-      expect(capturedToken!.isCancelled, isTrue);
-      expect(find.textContaining('Failed to load releases'), findsNothing);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('renders a retry action when the fetch fails', (tester) async {
-      var attempts = 0;
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: _InteractiveSearchSheetLauncher(
-            fetchReleases: (_) async {
-              attempts++;
-              if (attempts == 1) throw Exception('boom');
-              return [_release(title: 'Recovered.Release')];
-            },
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('Retry'), findsOneWidget);
-
-      await tester.tap(find.text('Retry'));
-      await tester.pumpAndSettle();
-
-      expect(attempts, 2);
-      expect(find.text('Recovered.Release'), findsOneWidget);
-    });
-  });
-
-  group('InteractiveSearchSheet.showAsync failures', () {
-    DioException refused() => DioException(
-      requestOptions: RequestOptions(path: '/api/v3/release'),
-      type: DioExceptionType.badResponse,
-      response: Response<dynamic>(
-        requestOptions: RequestOptions(path: '/api/v3/release'),
-        statusCode: 401,
-      ),
-    );
-
-    testWidgets('a sheet told its service names it and leads with the remedy', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: _InteractiveSearchSheetLauncher(
-            fetchReleases: (_) async => throw refused(),
-            service: ServiceKey.radarr,
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('Radarr answered but refused the key'), findsOneWidget);
-      expect(
-        find.widgetWithText(FilledButton, 'Paste the key again'),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('a sheet told no service cannot say whose form to open', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: _InteractiveSearchSheetLauncher(
-            fetchReleases: (_) async => throw refused(),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('Paste the key again'), findsNothing);
-      expect(find.textContaining('Radarr'), findsNothing);
-    });
-  });
-
   group('InteractiveSearchSheet filtering', () {
     testWidgets('summarises the result counts', (tester) async {
       await _pumpSheet(tester, releases: _sampleReleases);
@@ -550,27 +319,14 @@ Future<void> _showSheet(
   await tester.pumpAndSettle();
 }
 
-Future<void> _pumpSheetEntrance(WidgetTester tester) async {
-  await tester.pump();
-  await tester.pump(const Duration(milliseconds: 300));
-}
-
 class _InteractiveSearchSheetLauncher extends StatefulWidget {
   const _InteractiveSearchSheetLauncher({
-    this.fetchReleases,
-    this.releases,
+    required this.releases,
     this.onGrabRelease,
-    this.service,
-  }) : assert(fetchReleases != null || releases != null);
+  });
 
-  /// Whose search the async variant is, when the caller knows.
-  final ServiceKey? service;
-
-  /// Opens the async variant, which fetches before it lists.
-  final Future<List<dynamic>> Function(CancelToken token)? fetchReleases;
-
-  /// Opens the plain variant on an already-resolved list.
-  final List<dynamic>? releases;
+  /// The resolved list the sheet opens on.
+  final List<dynamic> releases;
 
   final Future<void> Function(String guid, int indexerId)? onGrabRelease;
 
@@ -595,22 +351,21 @@ class _InteractiveSearchSheetLauncherState
       final releases = widget.releases;
       final onGrabRelease = widget.onGrabRelease ?? (String _, int _) async {};
 
-      if (releases != null) {
-        InteractiveSearchSheet.show(
-          context: context,
+      AppBottomSheet.showScrollable(
+        context: context,
+        title: 'Releases',
+        subtitle: 'Interactive Search',
+        icon: Icons.travel_explore_rounded,
+        showClose: true,
+        initialSize: 0.75,
+        minSize: 0.5,
+        maxSize: 0.95,
+        builder: (context, scrollController) => InteractiveSearchSheet(
           releases: releases,
           title: 'Interactive Search',
           onGrabRelease: onGrabRelease,
-        );
-        return;
-      }
-
-      InteractiveSearchSheet.showAsync(
-        context: context,
-        title: 'Interactive Search',
-        fetchReleases: widget.fetchReleases!,
-        onGrabRelease: onGrabRelease,
-        service: widget.service,
+          scrollController: scrollController,
+        ),
       );
     });
   }

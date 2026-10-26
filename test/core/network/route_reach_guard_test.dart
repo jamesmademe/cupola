@@ -144,7 +144,7 @@ final _reads = <({String name, RegExp pattern})>[
   ),
   (name: 'pinForUrl(', pattern: RegExp(r'\bpinForUrl\(')),
   (name: 'urlFor(', pattern: RegExp(r'\burlFor\(')),
-  // `settings.radarrUrl` and its kin: the first connection's saved address.
+  // `settings.urlFor(ServiceKey.radarr)` and its kin: the first connection's saved address.
   // A field of another class that happens to share the name is its own.
   (
     name: 'projection',

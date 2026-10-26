@@ -11,7 +11,7 @@ import 'package:cupola/core/theme.dart';
 /// giving the app a tactile, "alive" feel on touch.
 ///
 /// Use around posters, cards and list rows that navigate or act on tap. Keep
-/// the effect gentle ([pressedScale] 0.96, the press role) so it reads as
+/// the effect gentle (the press role's 0.96, [AppAnimation.pressScale]) so it reads as
 /// depth, not a bounce.
 ///
 /// Because nearly every tappable card in the app funnels through here, this is
@@ -38,9 +38,6 @@ class PressableScale extends StatefulWidget {
   /// key or Shift+F10, and the ⋯ a poster inside draws under the pointer
   /// ([PressFeedback.menu]). A screen reader reaches it as the long press.
   final void Function(Offset? at)? onMenu;
-
-  /// Scale applied while pressed. Defaults to the press role's 0.96.
-  final double pressedScale;
 
   /// Whether to fire [HapticFeedback.lightImpact] on tap.
   final bool haptic;
@@ -82,7 +79,6 @@ class PressableScale extends StatefulWidget {
     this.onTap,
     this.onLongPress,
     this.onMenu,
-    this.pressedScale = AppAnimation.pressScale,
     this.haptic = true,
     this.semanticLabel,
     this.semanticValue,
@@ -136,7 +132,7 @@ class _PressableScaleState extends State<PressableScale> {
     final animate = !MediaQuery.disableAnimationsOf(context);
 
     final Widget scaled = AnimatedScale(
-      scale: _pressed && animate ? widget.pressedScale : 1.0,
+      scale: _pressed && animate ? AppAnimation.pressScale : 1.0,
       duration: animate ? AppAnimation.press : Duration.zero,
       curve: AppAnimation.standardCurve,
       child: PressFeedback._(

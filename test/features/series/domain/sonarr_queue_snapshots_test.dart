@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
-import 'package:cupola/features/series/domain/models/sonarr_season.dart';
 import 'package:cupola/features/series/domain/sonarr_queue_snapshots.dart';
 import 'package:cupola/features/series/domain/sonarr_status.dart';
 
@@ -33,14 +32,6 @@ const _episode = SonarrEpisode(
   hasFile: false,
   monitored: true,
   airDateUtc: '2024-01-08T00:00:00Z',
-);
-
-const _season = SonarrSeason(
-  seasonNumber: 2,
-  monitored: true,
-  episodeCount: 2,
-  totalEpisodeCount: 2,
-  episodeFileCount: 1,
 );
 
 void main() {
@@ -87,15 +78,6 @@ void main() {
     expect(status.pipeline, MediaPipeline.downloading);
     // The file is still missing on disk; what the row says is the pipeline.
     expect(status.label, 'Downloading');
-
-    expect(
-      sonarrSeasonStatus(
-        _season,
-        queueEntry: queues.seasonEntry(1, 2),
-        queueUnknown: !queues.isWhole,
-      ).pipeline,
-      MediaPipeline.downloading,
-    );
   });
 
   test('with the queue unread, an aired episode with no file and its '
@@ -108,19 +90,6 @@ void main() {
     expect(
       sonarrEpisodeStatus(_episode, now: now).availability,
       MediaAvailability.missing,
-    );
-    expect(
-      sonarrSeasonStatus(
-        const SonarrSeason(
-          seasonNumber: 2,
-          monitored: true,
-          episodeCount: 2,
-          totalEpisodeCount: 2,
-          episodeFileCount: 0,
-        ),
-        queueUnknown: true,
-      ).availability,
-      MediaAvailability.unknown,
     );
   });
 }

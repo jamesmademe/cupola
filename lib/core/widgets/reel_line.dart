@@ -49,31 +49,10 @@ class ReelLine extends StatelessWidget {
     this.textAlign,
     this.fallbackMaxLines,
     this.fallbackOverflow,
-  }) : span = null;
+  });
 
-  /// A rolling line built from a styled span tree.
-  ///
-  /// Use where part of the line carries its own colour or weight: an accented
-  /// word in a headline, a figure and its metric word as one run. Only the text
-  /// clusters roll; a [WidgetSpan] leaf stays anchored.
-  const ReelLine.rich(
-    InlineSpan this.span, {
-    super.key,
-    required String plain,
-    this.style,
-    this.options = ReelMotion.figure,
-    this.semanticsLabel,
-    this.textAlign,
-    this.fallbackMaxLines,
-    this.fallbackOverflow,
-  }) : text = plain;
-
-  /// The plain string. In [ReelLine.rich] this is the flattened text, used for
-  /// measurement and as the default spoken value.
+  /// The plain string: used for measurement and as the default spoken value.
   final String text;
-
-  /// The styled tree, when built through [ReelLine.rich].
-  final InlineSpan? span;
 
   final TextStyle? style;
 
@@ -130,21 +109,13 @@ class ReelLine extends StatelessWidget {
           // text is unaffected: the clip is the widget's own box, which by
           // definition already contains the line it is laying out.
           return ClipRect(
-            child: span == null
-                ? ReelText(
-                    text,
-                    style: resolved,
-                    options: options,
-                    textAlign: textAlign,
-                    semanticsLabel: semanticsLabel ?? text,
-                  )
-                : ReelText.rich(
-                    span!,
-                    style: resolved,
-                    options: options,
-                    textAlign: textAlign,
-                    semanticsLabel: semanticsLabel ?? text,
-                  ),
+            child: ReelText(
+              text,
+              style: resolved,
+              options: options,
+              textAlign: textAlign,
+              semanticsLabel: semanticsLabel ?? text,
+            ),
           );
         }
 
@@ -155,30 +126,19 @@ class ReelLine extends StatelessWidget {
 
   /// The line as ordinary text: what it looks like settled, and what it falls
   /// back to whenever it cannot roll.
-  Widget _still(TextStyle resolved) => span == null
-      ? Text(
-          text,
-          style: resolved,
-          textAlign: textAlign,
-          maxLines: fallbackMaxLines,
-          overflow: fallbackOverflow,
-          semanticsLabel: semanticsLabel,
-        )
-      : Text.rich(
-          span!,
-          style: resolved,
-          textAlign: textAlign,
-          maxLines: fallbackMaxLines,
-          overflow: fallbackOverflow,
-          semanticsLabel: semanticsLabel,
-        );
+  Widget _still(TextStyle resolved) => Text(
+    text,
+    style: resolved,
+    textAlign: textAlign,
+    maxLines: fallbackMaxLines,
+    overflow: fallbackOverflow,
+    semanticsLabel: semanticsLabel,
+  );
 
   bool _fits(BuildContext context, TextStyle resolved, double maxWidth) =>
       fitsOneLine(
         context,
-        span: span == null
-            ? TextSpan(text: text, style: resolved)
-            : TextSpan(style: resolved, children: [span!]),
+        span: TextSpan(text: text, style: resolved),
         maxWidth: maxWidth,
       );
 

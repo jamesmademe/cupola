@@ -361,10 +361,6 @@ StreamItem jellyfinSearchHintFromJson(Map<String, dynamic> hint) {
   });
 }
 
-/// A whole `SearchHints` array. Top-level for `Isolate.run`, like its sibling.
-List<StreamItem> jellyfinSearchHintsFromJson(Object? raw) =>
-    jsonObjects(raw, jellyfinSearchHintFromJson);
-
 /// Jellyfin's `PlayMethod` → the shared decision enum.
 ///
 /// A missing `PlayMethod` with a live `TranscodingInfo` is treated as a

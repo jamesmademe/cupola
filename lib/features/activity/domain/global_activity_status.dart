@@ -26,7 +26,7 @@ import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 /// Declared here rather than beside the provider because the resolvers below
 /// switch on it, and a domain layer must not import presentation.
 /// `activity_provider.dart` re-exports it, so existing call sites are unchanged.
-enum GlobalActivityKind { request, queue, history, blocklist, missing, cutoff }
+enum GlobalActivityKind { request, queue, history, blocklist }
 
 /// Resolves an \*arr record of the given [kind] into a renderable status.
 MediaStatusInfo resolveActivityStatus(
@@ -37,8 +37,6 @@ MediaStatusInfo resolveActivityStatus(
     GlobalActivityKind.queue => resolveQueueDisplayStatus(item),
     GlobalActivityKind.history => resolveHistoryStatus(item),
     GlobalActivityKind.blocklist => resolveBlocklistStatus(item),
-    GlobalActivityKind.missing => resolveWantedStatus(item, isCutoff: false),
-    GlobalActivityKind.cutoff => resolveWantedStatus(item, isCutoff: true),
     // Requests never arrive as a raw map; see [resolveRequestStatus].
     GlobalActivityKind.request => const MediaStatusInfo.unknown(),
   };

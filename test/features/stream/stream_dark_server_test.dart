@@ -25,7 +25,6 @@ import 'package:cupola/features/stream/domain/stream_semantics.dart';
 import 'package:cupola/features/stream/presentation/stream_activity_provider.dart';
 import 'package:cupola/features/stream/presentation/stream_overview_provider.dart';
 import 'package:cupola/features/stream/presentation/stream_overview_screen.dart';
-import 'package:cupola/features/stream/presentation/widgets/stream_activity_section.dart';
 
 import '../../test_helpers/settings_scope.dart';
 
@@ -144,7 +143,7 @@ void main() {
     });
   });
 
-  group('Activity streaming', () {
+  group('the Streaming reads, every connection dark or some', () {
     test('every configured server dark is a failure, not "nobody"', () async {
       final container = ProviderContainer(
         overrides: [
@@ -268,21 +267,6 @@ void main() {
     expect(find.text(streamIdleMessage), findsNothing);
     expect(find.byType(ServiceOfflineState), findsOneWidget);
     expect(find.byType(AppErrorState), findsNothing);
-    expectPlainWords();
-  });
-
-  testWidgets('Activity with its only media server dark names it, not '
-      '"Nobody is watching"', (tester) async {
-    await _pump(
-      tester,
-      configured: const [ServiceKey.jellyfin],
-      overrides: [jellyfinClientProvider.overrideWith((_) => _darkJellyfin())],
-      home: const Scaffold(body: StreamActivitySection(bottomPadding: 0)),
-    );
-
-    expect(find.text(streamIdleMessage), findsNothing);
-    expect(find.byType(ServiceOfflineState), findsOneWidget);
-    expect(find.text('Jellyfin did not answer'), findsOneWidget);
     expectPlainWords();
   });
 }

@@ -733,10 +733,7 @@ class ServiceMatrixCell extends ConsumerWidget {
     // than dark, and it carries no pip: nothing has been asked, so there is
     // nothing to report.
     if (!configured && instanceId == null) {
-      return _NotSetUpCell(
-        service: service,
-        asRow: role == ServiceMatrixRole.readout,
-      );
+      return _NotSetUpCell(service: service);
     }
 
     final summary = instanceId == null
@@ -859,119 +856,56 @@ class ServiceMatrixCell extends ConsumerWidget {
 /// silently omits what you have not connected cannot be read as an inventory,
 /// and the one action it needs is one tap away.
 class _NotSetUpCell extends StatelessWidget {
-  const _NotSetUpCell({required this.service, this.asRow = false});
+  const _NotSetUpCell({required this.service});
 
   final ServiceKey service;
 
-  /// A row of the readout's list rather than a card of the picker's grid.
-  final bool asRow;
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    if (asRow) {
-      final room = CupolaRoom.of(context);
-      return AppCard.surfaceOutlined(
-        key: ValueKey('service-matrix-cell-${service.routeParam}'),
-        onTap: () => context.push(ServiceRoutes.setUp(service)),
-        pressFeedback: AppCardPressFeedback.scale,
-        semanticLabel: service.title,
-        semanticValue: servicesNotSetUpCellLabel,
-        excludeChildSemantics: true,
-        backgroundColor: Colors.transparent,
-        borderColor: Colors.transparent,
-        borderRadius: BorderRadius.zero,
-        padding: _rowPadding,
-        child: Row(
-          children: [
-            Opacity(opacity: 0.5, child: ServiceMarkTile(icon: service.icon)),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    Lexicon.setUp(service.title),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppType.row.copyWith(color: room.inkSecondary),
-                  ),
-                  Text(
-                    servicesNotSetUpCellLabel,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppType.meta.copyWith(color: room.inkTertiary),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: room.edge),
-              ),
-              child: Icon(
-                Icons.add_rounded,
-                size: 18,
-                color: room.inkSecondary,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
+    final room = CupolaRoom.of(context);
     return AppCard.surfaceOutlined(
       key: ValueKey('service-matrix-cell-${service.routeParam}'),
-      // The service's own setup form, like every other `Set up X`: the
-      // connections list made the user find, a second time, the service
-      // they had just tapped.
       onTap: () => context.push(ServiceRoutes.setUp(service)),
       pressFeedback: AppCardPressFeedback.scale,
       semanticLabel: service.title,
       semanticValue: servicesNotSetUpCellLabel,
       excludeChildSemantics: true,
-      backgroundColor: colorScheme.surfaceContainerLow,
-      borderRadius: AppRadius.borderRadiusLg,
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      backgroundColor: Colors.transparent,
+      borderColor: Colors.transparent,
+      borderRadius: BorderRadius.zero,
+      padding: _rowPadding,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Icon(
-                service.icon,
-                size: ServiceMatrixMetrics.glyphSize,
-                color: colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  service.shortTitle,
+          Opacity(opacity: 0.5, child: ServiceMarkTile(icon: service.icon)),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  Lexicon.setUp(service.title),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium
-                      ?.weight(FontWeight.w600)
-                      .copyWith(color: colorScheme.onSurfaceVariant),
+                  style: AppType.row.copyWith(color: room.inkSecondary),
                 ),
-              ),
-            ],
-          ),
-          Text(
-            servicesNotSetUpCellLabel,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color:
-                  theme.extension<CupolaThemeColors>()?.dimText ??
-                  colorScheme.onSurfaceVariant,
+                Text(
+                  servicesNotSetUpCellLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppType.meta.copyWith(color: room.inkTertiary),
+                ),
+              ],
             ),
+          ),
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: room.edge),
+            ),
+            child: Icon(Icons.add_rounded, size: 18, color: room.inkSecondary),
           ),
         ],
       ),
@@ -1033,7 +967,7 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
   final ServiceSignalPair? signals;
 
   /// The service answered its probe and its figures did not arrive. Drawn as
-  /// an em dash rather than the in-flight shimmer: see [_CellLiveLine].
+  /// an em dash rather than the in-flight shimmer: see [_CellRow].
   final bool signalsFailed;
   final String host;
 
@@ -1181,16 +1115,7 @@ class _ServiceMatrixCellBody extends ConsumerWidget {
                   surface: surface,
                   instanceCount: instanceCount,
                 ),
-                if (role == ServiceMatrixRole.readout)
-                  _CellLiveLine(
-                    reachability: reachability,
-                    faultTone: faultTone,
-                    signals: signals,
-                    signalsFailed: signalsFailed,
-                    statusLabel: statusLabel,
-                    surface: surface,
-                  )
-                else if (host.isNotEmpty)
+                if (host.isNotEmpty)
                   Text(
                     host,
                     maxLines: 1,
@@ -1522,201 +1447,6 @@ class _ReachabilityPip extends StatelessWidget {
       width: _size,
       height: _size,
       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-    );
-  }
-}
-
-/// The readout: two live figures when the service is up, the state word when it
-/// is not.
-///
-/// One slot for both is the point. The old card spent a row on `ONLINE` next to
-/// a green dot saying the same thing, and spent the row below it on a library
-/// total that does not change from one week to the next: so the only genuinely
-/// live line on a control-room screen was chrome.
-///
-/// Two figures rather than one, because one was never the whole answer: the
-/// primary is the service's headline (its scale, or its fault if it has one) and
-/// the secondary is the next-ranked metric, **each keeping its own tone**. A
-/// Radarr reads `2 038 movies` over a neutral `34 missing`; a Bazarr reads
-/// `47 wanted subs` over an amber `API key rejected`. Painting both with the
-/// worse of the two would collapse the distinction the tone rule is for.
-class _CellLiveLine extends StatelessWidget {
-  const _CellLiveLine({
-    required this.reachability,
-    required this.signals,
-    this.signalsFailed = false,
-    required this.statusLabel,
-    required this.surface,
-    this.faultTone = StatusTone.warning,
-  });
-
-  final ServiceReachability reachability;
-
-  /// Amber for a fault; blue for a Seerr account that signed out.
-  final StatusTone faultTone;
-  final ServiceSignalPair? signals;
-  final bool signalsFailed;
-  final String statusLabel;
-
-  /// The cell's own background, which is what a tone-coloured word here is
-  /// measured against. An offline cell sits a step lower on the surface ladder,
-  /// so it is not the same composite as an online one.
-  final Color surface;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    // One tier above the name is the whole hierarchy: the figure is the only
-    // thing on the cell allowed to be larger and bolder than the service's own
-    // name, and only just.
-    final figureStyle = theme.textTheme.bodyLarge?.weight(FontWeight.w600);
-
-    if (reachability != ServiceReachability.online) {
-      return Text(
-        statusLabel,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: figureStyle?.copyWith(
-          // `surface` is the card's own ground, not the scaffold's: the walk
-          // that keeps a saturated tone legible has to measure against what the
-          // label actually sits on.
-          //
-          // Checking is **neutral**, not amber. A probe still out is not a
-          // fault, and the header says the same thing in the same breath ("N
-          // checking, which is not a fault").
-          //
-          // A fault is amber: the service answered. Only a service that did
-          // not answer is red.
-          color: statusToneColor(colorScheme, switch (reachability) {
-            ServiceReachability.checking ||
-            ServiceReachability.onlyAtHome => StatusTone.neutral,
-            ServiceReachability.fault => faultTone,
-            _ => StatusTone.error,
-          }, surface: surface),
-        ),
-      );
-    }
-
-    final current = signals;
-    if (current == null && signalsFailed) {
-      // Untoned, like `ServiceKpi.unavailable`: the figure's absence is not a
-      // fault of the service, which has just answered its probe.
-      return Text(
-        ServiceKpi.unavailableValue,
-        maxLines: 1,
-        style: figureStyle?.copyWith(
-          color:
-              theme.extension<CupolaThemeColors>()?.dimText ??
-              colorScheme.onSurfaceVariant,
-        ),
-      );
-    }
-    if (current == null) {
-      // Reachable, metric still in flight. A shimmer says "coming"; blank space
-      // would say "nothing to report", which is a different fact.
-      return ShimmerPlaceholder.text(width: 64);
-    }
-
-    final secondary = current.secondary;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _FigureLine(
-          signal: current.primary,
-          style: figureStyle,
-          surface: surface,
-          emphasis: true,
-        ),
-        if (secondary != null)
-          _FigureLine(
-            signal: secondary,
-            style: theme.textTheme.bodySmall?.weight(FontWeight.w600),
-            surface: surface,
-            emphasis: false,
-          ),
-      ],
-    );
-  }
-}
-
-/// One figure and its word, on one line.
-class _FigureLine extends StatelessWidget {
-  const _FigureLine({
-    required this.signal,
-    required this.style,
-    required this.surface,
-    required this.emphasis,
-  });
-
-  final ServiceSignal signal;
-  final TextStyle? style;
-  final Color surface;
-
-  /// Whether this is the card's primary. The secondary is a step quieter in
-  /// size and weight: two figures at the same weight are two headlines.
-  final bool emphasis;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final needsAttention = signal.needsAttention;
-    // Each figure keeps its own tone, resolved against the card's own ground.
-    // An unflagged figure is ordinary ink, not a colour: a card where every
-    // number is tinted has no way left to say which one matters.
-    final toneColor = needsAttention
-        ? statusToneColor(colorScheme, signal.tone, surface: surface)
-        : (emphasis ? colorScheme.onSurface : colorScheme.onSurfaceVariant);
-
-    return Row(
-      children: [
-        // Only when the figure is asking for something. On a healthy service the
-        // glyph restates the metric word beside it, and sixteen of them turned
-        // the grid into a sheet of pictograms.
-        if (needsAttention && emphasis) ...[
-          Icon(signal.icon, size: 13, color: toneColor),
-          const SizedBox(width: AppSpacing.xs),
-        ],
-        // One text run, not two `Text`s in a `Row`. Two of them cannot both be
-        // right. Unflexed, a wide figure cannot shrink, and a transfer rate
-        // is service-supplied and `1023.9 KB/s` at the band's 1.6x clamp is
-        // wider on its own than a two-column cell on a 375pt phone, which is an
-        // overflow stripe rather than an ellipsis. Made flexible instead,
-        // Flutter splits the free space by flex factor and never hands the
-        // remainder back, so `12 missing` elided to "12 missi…" at the *default*
-        // reading size with room to spare.
-        Expanded(
-          child: Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(
-                  // The figure updates in place; proportional digits make it
-                  // jitter.
-                  text: signal.value,
-                  style: style?.tabular.copyWith(color: toneColor),
-                ),
-                // Absent when the value is already a state word, such as "Paused", which needs
-                // no "status" after it. See `ServiceSignal.label`.
-                if (signal.label.isNotEmpty)
-                  TextSpan(
-                    text: ' ${signal.label}',
-                    // Plain body, not `AppTheme.eyebrow`. The Eyebrow Rule stops
-                    // at repetition: "the eyebrow earns its emphasis by being
-                    // rare", and one per cell across a sixteen-cell grid is the
-                    // noise the style exists to avoid.
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-              ],
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
     );
   }
 }

@@ -458,46 +458,6 @@ void main() {
     });
   });
 
-  group('the compact pair', () {
-    testWidgets('is a 28pt plate in a 44pt target, and says its answer '
-        'small', (tester) async {
-      final harness = await _pump(
-        tester,
-        Profiles.p6,
-        const RequestAnswerControls.compact(
-          instanceId: _seerr,
-          requestId: 1,
-          title: 'Charge',
-        ),
-      );
-
-      for (final button in [
-        find.byType(FilledButton),
-        find.byType(OutlinedButton),
-      ]) {
-        expect(tester.getSize(button).height, greaterThanOrEqualTo(44));
-        expect(
-          tester
-              .getSize(
-                find
-                    .descendant(of: button, matching: find.byType(Material))
-                    .first,
-              )
-              .height,
-          28,
-        );
-      }
-
-      await tester.tap(_decline);
-      await harness.settle(tester);
-      await tester.tap(find.widgetWithText(FilledButton, 'Decline request'));
-      await harness.settle(tester);
-      expect(find.text('Declined'), findsOneWidget);
-
-      await harness.unmount(tester);
-    });
-  });
-
   test('the phases say what a screen reader hears of each', () {
     expect(RequestAnswerPhase.checking.spoken, 'Checking where it goes');
     expect(RequestAnswerPhase.approving.spoken, 'Approving');

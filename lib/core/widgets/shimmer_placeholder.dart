@@ -16,21 +16,16 @@ class ShimmerPlaceholder extends StatefulWidget {
   /// Border radius of the placeholder
   final BorderRadius? borderRadius;
 
-  /// Whether to show as a circle
-  final bool isCircle;
-
   const ShimmerPlaceholder({
     super.key,
     this.width,
     required this.height,
     this.borderRadius,
-    this.isCircle = false,
   });
 
   /// Creates a card-shaped shimmer placeholder
   ShimmerPlaceholder.card({super.key, this.width, required this.height})
-    : borderRadius = AppRadius.borderRadiusMd,
-      isCircle = false;
+    : borderRadius = AppRadius.borderRadiusMd;
 
   /// Creates a text line shimmer placeholder
   factory ShimmerPlaceholder.text({
@@ -45,13 +40,6 @@ class ShimmerPlaceholder extends StatefulWidget {
       borderRadius: AppRadius.borderRadiusXs,
     );
   }
-
-  /// Creates a circular shimmer placeholder
-  const ShimmerPlaceholder.circle({super.key, required double size})
-    : width = size,
-      height = size,
-      borderRadius = null,
-      isCircle = true;
 
   @override
   State<ShimmerPlaceholder> createState() => _ShimmerPlaceholderState();
@@ -100,8 +88,7 @@ class _ShimmerPlaceholderState extends State<ShimmerPlaceholder>
         width: widget.width,
         height: widget.height,
         decoration: BoxDecoration(
-          shape: widget.isCircle ? BoxShape.circle : BoxShape.rectangle,
-          borderRadius: widget.isCircle ? null : widget.borderRadius,
+          borderRadius: widget.borderRadius,
           color: baseColor,
         ),
       );
@@ -114,8 +101,7 @@ class _ShimmerPlaceholderState extends State<ShimmerPlaceholder>
           width: widget.width,
           height: widget.height,
           decoration: BoxDecoration(
-            shape: widget.isCircle ? BoxShape.circle : BoxShape.rectangle,
-            borderRadius: widget.isCircle ? null : widget.borderRadius,
+            borderRadius: widget.borderRadius,
             gradient: LinearGradient(
               begin: Alignment(_animation.value - 1, 0),
               end: Alignment(_animation.value, 0),

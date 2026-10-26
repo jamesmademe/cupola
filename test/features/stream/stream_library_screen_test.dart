@@ -106,17 +106,6 @@ class _ScriptedServer implements StreamServerClient {
   }) async => null;
 
   @override
-  Future<StreamItem?> findByExternalId({
-    String? tmdbId,
-    String? tvdbId,
-    String? imdbId,
-    StreamItemKind? kind,
-    String? title,
-    int? year,
-    CancelToken? cancelToken,
-  }) async => null;
-
-  @override
   Future<StreamExternalLookup> lookupByExternalId({
     String? tmdbId,
     String? tvdbId,
@@ -161,9 +150,6 @@ class _ScriptedServer implements StreamServerClient {
 
   @override
   Future<bool> verifyCredential() async => true;
-
-  @override
-  Future<void> refreshLibrary(String libraryId) async {}
 
   @override
   Future<void> stopSession(String sessionId) async {}

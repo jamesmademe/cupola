@@ -39,15 +39,6 @@ class AppAnimation {
   /// are kept so the call sites stand.
   static const Curve emphasizedCurve = DesignTokens.motionCurveStandard;
 
-  /// Sheets and dialogs arriving.
-  static const Curve sheetInCurve = DesignTokens.motionSheetInCurve;
-
-  /// Sheets and dialogs leaving.
-  static const Curve sheetOutCurve = DesignTokens.motionSheetOutCurve;
-
-  /// A figure rolling into place (easeOutCubic).
-  static const Curve rollCurve = DesignTokens.motionRollCurve;
-
   // === ROLES ===
 
   /// 180ms - The press dip.
@@ -68,23 +59,8 @@ class AppAnimation {
   /// 420ms - The pager, the segmented thumb, the chip rail.
   static const Duration emphasized = DesignTokens.motionEmphasizedDuration;
 
-  /// 520ms - An entrance: rise [enterRise] and fade.
+  /// 520ms - An entrance: rise and fade.
   static const Duration enter = DesignTokens.motionEnterDuration;
-
-  /// How far an entering element rises.
-  static const double enterRise = DesignTokens.motionEnterRise;
-
-  /// 40ms - The delay between siblings entering.
-  static const Duration enterStagger = DesignTokens.motionEnterStagger;
-
-  /// Siblings past this many enter together.
-  static final int enterStaggerMax = DesignTokens.motionEnterStaggerMax.round();
-
-  /// 380ms - Sheets and dialogs in.
-  static const Duration sheetIn = DesignTokens.motionSheetInDuration;
-
-  /// 240ms - Sheets and dialogs out.
-  static const Duration sheetOut = DesignTokens.motionSheetOutDuration;
 
   /// 450ms - The poster → Media flight.
   static const Duration shared = DesignTokens.motionSharedDuration;
