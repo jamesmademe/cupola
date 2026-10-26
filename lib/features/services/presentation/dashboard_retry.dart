@@ -108,7 +108,6 @@ void retryDashboardServices(WidgetRef ref, Iterable<ServiceKey> services) {
     }
     ref.invalidate(serviceSummaryProvider(service));
     ref.invalidate(serviceKpiProvider(service));
-    ref.invalidate(serviceSignalProvider(service));
     ref.invalidate(serviceSignalPairProvider(service));
     ref.invalidate(foldedServiceKpisProvider(service));
     ref.invalidate(foldedServiceSignalPairProvider(service));

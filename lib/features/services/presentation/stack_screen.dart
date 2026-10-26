@@ -347,7 +347,6 @@ void _invalidateStack(WidgetRef ref, {bool libraries = true}) {
     // it was the one thing refresh did not touch: the KPI providers were only
     // ever invalidated from the individual service pages.
     ref.invalidate(serviceKpiProvider(service));
-    ref.invalidate(serviceSignalProvider(service));
     // The stack card's two figures. Reduced from the same KPI list, but its own
     // `autoDispose` family entry; invalidating only the single-figure provider
     // left the cards showing the figures from before the pull.

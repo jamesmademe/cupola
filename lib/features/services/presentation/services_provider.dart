@@ -4142,7 +4142,7 @@ DashboardDecision _failedImportDecision(ArrHistoryEntry entry) =>
 
 /// The two live figures one stack card shows.
 ///
-/// Lives here rather than beside `serviceSignalProvider` because it is a
+/// Lives here rather than beside the KPI providers because it is a
 /// Dashboard concern: the Portal's picker and the aggregate lines all want
 /// exactly one figure and are right to. The card wants two, and reduces the same
 /// KPI list through the same ranking (see `resolveServiceSignalPair`), so the
