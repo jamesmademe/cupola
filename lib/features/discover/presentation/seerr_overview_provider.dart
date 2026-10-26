@@ -20,6 +20,7 @@ import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/date_format.dart' show formatDayWords;
+import 'package:cupola/features/discover/data/seerr_service.dart';
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/domain/seerr_grant.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
@@ -181,6 +182,26 @@ SeerrOverviewSection seerrProcessingSection(
   int limit = seerrProcessingPreviewLimit,
   SeerrRowVoice voice = _operatorVoice,
 }) {
+  final picked = seerrProcessingPick(requests, limit: limit);
+  return (
+    rows: List.unmodifiable([
+      for (final request in picked.shown)
+        _row(request, now: now, tone: StatusTone.info, voice: voice),
+    ]),
+    total: picked.total,
+    isFloor: !holdsEveryRequest(requests),
+  );
+}
+
+/// The requests [seerrProcessingSection] draws, newest first and cut to
+/// [limit], and how many Seerr is working on in all.
+///
+/// Apart from the section so a reader that has only the rows can pick the few
+/// it draws and name those alone.
+({List<SeerrRequest> shown, int total}) seerrProcessingPick(
+  List<SeerrRequest> requests, {
+  int limit = seerrProcessingPreviewLimit,
+}) {
   final working = <SeerrRequest>[];
   for (final request in requests) {
     switch (request.displayStatus.kind) {
@@ -214,12 +235,8 @@ SeerrOverviewSection seerrProcessingSection(
   });
 
   return (
-    rows: List.unmodifiable([
-      for (final request in working.take(limit))
-        _row(request, now: now, tone: StatusTone.info, voice: voice),
-    ]),
+    shown: working.take(limit).toList(growable: false),
     total: working.length,
-    isFloor: !holdsEveryRequest(requests),
   );
 }
 
@@ -251,11 +268,22 @@ final seerrOverviewDecisionsProvider =
 final seerrOverviewProcessingProvider =
     FutureProvider.autoDispose<SeerrOverviewSection>((ref) async {
       final voice = seerrRowVoice(ref);
-      final requests = await ref.watch(requestsProvider.future);
-      return seerrProcessingSection(
-        requests,
-        now: DateTime.now(),
-        voice: voice,
+      // Counted over the rows; only the few drawn are named.
+      final requests = await ref.watch(requestRowsProvider.future);
+      final picked = seerrProcessingPick(requests);
+      final shown = await ref.watch(seerrServiceProvider).hydrate(picked.shown);
+      return (
+        rows: List<SeerrOverviewRow>.unmodifiable([
+          for (final request in shown)
+            _row(
+              request,
+              now: DateTime.now(),
+              tone: StatusTone.info,
+              voice: voice,
+            ),
+        ]),
+        total: picked.total,
+        isFloor: !holdsEveryRequest(requests),
       );
     }, retry: noProviderRetry);
 

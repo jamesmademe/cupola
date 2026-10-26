@@ -1072,12 +1072,12 @@ List<ServiceKpi> _qbittorrentKpisFrom(
 }
 
 Future<List<ServiceKpi>> _seerrKpis(Ref ref) async =>
-    _seerrKpisFrom(await ref.watch(requestsProvider.future));
+    _seerrKpisFrom(await ref.watch(requestRowsProvider.future));
 
 /// See [_radarrKpisFor]. Seerr already owned its per-connection read, because a
 /// request id is per instance and a merged list cannot be acted on by id alone.
 Future<List<ServiceKpi>> _seerrKpisFor(Ref ref, String instanceId) async =>
-    _seerrKpisFrom(await ref.watch(requestsForProvider(instanceId).future));
+    _seerrKpisFrom(await ref.watch(requestRowsForProvider(instanceId).future));
 
 List<ServiceKpi> _seerrKpisFrom(List<SeerrRequest> requests) {
   var pending = 0;

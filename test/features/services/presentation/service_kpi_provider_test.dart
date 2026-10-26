@@ -45,7 +45,7 @@ SeerrRequest _request({
 
 Future<Map<String, String>> _seerrKpis(List<SeerrRequest> requests) async {
   final container = ProviderContainer(
-    overrides: [requestsProvider.overrideWith((ref) async => requests)],
+    overrides: [requestRowsProvider.overrideWith((ref) async => requests)],
   );
   addTearDown(container.dispose);
 

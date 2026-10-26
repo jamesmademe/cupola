@@ -203,15 +203,19 @@ bool holdsEveryRequest(List<SeerrRequest> requests) => switch (requests) {
 /// a minute before showing the same error. The retry that matters is the one on
 /// the card the section draws, which the user presses.
 final seerrDecisionsProvider = FutureProvider<SeerrDecisions>((ref) async {
-  final requests = await ref.watch(requestsProvider.future);
+  // The rows, not the list with titles: what waits is counted over states
+  // alone, and only the few the section draws are named.
+  final requests = await ref.watch(requestRowsProvider.future);
   final waiting = requests.where(isAwaitingApproval).toList(growable: false);
+  final preview = await ref
+      .watch(seerrServiceProvider)
+      .hydrate(
+        // The set is already filtered to pending, so this sort is doing its
+        // second job only: newest first inside the group.
+        sortRequestsPendingFirst(waiting, limit: seerrDecisionsPreviewLimit),
+      );
   return (
-    // The set is already filtered to pending, so this sort is doing its second
-    // job only: newest first inside the group.
-    preview: sortRequestsPendingFirst(
-      waiting,
-      limit: seerrDecisionsPreviewLimit,
-    ),
+    preview: preview,
     // Counted over the rows, so only as whole as they are. A lost page used
     // to come out as a smaller, confident "3 waiting".
     total: waiting.length,
