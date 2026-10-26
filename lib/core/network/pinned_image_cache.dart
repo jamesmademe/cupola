@@ -115,18 +115,48 @@ _pinnedCaches = {};
 /// for every unpinned image.
 PinnedImageCache? _guardedDefaultCache;
 
+/// What every cache key starts with: empty for the app's own stores, the
+/// scope's name inside [separateImageCaches].
+String _keyPrefix = '';
+
 /// Test-only: retires every memoised cache so one test cannot see another's.
 @visibleForTesting
 void resetPinnedImageCaches() {
+  for (final cache in _forgetCaches()) {
+    unawaited(_retire(cache));
+  }
+}
+
+/// Gives every image from here on stores of their own, named after [scope],
+/// until the returned call ends it.
+///
+/// The demo serves invented servers whose addresses could be a real
+/// household's (`nas.home.arpa` is the name RFC 8375 gives every home), and
+/// the stores are keyed by address: without a scope a poster the demo
+/// fetched would be served to the real server's page later, from disk. The
+/// app's own caches are let go, never emptied; ending the scope empties its
+/// stores and lets the app's be built again on their own keys.
+Future<void> Function() separateImageCaches(String scope) {
+  for (final cache in _forgetCaches()) {
+    unawaited(_retire(cache, empty: false));
+  }
+  _keyPrefix = '${scope}_';
+  return () async {
+    final retiring = _forgetCaches();
+    _keyPrefix = '';
+    await Future.wait(retiring.map(_retire));
+  };
+}
+
+/// Drops every memoised cache and returns them, for the caller to retire.
+List<PinnedImageCache> _forgetCaches() {
   final entries = <PinnedImageCache>[
     ..._pinnedCaches.values.map((entry) => entry.cache),
     ?_guardedDefaultCache,
   ];
   _pinnedCaches.clear();
   _guardedDefaultCache = null;
-  for (final cache in entries) {
-    unawaited(_retire(cache));
-  }
+  return entries;
 }
 
 /// The guarded [CacheManager] for [imageUrl]: pinned to its origin's trusted
@@ -157,7 +187,7 @@ BaseCacheManager? pinnedImageCacheFor(String? imageUrl) {
 
   final endpoint = Uri.parse(origin);
   final cache = pinnedImageCacheBuilder(
-    cacheKey: pinnedImageCacheKey(origin, pin),
+    cacheKey: '$_keyPrefix${pinnedImageCacheKey(origin, pin)}',
     fingerprint: pin,
     host: endpoint.host,
     port: endpoint.port,
@@ -177,7 +207,7 @@ PinnedImageCache _guardedDefaultImageCache() {
   final cached = _guardedDefaultCache;
   if (cached != null) return cached;
   final cache = pinnedImageCacheBuilder(
-    cacheKey: 'cupola_images_guarded',
+    cacheKey: '${_keyPrefix}cupola_images_guarded',
     fingerprint: '',
     host: '',
     port: 443,
@@ -186,12 +216,12 @@ PinnedImageCache _guardedDefaultImageCache() {
   return cache;
 }
 
-Future<void> _retire(PinnedImageCache cache) async {
+Future<void> _retire(PinnedImageCache cache, {bool empty = true}) async {
   try {
     // The new pin gets a new cache key and therefore a new store, so the old
     // one would otherwise sit on disk holding images fetched under a
     // certificate the user has since replaced.
-    await cache.manager.emptyCache();
+    if (empty) await cache.manager.emptyCache();
   } catch (_) {
     // A store that never opened has nothing to empty; retirement is
     // best-effort housekeeping and must not take a caller down with it.

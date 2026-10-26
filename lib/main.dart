@@ -22,6 +22,8 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/a11y_announce.dart';
 import 'package:cupola/core/widgets/app_snapshot_cover.dart';
 import 'package:cupola/core/widgets/themed_system_bars.dart';
+import 'package:cupola/demo/demo_door.dart';
+import 'package:cupola/demo/demo_session.dart';
 import 'package:cupola/features/discover/data/seerr_accounts.dart';
 import 'package:cupola/features/outside/data/outside_background.dart';
 import 'package:cupola/features/outside/data/outside_keeper.dart';
@@ -29,6 +31,7 @@ import 'package:cupola/features/release_search/data/release_search_bootstrap.dar
 import 'package:cupola/features/settings/data/route_probe.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/data/settings_service.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/shell/domain/startup_failure.dart';
 import 'package:cupola/features/shell/presentation/settings_back_claim.dart';
 import 'package:cupola/features/shell/presentation/startup_failure_page.dart';
@@ -81,7 +84,12 @@ Future<void> _start() async {
 
   switch (outcome) {
     case StartupReady(value: final overrides):
-      runApp(ProviderScope(overrides: overrides, child: const CupolaApp()));
+      runApp(
+        ProviderScope(
+          overrides: [...overrides, demoDoorProvider.overrideWithValue(_door)],
+          child: const CupolaApp(),
+        ),
+      );
       LinkHandoff.routerReadyWhenDrawn();
     case StartupFailed(:final failure):
       runApp(
@@ -93,6 +101,27 @@ Future<void> _start() async {
       );
   }
   DesktopWindow.showWhenDrawn();
+}
+
+/// The way into the demo and out of it: see [DemoSession].
+const _door = DemoDoor(enter: _enterDemo, leave: _leaveDemo);
+
+Future<void> _enterDemo(SettingsModel leaving) async {
+  final session = await DemoSession.start(leaving: leaving);
+  runApp(
+    ProviderScope(
+      overrides: [
+        ...session.overrides,
+        demoDoorProvider.overrideWithValue(_door),
+      ],
+      child: const CupolaApp(),
+    ),
+  );
+}
+
+Future<void> _leaveDemo(DemoSession session) async {
+  await session.end();
+  await _start();
 }
 
 /// The Home's last drawings (`LastKnownStore`), from the system's cache

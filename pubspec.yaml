@@ -42,6 +42,10 @@ dependencies:
   flutter_riverpod: ^3.0.3
   go_router: ^17.0.0
   shared_preferences: ^2.5.3
+  # Promoted from a transitive dependency of `shared_preferences` so the demo
+  # (`lib/demo/demo_session.dart`) can hold the app's preferences in memory
+  # for as long as it runs.
+  shared_preferences_platform_interface: ^2.4.2
   flutter_secure_storage: ^10.2.0
   cached_network_image: ^3.4.1
   # Promoted from a transitive dependency of `cached_network_image` so
