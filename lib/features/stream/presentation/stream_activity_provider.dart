@@ -190,8 +190,8 @@ final streamActivityProvider = FutureProvider<List<StreamActivityRow>>((
         ),
       );
     } catch (error, stack) {
-      // A shared account's Plex is not a failure, and is named by
-      // [streamActivityOwnerOnlyProvider] instead.
+      // A shared account's Plex is not a failure: only its owner sees who is
+      // watching, which Now playing says.
       if (await _ownerOnly(ref, connection.key, error)) continue;
       // Reported through streamActivityOfflineProvider rather than thrown: one
       // dark server must not hide the other's sessions.
@@ -248,8 +248,8 @@ final streamActivityOfflineProvider = FutureProvider<List<StreamOfflineSource>>(
       try {
         await ref.watch(streamSessionsForProvider(connection.key).future);
       } catch (error) {
-        // Answered and refused only the sessions: named in blue by
-        // [streamActivityOwnerOnlyProvider], never as a server that is down.
+        // Answered and refused only the sessions: named in blue on Now playing,
+        // never as a server that is down.
         if (await _ownerOnly(ref, connection.key, error)) continue;
         offline.add((
           service: connection.key.service,
@@ -268,45 +268,3 @@ final streamActivityOfflineProvider = FutureProvider<List<StreamOfflineSource>>(
   },
   retry: noProviderRetry,
 );
-
-/// A Plex connection whose sessions only the owner's token sees.
-///
-/// [server] is what the note calls it once the household has two Plex
-/// servers (`Plex Cabin`), and null while there is one, which the note calls
-/// "this Plex server".
-typedef StreamOwnerOnlySource = ({String instanceId, String? server});
-
-/// Configured Plex connections whose sessions only the owner's token sees,
-/// because the one saved is a shared account's. Never throws.
-final streamActivityOwnerOnlyProvider =
-    FutureProvider<List<StreamOwnerOnlySource>>((ref) async {
-      final ownerOnly = <StreamOwnerOnlySource>[];
-      for (final connection in _streamConnections(ref)) {
-        try {
-          await ref.watch(streamSessionsForProvider(connection.key).future);
-        } catch (error) {
-          if (!await _ownerOnly(ref, connection.key, error)) continue;
-          ownerOnly.add((
-            instanceId: connection.key.instanceId,
-            server: connection.name == null
-                ? null
-                : serviceWithConnection(
-                    connection.key.service,
-                    connection.name,
-                    joiner: ' ',
-                  ),
-          ));
-        }
-      }
-      return ownerOnly;
-    }, retry: noProviderRetry);
-
-/// Whether any media server is configured at all.
-///
-/// The Streaming sub-segment is offered unconditionally. Hiding a whole record
-/// type because nothing is set up yet would make the feature undiscoverable, so
-/// the body needs this to tell "not set up" from "nobody watching".
-final hasStreamServiceProvider = Provider<bool>((ref) {
-  final settings = ref.watch(currentSettingsProvider);
-  return ServiceDomain.stream.services.any(settings.isServiceConfigured);
-});

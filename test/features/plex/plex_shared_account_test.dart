@@ -3,7 +3,7 @@
 /// A Plex token is a person's. A shared account's reads the libraries it was
 /// given and is refused `/status/sessions` with a 401, the status a wrong
 /// token gets everywhere. Now playing used to report that 401 as a refused
-/// credential, and Activity's Streaming as a server that did not answer, in
+/// credential, and the Streaming list as a server that did not answer, in
 /// red. Plex now has a capability probe, and what it learns is said in blue:
 /// only the owner of the server sees what is playing.
 library;
@@ -21,8 +21,6 @@ import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/plex/presentation/plex_tab_screens.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
-import 'package:cupola/features/stream/domain/stream_semantics.dart';
-import 'package:cupola/features/stream/presentation/widgets/stream_activity_section.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_now_playing_section.dart';
 
 import '../../test_helpers/profiles/profiles.dart';
@@ -64,10 +62,6 @@ final Widget _nowPlaying = Scaffold(
       ),
     ),
   ),
-);
-
-const Widget _activity = Scaffold(
-  body: StreamActivitySection(bottomPadding: 0),
 );
 
 final _ownerOnly = find.text(plexOwnerOnlyMessage());
@@ -157,32 +151,6 @@ void main() {
       );
 
       expect(_ownerOnly, findsOneWidget);
-      _expectNoFault();
-      await harness.unmount(tester);
-    });
-
-    testWidgets('Activity, with no other media server: the note, and no '
-        'claim that nobody is watching', (tester) async {
-      final harness = await _pump(tester, Profiles.p6, _activity);
-
-      expect(_ownerOnly, findsOneWidget);
-      expect(find.text(streamIdleMessage), findsNothing);
-      _expectNoFault();
-      await harness.unmount(tester);
-    });
-
-    testWidgets('Activity, beside a Jellyfin: its sessions, and the Plex note '
-        'in blue rather than a server that did not answer', (tester) async {
-      final harness = await _pump(
-        tester,
-        Profiles.p6.withConnection(WorldConnections.jellyfin),
-        _activity,
-      );
-
-      // Anna, on the Jellyfin.
-      expect(find.text(WorldTitles.sintel.title), findsOneWidget);
-      expect(_ownerOnly, findsOneWidget);
-      _expectBlue(tester);
       _expectNoFault();
       await harness.unmount(tester);
     });
