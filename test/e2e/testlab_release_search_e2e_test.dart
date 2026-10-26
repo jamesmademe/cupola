@@ -51,6 +51,9 @@ void main() {
       }
       await Future<void>.delayed(const Duration(milliseconds: 500));
     }
+    // A torrent from an earlier run would make the grab a duplicate, and
+    // Radarr would read the refusal as a failed add: the test starts without it.
+    await _dropTorrent(credentials, _torrentName);
     await Future<void>.delayed(const Duration(seconds: 2));
   });
 
@@ -125,6 +128,45 @@ void main() {
       reason: 'Radarr recorded no outcome for the download',
     );
   }, timeout: const Timeout(Duration(minutes: 6)));
+}
+
+const _torrentName = 'The.Great.Bunny.2008.1080p.WEB-DL.DDP5.1.H.264-CUPOLA';
+
+Future<void> _dropTorrent(Map<String, String> credentials, String name) async {
+  final client = HttpClient();
+  try {
+    final cookie = await _signIn(client, credentials, _qbitDirect, _qbitHost);
+    final info = await client.getUrl(
+      Uri.parse('$_qbitDirect/api/v2/torrents/info'),
+    );
+    info.headers.set(HttpHeaders.hostHeader, _qbitHost);
+    info.headers.set('Cookie', cookie);
+    final torrents =
+        jsonDecode(await (await info.close()).transform(utf8.decoder).join())
+            as List;
+    final hashes = torrents
+        .whereType<Map>()
+        .where((torrent) => torrent['name'] == name)
+        .map((torrent) => torrent['hash'])
+        .whereType<String>()
+        .join('|');
+    if (hashes.isEmpty) return;
+    final call = await client.postUrl(
+      Uri.parse('$_qbitDirect/api/v2/torrents/delete'),
+    );
+    call.headers.set(HttpHeaders.hostHeader, _qbitHost);
+    call.headers.set('Cookie', cookie);
+    call.headers.contentType = ContentType(
+      'application',
+      'x-www-form-urlencoded',
+    );
+    final form = utf8.encode('hashes=$hashes&deleteFiles=true');
+    call.contentLength = form.length;
+    call.add(form);
+    await (await call.close()).drain<void>();
+  } finally {
+    client.close(force: true);
+  }
 }
 
 /// The app's qBittorrent, read directly: the WebUI's own port is 8080, the
