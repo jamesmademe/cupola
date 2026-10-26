@@ -57,15 +57,12 @@ class MediaGrid<T> extends StatelessWidget {
   /// Cover types to search for in images.
   final List<String> coverTypes;
 
-  /// Scroll physics. Use AlwaysScrollableScrollPhysics for RefreshIndicator.
-  final ScrollPhysics? physics;
-
   /// Minimum number of columns; more are used when the window is wide enough.
   ///
   /// This is a floor rather than a fixed count so an iPad or a resized macOS
   /// window fills with more posters instead of stretching three of them to
   /// several hundred points each.
-  final int crossAxisCount;
+  static const int _minColumns = 3;
 
   const MediaGrid({
     super.key,
@@ -79,8 +76,6 @@ class MediaGrid<T> extends StatelessWidget {
     required this.heroTagPrefix,
     this.onItemTap,
     this.coverTypes = const ['poster', 'cover'],
-    this.physics,
-    this.crossAxisCount = 3,
   });
 
   /// The floor a poster is built on: below this width the artwork stops being
@@ -143,7 +138,7 @@ class MediaGrid<T> extends StatelessWidget {
       builder: (context, constraints) {
         final columns = columnsFor(
           constraints.maxWidth - (AppSpacing.lg * 2),
-          crossAxisCount,
+          _minColumns,
         );
         return _grid(context, columns);
       },
@@ -152,7 +147,7 @@ class MediaGrid<T> extends StatelessWidget {
 
   Widget _grid(BuildContext context, int columns) {
     return GridView.builder(
-      physics: physics ?? const AlwaysScrollableScrollPhysics(),
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.only(
         left: AppSpacing.lg,
         right: AppSpacing.lg,
