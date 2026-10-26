@@ -2744,11 +2744,7 @@ List<GoRoute> _truenasSectionRoutes() => <GoRoute>[
   _page('data-protection', (state) => const TrueNasDataProtectionScreen()),
   _page(
     'containers',
-    (state) => const TrueNasVirtScreen(
-      type: 'CONTAINER',
-      title: 'Containers',
-      experimental: true,
-    ),
+    (state) => const TrueNasVirtScreen(type: 'CONTAINER'),
     routes: [
       _page(
         'instance/:id',
@@ -2761,7 +2757,7 @@ List<GoRoute> _truenasSectionRoutes() => <GoRoute>[
   ),
   _page(
     'vms',
-    (state) => const TrueNasVirtScreen(type: 'VM', title: 'Virtual machines'),
+    (state) => const TrueNasVirtScreen(type: 'VM'),
     routes: [
       _page(
         'instance/:id',
