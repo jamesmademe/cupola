@@ -48,7 +48,10 @@ void main() {
       await _tap(tester, flow, 'Test connection');
       expect(find.text('Radarr answered.'), findsOneWidget);
       // Nothing is saved until it has: the run could still be abandoned.
-      expect(flow.container.read(settingsProvider).radarrUrl, isEmpty);
+      expect(
+        flow.container.read(settingsProvider).urlFor(ServiceKey.radarr),
+        isEmpty,
+      );
       expect(flow.container.read(onboardingCompletedProvider), isFalse);
 
       await _tap(tester, flow, 'Continue');
@@ -61,8 +64,8 @@ void main() {
       expect(find.byType(OnboardingScreen), findsNothing);
       expect(flow.container.read(onboardingCompletedProvider), isTrue);
       final saved = flow.container.read(settingsProvider);
-      expect(saved.radarrUrl, WorldHosts.radarr);
-      expect(saved.radarrApiKey, worldKey(WorldIds.radarr));
+      expect(saved.urlFor(ServiceKey.radarr), WorldHosts.radarr);
+      expect(saved.apiKeyFor(ServiceKey.radarr), worldKey(WorldIds.radarr));
       // And it is the flag on disk that a next launch reads.
       expect(
         await flow.container
@@ -141,7 +144,10 @@ void main() {
         expect(_primary('Test connection'), findsOneWidget);
         expect(_primary('Continue'), findsNothing);
         // Nothing was saved on the way, and nothing is for the asking.
-        expect(flow.container.read(settingsProvider).radarrUrl, isEmpty);
+        expect(
+          flow.container.read(settingsProvider).urlFor(ServiceKey.radarr),
+          isEmpty,
+        );
 
         // Put back as it was tested, the answer holds again.
         await tester.enterText(input, typed);
@@ -169,7 +175,10 @@ void main() {
       await _tap(tester, flow, 'Test connection');
 
       expect(_primary('Continue'), findsNothing);
-      expect(flow.container.read(settingsProvider).radarrUrl, isEmpty);
+      expect(
+        flow.container.read(settingsProvider).urlFor(ServiceKey.radarr),
+        isEmpty,
+      );
       expect(flow.container.read(onboardingCompletedProvider), isFalse);
 
       await flow.harness.unmount(tester);
@@ -187,9 +196,12 @@ void main() {
       // Seerr is saved before Found asks it anything; the way in is not over.
       expect(find.text('Step 2 of 2'), findsOneWidget);
       expect(flow.container.read(onboardingCompletedProvider), isFalse);
-      expect(flow.container.read(settingsProvider).seerrUrl, WorldHosts.seerr);
       expect(
-        flow.container.read(settingsProvider).seerrApiKey,
+        flow.container.read(settingsProvider).urlFor(ServiceKey.seerr),
+        WorldHosts.seerr,
+      );
+      expect(
+        flow.container.read(settingsProvider).apiKeyFor(ServiceKey.seerr),
         worldKey(WorldIds.seerr),
       );
 
@@ -210,10 +222,10 @@ void main() {
       expect(flow.router.state.uri.path, ServiceRoutes.home);
       expect(flow.container.read(onboardingCompletedProvider), isTrue);
       final saved = flow.container.read(settingsProvider);
-      expect(saved.radarrUrl, isNotEmpty);
-      expect(saved.radarrApiKey, worldKey(WorldIds.radarr));
-      expect(saved.sonarrUrl, isNotEmpty);
-      expect(saved.sonarrApiKey, worldKey(WorldIds.sonarr));
+      expect(saved.urlFor(ServiceKey.radarr), isNotEmpty);
+      expect(saved.apiKeyFor(ServiceKey.radarr), worldKey(WorldIds.radarr));
+      expect(saved.urlFor(ServiceKey.sonarr), isNotEmpty);
+      expect(saved.apiKeyFor(ServiceKey.sonarr), worldKey(WorldIds.sonarr));
 
       await flow.harness.unmount(tester);
     });
@@ -237,11 +249,11 @@ void main() {
       await _tap(tester, flow, 'Enter Cupola');
 
       final saved = flow.container.read(settingsProvider);
-      expect(saved.radarrUrl, WorldHosts.radarr);
-      expect(saved.radarrApiKey, worldKey(WorldIds.radarr));
+      expect(saved.urlFor(ServiceKey.radarr), WorldHosts.radarr);
+      expect(saved.apiKeyFor(ServiceKey.radarr), worldKey(WorldIds.radarr));
       // What was typed for Seerr was never tested, so it is not a connection.
-      expect(saved.seerrUrl, isEmpty);
-      expect(saved.seerrApiKey, isEmpty);
+      expect(saved.urlFor(ServiceKey.seerr), isEmpty);
+      expect(saved.apiKeyFor(ServiceKey.seerr), isEmpty);
       expect(saved.instances, hasLength(1));
 
       await flow.harness.unmount(tester);
@@ -264,7 +276,10 @@ void main() {
       // No way forward from a service that did not answer, and nothing saved.
       expect(find.text('Radarr answered.'), findsNothing);
       expect(_primary('Continue'), findsNothing);
-      expect(flow.container.read(settingsProvider).radarrUrl, isEmpty);
+      expect(
+        flow.container.read(settingsProvider).urlFor(ServiceKey.radarr),
+        isEmpty,
+      );
       expect(flow.container.read(onboardingCompletedProvider), isFalse);
 
       // The key is put right on the server's side, and the same press works.
@@ -275,7 +290,7 @@ void main() {
       await _tap(tester, flow, 'Enter Cupola');
 
       expect(
-        flow.container.read(settingsProvider).radarrUrl,
+        flow.container.read(settingsProvider).urlFor(ServiceKey.radarr),
         WorldHosts.radarr,
       );
       expect(flow.router.state.uri.path, ServiceRoutes.home);
@@ -307,9 +322,9 @@ void main() {
       await _tap(tester, flow, 'Enter Cupola');
 
       final saved = flow.container.read(settingsProvider);
-      expect(saved.radarrUrl, WorldHosts.radarr);
-      expect(saved.sonarrUrl, WorldHosts.sonarr);
-      expect(saved.sonarrApiKey, worldKey(WorldIds.sonarr));
+      expect(saved.urlFor(ServiceKey.radarr), WorldHosts.radarr);
+      expect(saved.urlFor(ServiceKey.sonarr), WorldHosts.sonarr);
+      expect(saved.apiKeyFor(ServiceKey.sonarr), worldKey(WorldIds.sonarr));
       expect(flow.container.read(onboardingCompletedProvider), isTrue);
       expect(flow.router.state.uri.path, ServiceRoutes.home);
 
@@ -350,7 +365,7 @@ void main() {
       await _tap(tester, flow, 'Enter Cupola');
 
       final saved = flow.container.read(settingsProvider);
-      expect(saved.sonarrUrl, WorldHosts.sonarr);
+      expect(saved.urlFor(ServiceKey.sonarr), WorldHosts.sonarr);
       // The new host has no pin; and the abandoned one is forgotten rather
       // than relocated.
       expect(saved.pinForUrl(WorldHosts.sonarr), isNull);

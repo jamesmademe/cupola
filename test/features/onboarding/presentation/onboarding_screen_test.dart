@@ -288,7 +288,10 @@ void main() {
       expect(_button('Test connection'), findsOneWidget);
       expect(_button('Continue'), findsNothing);
       expect(_skips(), findsNothing);
-      expect(way.container.read(settingsProvider).sonarrUrl, isEmpty);
+      expect(
+        way.container.read(settingsProvider).urlFor(ServiceKey.sonarr),
+        isEmpty,
+      );
       expect(way.container.read(onboardingCompletedProvider), isFalse);
     });
 
@@ -467,8 +470,8 @@ void main() {
       await _tap(tester, 'Back');
 
       final saved = way.container.read(settingsProvider);
-      expect(saved.sonarrUrl, 'https://sonarr.lan:8989');
-      expect(saved.sonarrApiKey, 'abcdef1234567890');
+      expect(saved.urlFor(ServiceKey.sonarr), 'https://sonarr.lan:8989');
+      expect(saved.apiKeyFor(ServiceKey.sonarr), 'abcdef1234567890');
     });
 
     testWidgets('choosing another service leaves a saved one configured', (
@@ -489,9 +492,9 @@ void main() {
       // Removing a connection is a confirmed action that lives in the settings
       // screen. Setting another one up here means "not this one now".
       final saved = way.container.read(settingsProvider);
-      expect(saved.sonarrUrl, 'https://sonarr.lan:8989');
-      expect(saved.sonarrApiKey, 'abcdef1234567890');
-      expect(saved.radarrUrl, isEmpty);
+      expect(saved.urlFor(ServiceKey.sonarr), 'https://sonarr.lan:8989');
+      expect(saved.apiKeyFor(ServiceKey.sonarr), 'abcdef1234567890');
+      expect(saved.urlFor(ServiceKey.radarr), isEmpty);
     });
 
     testWidgets('a revisit keeps every saved service, credentials included', (
@@ -512,13 +515,13 @@ void main() {
       await _tap(tester, 'Back');
 
       final saved = way.container.read(settingsProvider);
-      expect(saved.sonarrUrl, 'https://sonarr.lan:8989');
-      expect(saved.sonarrApiKey, 'abcdef1234567890');
+      expect(saved.urlFor(ServiceKey.sonarr), 'https://sonarr.lan:8989');
+      expect(saved.apiKeyFor(ServiceKey.sonarr), 'abcdef1234567890');
       // The credential half too. It lives in secure storage, so losing it is
       // the one thing the user cannot undo from memory.
-      expect(saved.qbittorrentUrl, 'https://qb.lan:8080');
-      expect(saved.qbittorrentUsername, 'admin');
-      expect(saved.qbittorrentPassword, 'hunter2');
+      expect(saved.urlFor(ServiceKey.qbittorrent), 'https://qb.lan:8080');
+      expect(saved.usernameFor(ServiceKey.qbittorrent), 'admin');
+      expect(saved.apiKeyFor(ServiceKey.qbittorrent), 'hunter2');
     });
 
     testWidgets('a first run that types and goes back invents nothing to save', (
@@ -532,7 +535,10 @@ void main() {
 
       await _tap(tester, 'Back');
 
-      expect(way.container.read(settingsProvider).sonarrUrl, isEmpty);
+      expect(
+        way.container.read(settingsProvider).urlFor(ServiceKey.sonarr),
+        isEmpty,
+      );
       expect(_claim, findsOneWidget);
     });
   });

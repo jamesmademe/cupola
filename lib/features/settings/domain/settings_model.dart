@@ -478,30 +478,6 @@ class SettingsModel {
     return instances.where((instance) => instance.isSignedOut).firstOrNull;
   }
 
-  /// Returns a copy with [service]'s per-server extras cleared.
-  ///
-  /// The `{url, apiKey}` pair [copyWithService] reaches is not all of what
-  /// describes a connection: Jellyfin also stores *which user* the library is
-  /// read through, and that value belongs to the server that was removed. Left
-  /// behind, re-adding a different Jellyfin binds every per-viewer query to a
-  /// user id that does not exist there, and the picker shows nothing selected.
-  ///
-  /// [plexClientId] is deliberately **not** cleared and is not the same kind of
-  /// value: it identifies this *install* rather than any one server, is minted
-  /// exactly once, and `SettingsService.saveSettings` refuses to overwrite it
-  /// for that reason.
-  SettingsModel copyWithoutServiceExtras(ServiceKey service) {
-    if (!service.namesAPerson) return this;
-    final updated = instances
-        .map(
-          (instance) => instance.service == service
-              ? instance.copyWith(viewerId: '')
-              : instance,
-        )
-        .toList(growable: false);
-    return copyWith(instances: updated);
-  }
-
   // === Certificates (ADR-6) ================================================
 
   /// The trusted fingerprint for the TLS origin [rawUrl] belongs to, or null
@@ -627,52 +603,6 @@ class SettingsModel {
   // served. New code should reach for [instancesOf] or [primaryOf]; these say
   // "the first one" without being able to say anything else.
 
-  String get seerrUrl => urlFor(ServiceKey.seerr);
-  String get seerrApiKey => apiKeyFor(ServiceKey.seerr);
-  String get radarrUrl => urlFor(ServiceKey.radarr);
-  String get radarrApiKey => apiKeyFor(ServiceKey.radarr);
-  String get sonarrUrl => urlFor(ServiceKey.sonarr);
-  String get sonarrApiKey => apiKeyFor(ServiceKey.sonarr);
-  String get lidarrUrl => urlFor(ServiceKey.lidarr);
-  String get lidarrApiKey => apiKeyFor(ServiceKey.lidarr);
-  String get qbittorrentUrl => urlFor(ServiceKey.qbittorrent);
-  String get qbittorrentUsername => usernameFor(ServiceKey.qbittorrent);
-  String get qbittorrentPassword => apiKeyFor(ServiceKey.qbittorrent);
-  String get transmissionUrl => urlFor(ServiceKey.transmission);
-  String get transmissionUsername => usernameFor(ServiceKey.transmission);
-  String get transmissionPassword => apiKeyFor(ServiceKey.transmission);
-  String get npmUrl => urlFor(ServiceKey.nginxProxyManager);
-
-  /// The Nginx Proxy Manager account's email address.
-  ///
-  /// Held in the generic username slot because that is structurally what it is
-  /// (the non-secret half of a credential pair), but NPM calls it an email and
-  /// so does the field, via [ServiceKeyExtension.usernameLabel]. Typing a bare
-  /// username into `POST /api/tokens` is rejected, so labelling it "Username"
-  /// would have been an invitation to fail the login.
-  String get npmUsername => usernameFor(ServiceKey.nginxProxyManager);
-  String get npmPassword => apiKeyFor(ServiceKey.nginxProxyManager);
-  String get bazarrUrl => urlFor(ServiceKey.bazarr);
-  String get bazarrApiKey => apiKeyFor(ServiceKey.bazarr);
-  String get truenasUrl => urlFor(ServiceKey.truenas);
-  String get truenasApiKey => apiKeyFor(ServiceKey.truenas);
-  String get dockgeUrl => urlFor(ServiceKey.dockge);
-  String get dockgeUsername => usernameFor(ServiceKey.dockge);
-  String get dockgePassword => apiKeyFor(ServiceKey.dockge);
-  String get prowlarrUrl => urlFor(ServiceKey.prowlarr);
-  String get prowlarrApiKey => apiKeyFor(ServiceKey.prowlarr);
-  String get readarrUrl => urlFor(ServiceKey.readarr);
-  String get readarrApiKey => apiKeyFor(ServiceKey.readarr);
-  String get sabnzbdUrl => urlFor(ServiceKey.sabnzbd);
-  String get sabnzbdApiKey => apiKeyFor(ServiceKey.sabnzbd);
-  String get nzbgetUrl => urlFor(ServiceKey.nzbget);
-  String get nzbgetUsername => usernameFor(ServiceKey.nzbget);
-  String get nzbgetPassword => apiKeyFor(ServiceKey.nzbget);
-  String get unraidUrl => urlFor(ServiceKey.unraid);
-  String get unraidApiKey => apiKeyFor(ServiceKey.unraid);
-  String get jellyfinUrl => urlFor(ServiceKey.jellyfin);
-  String get jellyfinApiKey => apiKeyFor(ServiceKey.jellyfin);
-
   /// Which Jellyfin user's watch state the library is read through.
   ///
   /// Required rather than optional, and the reason is structural: a Jellyfin API
@@ -684,17 +614,6 @@ class SettingsModel {
   /// `/library/*` takes no impersonation parameter. That asymmetry is a real
   /// property of the two APIs, not a gap here.
   String get jellyfinUserId => primaryOf(ServiceKey.jellyfin)?.viewerId ?? '';
-  String get plexUrl => urlFor(ServiceKey.plex);
-
-  /// The user's own `X-Plex-Token`, pasted by hand.
-  ///
-  /// Named for what Plex calls it rather than squeezed into an `apiKey` field,
-  /// though it occupies the generic credential slot exactly as
-  /// `qbittorrentPassword` does. Cupola never mints this: every documented way
-  /// to obtain a Plex token is a plex.tv call, and reaching for one would break
-  /// the product's first principle. A pasted token is validated by the user's
-  /// own server.
-  String get plexToken => apiKeyFor(ServiceKey.plex);
 }
 
 /// [service] and the connection [name] as one phrase: `Radarr · 4K`, the

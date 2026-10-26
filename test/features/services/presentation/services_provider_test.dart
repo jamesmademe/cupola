@@ -182,7 +182,7 @@ void main() {
           .read(_settingsHolderProvider.notifier)
           .set(
             _secureRadarr.copyWithTrustedCertificate(
-              url: _secureRadarr.radarrUrl,
+              url: _secureRadarr.urlFor(ServiceKey.radarr),
               fingerprint: 'ab:cd:ef',
             ),
           );
@@ -469,7 +469,7 @@ void main() {
           .read(_settingsHolderProvider.notifier)
           .set(
             _secureRadarr.copyWithTrustedCertificate(
-              url: _secureRadarr.radarrUrl,
+              url: _secureRadarr.urlFor(ServiceKey.radarr),
               fingerprint: 'ab:cd:ef',
             ),
           );

@@ -287,7 +287,7 @@ void main() {
       addTearDown(container.dispose);
 
       expect(
-        container.read(settingsProvider).radarrUrl,
+        container.read(settingsProvider).urlFor(ServiceKey.radarr),
         'https://radarr.local:7878',
       );
       expect(container.read(onboardingCompletedProvider), isTrue);
@@ -320,8 +320,14 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Reset app data'));
       await tester.pumpAndSettle();
 
-      expect(container.read(settingsProvider).radarrUrl, isEmpty);
-      expect(container.read(settingsProvider).radarrApiKey, isEmpty);
+      expect(
+        container.read(settingsProvider).urlFor(ServiceKey.radarr),
+        isEmpty,
+      );
+      expect(
+        container.read(settingsProvider).apiKeyFor(ServiceKey.radarr),
+        isEmpty,
+      );
       expect(container.read(settingsProvider).themeMode, AppThemeMode.dark);
       expect(container.read(onboardingCompletedProvider), isFalse);
       expect(await secureStore.read(key: 'secure_radarr_api_key'), isNull);
@@ -376,7 +382,7 @@ void main() {
 
       expect(find.text('Reset all data?'), findsNothing);
       expect(
-        container.read(settingsProvider).radarrUrl,
+        container.read(settingsProvider).urlFor(ServiceKey.radarr),
         'https://radarr.local:7878',
       );
       expect(container.read(onboardingCompletedProvider), isTrue);
@@ -557,10 +563,13 @@ void main() {
         expect(container.read(onboardingCompletedProvider), isTrue);
         expect(await service.loadOnboardingComplete(), isTrue);
         expect(
-          container.read(settingsProvider).radarrUrl,
+          container.read(settingsProvider).urlFor(ServiceKey.radarr),
           'https://radarr.local:7878',
         );
-        expect(container.read(settingsProvider).radarrApiKey, 'radarr-key');
+        expect(
+          container.read(settingsProvider).apiKeyFor(ServiceKey.radarr),
+          'radarr-key',
+        );
 
         // Pushed, not replaced: Back returns to Settings.
         router.pop();

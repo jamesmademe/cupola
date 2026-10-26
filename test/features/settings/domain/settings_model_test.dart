@@ -96,51 +96,6 @@ void main() {
     });
   });
 
-  group('SettingsModel.copyWithoutServiceExtras', () {
-    test('removing Jellyfin drops the chosen viewer with it', () {
-      // `jellyfinUserId` sits outside the per-service {url, apiKey} map, so
-      // `copyWithService` cannot reach it. Left behind, re-adding a *different*
-      // Jellyfin binds every per-viewer query to a user id that server has
-      // never heard of, and the picker shows nothing selected.
-      final settings = settingsWith(
-        jellyfinUrl: 'https://jelly.lan:8096',
-        jellyfinApiKey: 'jf-key',
-        jellyfinUserId: 'a1b2c3',
-      );
-
-      final cleared = settings
-          .copyWithService(ServiceKey.jellyfin, url: '', apiKey: '')
-          .copyWithoutServiceExtras(ServiceKey.jellyfin);
-
-      expect(cleared.jellyfinUserId, isEmpty);
-    });
-
-    test('the Plex client id survives, because it is not per-server', () {
-      // It identifies this install, is minted exactly once, and a new value
-      // registers another device row on the user's server.
-      final settings = settingsWith(
-        plexUrl: 'https://plex.lan:32400',
-        plexToken: 'token',
-        plexClientId: 'minted-once',
-      );
-
-      final cleared = settings
-          .copyWithService(ServiceKey.plex, url: '', apiKey: '')
-          .copyWithoutServiceExtras(ServiceKey.plex);
-
-      expect(cleared.plexClientId, 'minted-once');
-    });
-
-    test('a service with no extras is returned untouched', () {
-      final settings = settingsWith(jellyfinUserId: 'a1b2c3');
-
-      expect(
-        settings.copyWithoutServiceExtras(ServiceKey.radarr).jellyfinUserId,
-        'a1b2c3',
-      );
-    });
-  });
-
   group('SettingsModel.copyWithoutUnusedCertificate', () {
     const fingerprint = 'aa:bb';
 
@@ -218,11 +173,11 @@ void main() {
         apiKey: 'new-key',
       );
 
-      expect(updated.radarrUrl, 'https://new.radarr');
-      expect(updated.radarrApiKey, 'new-key');
-      expect(updated.seerrUrl, '');
-      expect(updated.sonarrUrl, '');
-      expect(updated.lidarrUrl, '');
+      expect(updated.urlFor(ServiceKey.radarr), 'https://new.radarr');
+      expect(updated.apiKeyFor(ServiceKey.radarr), 'new-key');
+      expect(updated.urlFor(ServiceKey.seerr), '');
+      expect(updated.urlFor(ServiceKey.sonarr), '');
+      expect(updated.urlFor(ServiceKey.lidarr), '');
     });
 
     test('partial update only changes provided fields', () {
@@ -231,8 +186,8 @@ void main() {
         url: 'https://sonarr.local',
       );
 
-      expect(updated.sonarrUrl, 'https://sonarr.local');
-      expect(updated.sonarrApiKey, '');
+      expect(updated.urlFor(ServiceKey.sonarr), 'https://sonarr.local');
+      expect(updated.apiKeyFor(ServiceKey.sonarr), '');
     });
 
     test('updates Bazarr URL and API key through copyWithService', () {
@@ -242,8 +197,8 @@ void main() {
         apiKey: 'bzkey',
       );
 
-      expect(updated.bazarrUrl, 'https://bazarr.local');
-      expect(updated.bazarrApiKey, 'bzkey');
+      expect(updated.urlFor(ServiceKey.bazarr), 'https://bazarr.local');
+      expect(updated.apiKeyFor(ServiceKey.bazarr), 'bzkey');
     });
 
     test('works for all ServiceKey values', () {

@@ -7,6 +7,7 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 import '../../../test_helpers/fake_secure_settings_store.dart';
 
 import '../../../test_helpers/settings_scope.dart';
+import 'package:cupola/features/settings/domain/service_key.dart';
 
 void main() {
   group('SettingsService', () {
@@ -107,16 +108,46 @@ void main() {
 
       final loaded = await service.loadSettings();
 
-      expect(loaded.seerrUrl, settings.seerrUrl);
-      expect(loaded.seerrApiKey, settings.seerrApiKey);
-      expect(loaded.radarrUrl, settings.radarrUrl);
-      expect(loaded.radarrApiKey, settings.radarrApiKey);
-      expect(loaded.sonarrUrl, settings.sonarrUrl);
-      expect(loaded.sonarrApiKey, settings.sonarrApiKey);
-      expect(loaded.lidarrUrl, settings.lidarrUrl);
-      expect(loaded.lidarrApiKey, settings.lidarrApiKey);
-      expect(loaded.bazarrUrl, settings.bazarrUrl);
-      expect(loaded.bazarrApiKey, settings.bazarrApiKey);
+      expect(
+        loaded.urlFor(ServiceKey.seerr),
+        settings.urlFor(ServiceKey.seerr),
+      );
+      expect(
+        loaded.apiKeyFor(ServiceKey.seerr),
+        settings.apiKeyFor(ServiceKey.seerr),
+      );
+      expect(
+        loaded.urlFor(ServiceKey.radarr),
+        settings.urlFor(ServiceKey.radarr),
+      );
+      expect(
+        loaded.apiKeyFor(ServiceKey.radarr),
+        settings.apiKeyFor(ServiceKey.radarr),
+      );
+      expect(
+        loaded.urlFor(ServiceKey.sonarr),
+        settings.urlFor(ServiceKey.sonarr),
+      );
+      expect(
+        loaded.apiKeyFor(ServiceKey.sonarr),
+        settings.apiKeyFor(ServiceKey.sonarr),
+      );
+      expect(
+        loaded.urlFor(ServiceKey.lidarr),
+        settings.urlFor(ServiceKey.lidarr),
+      );
+      expect(
+        loaded.apiKeyFor(ServiceKey.lidarr),
+        settings.apiKeyFor(ServiceKey.lidarr),
+      );
+      expect(
+        loaded.urlFor(ServiceKey.bazarr),
+        settings.urlFor(ServiceKey.bazarr),
+      );
+      expect(
+        loaded.apiKeyFor(ServiceKey.bazarr),
+        settings.apiKeyFor(ServiceKey.bazarr),
+      );
       expect(loaded.region, settings.region);
       expect(loaded.themeMode, settings.themeMode);
     });
@@ -124,16 +155,16 @@ void main() {
     test('loadSettings returns empty defaults on fresh storage', () async {
       final loaded = await service.loadSettings();
 
-      expect(loaded.seerrUrl, isEmpty);
-      expect(loaded.seerrApiKey, isEmpty);
-      expect(loaded.radarrUrl, isEmpty);
-      expect(loaded.radarrApiKey, isEmpty);
-      expect(loaded.sonarrUrl, isEmpty);
-      expect(loaded.sonarrApiKey, isEmpty);
-      expect(loaded.lidarrUrl, isEmpty);
-      expect(loaded.lidarrApiKey, isEmpty);
-      expect(loaded.bazarrUrl, isEmpty);
-      expect(loaded.bazarrApiKey, isEmpty);
+      expect(loaded.urlFor(ServiceKey.seerr), isEmpty);
+      expect(loaded.apiKeyFor(ServiceKey.seerr), isEmpty);
+      expect(loaded.urlFor(ServiceKey.radarr), isEmpty);
+      expect(loaded.apiKeyFor(ServiceKey.radarr), isEmpty);
+      expect(loaded.urlFor(ServiceKey.sonarr), isEmpty);
+      expect(loaded.apiKeyFor(ServiceKey.sonarr), isEmpty);
+      expect(loaded.urlFor(ServiceKey.lidarr), isEmpty);
+      expect(loaded.apiKeyFor(ServiceKey.lidarr), isEmpty);
+      expect(loaded.urlFor(ServiceKey.bazarr), isEmpty);
+      expect(loaded.apiKeyFor(ServiceKey.bazarr), isEmpty);
       expect(loaded.themeMode, AppThemeMode.dark);
     });
 
@@ -146,8 +177,8 @@ void main() {
 
       final loaded = await service.loadSettings();
 
-      expect(loaded.bazarrUrl, 'https://bazarr.example.com');
-      expect(loaded.bazarrApiKey, 'bazarr-key');
+      expect(loaded.urlFor(ServiceKey.bazarr), 'https://bazarr.example.com');
+      expect(loaded.apiKeyFor(ServiceKey.bazarr), 'bazarr-key');
     });
 
     test('loadSettings falls back to legacy Jellyseerr keys', () async {
@@ -159,8 +190,8 @@ void main() {
 
       final loaded = await service.loadSettings();
 
-      expect(loaded.seerrUrl, 'https://legacy.example.com');
-      expect(loaded.seerrApiKey, 'legacy-seerr-key');
+      expect(loaded.urlFor(ServiceKey.seerr), 'https://legacy.example.com');
+      expect(loaded.apiKeyFor(ServiceKey.seerr), 'legacy-seerr-key');
     });
 
     test('saveSettings removes secure keys when values are empty', () async {
@@ -198,12 +229,12 @@ void main() {
       await service.clearAll();
 
       final loaded = await service.loadSettings();
-      expect(loaded.seerrUrl, isEmpty);
-      expect(loaded.seerrApiKey, isEmpty);
-      expect(loaded.radarrUrl, isEmpty);
-      expect(loaded.radarrApiKey, isEmpty);
-      expect(loaded.qbittorrentUsername, isEmpty);
-      expect(loaded.qbittorrentPassword, isEmpty);
+      expect(loaded.urlFor(ServiceKey.seerr), isEmpty);
+      expect(loaded.apiKeyFor(ServiceKey.seerr), isEmpty);
+      expect(loaded.urlFor(ServiceKey.radarr), isEmpty);
+      expect(loaded.apiKeyFor(ServiceKey.radarr), isEmpty);
+      expect(loaded.usernameFor(ServiceKey.qbittorrent), isEmpty);
+      expect(loaded.apiKeyFor(ServiceKey.qbittorrent), isEmpty);
       expect(loaded.themeMode, AppThemeMode.dark);
 
       expect(await secureStore.read(key: 'secure_seerr_api_key'), isNull);
@@ -378,7 +409,10 @@ void main() {
 
         final loaded = await service.loadSettings();
 
-        expect(loaded.qbittorrentUrl, 'http://192.168.1.5:8080');
+        expect(
+          loaded.urlFor(ServiceKey.qbittorrent),
+          'http://192.168.1.5:8080',
+        );
         // Written back, so the rewrite happens once instead of on every load;
         // and so it survives even if the user never saves anything.
         expect(prefs.getString('qbittorrent_url'), 'http://192.168.1.5:8080');
@@ -387,7 +421,10 @@ void main() {
       test('Dockge is migrated too: same commit changed both', () async {
         await prefs.setString('dockge_url', 'nas.lan:5001');
 
-        expect((await service.loadSettings()).dockgeUrl, 'http://nas.lan:5001');
+        expect(
+          (await service.loadSettings()).urlFor(ServiceKey.dockge),
+          'http://nas.lan:5001',
+        );
       });
 
       // The scoping is the whole safety property. Scheme-less has always meant
@@ -405,9 +442,9 @@ void main() {
 
         final loaded = await service.loadSettings();
 
-        expect(loaded.sonarrUrl, 'sonarr.lan:8989');
-        expect(loaded.truenasUrl, 'nas.lan');
-        expect(loaded.sabnzbdUrl, 'nas.lan:8080');
+        expect(loaded.urlFor(ServiceKey.sonarr), 'sonarr.lan:8989');
+        expect(loaded.urlFor(ServiceKey.truenas), 'nas.lan');
+        expect(loaded.urlFor(ServiceKey.sabnzbd), 'nas.lan:8080');
         // And nothing is written back over the stored value either, so the
         // original is still there for `normalizeBaseUrl` to resolve to https.
         expect(prefs.getString('truenas_url'), 'nas.lan');
@@ -425,7 +462,7 @@ void main() {
 
         final loaded = await service.loadSettings();
 
-        expect(loaded.pinForUrl(loaded.truenasUrl), 'AA:BB');
+        expect(loaded.pinForUrl(loaded.urlFor(ServiceKey.truenas)), 'AA:BB');
       });
 
       test('an explicit scheme is never rewritten', () async {
@@ -434,8 +471,8 @@ void main() {
 
         final loaded = await service.loadSettings();
 
-        expect(loaded.radarrUrl, 'https://radarr.lan:7878');
-        expect(loaded.sonarrUrl, 'http://sonarr.lan:8989');
+        expect(loaded.urlFor(ServiceKey.radarr), 'https://radarr.lan:7878');
+        expect(loaded.urlFor(ServiceKey.sonarr), 'http://sonarr.lan:8989');
       });
 
       test('a host that cannot be parsed is left alone', () async {
@@ -443,11 +480,17 @@ void main() {
         // for it would only turn one unusable value into a different one.
         await prefs.setString('qbittorrent_url', '::::');
 
-        expect((await service.loadSettings()).qbittorrentUrl, '::::');
+        expect(
+          (await service.loadSettings()).urlFor(ServiceKey.qbittorrent),
+          '::::',
+        );
       });
 
       test('an empty URL stays empty rather than becoming http://', () async {
-        expect((await service.loadSettings()).qbittorrentUrl, isEmpty);
+        expect(
+          (await service.loadSettings()).urlFor(ServiceKey.qbittorrent),
+          isEmpty,
+        );
         expect(prefs.getString('qbittorrent_url'), isNull);
       });
 
@@ -457,7 +500,10 @@ void main() {
         await service.loadSettings();
         final loaded = await service.loadSettings();
 
-        expect(loaded.qbittorrentUrl, 'http://192.168.1.5:8080');
+        expect(
+          loaded.urlFor(ServiceKey.qbittorrent),
+          'http://192.168.1.5:8080',
+        );
       });
 
       // The fix for the upgrade break is split across two files: this migration
@@ -469,7 +515,9 @@ void main() {
         await prefs.setString('qbittorrent_url', '192.168.1.5:8080');
 
         final loaded = await service.loadSettings();
-        final client = QbittorrentClient(url: loaded.qbittorrentUrl);
+        final client = QbittorrentClient(
+          url: loaded.urlFor(ServiceKey.qbittorrent),
+        );
         addTearDown(client.close);
 
         expect(client.baseUrl, 'http://192.168.1.5:8080');

@@ -950,10 +950,9 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     final prior = before.instanceById(_target.id);
     final cleared = before
         // Drops the whole connection rather than blanking its fields, which
-        // takes the chosen viewer with it. `copyWithoutServiceExtras` used to
-        // do that job and is deliberately not called any more: it clears the
-        // viewer on *every* instance of the service, so removing one Jellyfin
-        // would have reset which person the other one reads through.
+        // takes the chosen viewer with it. Clearing the viewer by service
+        // would reach *every* instance of it, so removing one Jellyfin would
+        // reset which person the other one reads through.
         .copyWithoutInstance(_target.id)
         // Forget its origins' pins too, at home and away, but only when
         // nothing else configured still reaches them: removing Sonarr must
