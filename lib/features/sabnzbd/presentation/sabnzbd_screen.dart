@@ -7,7 +7,6 @@ import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/status/read_age.dart';
-import 'package:cupola/core/status/silence_age.dart';
 import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -15,10 +14,9 @@ import 'package:cupola/features/sabnzbd/presentation/sabnzbd_overview_provider.d
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_actions.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
+import 'package:cupola/features/services/presentation/client_queue_frame.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
-import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
-import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// SABnzbd's Queue tab: the whole download queue, with the controls that act
@@ -65,49 +63,24 @@ class _SabnzbdDashboard extends ConsumerWidget {
     // Live while this page is the page on screen.
     ref.watchWhileLive(context, sabnzbdPollingProvider);
     final watched = ref.watch(sabnzbdQueueProvider);
-    final summaryAsync = ref.watch(serviceSummaryProvider(ServiceKey.sabnzbd));
-    // A failed probe, in its own words: "did not answer" only when nothing did,
-    // the refusal and its remedy when the key was refused.
-    // The list's own failure bands too, until the probe says it.
-    final failed = clientPageFailure(
-      ServiceKey.sabnzbd,
-      summary: summaryAsync,
-      list: watched,
-    );
-    // How long the connection has not answered, said only when that is what
-    // the probe found: a fault is an answer, and carries no span.
-    final silentFor = ref.watchSilence(
+    final frame = watchClientQueueFrame(
       context,
+      ref,
       ServiceKey.sabnzbd,
-      silent: failed?.didNotAnswer ?? false,
+      watched,
     );
+    final (:failed, :silentFor, :staleAge, :sampleAge, :list, :offline) = frame;
 
     // With nothing to keep the failure is the page. Over a queue already read
     // it is a band, and the queue stays under it as it was last said.
-    if (failed != null && !watched.hasValue) {
+    if (offline) {
       return ServiceOfflineState.fromSummary(
-        summary: failed,
+        summary: failed!,
         since: silentFor,
         onRetry: () => _invalidateAll(ref),
       );
     }
-    final queueAsync = lastReadUnderBand(watched, banded: failed != null);
-    // With no fault band, a queue read that stopped coming back says so
-    // (`FaultBand.stale`); a fault band, which says why, wins.
-    final staleAge = ref.watchQueueStaleAge(
-      context,
-      ServiceKey.sabnzbd,
-      underBand: failed != null,
-      hasQueue: watched.hasValue,
-    );
-    // How old the rows are, only while they are the last queue read under a
-    // band: their figures stopped moving when SABnzbd stopped answering, or
-    // when its queue stopped coming back.
-    final sampleAge = ref.watchQueueReadAge(
-      context,
-      ServiceKey.sabnzbd,
-      underBand: failed != null || staleAge != null,
-    );
+    final queueAsync = list;
 
     // Through the same `when` the rows draw with, so the header never counts
     // a queue its section is not showing.
@@ -159,7 +132,16 @@ class _SabnzbdDashboard extends ConsumerWidget {
               const SizedBox(height: 2),
             ],
           ),
-          _queueRows(ref, queueAsync, sampleAge),
+          clientRowsSliver<SabnzbdQueue, SabnzbdQueueSlot>(
+            service: ServiceKey.sabnzbd,
+            value: queueAsync,
+            rowsOf: (queue) => queue.slots,
+            emptyTitle: 'Queue is empty',
+            rowBuilder: (context, slot) =>
+                _QueueTile(slot: slot, sampleAge: sampleAge),
+            consequence: 'the queue is not shown',
+            onRetry: () => ref.invalidate(sabnzbdQueueProvider),
+          ),
           SliverToBoxAdapter(
             child: SizedBox(
               height: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
@@ -185,47 +167,6 @@ String? sabnzbdQueueCountLabel(SabnzbdQueue? queue) {
   final shown = queue.slots.length;
   if (shown < total) return '$shown of $total $noun shown';
   return '$total $noun';
-}
-
-/// The queue's rows, as a sliver: every slot, lazily built.
-Widget _queueRows(
-  WidgetRef ref,
-  AsyncValue<SabnzbdQueue> queueAsync,
-  Duration? sampleAge,
-) {
-  return queueAsync.when(
-    data: (queue) {
-      if (queue.slots.isEmpty) {
-        return const SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            child: AppEmptyState.inline(
-              icon: Icons.download_done_rounded,
-              title: 'Queue is empty',
-            ),
-          ),
-        );
-      }
-      return SliverList.builder(
-        itemCount: queue.slots.length,
-        itemBuilder: (context, index) =>
-            _QueueTile(slot: queue.slots[index], sampleAge: sampleAge),
-      );
-    },
-    loading: () => const SliverToBoxAdapter(child: ListRowsShimmer()),
-    error: (error, _) => SliverToBoxAdapter(
-      child: InlineErrorRetry(
-        message: sectionFailureMessage(
-          ServiceKey.sabnzbd,
-          error,
-          consequence: 'the queue is not shown',
-        ),
-        error: error,
-        service: ServiceKey.sabnzbd,
-        onRetry: () => ref.invalidate(sabnzbdQueueProvider),
-      ),
-    ),
-  );
 }
 
 /// Providers refreshed after any SABnzbd mutation.
