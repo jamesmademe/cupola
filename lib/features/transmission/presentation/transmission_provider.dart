@@ -86,7 +86,8 @@ final transmissionTorrentsProvider = FutureProvider<List<TransmissionTorrent>>((
 ) async {
   final client = ref.watch(transmissionClientProvider);
   final noteRead = ref.queueReadNoter(ServiceKey.transmission);
-  final torrents = await client.torrents();
+  // Only the queue's poll reads a delta; every other read is the whole list.
+  final torrents = await client.torrentsSynced();
   noteRead();
   return torrents;
 }, retry: noProviderRetry);
@@ -115,6 +116,9 @@ final transmissionPollingProvider = Provider.autoDispose<void>((ref) {
     id: 'transmission.queue',
     interval: const Duration(seconds: 3),
     onTick: () {
+      // This read may be a delta: the list's own three-second read, asked for
+      // with only what moved, and in full every half minute.
+      ref.read(transmissionClientProvider).allowDeltaRead();
       ref.readAgainUnlessInFlight([
         transmissionTorrentsProvider,
         transmissionStatsProvider,
