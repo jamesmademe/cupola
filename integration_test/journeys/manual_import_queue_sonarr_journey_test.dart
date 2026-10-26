@@ -105,6 +105,21 @@ void main() {
         timeout: const Duration(minutes: 3),
       );
 
+      // Home checks every connection; qBittorrent's answer lands a moment after
+      // the library line. A connection the lab keeps up must not read as refused.
+      await settle(tester, const Duration(seconds: 10));
+      // Any fault on qBittorrent is headed `Not in the total: qBittorrent`; a
+      // refusal and an unreachable proxy both draw under it.
+      expect(
+        find.textContaining('Not in the total: qBittorrent'),
+        findsNothing,
+        reason: 'Home still reports a fault on qBittorrent',
+      );
+      expect(
+        find.textContaining('refused the sign-in'),
+        findsNothing,
+        reason: 'Home still reports qBittorrent refusing the sign-in',
+      );
       final episode = await sonarr.episode('Breaking Bad', 1, 3);
       expect(
         await sonarr.episodeFilePath(episode),
