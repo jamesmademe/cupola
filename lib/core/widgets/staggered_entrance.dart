@@ -17,15 +17,9 @@ class StaggeredEntrance extends StatefulWidget {
   /// Position of this child; drives the staggered start delay.
   final int index;
 
-  /// Delay increment per index step.
-  final Duration step;
-
   /// The delay pattern resets every [wrapCount] items so off-screen items
   /// don't accumulate large delays. Set to 0 to disable wrapping.
   final int wrapCount;
-
-  /// Vertical travel distance of the slide-up, in logical pixels.
-  final double offset;
 
   /// Extra base delay added before the per-index stagger begins.
   ///
@@ -38,11 +32,15 @@ class StaggeredEntrance extends StatefulWidget {
     super.key,
     required this.child,
     this.index = 0,
-    this.step = const Duration(milliseconds: 45),
     this.wrapCount = 12,
-    this.offset = 16,
     this.delay = Duration.zero,
   });
+
+  /// Delay increment per index step.
+  static const Duration _step = Duration(milliseconds: 45);
+
+  /// Vertical travel distance of the slide-up, in logical pixels.
+  static const double _offset = 16;
 
   @override
   State<StaggeredEntrance> createState() => _StaggeredEntranceState();
@@ -68,7 +66,7 @@ class _StaggeredEntranceState extends State<StaggeredEntrance>
     final effectiveIndex = widget.wrapCount > 0
         ? widget.index % widget.wrapCount
         : widget.index;
-    final delay = widget.delay + widget.step * effectiveIndex;
+    final delay = widget.delay + StaggeredEntrance._step * effectiveIndex;
     if (delay == Duration.zero) {
       _controller.forward();
     } else {
@@ -101,7 +99,7 @@ class _StaggeredEntranceState extends State<StaggeredEntrance>
       child: AnimatedBuilder(
         animation: _fade,
         builder: (context, child) => Transform.translate(
-          offset: Offset(0, (1 - _fade.value) * widget.offset),
+          offset: Offset(0, (1 - _fade.value) * StaggeredEntrance._offset),
           child: child,
         ),
         child: widget.child,
