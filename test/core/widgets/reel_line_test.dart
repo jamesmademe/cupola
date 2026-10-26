@@ -187,16 +187,8 @@ void main() {
             width: 1000,
             child: ValueListenableBuilder<int>(
               valueListenable: rebuild,
-              builder: (context, _, _) => ReelLine.rich(
-                const TextSpan(
-                  children: [
-                    TextSpan(text: '12'),
-                    TextSpan(text: ' MB/\u2060s'),
-                  ],
-                ),
-                plain: '12 MB/\u2060s',
-                style: style,
-              ),
+              builder: (context, _, _) =>
+                  ReelLine('12 MB/\u2060s', style: style),
             ),
           ),
         ),
