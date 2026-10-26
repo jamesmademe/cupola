@@ -350,11 +350,18 @@ class ManualImportItem {
         break;
       case ServiceKey.lidarr:
         artist = assignment.match.raw;
-        album = assignment.album?.raw ?? album;
-        resolvedAlbumReleaseId =
-            intOrNull(assignment.album?.raw['albumReleaseId']) ??
-            intOrNull(assignment.track?.raw['albumReleaseId']) ??
-            albumReleaseId;
+        final chosenAlbum = assignment.album?.raw;
+        album = chosenAlbum ?? album;
+        // Neither Lidarr's album nor its track carries `albumReleaseId`: the
+        // release lives in the album's `releases`, and `/track?albumId=` lists
+        // the tracks of the monitored one. The scan's id only holds while the
+        // album is still the one the scan matched.
+        resolvedAlbumReleaseId = chosenAlbum == null
+            ? albumReleaseId
+            : _monitoredReleaseIdOf(chosenAlbum) ??
+                  (intOrNull(chosenAlbum['id']) == intOrNull(this.album?['id'])
+                      ? albumReleaseId
+                      : null);
         tracks = assignment.tracks.isNotEmpty
             ? assignment.tracks.map((item) => item.raw).toList(growable: false)
             : assignment.track == null
@@ -945,4 +952,19 @@ String? _episodeSummary(List<Map<String, dynamic>> episodes) {
   if (labels.length == 1) return labels.first;
   if (labels.length == 2) return '${labels[0]}, ${labels[1]}';
   return '${labels.take(2).join(', ')} +${labels.length - 2}';
+}
+
+/// The id of the release Lidarr monitors for [album], or its only release.
+///
+/// Null when the album lists several releases and monitors none: the import
+/// would then name a release the tracks may not belong to, and Lidarr's own
+/// choice is the honest one.
+int? _monitoredReleaseIdOf(Map<String, dynamic> album) {
+  final releases = album['releases'];
+  if (releases is! List) return null;
+  final maps = releases.whereType<Map>().toList(growable: false);
+  for (final release in maps) {
+    if (release['monitored'] == true) return intOrNull(release['id']);
+  }
+  return maps.length == 1 ? intOrNull(maps.single['id']) : null;
 }
