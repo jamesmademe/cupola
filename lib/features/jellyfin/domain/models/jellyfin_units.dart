@@ -20,11 +20,6 @@ library;
 /// One .NET tick is 100 ns, so a millisecond is 10 000 ticks.
 const int kJellyfinTicksPerMillisecond = 10000;
 
-/// 10 000 000 (`TimeSpan.TicksPerSecond`). Kept even though the app converts to
-/// milliseconds, because it is the constant every Jellyfin discussion quotes and
-/// its absence is what makes `/ 10000` look like a typo.
-const int kJellyfinTicksPerSecond = 10000000;
-
 /// Reads a tick count as a Dart [int].
 ///
 /// Ticks are `int64` server-side: a two-hour film is 7.2e10 ticks, far past the
