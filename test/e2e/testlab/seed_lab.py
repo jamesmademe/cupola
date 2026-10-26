@@ -507,7 +507,7 @@ def seed_seeder(env: dict[str, str], state_dir: Path) -> None:
 
 
 def seed_radarr_library(world: dict[str, Any]) -> None:
-    """The 40 films of the world, without a TMDB lookup per film.
+    """The 41 films of the world, without a TMDB lookup per film.
 
     The lookup was the slow part (TMDB rate limits made forty films take
     minutes). The world already carries the ids, so the record is created

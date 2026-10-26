@@ -256,7 +256,7 @@ The journey asserts those real states.
 ## The arr libraries
 
 The seed materialises the world as a library rather than a handful of rows:
-40 films, 10 series (the eight real ones the lookup resolves plus two lab
+41 films, 10 series (the eight real ones the lookup resolves plus two lab
 specimens), 8 artists and 6 authors. Radarr creates the films from the ids in
 `world.json` and asks `RefreshMovie` for the artwork in the background; Sonarr
 looks up the real TVDB series and refreshes their episodes, with Brooklyn
@@ -679,7 +679,7 @@ the lab, not claims that the corresponding Cupola screens are unreachable.
 
 The seed reads `state/world.json`, which `dart run tool/testlab/export_world.dart`
 writes from `test/test_helpers/profiles/world.dart`. The export is deterministic,
-and `test/tool/export_world_test.dart` holds it to the Dart catalogue: 40 movies,
+and `test/tool/export_world_test.dart` holds it to the Dart catalogue: 41 movies,
 12 series, 8 artists and 6 authors. The bootstrap exports it before the seed; a
 world.json that has drifted from the Dart source is a test failure, not a
 surprise in the lab.
