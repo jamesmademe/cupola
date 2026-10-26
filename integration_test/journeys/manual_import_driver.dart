@@ -317,4 +317,30 @@ class ArrApi {
     return (await get('/track?albumId=$albumId') as List)
         .cast<Map<String, dynamic>>();
   }
+
+  /// The tracks numbered [numbers] (Lidarr's `a1`, `b2`…) of [album] once
+  /// Lidarr holds a file for each: the server's state, not a fixed wait. A
+  /// command can say `Completed` a moment before the file is on the record.
+  Future<List<Map<String, dynamic>>> albumTracksWithFiles(
+    String artist,
+    String album,
+    List<String> numbers, {
+    Duration timeout = const Duration(minutes: 2),
+  }) async {
+    final end = DateTime.now().add(timeout);
+    while (true) {
+      final chosen = (await albumTracks(
+        artist,
+        album,
+      )).where((track) => numbers.contains(track['trackNumber'])).toList();
+      final filed =
+          chosen.length == numbers.length &&
+          chosen.every((track) => (track['trackFileId'] as int? ?? 0) > 0);
+      if (filed) return chosen;
+      if (DateTime.now().isAfter(end)) {
+        fail('Lidarr never gave ${numbers.join(', ')} a file');
+      }
+      await Future<void>.delayed(const Duration(seconds: 1));
+    }
+  }
 }

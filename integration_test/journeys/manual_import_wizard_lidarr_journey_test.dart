@@ -75,25 +75,19 @@ void main() {
       await wizard.confirmImport(3, service: 'Lidarr');
       await wizard.waitTrack('Completed');
 
-      final tracks = await lidarr.albumTracks('Air', 'Moon Safari');
-      for (final number in [1, 2, 3]) {
-        final track = tracks.firstWhere(
-          (item) => item['trackNumber'] == 'a$number',
-        );
-        expect(
-          track['trackFileId'],
-          greaterThan(0),
-          reason: 'Lidarr holds no file for track $number',
-        );
-      }
+      await lidarr.albumTracksWithFiles('Air', 'Moon Safari', [
+        'a1',
+        'a2',
+        'a3',
+      ]);
     },
     timeout: const Timeout(Duration(minutes: 10)),
   );
 
   testWidgets(
-    'M-14 · a track chosen by hand fails in Lidarr: AlbumRelease with ID 0 (known gap)',
+    'M-14 · a track whose name says nothing is given an album and a track by hand',
     (tester) async {
-      final (:app, :wizard, lidarr: _) = await open(tester, 'import-track-fix');
+      final (:app, :wizard, :lidarr) = await open(tester, 'import-track-fix');
 
       await wizard.openWizard(ServiceKey.lidarr);
       await wizard.reviewFolder('$_root/l13-track-fix');
@@ -112,13 +106,10 @@ void main() {
       await app.surface.see('Match to track 2');
       await app.tapIn(tester, find.text('Match to track 2'));
 
-      // Known gap, characterised rather than hidden: an album chosen by hand
-      // sends albumReleaseId 0 (the album record has releases, not that id),
-      // and Lidarr refuses the import. When the app sends the release, this
-      // journey turns red: rewrite it as a completed import then.
       await wizard.confirmImport(1, service: 'Lidarr');
-      await wizard.waitTrack('Failed');
-      await app.surface.seePart('AlbumRelease with ID 0 does not exist');
+      await wizard.waitTrack('Completed');
+
+      await lidarr.albumTracksWithFiles('Air', 'Moon Safari', ['a2']);
     },
     timeout: const Timeout(Duration(minutes: 10)),
   );
