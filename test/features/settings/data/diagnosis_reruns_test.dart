@@ -48,6 +48,26 @@ Future<void> _write(
     .updateSettings(change(container.read(currentSettingsProvider)));
 
 void main() {
+  test('a service row and the form of each of its connections ask a server '
+      'once between them', () async {
+    // What the forms alone cost: one test per connection.
+    final alone = await ProfileHarness.start(Profiles.p1);
+    final aloneContainer = alone.container();
+    for (final instance
+        in aloneContainer.read(currentSettingsProvider).configuredInstances) {
+      aloneContainer.listen(instanceDiagnosisProvider(instance.id), (_, _) {});
+      await aloneContainer.read(instanceDiagnosisProvider(instance.id).future);
+    }
+    final formsOnly = _traffic(alone);
+    expect(formsOnly, greaterThan(0));
+
+    // The service rows beside them cost nothing more.
+    final both = await ProfileHarness.start(Profiles.p1);
+    await _readAll(both.container());
+
+    expect(_traffic(both), formsOnly);
+  });
+
   test('a theme toggle tests no connection again', () async {
     final harness = await ProfileHarness.start(Profiles.p1);
     final container = harness.container();
