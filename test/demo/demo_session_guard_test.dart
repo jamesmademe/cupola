@@ -7,6 +7,8 @@ import 'package:shared_preferences_platform_interface/shared_preferences_platfor
 
 import 'package:cupola/demo/demo_session.dart';
 import 'package:cupola/features/outside/data/outside_background.dart';
+import 'package:cupola/features/release_search/domain/release_search_reach.dart';
+import 'package:cupola/features/release_search/domain/release_search_target.dart';
 import 'package:cupola/features/release_search/presentation/release_search_entry.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -107,6 +109,15 @@ void main() {
     final notifications = container.read(releaseSearchNotificationsProvider);
     expect(await notifications.permissionGranted(), isTrue);
     expect(await notifications.requestPermission(), isTrue);
+  });
+
+  test('a release search never leaves the app for a native task', () async {
+    final (_, container) = await open();
+    const target = ReleaseSearchTarget.movie(movieId: 1, label: 'Sintel');
+    expect(
+      container.read(releaseSearchReachProvider(target)),
+      ReleaseSearchReach.whileOpen,
+    );
   });
 
   test('the demo opens on the whole household, onboarding done', () async {

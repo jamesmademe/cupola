@@ -7,6 +7,8 @@ import 'package:cupola/demo/world/fakes/client_fakes.dart';
 import 'package:cupola/demo/world/fakes/infra_fakes.dart';
 import 'package:cupola/demo/world/fakes/media_fakes.dart';
 import 'package:cupola/demo/world/profile_network.dart';
+import 'package:cupola/demo/world/world.dart';
+import 'package:cupola/demo/world/world_life.dart';
 
 /// A decoded JSON object, the shape every canned answer is built from.
 typedef JsonMap = Map<String, Object?>;
@@ -20,7 +22,20 @@ class ServerContext {
 
   ConnectionBehaviour get behaviour => server.behaviour;
   ConfigProfile get profile => network.profile;
-  DateTime get now => network.now;
+
+  /// What relative times are measured from: the network's fixed moment, or
+  /// its clock once the world lives (a world that moves on keeps "2 h ago"
+  /// two hours ago).
+  DateTime get now => network.life == null ? network.now : network.currentTime;
+
+  /// The world's life, or null when it answers from its profile as written.
+  WorldLife? get life => network.life;
+
+  /// Every download, as the world stands now.
+  List<WorldDownload> get downloads => life?.downloads ?? profile.downloads;
+
+  /// The usenet clients whose whole queue is paused.
+  Set<String> get pausedQueues => life?.pausedQueues ?? profile.pausedQueues;
 
   /// [age] before [now], as the ISO-8601 UTC string every service here sends.
   String ago(Duration age) => now.subtract(age).toUtc().toIso8601String();

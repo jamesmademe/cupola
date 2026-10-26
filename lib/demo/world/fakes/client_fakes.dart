@@ -11,7 +11,7 @@ import 'package:cupola/demo/world/service_fakes.dart';
 import 'package:cupola/demo/world/world.dart';
 
 List<WorldDownload> _rowsOf(ServerContext c, String client) => [
-  for (final d in c.profile.downloads)
+  for (final d in c.downloads)
     if (d.client == client) d,
 ];
 
@@ -179,8 +179,35 @@ class QbittorrentFake extends ServiceFake {
       case ('GET', '/api/v2/torrents/tags'):
         return NetworkReply.json(const <Object?>[]);
     }
-    if (r.method == 'POST') return NetworkReply.text('Ok.');
+    if (r.method == 'POST') {
+      _write(r, c, rows);
+      return NetworkReply.text('Ok.');
+    }
     return null;
+  }
+
+  /// What a write does to a living world: pause, resume, delete. The rest
+  /// (tags, limits, a recheck) is answered and changes nothing the world
+  /// draws.
+  static void _write(
+    NetworkRequest r,
+    ServerContext c,
+    List<WorldDownload> rows,
+  ) {
+    final life = c.life;
+    if (life == null) return;
+    final named = r.form['hashes'] ?? '';
+    final hashes = named == 'all'
+        ? [for (final d in rows) d.id]
+        : named.split('|').where((h) => h.isNotEmpty).toList();
+    final act = switch (r.path) {
+      '/api/v2/torrents/stop' || '/api/v2/torrents/pause' => life.pause,
+      '/api/v2/torrents/start' || '/api/v2/torrents/resume' => life.resume,
+      '/api/v2/torrents/delete' => life.remove,
+      _ => null,
+    };
+    if (act == null) return;
+    hashes.forEach(act);
   }
 }
 
@@ -321,7 +348,36 @@ class TransmissionFake extends ServiceFake {
           'size-bytes': 12400000000000,
         });
     }
+    _write(r, c, rows);
     return ok(const {});
+  }
+
+  /// What a write does to a living world: start, stop, remove, named by the
+  /// torrents' ids in `torrent-get` (their place in the list) or by hash.
+  void _write(NetworkRequest r, ServerContext c, List<WorldDownload> rows) {
+    final life = c.life;
+    final body = r.json;
+    if (life == null || body is! Map) return;
+    final arguments = body['arguments'];
+    final ids = arguments is Map ? arguments['ids'] : null;
+    final named = <String>[
+      if (ids is List)
+        for (final id in ids)
+          if (id is int && id >= 1 && id <= rows.length)
+            rows[id - 1].id
+          else if (id is String)
+            id,
+      if (ids == null)
+        for (final d in rows) d.id,
+    ];
+    final act = switch (_method(r)) {
+      'torrent-stop' => life.pause,
+      'torrent-start' || 'torrent-start-now' => life.resume,
+      'torrent-remove' => life.remove,
+      _ => null,
+    };
+    if (act == null) return;
+    named.forEach(act);
   }
 }
 
@@ -371,13 +427,14 @@ class SabnzbdFake extends ServiceFake {
     final mbLeft = rows.fold<double>(0, (s, d) => s + d.sizeLeft / 1048576);
     // A full disk stops the queue as a pause does, and nothing moves.
     final diskFull = c.profile.fullDisks.contains(c.server.id);
-    final paused = diskFull || c.profile.pausedQueues.contains(c.server.id);
+    final paused = diskFull || c.pausedQueues.contains(c.server.id);
     final speed = paused ? 0 : rows.fold<int>(0, (s, d) => s + d.speed);
     switch (_mode(r)) {
       case 'version':
         return NetworkReply.json({'version': '4.3.3'});
       case 'queue':
         if (r.query.containsKey('name')) {
+          _writeJob(r, c);
           return NetworkReply.json({'status': true});
         }
         return NetworkReply.json({
@@ -480,8 +537,25 @@ class SabnzbdFake extends ServiceFake {
         });
       case 'warnings':
         return NetworkReply.json({'warnings': const <Object?>[]});
+      case 'pause' || 'resume':
+        c.life?.setQueuePaused(c.server.id, paused: _mode(r) == 'pause');
     }
     return NetworkReply.json({'status': true});
+  }
+
+  /// What `mode=queue&name=…&value=<nzo_id>` does to a living world.
+  void _writeJob(NetworkRequest r, ServerContext c) {
+    final life = c.life;
+    final job = r.query['value'];
+    if (life == null || job == null) return;
+    switch (r.query['name']) {
+      case 'pause':
+        life.pause(job);
+      case 'resume':
+        life.resume(job);
+      case 'delete':
+        life.remove(job);
+    }
   }
 }
 
@@ -520,7 +594,7 @@ class NzbgetFake extends ServiceFake {
         NetworkReply.json({'version': '1.1', 'id': id, 'result': value});
     final rows = _rowsOf(c, 'nzbget');
     final diskFull = c.profile.fullDisks.contains(c.server.id);
-    final paused = diskFull || c.profile.pausedQueues.contains(c.server.id);
+    final paused = diskFull || c.pausedQueues.contains(c.server.id);
     return switch (_method(r)) {
       'version' => result(
         jsonFixture('nzbget/version.json')['result'] ?? '24.3',
@@ -531,8 +605,37 @@ class NzbgetFake extends ServiceFake {
           group(d, nzbId: i + 1, paused: paused),
       ]),
       'history' => result(const <Object?>[]),
-      _ => result(true),
+      _ => result(_write(r, c, rows)),
     };
+  }
+
+  /// What a write does to a living world: the whole queue paused or
+  /// resumed, a group paused, resumed or deleted by its `NZBID` (its place
+  /// in `listgroups`). Always `true`, as NZBGet answers.
+  bool _write(NetworkRequest r, ServerContext c, List<WorldDownload> rows) {
+    final life = c.life;
+    final body = r.json;
+    if (life == null || body is! Map) return true;
+    final params = body['params'];
+    switch (_method(r)) {
+      case 'pausedownload':
+        life.setQueuePaused(c.server.id, paused: true);
+      case 'resumedownload':
+        life.setQueuePaused(c.server.id, paused: false);
+      case 'editqueue' when params is List && params.length >= 4:
+        final act = switch (params[0]) {
+          'GroupPause' => life.pause,
+          'GroupResume' => life.resume,
+          'GroupDelete' || 'GroupFinalDelete' => life.remove,
+          _ => null,
+        };
+        final ids = params[3];
+        if (act == null || ids is! List) return true;
+        for (final id in ids) {
+          if (id is int && id >= 1 && id <= rows.length) act(rows[id - 1].id);
+        }
+    }
+    return true;
   }
 
   /// `status`, with the rate summed over the world's NZBGet jobs. With none,

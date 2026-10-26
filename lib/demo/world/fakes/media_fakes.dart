@@ -203,14 +203,14 @@ class SeerrFake extends ServiceFake {
           },
         ],
       'downloadStatus': [
-        for (final d in WorldDownloads.all)
+        for (final d in c.downloads)
           if (d.title == t &&
               (d.arr == WorldIds.radarr || d.arr == WorldIds.sonarr) &&
               d.state != DownloadState.importBlocked)
             _downloadStatus(c, d),
       ],
       'downloadStatus4k': [
-        for (final d in WorldDownloads.all)
+        for (final d in c.downloads)
           if (d.title == t && d.arr == WorldIds.radarr4k) _downloadStatus(c, d),
       ],
       'createdAt': c.ago(const Duration(days: 60)),

@@ -20,6 +20,7 @@ import 'package:cupola/demo/world/profiles.dart';
 import 'package:cupola/features/outside/data/outside_background.dart';
 import 'package:cupola/features/outside/data/outside_keeper.dart';
 import 'package:cupola/features/release_search/data/release_search_notifications.dart';
+import 'package:cupola/features/release_search/domain/release_search_reach.dart';
 import 'package:cupola/features/release_search/presentation/release_search_entry.dart';
 import 'package:cupola/features/settings/data/settings_service.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -46,7 +47,8 @@ final demoProfile = Profiles.p1
 ///    process;
 ///  * preferences, the secure store and the Home's last drawings live in
 ///    memory, so nothing the visitor does reaches the disk or the keychain;
-///  * the widgets' shelf, the background run and notifications stay off;
+///  * the widgets' shelf, the background run, background release searches
+///    and notifications stay off;
 ///  * posters go to image stores of their own, emptied on the way out.
 ///
 /// [end] puts each of these back; the app then starts again from its real
@@ -93,6 +95,12 @@ class DemoSession {
 
     final profile = demoProfile;
     final network = ProfileNetwork(profile, now: now);
+    // The world lives: what the visitor does stays done, and the downloads
+    // move with the wall clock.
+    network.live();
+    final clock = Stopwatch()..start();
+    network.followClock(() => clock.elapsed);
+    ends.add(clock.stop);
     ends.add(network.install());
     final previousIo = IOOverrides.current;
     IOOverrides.global = _NoSockets();
@@ -130,6 +138,11 @@ class DemoSession {
       outsideSchedulerProvider.overrideWithValue(null),
       releaseSearchNotificationsProvider.overrideWithValue(
         _QuietNotifications(),
+      ),
+      // A background search is a native task, which no `HttpOverrides`
+      // reaches: in the demo every search runs in the app, on the world.
+      releaseSearchReachProvider.overrideWith(
+        (ref, target) => ReleaseSearchReach.whileOpen,
       ),
       demoSessionProvider.overrideWith((ref) => session),
     ];

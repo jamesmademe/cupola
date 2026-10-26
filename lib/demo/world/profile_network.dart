@@ -10,6 +10,7 @@ import 'package:cupola/demo/world/fake_socket.dart';
 import 'package:cupola/demo/world/fakes/plex_tv_fake.dart';
 import 'package:cupola/demo/world/fakes/seerr_sessions.dart';
 import 'package:cupola/demo/world/service_fakes.dart';
+import 'package:cupola/demo/world/world_life.dart';
 
 /// One request that reached the fake network.
 class NetworkRequest {
@@ -329,6 +330,16 @@ class ProfileNetwork {
 
   final ConfigProfile profile;
 
+  /// The world's life, once [live] turned it on: what it keeps of what it
+  /// is told, and the downloads moving with the clock. Null for a test's
+  /// network, which answers from [profile] as written.
+  WorldLife? get life => _life;
+  WorldLife? _life;
+
+  /// Turns the world's life on. From here on every answer is the world as it
+  /// stands at [currentTime], and its relative times are measured from it.
+  WorldLife live() => _life ??= WorldLife(this);
+
   /// The moment the world's relative times ("2 h ago") are measured from.
   /// It stays put; [currentTime] is the one that moves.
   final DateTime now;
@@ -578,6 +589,7 @@ class ProfileNetwork {
   /// The answer to [raw], or null for a request that is taken and never
   /// answered ([NetworkReply.hang]).
   _FakeResponse? _respond(_FakeRequest raw) {
+    _life?.catchUp();
     final server = serverAt(raw.uri);
     final request = NetworkRequest(
       method: raw.method,
