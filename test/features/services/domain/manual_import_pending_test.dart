@@ -54,6 +54,20 @@ void main() {
     },
   );
 
+  test('a blocked import with no output path is still a manual import', () {
+    // The boundary of M-10 as the code draws it: the live path never reads the
+    // path, so a blocked record without one still asks for the wizard. If the
+    // path ever gates the control, this fails and the catalogue row changes.
+    const blocked = <String, dynamic>{
+      'status': 'completed',
+      'trackedDownloadState': 'importBlocked',
+      'trackedDownloadStatus': 'warning',
+    };
+
+    expect(arrQueueFault(blocked), InFlightFault.needsImport);
+    expect(blocked.containsKey('outputPath'), isFalse);
+  });
+
   test('a blocked import is the one state that offers Manual import', () {
     final blocked = {
       'status': 'completed',
