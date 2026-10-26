@@ -558,6 +558,57 @@ class SeerrFake extends ServiceFake {
     };
   }
 
+  /// What the review sites say of the world's own films, `(critics,
+  /// audience, IMDb)`; any other film with an IMDb id gets scores worked out
+  /// from its TMDB id, so a title page always reads the same.
+  static const _filmScores = <String, (int, int, double)>{
+    'sintel': (92, 88, 7.5),
+    'metropolis': (98, 95, 8.3),
+    'tearsOfSteel': (74, 70, 6.8),
+    'spriteFright': (68, 72, 5.9),
+  };
+
+  static (int, int, double) _scoresOf(WorldTitle t) =>
+      _filmScores[t.key] ??
+      (
+        55 + t.tmdbId % 41,
+        60 + t.tmdbId * 7 % 36,
+        double.parse((5.5 + t.tmdbId % 30 / 10).toStringAsFixed(1)),
+      );
+
+  /// Seerr's `RTRating` for a film, null when Rotten Tomatoes has none: it
+  /// rates the films that have an IMDb id here, which leaves Coffee Run,
+  /// Spring and Charge without a score.
+  static JsonMap? _tomatoes(WorldTitle t) {
+    if (t.imdbId == null) return null;
+    final (critics, audience, _) = _scoresOf(t);
+    return {
+      'title': t.title,
+      'url': 'https://www.rottentomatoes.com/m/${t.slug.replaceAll('-', '_')}',
+      'criticsRating': critics >= 75
+          ? 'Certified Fresh'
+          : critics >= 60
+          ? 'Fresh'
+          : 'Rotten',
+      'criticsScore': critics,
+      'audienceRating': audience >= 60 ? 'Upright' : 'Spilled',
+      'audienceScore': audience,
+      'year': t.year,
+    };
+  }
+
+  /// Seerr's `IMDBRating` for a film, null when it has no IMDb id.
+  static JsonMap? _imdb(WorldTitle t) {
+    if (t.imdbId == null) return null;
+    return {
+      'title': t.title,
+      'url': 'https://www.imdb.com/title/${t.imdbId}',
+      'criticsScore': _scoresOf(t).$3,
+      'criticsScoreCount': 1000 + t.tmdbId % 9000,
+      'year': t.year,
+    };
+  }
+
   static JsonMap _credit(ServerContext c, WorldTitle t) => {
     'id': t.tmdbId,
     'mediaType': t.isSeries ? 'tv' : 'movie',
@@ -767,7 +818,11 @@ class SeerrFake extends ServiceFake {
                 'createdAt': c.ago(const Duration(days: 3)),
                 'updatedAt': c.ago(const Duration(days: 2)),
                 'createdBy': _user(c, 2),
-                'media': _media(c, WorldTitles.tearsOfSteel),
+                // The issue's media names its title, as the app reads it.
+                'media': {
+                  ..._media(c, WorldTitles.tearsOfSteel)!,
+                  'title': WorldTitles.tearsOfSteel.title,
+                },
                 'comments': [
                   {
                     'id': 1,
@@ -979,6 +1034,30 @@ class SeerrFake extends ServiceFake {
           'criticsScore': 88,
           'criticsRating': 'Fresh',
         });
+      }
+      // Rotten Tomatoes' and IMDb's word on a film, which TMDB's record
+      // lacks: `/ratings` is Rotten Tomatoes alone, `/ratingscombined` both.
+      final scores = RegExp(
+        r'^/api/v1/movie/(\d+)/(ratings|ratingscombined)$',
+      ).firstMatch(path);
+      if (scores != null) {
+        final id = int.parse(scores.group(1)!);
+        final film = (c.life == null ? WorldTitles.all : WorldTitles.catalogue)
+            .where((t) => t.tmdbId == id && !t.isSeries)
+            .firstOrNull;
+        if (film == null) {
+          return NetworkReply.json({'message': 'Not found'}, status: 404);
+        }
+        final rt = _tomatoes(film);
+        if (scores.group(2) == 'ratings') {
+          // Seerr answers 404 for a film Rotten Tomatoes does not rate.
+          return rt == null
+              ? NetworkReply.json({
+                  'message': 'Unable to retrieve movie ratings.',
+                }, status: 404)
+              : NetworkReply.json(rt);
+        }
+        return NetworkReply.json({'rt': rt, 'imdb': _imdb(film)});
       }
       final detail = RegExp(r'^/api/v1/(movie|tv)/(\d+)$').firstMatch(path);
       if (detail != null) {
@@ -1410,6 +1489,67 @@ class JellyfinFake extends ServiceFake {
     },
   };
 
+  /// The household's devices as `GET /Devices` lists them (`DeviceInfoDto`):
+  /// the living-room TV Anna is watching on, the operator's phone and
+  /// browser, and Luca's tablet.
+  static List<JsonMap> _devices(ServerContext c) {
+    JsonMap device(
+      String id,
+      String name,
+      String app,
+      String version,
+      String userId,
+      String user,
+      Duration lastSeen,
+    ) => {
+      'Id': id,
+      'Name': name,
+      'AppName': app,
+      'AppVersion': version,
+      'LastUserId': userId,
+      'LastUserName': user,
+      'DateLastActivity': c.ago(lastSeen),
+    };
+    return [
+      device(
+        'living-room-tv',
+        'Living room TV',
+        'Jellyfin Android TV',
+        '0.19.1',
+        annaId,
+        WorldPeople.anna,
+        const Duration(minutes: 1),
+      ),
+      device(
+        'operator-iphone',
+        'Operator iPhone',
+        'Jellyfin iOS',
+        '1.4.2',
+        operatorId,
+        'Operator',
+        const Duration(hours: 3),
+      ),
+      device(
+        'luca-ipad',
+        "Luca's iPad",
+        'Jellyfin iOS',
+        '1.4.2',
+        lucaId,
+        WorldPeople.luca,
+        const Duration(days: 2),
+      ),
+      device(
+        'operator-firefox',
+        'Firefox',
+        'Jellyfin Web',
+        '10.11.11',
+        operatorId,
+        'Operator',
+        const Duration(days: 6),
+      ),
+    ];
+  }
+
   @override
   NetworkReply? answer(NetworkRequest r, ServerContext c) {
     if (r.method != 'GET') return const NetworkReply(204);
@@ -1477,6 +1617,16 @@ class JellyfinFake extends ServiceFake {
             'Id': 'task-scan',
             'Category': 'Library',
             'Key': 'RefreshLibrary',
+            // The run before this one, twelve hours back: the task's default
+            // trigger is every twelve hours.
+            'LastExecutionResult': {
+              'Status': 'Completed',
+              'StartTimeUtc': c.ago(const Duration(hours: 12, minutes: 6)),
+              'EndTimeUtc': c.ago(const Duration(hours: 12, minutes: 2)),
+              'Name': 'Scan media library',
+              'Key': 'RefreshLibrary',
+              'Id': 'task-scan-last',
+            },
           },
         ]);
       case '/System/ActivityLog/Entries':
@@ -1501,8 +1651,8 @@ class JellyfinFake extends ServiceFake {
         });
       case '/Devices':
         return NetworkReply.json({
-          'Items': const <Object?>[],
-          'TotalRecordCount': 7,
+          'Items': _devices(c),
+          'TotalRecordCount': _devices(c).length,
         });
       case '/Items':
       case '/Search/Hints':
@@ -1680,6 +1830,194 @@ class PlexFake extends ServiceFake {
     WorldTitles.spring,
   ];
 
+  static const _machineId = '9c8b7a6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b';
+
+  /// Plex's timestamps: whole seconds since the epoch, [age] before now.
+  static int _epoch(ServerContext c, Duration age) =>
+      c.now.subtract(age).millisecondsSinceEpoch ~/ 1000;
+
+  /// The sections as recorded, scanned when a household's server scans: the
+  /// films this morning, the series a couple of hours ago, the music last
+  /// night. The photos were never scanned and say nothing.
+  static JsonMap _sections(ServerContext c) {
+    final json = jsonFixtureMap('plex/library_sections.json');
+    final scanned = <String, Duration>{
+      '1': const Duration(hours: 5),
+      '2': const Duration(hours: 2),
+      '3': const Duration(hours: 20),
+    };
+    final container = json['MediaContainer'] as Map<String, dynamic>;
+    for (final section in (container['Directory'] as List).cast<JsonMap>()) {
+      final age = scanned[section['key']];
+      if (age != null) section['scannedAt'] = _epoch(c, age);
+    }
+    return json;
+  }
+
+  /// The episode the owner stopped five minutes from the end of: Jellyfin's
+  /// Continue watching holds it too, at three quarters of twenty minutes.
+  static JsonMap _partWatched(ServerContext c) => {
+    'ratingKey': '203',
+    'key': '/library/metadata/203',
+    'guid': 'plex://episode/cosmosLaundromat-s02e03',
+    'type': 'episode',
+    'title': 'The Second Cycle',
+    'summary': 'Franck wakes up in the second life Tachyon sold him.',
+    'grandparentRatingKey': '200',
+    'grandparentKey': '/library/metadata/200',
+    'grandparentGuid': 'plex://show/cosmosLaundromat',
+    'grandparentTitle': WorldTitles.cosmosLaundromat.title,
+    'parentRatingKey': '202',
+    'parentKey': '/library/metadata/202',
+    'parentTitle': 'Season 2',
+    'parentIndex': 2,
+    'index': 3,
+    'year': WorldTitles.cosmosLaundromat.year,
+    'duration': 1200000,
+    'viewOffset': 900000,
+    'lastViewedAt': _epoch(c, const Duration(hours: 1)),
+    'addedAt': _epoch(c, const Duration(days: 25)),
+    'librarySectionID': 2,
+    'librarySectionKey': '/library/sections/2',
+    'librarySectionTitle': 'TV Shows',
+    'source': 'server://$_machineId/com.plexapp.plugins.library',
+    'Guid': [
+      {'id': 'tvdb://${WorldTitles.cosmosLaundromat.tvdbId}'},
+    ],
+  };
+
+  /// What is playing on the server: Luca's Elephants Dream on his iPad.
+  static JsonMap _session(ServerContext c) => {
+    ..._metadata(c, WorldTitles.elephantsDream, 103),
+    'sessionKey': '12',
+    'duration': 660000,
+    'viewOffset': 240000,
+    'librarySectionID': 1,
+    'librarySectionKey': '/library/sections/1',
+    'librarySectionTitle': 'Movies',
+    'User': {'id': '2', 'title': WorldPeople.luca},
+    'Player': {
+      'address': '192.168.1.58',
+      'device': 'iPad',
+      'machineIdentifier': 'luca-ipad',
+      'model': 'iPad13,4',
+      'platform': 'iOS',
+      'platformVersion': '18.6',
+      'product': 'Plex for iOS',
+      'profile': 'iOS',
+      'state': 'playing',
+      'title': "Luca's iPad",
+      'version': '9.35.0',
+      'local': true,
+      'relayed': false,
+      'secure': true,
+      'userID': 2,
+    },
+    'Session': {
+      'id': 'plex-session-luca',
+      'bandwidth': 8000,
+      'location': 'lan',
+    },
+  };
+
+  /// The devices that signed in to the server, as `/devices` lists them.
+  static List<JsonMap> _devices(ServerContext c) => [
+    for (final (id, name, product, platform, seen) in [
+      (
+        1,
+        'Living room TV',
+        'Plex for Android (TV)',
+        'Android',
+        const Duration(days: 1),
+      ),
+      (2, 'Operator iPhone', 'Plex for iOS', 'iOS', const Duration(hours: 4)),
+      (3, "Luca's iPad", 'Plex for iOS', 'iOS', const Duration(minutes: 3)),
+    ])
+      {
+        'id': id,
+        'name': name,
+        'product': product,
+        'platform': platform,
+        'clientIdentifier': 'plex-device-$id',
+        'provides': 'client,player,pubsub-player',
+        'createdAt': _epoch(c, Duration(days: 300 - id * 40)),
+        'lastSeenAt': _epoch(c, seen),
+      },
+  ];
+
+  /// The household's one playlist: three of the films, for a film night.
+  static List<JsonMap> _playlists(ServerContext c) => [
+    {
+      'ratingKey': '900',
+      'key': '/playlists/900/items',
+      'guid': 'com.plexapp.agents.none://film-night',
+      'type': 'playlist',
+      'title': 'Film night',
+      'playlistType': 'video',
+      'smart': false,
+      'leafCount': 3,
+      'duration': 2282000,
+      'addedAt': _epoch(c, const Duration(days: 12)),
+      'updatedAt': _epoch(c, const Duration(days: 4)),
+    },
+  ];
+
+  static JsonMap _continueWatching(ServerContext c) => {
+    'MediaContainer': {
+      'size': 1,
+      'Hub': [
+        {
+          'hubIdentifier': 'home.continue',
+          'hubKey': '/hubs/continueWatching/items',
+          'key': '/hubs/continueWatching/items',
+          'more': false,
+          'size': 1,
+          'style': 'hero',
+          'title': 'Continue Watching',
+          'type': 'mixed',
+          'Metadata': [_partWatched(c)],
+        },
+      ],
+    },
+  };
+
+  /// What Plex's matcher (the dialog of Fix Match) answers for an external
+  /// id, `tmdb-603`, asked through an item of a section whose agent is
+  /// `tv.plex.agents.movie` or `.series`: the title it knows, under Plex's
+  /// own guid, the one its items carry.
+  static JsonMap _matches(NetworkRequest r) {
+    final series = (r.query['agent'] ?? '').endsWith('.series');
+    final ask = RegExp(
+      r'^(tmdb|tvdb|imdb)-(.+)$',
+    ).firstMatch(r.query['title'] ?? '');
+    final found = ask == null
+        ? null
+        : WorldTitles.catalogue.where((t) {
+            if (t.isSeries != series) return false;
+            return switch (ask.group(1)) {
+              'tmdb' => '${t.tmdbId}' == ask.group(2),
+              'tvdb' => t.tvdbId != null && '${t.tvdbId}' == ask.group(2),
+              _ => t.imdbId == ask.group(2),
+            };
+          }).firstOrNull;
+    return {
+      'MediaContainer': {
+        'size': found == null ? 0 : 1,
+        'identifier': 'com.plexapp.plugins.library',
+        if (found != null)
+          'SearchResult': [
+            {
+              'guid': 'plex://${series ? 'show' : 'movie'}/${found.key}',
+              'name': found.title,
+              'year': found.year,
+              'score': 100,
+              'lifespanEnded': false,
+            },
+          ],
+      },
+    };
+  }
+
   @override
   NetworkReply? answer(NetworkRequest r, ServerContext c) {
     if (r.method != 'GET') return const NetworkReply(200);
@@ -1689,25 +2027,35 @@ class PlexFake extends ServiceFake {
       case '/':
         return NetworkReply.json(jsonFixtureMap('plex/capabilities.json'));
       case '/status/sessions':
-        return NetworkReply.json(jsonFixtureMap('plex/sessions_idle.json'));
+        return NetworkReply.json({
+          'MediaContainer': {
+            'size': 1,
+            'Metadata': [_session(c)],
+          },
+        });
       case '/library/sections':
-        return NetworkReply.json(jsonFixtureMap('plex/library_sections.json'));
-      // Nobody has authorized a device or made a playlist: the lists the
-      // Devices and Playlists tabs read answer empty.
+        return NetworkReply.json(_sections(c));
       case '/devices':
         return NetworkReply.json({
-          'MediaContainer': {'size': 0, 'Device': const <Object?>[]},
+          'MediaContainer': {'size': _devices(c).length, 'Device': _devices(c)},
         });
       case '/playlists':
         return NetworkReply.json({
-          'MediaContainer': {'size': 0, 'Metadata': const <Object?>[]},
+          'MediaContainer': {
+            'size': _playlists(c).length,
+            'Metadata': _playlists(c),
+          },
         });
       case '/hubs/continueWatching':
       case '/hubs/home/continueWatching':
-        return NetworkReply.json({
-          'MediaContainer': {'size': 0, 'Hub': const <Object?>[]},
-        });
+        return NetworkReply.json(_continueWatching(c));
       case '/library/onDeck':
+        return NetworkReply.json({
+          'MediaContainer': {
+            'size': 1,
+            'Metadata': [_partWatched(c)],
+          },
+        });
       case '/library/recentlyAdded':
         return NetworkReply.json({
           'MediaContainer': {'size': 0, 'Metadata': const <Object?>[]},
@@ -1724,6 +2072,9 @@ class PlexFake extends ServiceFake {
             ],
           },
         });
+    }
+    if (RegExp(r'^/library/metadata/[^/]+/matches$').hasMatch(r.path)) {
+      return NetworkReply.json(_matches(r));
     }
     if (RegExp(r'^/library/sections/\d+/all$').hasMatch(r.path)) {
       return NetworkReply.json({

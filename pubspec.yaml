@@ -212,7 +212,6 @@ flutter:
     - test/fixtures/plex/capabilities.json
     - test/fixtures/plex/identity.json
     - test/fixtures/plex/library_sections.json
-    - test/fixtures/plex/sessions_idle.json
     - test/fixtures/sabnzbd/server_stats.json
     - test/fixtures/seerr/public_settings_jellyseerr_1.9.2.json
     - test/fixtures/seerr/public_settings_jellyseerr_2.7.3.json
