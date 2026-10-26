@@ -249,7 +249,7 @@ class _RequestsSeerrService extends FakeSeerrService {
   final List<int> deleted = [];
 
   @override
-  Future<List<SeerrRequest>> getRequests() async => requests;
+  Future<List<SeerrRequest>> getRequestRows() async => requests;
 
   @override
   Future<void> approveRequest(int requestId) async {

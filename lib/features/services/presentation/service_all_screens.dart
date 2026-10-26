@@ -41,8 +41,7 @@ class ServiceAllRequestsScreen extends ConsumerWidget {
           : null,
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(requestsProvider);
-          ref.invalidate(requestsForProvider);
+          invalidateSeerrRequests(ref.container);
           try {
             await ref.read(requestsProvider.future);
           } catch (_) {}

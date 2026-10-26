@@ -100,6 +100,12 @@ class _ListingTransmission implements TransmissionClient {
   Future<List<TransmissionTorrent>> torrents({List<String>? ids}) async => list;
 
   @override
+  Future<List<TransmissionTorrent>> torrentsSynced() => torrents();
+
+  @override
+  void allowDeltaRead() {}
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 

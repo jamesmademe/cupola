@@ -23,6 +23,7 @@ import 'package:cupola/features/shell/domain/shell_shortcuts.dart';
 import 'package:cupola/features/shell/domain/window_history.dart';
 import 'package:cupola/features/shell/presentation/desktop/command_deck.dart';
 import 'package:cupola/features/shell/presentation/desktop/desktop_nav_rail.dart';
+import 'package:cupola/features/shell/presentation/desktop/desktop_downloads_poll.dart';
 import 'package:cupola/features/shell/presentation/desktop/desktop_rail_services.dart';
 import 'package:cupola/features/shell/presentation/desktop/in_flight_glance.dart';
 import 'package:cupola/features/shell/presentation/desktop/inspector_pane.dart';
@@ -195,6 +196,9 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
     // activity is the operator's, and no command deck, which reaches every
     // room and connection by name.
     final requester = ref.watch(shellAudienceProvider) == Audience.requester;
+    // What the chrome draws from, read again on its own clock; a requester has
+    // no downloads to draw.
+    if (!requester) ref.watch(desktopDownloadsPollProvider);
     final railWidth = DesktopNavRail.widthFor(compact: compact);
     // A Mac's full sidebar runs the window's height, the traffic lights in
     // its head, and the toolbar starts at its edge. Folded, the sidebar is too

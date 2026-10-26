@@ -8,15 +8,36 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 
-/// The request history of the Seerr the lens is on.
+/// The request history of the Seerr the lens is on, **as Seerr's rows carry
+/// it**: no title, no artwork, no score.
 ///
-/// Still the right provider for every surface that shows **one** Seerr:
-/// Discover, the services dashboard, the KPI strip, and the one the whole
-/// suite overrides to supply a fake. /activity, which merges every configured
-/// connection, reaches for [requestsForProvider] instead.
+/// The source of every list of requests, and what a figure is counted from: the
+/// KPI strip, how many wait for a decision. Those need each request's state
+/// and nothing of its title, and used to wait for a title page to be read for
+/// every row first. A surface that draws rows reads [requestsProvider], which
+/// is these rows with their titles; one that draws a few hands those to
+/// `SeerrService.hydrate`.
+///
+/// **The one to drop** for a read again, through [invalidateSeerrRequests]:
+/// [requestsProvider] derives from it and cannot re-read the pages by itself
+/// (`requests_invalidation_guard_test.dart`).
+final requestRowsProvider = FutureProvider<List<SeerrRequest>>((ref) async {
+  return ref.watch(seerrServiceProvider).getRequestRows();
+}, retry: noProviderRetry);
+
+/// The request history of the Seerr the lens is on, every row with its title.
+///
+/// Still the right provider for every surface that shows **one** Seerr's rows:
+/// Discover, the services dashboard, and the one the whole suite overrides to
+/// supply a fake. /activity, which merges every configured connection, reaches
+/// for [requestsForProvider] instead.
+///
+/// Derived from [requestRowsProvider]: the pages are read once, whoever asks
+/// first, and this adds the title reads. Never invalidated on its own, since
+/// that would read the titles again over the rows it already has.
 final requestsProvider = FutureProvider<List<SeerrRequest>>((ref) async {
-  final service = ref.watch(seerrServiceProvider);
-  return service.getRequests();
+  final rows = await ref.watch(requestRowsProvider.future);
+  return ref.watch(seerrServiceProvider).hydrate(rows);
 }, retry: noProviderRetry);
 
 final seerrIssuesProvider = FutureProvider.autoDispose
@@ -32,18 +53,32 @@ final seerrUsersProvider =
       return ref.watch(seerrServiceProvider).getUsersResult();
     }, retry: noProviderRetry);
 
-/// The request history of **one named connection**, whatever the lens is on.
+/// The rows of **one named connection's** request history, without titles
+/// (see [requestRowsProvider]). Whatever the lens is on.
 ///
 /// A Seerr request id is per instance: two servers both number from one, so a
 /// list merged across them cannot be acted on by id alone, and the row that
 /// carries the id has to carry the connection with it.
 ///
-/// The lens's own id collapses back onto [requestsProvider] rather than
+/// The lens's own id collapses back onto [requestRowsProvider] rather than
 /// fetching the same server twice, and, as with the service families, that
 /// collapse is what keeps an override of the plain provider from being bypassed
 /// by the path that names a connection. `read` of the lens for the reason
 /// `seerrServiceForProvider` documents at length: watching it would re-fetch
 /// every entry of this family every time the user moved the lens.
+final requestRowsForProvider =
+    FutureProvider.family<List<SeerrRequest>, String>((ref, instanceId) async {
+      final lens = ref.read(activeInstanceProvider(ServiceKey.seerr))?.id ?? '';
+      if (instanceId.isEmpty || instanceId == lens) {
+        return ref.watch(requestRowsProvider.future);
+      }
+      return ref.watch(seerrServiceForProvider(instanceId)).getRequestRows();
+    }, retry: noProviderRetry);
+
+/// The request history of **one named connection**, every row with its title,
+/// whatever the lens is on. Derived from [requestRowsForProvider], and dropped
+/// through [invalidateSeerrRequests] only, for the reason [requestsProvider]
+/// gives.
 final requestsForProvider = FutureProvider.family<List<SeerrRequest>, String>((
   ref,
   instanceId,
@@ -52,7 +87,8 @@ final requestsForProvider = FutureProvider.family<List<SeerrRequest>, String>((
   if (instanceId.isEmpty || instanceId == lens) {
     return ref.watch(requestsProvider.future);
   }
-  return ref.watch(seerrServiceForProvider(instanceId)).getRequests();
+  final rows = await ref.watch(requestRowsForProvider(instanceId).future);
+  return ref.watch(seerrServiceForProvider(instanceId)).hydrate(rows);
 }, retry: noProviderRetry);
 
 /// The requests of one named connection still in motion: waiting for
@@ -77,16 +113,35 @@ final pendingRequestsForProvider =
 /// Reads every list that shows Seerr's requests again: the lens's history,
 /// every connection's, the ones in motion and the ones waiting for a decision.
 ///
+/// **The only way to drop them** (with [invalidateSeerrRequestsOf]):
+/// `requests_invalidation_guard_test.dart` fails a direct drop of
+/// [requestsProvider] or [requestsForProvider]. The lists with titles derive
+/// from the rows, so dropping them alone re-reads the titles over rows as old
+/// as before, and reads no page.
+///
 /// Through the [container] rather than a ref, so a write that outlasts the page
 /// that made it can still say what it changed. Dropping the family is dropping
 /// every connection's entry, and the lens's own id collapses onto the plain
 /// provider: dropping one and not the other leaves a stale copy behind.
 void invalidateSeerrRequests(ProviderContainer container) {
   container
-    ..invalidate(requestsProvider)
-    ..invalidate(requestsForProvider)
+    ..invalidate(requestRowsProvider)
+    ..invalidate(requestRowsForProvider)
     ..invalidate(activeRequestsForProvider)
     ..invalidate(pendingRequestsForProvider);
+}
+
+/// [invalidateSeerrRequests] for the history of one connection alone, the lens
+/// when [instanceId] is empty: the lists in motion and waiting for a decision
+/// stay as they are. A connection that is the lens is dropped as both.
+void invalidateSeerrRequestsOf(ProviderContainer container, String instanceId) {
+  final lens = container.read(activeInstanceProvider(ServiceKey.seerr))?.id;
+  if (instanceId.isEmpty || instanceId == lens) {
+    container.invalidate(requestRowsProvider);
+  }
+  if (instanceId.isNotEmpty) {
+    container.invalidate(requestRowsForProvider(instanceId));
+  }
 }
 
 /// How many waiting requests the Seerr home lists before deferring to the full
@@ -148,15 +203,19 @@ bool holdsEveryRequest(List<SeerrRequest> requests) => switch (requests) {
 /// a minute before showing the same error. The retry that matters is the one on
 /// the card the section draws, which the user presses.
 final seerrDecisionsProvider = FutureProvider<SeerrDecisions>((ref) async {
-  final requests = await ref.watch(requestsProvider.future);
+  // The rows, not the list with titles: what waits is counted over states
+  // alone, and only the few the section draws are named.
+  final requests = await ref.watch(requestRowsProvider.future);
   final waiting = requests.where(isAwaitingApproval).toList(growable: false);
+  final preview = await ref
+      .watch(seerrServiceProvider)
+      .hydrate(
+        // The set is already filtered to pending, so this sort is doing its
+        // second job only: newest first inside the group.
+        sortRequestsPendingFirst(waiting, limit: seerrDecisionsPreviewLimit),
+      );
   return (
-    // The set is already filtered to pending, so this sort is doing its second
-    // job only: newest first inside the group.
-    preview: sortRequestsPendingFirst(
-      waiting,
-      limit: seerrDecisionsPreviewLimit,
-    ),
+    preview: preview,
     // Counted over the rows, so only as whole as they are. A lost page used
     // to come out as a smaller, confident "3 waiting".
     total: waiting.length,

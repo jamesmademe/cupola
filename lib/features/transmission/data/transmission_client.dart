@@ -2,7 +2,8 @@ import 'dart:typed_data';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show SynchronousFuture, compute;
+import 'package:flutter/foundation.dart'
+    show SynchronousFuture, compute, visibleForTesting;
 
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/redirect_guard.dart';
@@ -483,6 +484,86 @@ class TransmissionClient {
     return raw.length > _isolateParseThreshold
         ? compute(_parseTorrents, raw)
         : SynchronousFuture(_parseTorrents(raw));
+  }
+
+  /// What the daemon holds, as of the last full read.
+  Map<int, TransmissionTorrent>? _synced;
+  DateTime? _fullAt;
+  DateTime? _deltaUntil;
+
+  /// The time the full-read rule is judged by; a test replaces it.
+  @visibleForTesting
+  DateTime Function() clock = DateTime.now;
+
+  /// A full read at least this often: `recently-active` is built on each
+  /// torrent's last activity, so what another client changed without moving a
+  /// torrent (a label, a queue position shifting under a finished one) is not
+  /// in a delta, and this bounds how long it can stay unseen.
+  static const fullEvery = Duration(seconds: 30);
+
+  /// Says that the next [torrentsSynced] may be a delta, for the next second.
+  ///
+  /// Called by the queue's own three-second poll and nothing else, so that a
+  /// pull, a Retry or a read after a write always asks for the whole list.
+  void allowDeltaRead() =>
+      _deltaUntil = clock().add(const Duration(seconds: 1));
+
+  /// The torrent list for the live poll: **the whole list** when nothing is
+  /// held yet, when [fullEvery] has passed since the last whole read, or when
+  /// the read is not the poll's ([allowDeltaRead]); otherwise only what the
+  /// daemon says moved (`ids: "recently-active"`) folded onto what is held,
+  /// with `removed` taken out. At two thousand torrents every three seconds
+  /// the whole list is a megabyte a tick, to learn about a handful.
+  ///
+  /// The held list is kept in the daemon's order; a torrent seen for the first
+  /// time goes to the end, by id.
+  Future<List<TransmissionTorrent>> torrentsSynced() async {
+    final now = clock();
+    final held = _synced;
+    final fullAt = _fullAt;
+    final deltaUntil = _deltaUntil;
+    _deltaUntil = null;
+    final delta =
+        held != null &&
+        fullAt != null &&
+        now.difference(fullAt) < fullEvery &&
+        deltaUntil != null &&
+        now.isBefore(deltaUntil);
+    if (!delta) {
+      final all = await torrents();
+      _synced = {for (final torrent in all) torrent.id: torrent};
+      _fullAt = now;
+      return all;
+    }
+
+    final result = await _call('torrent-get', {
+      'fields': _listFields,
+      'ids': 'recently-active',
+    });
+    final changed = _parseTorrents([
+      for (final torrent in (result['torrents'] as List? ?? const []))
+        if (torrent is Map) Map<String, dynamic>.from(torrent),
+    ]);
+    final removed = {
+      for (final id in (result['removed'] as List? ?? const []))
+        if (id is num) id.toInt(),
+    };
+    final merged = Map<int, TransmissionTorrent>.of(held)
+      ..removeWhere((id, _) => removed.contains(id));
+    final fresh = <TransmissionTorrent>[];
+    for (final torrent in changed) {
+      if (merged.containsKey(torrent.id)) {
+        merged[torrent.id] = torrent;
+      } else {
+        fresh.add(torrent);
+      }
+    }
+    fresh.sort((a, b) => a.id.compareTo(b.id));
+    for (final torrent in fresh) {
+      merged[torrent.id] = torrent;
+    }
+    _synced = merged;
+    return merged.values.toList(growable: false);
   }
 
   static const List<String> _listFields = [

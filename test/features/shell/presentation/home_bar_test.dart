@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cupola/features/shell/presentation/desktop/desktop_downloads_poll.dart';
 import 'package:cupola/features/activity/data/activity_live.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
 import 'package:cupola/features/home/data/featured.dart';
@@ -455,6 +456,7 @@ Future<ProviderContainer> _pump(
       homeLivePollProvider.overrideWith((ref) {}),
       homeRecoveryPollProvider.overrideWith((ref) {}),
       sidebarInFlightPollProvider.overrideWith((ref) {}),
+      desktopDownloadsPollProvider.overrideWith((ref) {}),
       featuredAdvancesProvider.overrideWithValue(false),
     ],
   );

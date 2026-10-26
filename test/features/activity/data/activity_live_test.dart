@@ -82,7 +82,12 @@ Future<_Rig> _start(
           coverage: SourceCoverage.none,
         );
       }),
-      requestsProvider.overrideWith((ref) async {
+      // The rows are what the page reads again; the list with titles derives
+      // from them, here as it does in the app.
+      requestsProvider.overrideWith(
+        (ref) => ref.watch(requestRowsProvider.future),
+      ),
+      requestRowsProvider.overrideWith((ref) async {
         rig.reads.update('requests', (n) => n + 1, ifAbsent: () => 1);
         final held = rig.heldRequests;
         if (held != null && !held.isCompleted) return held.future;
@@ -312,7 +317,7 @@ void main() {
         'the first', (tester) async {
       final rig = await _start(tester, holdRequests: true);
       // The first read of the list is still out.
-      rig.container.invalidate(requestsProvider);
+      invalidateSeerrRequests(rig.container);
       await _flush(tester);
       expect(rig['requests'], 1);
       rig.forget();

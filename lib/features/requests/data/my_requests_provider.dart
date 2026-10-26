@@ -49,7 +49,7 @@ final requesterHomeFailureProvider = Provider.autoDispose<Object?>((ref) {
 
 /// Asks her Seerr again for everything her Home reads.
 void retryRequesterHome(WidgetRef ref) {
-  ref.invalidate(requestsProvider);
+  invalidateSeerrRequestsOf(ref.container, '');
   ref.invalidate(atriumTrendingProvider);
   ref.invalidate(comingSoonProvider);
 }

@@ -613,6 +613,35 @@ void main() {
       },
     );
 
+    test(
+      'a tick of the client page does not start the arr queue again',
+      () async {
+        final radarr = _CountingQueueRadarrService();
+        final container = _container(
+          settings: radarrAndQb,
+          radarrService: radarr,
+          overrides: [
+            allTorrentsProvider.overrideWith((ref) async => const []),
+          ],
+        );
+        container.listen(servicesQueueProvider, (_, _) {});
+        await container.read(servicesQueueProvider.future);
+        expect(radarr.calls, 1);
+
+        // The qBittorrent page's three-second tick: its list is read again.
+        container.invalidate(allTorrentsProvider);
+        await container.read(allTorrentsProvider.future);
+        await Future<void>.delayed(Duration.zero);
+        await container.read(servicesQueueProvider.future);
+        expect(radarr.calls, 1);
+
+        // A poll that reads the group again (Home, Activity, the desktop's) does.
+        container.invalidate(servicesQueueProvider);
+        await container.read(servicesQueueProvider.future);
+        expect(radarr.calls, 2);
+      },
+    );
+
     // The arr records an NZBGet job by the `drone` parameter it tagged the job
     // with; the join keyed the NZBGet row on its NZBID, so the two never met
     // and one download read as two.

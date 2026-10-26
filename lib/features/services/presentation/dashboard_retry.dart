@@ -54,8 +54,8 @@ List<ProviderOrFamily> dashboardSourcesOf(ServiceKey service) =>
       // The lens's list, every other Seerr's, which the region reads too, and
       // the waiting page Requests on the Home counts from.
       ServiceKey.seerr => [
-        servicesRequestsProvider,
-        requestsForProvider,
+        requestRowsProvider,
+        requestRowsForProvider,
         pendingRequestsForProvider,
       ],
       // The status list *is* the failing-indexer list; the indexers name them.

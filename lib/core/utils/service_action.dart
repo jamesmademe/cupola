@@ -9,6 +9,7 @@ import 'package:cupola/core/capability/capability_scope.dart';
 import 'package:cupola/core/capability/permission_refusal.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/features/home/data/home_live.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Runs a mutating service call with the shared plumbing every write action in
@@ -68,6 +69,7 @@ Future<bool> _run(
     for (final provider in invalidate) {
       container.invalidate(provider);
     }
+    readDownloadsAfterWrite(container, invalidate);
     if (successMessage != null) {
       say((at) => SnackBarHelper.success(at, successMessage));
     }

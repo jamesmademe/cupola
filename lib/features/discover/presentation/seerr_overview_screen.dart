@@ -92,7 +92,7 @@ class _OverviewBody extends ConsumerWidget {
     return RefreshIndicator(
       onRefresh: () async {
         invalidateServiceReadout(ref, ServiceKey.seerr);
-        ref.invalidate(requestsProvider);
+        invalidateSeerrRequestsOf(ref.container, '');
         ref.invalidate(seerrOverviewDecisionsProvider);
         ref.invalidate(seerrOverviewProcessingProvider);
         ref.invalidate(discoverTrendingProvider);
@@ -163,7 +163,7 @@ class _DecisionsSection extends ConsumerWidget {
         service: ServiceKey.seerr,
         consequence: 'what needs a decision is not shown',
         loadingLabel: 'Loading what needs a decision',
-        onRetry: () => ref.invalidate(requestsProvider),
+        onRetry: () => invalidateSeerrRequestsOf(ref.container, ''),
         skeleton: const ServiceOverviewRowsSkeleton(rows: 3),
         isEmpty: (data) => data.rows.isEmpty,
         // A resting state wears no alarm chrome: an auto-approving Seerr with
@@ -238,7 +238,7 @@ class _ProcessingSection extends ConsumerWidget {
         service: ServiceKey.seerr,
         consequence: 'what is processing is not shown',
         loadingLabel: 'Loading what is processing',
-        onRetry: () => ref.invalidate(requestsProvider),
+        onRetry: () => invalidateSeerrRequestsOf(ref.container, ''),
         skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
         isEmpty: (data) => data.rows.isEmpty,
         emptyBuilder: const ServiceOverviewEmpty(

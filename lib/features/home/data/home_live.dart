@@ -45,6 +45,34 @@ final List<ProviderOrFamily> homeDownloadsSources = [
   servicesQueueProvider,
 ];
 
+/// The lists the download clients' own pages hold: the part of
+/// [homeDownloadsSources] a client page drops, and what the queue reads as it
+/// stands (it does not watch them).
+final List<ProviderOrFamily> downloadClientLists = [
+  allTorrentsProvider,
+  transmissionTorrentsProvider,
+  sabnzbdQueueProvider,
+  nzbgetQueueProvider,
+  nzbgetStatusProvider,
+];
+
+/// Reads the queue again at once when a write succeeded whose follow-up
+/// dropped one of a client's lists: pausing, resuming or removing from a
+/// client's page shows on the Home's In flight, the rail's lights and the
+/// window's decisions now, not at the next poll.
+///
+/// Called by the two action runners with what they were told to drop. A queue
+/// read in flight is restarted rather than left: it began before the write,
+/// and a person's action is rare, unlike a tick.
+void readDownloadsAfterWrite(
+  ProviderContainer container,
+  Iterable<ProviderOrFamily> dropped,
+) {
+  if (dropped.any(downloadClientLists.contains)) {
+    container.invalidate(servicesQueueProvider);
+  }
+}
+
 /// What Now playing draws from, on every connection of both media servers.
 final List<ProviderOrFamily> homeSessionsSources = [
   jellyfinSessionsProvider,

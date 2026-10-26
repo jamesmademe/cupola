@@ -8,6 +8,7 @@ import 'package:cupola/core/service_theme.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/widgets.dart';
+import 'package:cupola/features/home/data/home_live.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -245,6 +246,7 @@ class _AddTorrentFormState extends ConsumerState<_AddTorrentForm> {
                 }
                 ref.invalidate(torrentsProvider);
                 ref.invalidate(allTorrentsProvider);
+                readDownloadsAfterWrite(ref.container, [allTorrentsProvider]);
                 if (!context.mounted) return;
                 Navigator.of(context).pop();
                 widget.onAdded();

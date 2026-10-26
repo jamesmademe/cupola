@@ -3,6 +3,7 @@ import 'dart:isolate';
 import 'package:dio/dio.dart';
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
+import 'package:cupola/core/utils/parallel_reads.dart';
 import 'package:cupola/features/discover/data/seerr_session.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -203,10 +204,22 @@ class SeerrService {
   /// How many title hydrations may run at once.
   ///
   /// Each one is a TMDB call proxied by Seerr, and a request list full of
-  /// "Unknown Media" rows used to fire one for every row simultaneously. Eight
+  /// "Unknown Media" rows used to fire one for every row simultaneously. Four
   /// at a time keeps a burst of refreshes polite to the server without making
   /// the first paint wait for a serial walk.
-  static const int _hydrationConcurrency = 8;
+  static const int _hydrationConcurrency = 4;
+
+  /// How many pages of one request walk may be in flight at once.
+  ///
+  /// The first page goes alone (it carries the count). Four, because a Seerr
+  /// on a small NAS answers four together sooner than twelve in a heap.
+  static const int _pageLanes = 4;
+
+  /// Title reads in flight, by `movie:550`: a second row for the same title
+  /// (a 4K and a standard copy, two people) joins the read of the first
+  /// instead of starting its own, which the cache could not do, being written
+  /// only when a read ends.
+  final Map<String, Future<_RequestTitle?>> _titleReads = {};
 
   /// `movie:550` → hydrated title metadata. Keyed by kind as well as TMDB
   /// id, since a movie and a series can share the number.
@@ -420,16 +433,47 @@ class SeerrService {
   /// Seerr's own rather than the length of whatever arrived. Declared as a
   /// plain list so that the fakes overriding this, and the providers typed on
   /// it, stay as they are.
-  Future<List<SeerrRequest>> getRequests() async {
+  Future<List<SeerrRequest>> getRequests() async =>
+      hydrate(await getRequestRows());
+
+  /// Every request this server holds, **as Seerr's rows carry them**: no
+  /// title, no artwork, no score, and not one TMDB call.
+  ///
+  /// What a figure is counted from (the KPI strip, how many wait for a
+  /// decision) needs the state of each request and nothing about its title,
+  /// and used to wait for [getRequests] to read a title page for every row
+  /// first. A surface that draws a row hands it to [hydrate]. The contract
+  /// of [getRequests] is this one's: it throws when the first page does not
+  /// come back.
+  Future<List<SeerrRequest>> getRequestRows() async {
     // Asked beside the pages rather than before them: a page waits for it
     // only to decode its rows, never to be sent.
     final numberingRead = numbering();
     final walk = await _walkRequests('all', numbering: numberingRead);
     return SeerrRequestList(
-      await _hydrateRequests(walk.items),
+      walk.items,
       total: walk.total,
       isPartial: walk.isPartial,
     );
+  }
+
+  /// [requests] with the title, the artwork and the score Seerr's rows lack,
+  /// read from the title's page ([_hydrationConcurrency] at a time, once per
+  /// title for as long as this service lives).
+  ///
+  /// A title that cannot be read leaves its row as it was. A
+  /// [SeerrRequestList] keeps its count and its partiality, so the figures
+  /// made of the hydrated rows say what they said of the rows.
+  Future<List<SeerrRequest>> hydrate(List<SeerrRequest> requests) async {
+    final hydrated = await _hydrateRequests(requests);
+    return switch (requests) {
+      SeerrRequestList(:final total, :final isPartial) => SeerrRequestList(
+        hydrated,
+        total: total,
+        isPartial: isPartial,
+      ),
+      _ => hydrated,
+    };
   }
 
   /// The requests still in motion: waiting for approval, being processed, or
@@ -500,18 +544,26 @@ class SeerrService {
     final all = <SeerrRequest>[...first.items];
     var isPartial = false;
 
-    // The server reports the true count on the first page, so the remaining
-    // pages can all be asked for in parallel. With no count there is nothing
-    // to page towards, and the first page is all that can be claimed.
+    // The server reports the true count on the first page, so the rest are
+    // known to exist and are asked for [_pageLanes] at a time: all of them at
+    // once was one socket per fifty requests, from a client that is reading
+    // a history nobody asked for by name. With no count there is nothing to
+    // page towards, and the first page is all that can be claimed.
     if (total != null) {
-      final pages = await Future.wait([
+      final skips = [
         for (
           var skip = _requestPageSize;
           skip < total;
           skip += _requestPageSize
         )
-          _requestPageSafely(skip, numbering: numbering, filter: filter),
-      ]);
+          skip,
+      ];
+      final pages = await runInLanes(
+        skips.length,
+        _pageLanes,
+        (i) =>
+            _requestPageSafely(skips[i], numbering: numbering, filter: filter),
+      );
       for (final page in pages) {
         if (page == null) {
           isPartial = true;
@@ -578,23 +630,12 @@ class SeerrService {
   ) async {
     if (requests.isEmpty) return requests;
 
-    final hydrated = List<SeerrRequest?>.filled(requests.length, null);
-    var next = 0;
-
-    Future<void> worker() async {
-      while (true) {
-        final index = next++;
-        if (index >= requests.length) return;
-        hydrated[index] = await _hydrateRequest(requests[index]);
-      }
-    }
-
-    final workers = _hydrationConcurrency < requests.length
-        ? _hydrationConcurrency
-        : requests.length;
-    await Future.wait(List.generate(workers, (_) => worker()));
-
-    return hydrated.whereType<SeerrRequest>().toList(growable: false);
+    final hydrated = await runInLanes(
+      requests.length,
+      _hydrationConcurrency,
+      (index) => _hydrateRequest(requests[index]),
+    );
+    return hydrated.toList(growable: false);
   }
 
   Future<SeerrRequest> _hydrateRequest(SeerrRequest request) async {
@@ -619,14 +660,28 @@ class SeerrService {
       return _applyHydration(request, cached);
     }
 
+    final movie = media.mediaType == 'movie';
+    if (!movie && media.mediaType != 'tv') return request;
+    // Entered before the first await, so a row for the same title that gets
+    // here while this one is reading joins it.
+    final read = _titleReads[key] ??= _readTitle(key, tmdbId, movie: movie);
+    final entry = await read;
+    return entry == null ? request : _applyHydration(request, entry);
+  }
+
+  /// One title's page, kept in [_mediaCache] when it answers. Null when it
+  /// did not: a hydration that failed leaves its row as it was.
+  Future<_RequestTitle?> _readTitle(
+    String key,
+    int tmdbId, {
+    required bool movie,
+  }) async {
     try {
-      final movie = media.mediaType == 'movie';
-      if (!movie && media.mediaType != 'tv') return request;
       final details = movie ? await getMovie(tmdbId) : await getTv(tmdbId);
       // A title not dated yet has an empty date: it still has its name.
       final date =
           details[movie ? 'releaseDate' : 'firstAirDate']?.toString() ?? '';
-      final entry = _mediaCache[key] = (
+      return _mediaCache[key] = (
         title: details[movie ? 'title' : 'name']?.toString(),
         year: date.length >= 4 ? date.substring(0, 4) : null,
         posterPath:
@@ -640,10 +695,11 @@ class SeerrService {
         ),
         voteCount: intOrNull(details['voteCount'] ?? details['vote_count']),
       );
-      return _applyHydration(request, entry);
-    } catch (e) {
-      // Ignore hydration errors
-      return request;
+    } catch (_) {
+      // A hydration that failed is not worth failing the list for.
+      return null;
+    } finally {
+      _titleReads.remove(key);
     }
   }
 

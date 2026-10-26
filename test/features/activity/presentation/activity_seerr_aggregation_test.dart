@@ -197,12 +197,12 @@ class _RequestsSeerrService extends FakeSeerrService {
   final List<SeerrRequest> requests;
 
   @override
-  Future<List<SeerrRequest>> getRequests() async => requests;
+  Future<List<SeerrRequest>> getRequestRows() async => requests;
 }
 
 class _ThrowingSeerrService extends FakeSeerrService {
   @override
-  Future<List<SeerrRequest>> getRequests() async {
+  Future<List<SeerrRequest>> getRequestRows() async {
     throw Exception('offline');
   }
 }

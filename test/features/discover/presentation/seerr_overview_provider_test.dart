@@ -11,6 +11,7 @@ import 'package:cupola/features/services/presentation/dashboard_sections.dart'
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
+import '../../../test_helpers/fake_services.dart';
 import '../../../test_helpers/settings_scope.dart';
 
 void main() {
@@ -247,7 +248,10 @@ void main() {
 
         final container = ProviderContainer(
           overrides: [
-            requestsProvider.overrideWith((ref) async => [pendingButAvailable]),
+            requestRowsProvider.overrideWith(
+              (ref) async => [pendingButAvailable],
+            ),
+            seerrServiceProvider.overrideWithValue(FakeSeerrService()),
             // The operator's key: the rows he has always read.
             currentSettingsProvider.overrideWith(
               (ref) => settingsWithServices(const [ServiceKey.seerr]),
@@ -264,6 +268,54 @@ void main() {
       },
     );
   });
+
+  group('seerrOverviewProcessingProvider', () {
+    test(
+      'counts every row it works on, names only the five it draws',
+      () async {
+        final seerr = _NamingSeerr();
+        final container = ProviderContainer(
+          overrides: [
+            requestRowsProvider.overrideWith(
+              (ref) async => [
+                for (var id = 1; id <= 12; id++)
+                  _request(
+                    id: id,
+                    title: null,
+                    status: RequestStatus.approved,
+                    createdAt: '2026-09-${id.toString().padLeft(2, '0')}',
+                  ),
+              ],
+            ),
+            seerrServiceProvider.overrideWithValue(seerr),
+            currentSettingsProvider.overrideWith(
+              (ref) => settingsWithServices(const [ServiceKey.seerr]),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final section = await container.read(
+          seerrOverviewProcessingProvider.future,
+        );
+
+        expect(section.total, 12);
+        expect(section.rows, hasLength(seerrProcessingPreviewLimit));
+        expect(seerr.hydrated, [12, 11, 10, 9, 8]);
+      },
+    );
+  });
+}
+
+/// Remembers which rows it was asked to name.
+class _NamingSeerr extends FakeSeerrService {
+  final List<int> hydrated = [];
+
+  @override
+  Future<List<SeerrRequest>> hydrate(List<SeerrRequest> requests) async {
+    hydrated.addAll(requests.map((r) => r.id));
+    return requests;
+  }
 }
 
 SeerrRequest _request({

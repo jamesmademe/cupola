@@ -2473,8 +2473,14 @@ Future<List<ServiceQueueItem>> _loadQbittorrentQueueItems(
 ) async {
   // The lens's own list is the one the qBittorrent page already holds; any
   // other connection is asked through its own long-lived client.
+  //
+  // Read, not watched: a watch made the queue (and with it every arr queue
+  // read behind it) start again at each three-second tick of the page that
+  // owns the list, which on a desktop is a graph that is never paused.
+  // `desktopDownloadsPollProvider` and the Home and Activity polls read the
+  // group again on their own, slower clocks.
   final torrents = source.isLens
-      ? await ref.watch(allTorrentsProvider.future)
+      ? await ref.read(allTorrentsProvider.future)
       : (await ref
                 .watch(qbittorrentServiceForProvider(source.instanceId))
                 .mainData())
@@ -2553,7 +2559,7 @@ Future<List<ServiceQueueItem>> _loadTransmissionQueueItems(
 ) async {
   // As qBittorrent: the lens's list is the one the Transmission page holds.
   final torrents = source.isLens
-      ? await ref.watch(transmissionTorrentsProvider.future)
+      ? await ref.read(transmissionTorrentsProvider.future)
       : await ref
             .watch(transmissionClientForProvider(source.instanceId))
             .torrents();
@@ -2635,7 +2641,7 @@ Future<List<ServiceQueueItem>> _loadSabnzbdQueueItems(
   _MergeConnection source,
 ) async {
   final queue = source.isLens
-      ? await ref.watch(sabnzbdQueueProvider.future)
+      ? await ref.read(sabnzbdQueueProvider.future)
       : await ref
             .watch(sabnzbdClientForProvider(source.instanceId))
             .getQueue(limit: SabnzbdClient.wholeQueue);
@@ -2735,8 +2741,8 @@ Future<List<ServiceQueueItem>> _loadNzbgetQueueItems(
   // eyebrow's sum left out.
   final (groups, status) = source.isLens
       ? await (
-          ref.watch(nzbgetQueueProvider.future),
-          ref.watch(nzbgetStatusProvider.future),
+          ref.read(nzbgetQueueProvider.future),
+          ref.read(nzbgetStatusProvider.future),
         ).wait
       : await (
           ref.watch(nzbgetClientForProvider(source.instanceId)).listGroups(),
