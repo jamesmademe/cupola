@@ -19,7 +19,7 @@ class _Attention
   Future<List<ArrAttentionItem<SonarrAttentionKind>>> build() async => const [
     ArrAttentionItem(
       kind: SonarrAttentionKind.stalled,
-      headline: 'Stuck · Slow Horses S04 E02',
+      headline: 'Stuck\u00A0· Slow Horses S04 E02',
       detail: 'qBittorrent',
       count: 2,
     ),
@@ -81,7 +81,7 @@ void main() {
 
     // The rows are still drawn under the failure, so the header still counts
     // them: it reads the retained value, never a dash over rows on screen.
-    expect(find.text('Stuck · Slow Horses S04 E02'), findsOneWidget);
+    expect(find.text('Stuck\u00A0· Slow Horses S04 E02'), findsOneWidget);
     expect(find.text('2'), findsOneWidget);
     expect(find.text('—'), findsNothing);
   });

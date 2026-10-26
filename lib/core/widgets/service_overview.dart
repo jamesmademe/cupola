@@ -1428,7 +1428,7 @@ class ServiceHistoryRow extends StatelessWidget {
         margin: const EdgeInsets.only(top: 5),
         decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
       ),
-      title: '${entry.subject} · ${entry.event.toLowerCase()}',
+      title: '${entry.subject}\u00A0· ${entry.event.toLowerCase()}',
       detail: entry.detail,
     );
   }
