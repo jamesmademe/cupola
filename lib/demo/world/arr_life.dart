@@ -21,6 +21,9 @@ class LiveMovie {
 
   /// When its file was imported, or null for none.
   DateTime? arrived;
+
+  /// When it arrived in the demo, or null for a film the world already held.
+  DateTime? arrivedLive;
 }
 
 /// One series on one Sonarr, as the living world keeps it.
@@ -317,7 +320,8 @@ class ArrLife {
       final movie = movieOf(arr, title) ?? addMovie(arr, title);
       movie
         ..hasFile = true
-        ..arrived = at;
+        ..arrived = at
+        ..arrivedLive = at;
     } else if (service == 'sonarr') {
       final one = seriesOf(arr, title) ?? addSeries(arr, title);
       final season = d.season;

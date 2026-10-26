@@ -252,6 +252,18 @@ class SeerrFake extends ServiceFake {
     return (q.id, title, requester, q.status, Duration.zero, is4k);
   }
 
+  /// How long ago [t] arrived on its arr in the demo, or null when it did
+  /// not: the player has held it since then.
+  static Duration? _arrivedInDemo(ServerContext c, WorldTitle t) {
+    final arrs = c.life?.arrs;
+    final arr = arrs == null ? null : _arrFor(c, t, false);
+    if (arrs == null || arr == null) return null;
+    final at = t.isSeries
+        ? arrs.seriesOf(arr, t)?.arrived
+        : arrs.movieOf(arr, t)?.arrivedLive;
+    return at == null ? null : c.now.difference(at);
+  }
+
   /// The id [t] has on the arr Seerr sends it to: the world's, or the one a
   /// living arr gave it.
   static int? _externalId(ServerContext c, WorldTitle t, {required bool is4k}) {
@@ -330,11 +342,14 @@ class SeerrFake extends ServiceFake {
       // When the player first held it: Coffee Run this afternoon, Sintel
       // two days ago, the rest of what is there long before.
       if (hd == 4 || hd == 5)
-        'mediaAddedAt': c.ago(switch (t.key) {
-          'coffeeRun' => const Duration(hours: 3),
-          'sintel' => const Duration(days: 2),
-          _ => const Duration(days: 25),
-        }),
+        'mediaAddedAt': c.ago(
+          _arrivedInDemo(c, t) ??
+              switch (t.key) {
+                'coffeeRun' => const Duration(hours: 3),
+                'sintel' => const Duration(days: 2),
+                _ => const Duration(days: 25),
+              },
+        ),
       // A series' seasons, each with its own status. Cosmos Laundromat: the
       // first on the server, the second in part. Night Shift: the first on
       // the server, the second asked for by nobody, the third waiting.
