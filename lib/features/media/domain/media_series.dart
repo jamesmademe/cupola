@@ -411,7 +411,7 @@ MediaNextAiring? mediaNextAiringOf(
     if (row case MediaConnectionRow(
       reading: MediaReadingAnswered(:final answer),
     ) when answer.value is MediaSeerrRecord) {
-      final model = DiscoverDetailViewModel.fromResponse(
+      final model = DiscoverDetailViewModel.of(
         (answer.value as MediaSeerrRecord).details,
       );
       final next = model.nextEpisodeToAir;

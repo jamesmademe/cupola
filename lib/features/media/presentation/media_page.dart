@@ -316,7 +316,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
       isMovie: mediaKey.isMovie,
       seasons: mediaKey.isMovie
           ? const []
-          : DiscoverDetailViewModel.fromResponse(record.details).seasons,
+          : DiscoverDetailViewModel.of(record.details).seasons,
       numbering: ref.watch(mediaSeerrNumberingProvider(seerr.id)).value,
       has4kServer: has4k,
     );
@@ -1187,7 +1187,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
         :final connection,
         reading: MediaReadingAnswered(:final answer),
       ) when answer.value is MediaSeerrRecord) {
-        final model = DiscoverDetailViewModel.fromResponse(
+        final model = DiscoverDetailViewModel.of(
           (answer.value as MediaSeerrRecord).details,
         );
         final numbers = [
