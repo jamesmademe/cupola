@@ -68,7 +68,9 @@ void main() {
   test('a row that is verde names a test file that exists', skip: _skip, () {
     final problems = <String>[];
     for (final row in rows) {
-      if (!row.state.contains('verde')) continue;
+      // A row is verde when its status leads with the word: a parziale row may
+      // mention a green part further on, and is not held to a test here.
+      if (!row.state.startsWith('verde')) continue;
       final named = _dartNamed(row.state).toList();
       if (named.isEmpty) {
         problems.add('${row.id} says verde but names no test file');
@@ -109,9 +111,9 @@ void main() {
       final area = row.id[0];
       final counts = byArea.putIfAbsent(area, () => <String, int>{});
       final state = row.state;
-      final bucket = state.contains('verde')
+      final bucket = state.startsWith('verde')
           ? 'verde'
-          : state.contains('parziale')
+          : state.startsWith('parziale')
           ? 'parziale'
           : state.startsWith('X') || state.contains('dichiarato')
           ? 'dichiarato'
