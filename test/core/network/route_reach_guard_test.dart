@@ -79,7 +79,11 @@ void main() {
       }
       if (_transportReaders.containsKey(file.path)) continue;
       final code = _withoutComments(file.readAsStringSync());
-      final transports = RegExp(r'\bwatchTransport\(').allMatches(code).length;
+      // A client is built off a transport by `watchTransport` itself or by a
+      // `ConnectionProviders.transport` pair, which calls it for its caller.
+      final transports = RegExp(
+        r'\b(?:watchTransport|ConnectionProviders<[^>]+>\.transport)\(',
+      ).allMatches(code).length;
       final told = RegExp(
         r'\.onlyAtHomeOf\(|\.onlyAtHome\b',
       ).allMatches(code).length;
@@ -100,6 +104,10 @@ void main() {
 /// The files that read a transport without building a client from it, and
 /// why.
 const _transportReaders = <String, String>{
+  'lib/features/settings/data/connection_providers.dart':
+      'Builds no client: it hands the transport to the `create` of each '
+      '`ConnectionProviders.transport`, which this guard reads where the '
+      'client is built.',
   'lib/core/status/read_clock.dart':
       'Keys a read\'s clock by the connection the request goes to.',
   'lib/features/qbittorrent/presentation/qbittorrent_provider.dart':

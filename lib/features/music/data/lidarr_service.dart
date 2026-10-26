@@ -1,56 +1,21 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/features/music/domain/models/lidarr_album.dart';
 import 'package:cupola/features/music/domain/models/lidarr_artist.dart';
 import 'package:cupola/features/music/domain/models/lidarr_track.dart';
-import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/data/connection_providers.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-final lidarrServiceProvider = Provider<LidarrService>((ref) {
-  return LidarrService(watchApiClient(ref, ServiceKey.lidarr));
-});
+final lidarrServiceProvider = _lidarr.lens;
 
-/// Lidarr bound to one named connection, whatever the lens is pointing at.
-///
-/// For the work that belongs to a *connection* rather than to a screen: a
-/// release search runs on the server it was started against, and the lens can
-/// move while it is queued. Empty id means the lens, which is what the plain
-/// [lidarrServiceProvider] answers; an id naming nothing throws "not configured"
-/// rather than quietly answering about some other server.
-///
-/// Not `autoDispose`: a caller reads this, awaits a request on it, and a
-/// disposal scheduled at the end of the read would close the `Dio` under the
-/// request. One live client per configured connection is the same bound the
-/// per-service providers already carry.
-final lidarrServiceForProvider = Provider.family<LidarrService, String>((
-  ref,
-  instanceId,
-) {
-  // The lens's own connection resolves to [lidarrServiceProvider] rather than to
-  // a second client for the same server. Without this the app kept two live
-  // `Dio`s pointed at one address whenever anything asked by id, and any
-  // override of the plain provider, which is how every test supplies a fake,
-  // was quietly bypassed on the path that names a connection.
-  //
-  // `read`, deliberately, and this is the load-bearing part. Watching the lens
-  // would rebuild EVERY entry of this family whenever the lens moved, entries
-  // for connections that did not change, and `watchApiClient` closes the
-  // outgoing client on dispose. A release search running against the seedbox
-  // would have its `Dio` shut under it because the user tapped a badge on
-  // another screen. The cost of reading is that an entry minted before the lens
-  // landed on its id keeps a client of its own until it is disposed: one extra
-  // connection, rather than a request that fails.
-  final lens = ref.read(activeInstanceProvider(ServiceKey.lidarr))?.id ?? '';
-  if (instanceId.isEmpty || instanceId == lens) {
-    return ref.watch(lidarrServiceProvider);
-  }
-  return LidarrService(
-    watchApiClient(ref, ServiceKey.lidarr, instanceId: instanceId),
-  );
-});
+final lidarrServiceForProvider = _lidarr.forConnection;
+
+final _lidarr = ConnectionProviders<LidarrService>.apiClient(
+  ServiceKey.lidarr,
+  create: LidarrService.new,
+);
 
 /// Service for interacting with Lidarr API.
 ///

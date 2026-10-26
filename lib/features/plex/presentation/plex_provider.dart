@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/features/plex/data/plex_client.dart';
 import 'package:cupola/features/plex/domain/models/plex_models.dart';
+import 'package:cupola/features/settings/data/connection_providers.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -34,49 +35,27 @@ import 'package:cupola/core/providers/provider_retry.dart';
 /// `Dio` in `onDispose`, so any rebuild kills in-flight requests and cascades an
 /// invalidation through every Stream surface. Watching the whole settings object
 /// meant a theme-mode toggle did that.
-final plexClientProvider = Provider<PlexClient>((ref) {
-  return _plexClient(ref, instanceId: null);
-});
+final plexClientProvider = _plex.lens;
 
-/// Plex bound to one named connection, whatever the lens is pointing at.
-///
-/// The dashboard's folded matrix has to ask a second Plex for its own figures;
-/// reading [plexClientProvider] there would silently answer with the lens's
-/// server under the other connection's label. The lens's own id collapses back
-/// onto the plain provider so tests and screens keep one client per active
-/// connection.
-final plexClientForProvider = Provider.family<PlexClient, String>((
-  ref,
-  instanceId,
-) {
-  final lens = ref.read(activeInstanceProvider(ServiceKey.plex))?.id ?? '';
-  if (instanceId.isEmpty || instanceId == lens) {
-    return ref.watch(plexClientProvider);
-  }
-  return _plexClient(ref, instanceId: instanceId);
-});
+final plexClientForProvider = _plex.forConnection;
 
-PlexClient _plexClient(Ref ref, {required String? instanceId}) {
-  final transport = watchTransport(
-    ref,
-    ServiceKey.plex,
-    instanceId: instanceId,
-  );
-  final clientId = ref.watch(
-    currentSettingsProvider.select((s) => s.plexClientId),
-  );
-  transport.ensureConfigured(ServiceKey.plex);
-  final client = PlexClient(
-    url: transport.url,
-    token: transport.apiKey,
-    clientIdentifier: clientId,
-    pinnedCertFingerprint: transport.pin,
-    accessHeaders: transport.access.headers(),
-    onlyAtHome: transport.onlyAtHomeOf(ServiceKey.plex),
-  );
-  ref.onDispose(client.close);
-  return client;
-}
+final _plex = ConnectionProviders<PlexClient>.transport(
+  ServiceKey.plex,
+  create: (ref, transport) {
+    final clientId = ref.watch(
+      currentSettingsProvider.select((s) => s.plexClientId),
+    );
+    return PlexClient(
+      url: transport.url,
+      token: transport.apiKey,
+      clientIdentifier: clientId,
+      pinnedCertFingerprint: transport.pin,
+      accessHeaders: transport.access.headers(),
+      onlyAtHome: transport.onlyAtHomeOf(ServiceKey.plex),
+    );
+  },
+  close: (client) => client.close(),
+);
 
 /// The same client, seen through the interface the Stream surfaces are written
 /// against.

@@ -7,6 +7,7 @@ import 'package:cupola/core/status/read_clock.dart';
 import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
 import 'package:cupola/features/sabnzbd/domain/models/sabnzbd_models.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/connection_providers.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -14,56 +15,21 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// Throws if SABnzbd is not configured; widgets must check
 /// `settings.isServiceConfigured(ServiceKey.sabnzbd)` before reading.
-final sabnzbdClientProvider = Provider<SabnzbdClient>((ref) {
-  // Selected rather than watching the whole model: this provider closes a live
-  // Dio on dispose, so an unrelated settings write must not rebuild it.
-  return _sabnzbdClient(ref, instanceId: null);
-});
+final sabnzbdClientProvider = _sabnzbd.lens;
 
-/// SABnzbd client for an explicitly named connection.
-///
-/// The empty and active ids reuse [sabnzbdClientProvider], keeping the legacy
-/// lens path on one live Dio. A non-active id owns one client for the lifetime
-/// of this family entry and is closed when that entry is disposed.
-final sabnzbdClientForProvider = Provider.family<SabnzbdClient, String>((
-  ref,
-  instanceId,
-) {
-  final activeId = ref.read(activeInstanceProvider(ServiceKey.sabnzbd))?.id;
-  if (instanceId.isEmpty || instanceId == activeId) {
-    return ref.watch(sabnzbdClientProvider);
-  }
+final sabnzbdClientForProvider = _sabnzbd.forConnection;
 
-  return _sabnzbdClient(ref, instanceId: instanceId);
-});
-
-/// Builds one client against a named connection.
-///
-/// One builder rather than two copies, matching NPM, Plex, Jellyfin and Unraid
-/// which landed beside this. The construction carries `certFingerprint`, which
-/// ADR-6 makes load-bearing: two copies of it is two places to forget the pin,
-/// and a client built without one silently stops trusting the certificate the
-/// user accepted for that origin.
-SabnzbdClient _sabnzbdClient(Ref ref, {required String? instanceId}) {
-  // `watchTransport`, selected rather than watching the whole model: this
-  // builder registers a dispose that closes a live Dio, so an unrelated
-  // settings write must not rebuild it.
-  final transport = watchTransport(
-    ref,
-    ServiceKey.sabnzbd,
-    instanceId: instanceId,
-  );
-  transport.ensureConfigured(ServiceKey.sabnzbd);
-  final client = SabnzbdClient(
+final _sabnzbd = ConnectionProviders<SabnzbdClient>.transport(
+  ServiceKey.sabnzbd,
+  create: (ref, transport) => SabnzbdClient(
     url: transport.url,
     apiKey: transport.apiKey,
     certFingerprint: transport.pin,
     accessHeaders: transport.access.headers(),
     onlyAtHome: transport.onlyAtHomeOf(ServiceKey.sabnzbd),
-  );
-  ref.onDispose(client.close);
-  return client;
-}
+  ),
+  close: (client) => client.close(),
+);
 
 /// The current download queue.
 ///
