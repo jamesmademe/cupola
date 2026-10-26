@@ -12,6 +12,8 @@ import 'package:cupola/features/settings/domain/connection_address.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
+import '../../../test_helpers/app_sources.dart';
+
 /// A Seerr client is born in one place, `seerrClientFor`
 /// (`lib/features/discover/data/seerr_session.dart`).
 ///
@@ -34,7 +36,8 @@ void main() {
       'lib',
     ).listSync(recursive: true).whereType<File>())
       if (file.path.endsWith('.dart') &&
-          !file.path.startsWith('lib/core/generated/'))
+          !file.path.startsWith('lib/core/generated/') &&
+          !isServerStandIn(file.path))
         file.path: _withoutComments(file.readAsStringSync()),
   };
 

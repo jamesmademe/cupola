@@ -22,12 +22,12 @@ import 'package:cupola/features/discover/domain/seerr_permission.dart';
 import 'package:cupola/features/discover/domain/seerr_server_facts.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-import '../../fixtures.dart';
-import '../config_profile.dart';
-import '../profile_network.dart';
-import '../service_fakes.dart';
-import '../world.dart';
-import 'media_fakes.dart' show JellyfinFake;
+import 'package:cupola/demo/world/fixtures.dart';
+import 'package:cupola/demo/world/config_profile.dart';
+import 'package:cupola/demo/world/profile_network.dart';
+import 'package:cupola/demo/world/service_fakes.dart';
+import 'package:cupola/demo/world/world.dart';
+import 'package:cupola/demo/world/fakes/media_fakes.dart' show JellyfinFake;
 
 /// How long a session lives after it was last used: the cookie's `maxAge`
 /// and the store's `ttl`, 30 days. The store moves the expiry on every request

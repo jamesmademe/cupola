@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../test_helpers/app_sources.dart';
+
 /// One spelling of an episode code, the brand book's `S2 E4`, and one place
 /// that spells it: `lib/core/utils/episode_code.dart`.
 ///
@@ -25,6 +27,7 @@ void main() {
       .whereType<File>()
       .where((file) => file.path.endsWith('.dart'))
       .where((file) => !file.path.startsWith('lib/core/generated/'))
+      .where((file) => !isServerStandIn(file.path))
       .where((file) => file.path != home)
       .toList(growable: false);
 

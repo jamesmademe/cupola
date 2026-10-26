@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/features/discover/presentation/discover_atrium.dart';
 import 'package:cupola/features/discover/presentation/widgets/collection_tally.dart';
 
-import '../../../test_helpers/profiles/fakes/media_fakes.dart';
+import 'package:cupola/demo/world/fakes/media_fakes.dart';
 import '../../../test_helpers/profiles/profiles.dart';
 
 /// The atrium's shelves that know the library: the collection the operator

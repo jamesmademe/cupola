@@ -14,7 +14,7 @@ import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
-import '../../../test_helpers/profiles/service_fakes.dart';
+import 'package:cupola/demo/world/service_fakes.dart';
 
 void main() {
   test('P1, In flight: a matched row keeps the arr\'s title and its '

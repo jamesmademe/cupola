@@ -15,7 +15,7 @@ import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
-import '../../../test_helpers/profiles/service_fakes.dart';
+import 'package:cupola/demo/world/service_fakes.dart';
 
 /// One failed import of Elephants Dream, film 1 on the 4K Radarr.
 Map<String, Object?> _failedImport(DateTime now) => {

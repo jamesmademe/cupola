@@ -10,9 +10,10 @@ import 'package:cupola/features/activity/data/activity_live.dart';
 import 'package:cupola/features/home/data/home_live.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 
+import 'package:cupola/demo/world/config_profile.dart';
+import 'package:cupola/demo/world/profile_network.dart';
+
 import '../settings_scope.dart';
-import 'config_profile.dart';
-import 'profile_network.dart';
 
 /// A profile made live: its fake network installed, and the overrides that
 /// start the app on its settings and its lens.
@@ -33,7 +34,8 @@ class ProfileHarness {
     List<Override> overrides = const [],
     DateTime? now,
   }) async {
-    final network = ProfileNetwork(profile, now: now)..install();
+    final network = ProfileNetwork(profile, now: now);
+    addTearDown(network.install());
     // What `CupolaApp` hands the artwork widgets, from the same settings.
     ConnectionAccessRegistry.update(profile.settings.accessHeadersByAddress);
     addTearDown(ConnectionAccessRegistry.reset);
@@ -158,4 +160,21 @@ Future<ProfileHarness> pumpWithProfile(
   );
   if (settle) await harness.settle(tester);
   return harness;
+}
+
+/// The world's clock, moved by a widget test's fake one.
+extension ProfileNetworkFakeTime on ProfileNetwork {
+  /// Moves [ProfileNetwork.currentTime] with the widget test's fake clock from
+  /// here on, so `tester.pump(const Duration(minutes: 31))` expires a PIN as
+  /// the app's own timers see it. `pumpWithProfile` does this; a test that
+  /// pumps its own tree after `ProfileHarness.start` calls it itself.
+  void followFakeTime(TestWidgetsFlutterBinding binding) {
+    final start = binding.clock.now();
+    var last = Duration.zero;
+    followClock(() {
+      // Outside a test body the binding has no fake clock to read.
+      if (binding.inTest) last = binding.clock.now().difference(start);
+      return last;
+    });
+  }
 }

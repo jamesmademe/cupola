@@ -5,8 +5,9 @@ import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
-import 'fakes/seerr_sessions.dart' show worldSeerrSessionOf;
-import 'world.dart';
+import 'package:cupola/demo/world/fakes/seerr_sessions.dart'
+    show worldSeerrSessionOf;
+import 'package:cupola/demo/world/world.dart';
 
 /// The six ways one household's configuration differs from another's, as the
 /// config inventory's legend names them (a–f).

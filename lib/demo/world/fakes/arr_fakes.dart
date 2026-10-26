@@ -9,10 +9,10 @@ library;
 
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-import '../profile_network.dart';
-import '../service_fakes.dart';
-import '../world.dart';
-import 'media_fakes.dart' show SeerrFake;
+import 'package:cupola/demo/world/profile_network.dart';
+import 'package:cupola/demo/world/service_fakes.dart';
+import 'package:cupola/demo/world/world.dart';
+import 'package:cupola/demo/world/fakes/media_fakes.dart' show SeerrFake;
 
 /// The shared arr surface: status, health, queue, history, calendar, wanted,
 /// profiles, root folders, commands.

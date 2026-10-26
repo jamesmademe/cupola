@@ -9,11 +9,11 @@ library;
 
 import 'dart:convert';
 
-import '../../fixtures.dart';
-import '../config_profile.dart';
-import '../fake_socket.dart';
-import '../profile_network.dart';
-import '../service_fakes.dart';
+import 'package:cupola/demo/world/fixtures.dart';
+import 'package:cupola/demo/world/config_profile.dart';
+import 'package:cupola/demo/world/fake_socket.dart';
+import 'package:cupola/demo/world/profile_network.dart';
+import 'package:cupola/demo/world/service_fakes.dart';
 
 // === TrueNAS ===============================================================
 
@@ -36,8 +36,8 @@ class TrueNasFake extends ServiceFake {
   NetworkReply? answer(NetworkRequest r, ServerContext c) => null;
 
   @override
-  WebSocketPeer? upgrade(NetworkRequest r, ServerContext c) =>
-      r.path == '/api/current' ? TrueNasPeer(c) : null;
+  WebSocketPeer? upgrade(NetworkRequest request, ServerContext context) =>
+      request.path == '/api/current' ? TrueNasPeer(context) : null;
 }
 
 /// The server half of `wss://…/api/current`.
@@ -235,8 +235,8 @@ class DockgeFake extends ServiceFake {
   NetworkReply? answer(NetworkRequest r, ServerContext c) => null;
 
   @override
-  WebSocketPeer? upgrade(NetworkRequest r, ServerContext c) =>
-      r.path.startsWith('/socket.io') ? DockgePeer(c) : null;
+  WebSocketPeer? upgrade(NetworkRequest request, ServerContext context) =>
+      request.path.startsWith('/socket.io') ? DockgePeer(context) : null;
 }
 
 /// Dockge's Socket.IO server, over Engine.IO v4.
@@ -369,14 +369,15 @@ class UnraidFake extends ServiceFake {
   }
 
   @override
-  bool isWrite(NetworkRequest r) => _query(r).trimLeft().startsWith('mutation');
+  bool isWrite(NetworkRequest request) =>
+      _query(request).trimLeft().startsWith('mutation');
 
   @override
-  NetworkReply refuseKey(NetworkRequest r) =>
+  NetworkReply refuseKey(NetworkRequest request) =>
       NetworkReply.json(jsonFixtureMap('unraid/error_unauthenticated.json'));
 
   @override
-  NetworkReply refuseWrite(NetworkRequest r) =>
+  NetworkReply refuseWrite(NetworkRequest request) =>
       NetworkReply.json(jsonFixtureMap('unraid/error_forbidden.json'));
 
   @override
@@ -414,19 +415,20 @@ class NpmFake extends ServiceFake {
   const NpmFake();
 
   @override
-  bool isPublic(NetworkRequest r) => r.method == 'GET' && r.path == '/api/';
+  bool isPublic(NetworkRequest request) =>
+      request.method == 'GET' && request.path == '/api/';
 
   @override
-  bool isWrite(NetworkRequest r) =>
-      r.method != 'GET' && r.path != '/api/tokens';
+  bool isWrite(NetworkRequest request) =>
+      request.method != 'GET' && request.path != '/api/tokens';
 
   @override
-  NetworkReply refuseKey(NetworkRequest r) => NetworkReply.json({
+  NetworkReply refuseKey(NetworkRequest request) => NetworkReply.json({
     'error': {'code': 401, 'message': 'Invalid email or password'},
   }, status: 401);
 
   @override
-  NetworkReply refuseWrite(NetworkRequest r) => NetworkReply.json({
+  NetworkReply refuseWrite(NetworkRequest request) => NetworkReply.json({
     'error': {'code': 403, 'message': 'Permission Denied'},
   }, status: 403);
 

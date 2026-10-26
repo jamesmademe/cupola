@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../test_helpers/app_sources.dart';
+
 /// Everything that reaches a server goes where the connection's route is:
 /// the eighth obligation of a client, beside ADR-6's five, the access
 /// headers' sixth and Seerr's seventh.
@@ -31,6 +33,7 @@ void main() {
   for (final file in Directory('lib').listSync(recursive: true)) {
     if (file is! File || !file.path.endsWith('.dart')) continue;
     if (file.path.startsWith('lib/core/generated/')) continue;
+    if (isServerStandIn(file.path)) continue;
     if (_whereTheAddressLives.contains(file.path)) continue;
     final code = _withoutComments(file.readAsStringSync());
     for (final (:name, :pattern) in _reads) {

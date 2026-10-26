@@ -24,7 +24,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-import '../test_helpers/profiles/world.dart';
+import 'package:cupola/demo/world/world.dart';
 import '../test_helpers/settings_scope.dart';
 
 /// P9 against the macOS lab: the household's Seerr, which the operator holds

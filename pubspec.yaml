@@ -196,6 +196,34 @@ flutter:
     - assets/fonts/BricolageGrotesque-OFL.txt
     - assets/fonts/Onest-OFL.txt
     - assets/fonts/GeistMono-OFL.txt
+    # The recorded answers the demo world serves as they are
+    # (`lib/demo/world/fixtures.dart`). They keep their one home beside the
+    # model tests that read them; every file the world names is listed here,
+    # held by `test/demo/world_fixtures_guard_test.dart`.
+    - test/fixtures/jellyfin/system_info_public.json
+    - test/fixtures/npm/users_me_admin.json
+    - test/fixtures/npm/users_me_view_only.json
+    - test/fixtures/nzbget/status.json
+    - test/fixtures/nzbget/version.json
+    - test/fixtures/plex/capabilities.json
+    - test/fixtures/plex/identity.json
+    - test/fixtures/plex/library_sections.json
+    - test/fixtures/plex/sessions_idle.json
+    - test/fixtures/sabnzbd/server_stats.json
+    - test/fixtures/seerr/public_settings_jellyseerr_1.9.2.json
+    - test/fixtures/seerr/public_settings_jellyseerr_2.7.3.json
+    - test/fixtures/seerr/public_settings_overseerr_1.35.0.json
+    - test/fixtures/seerr/public_settings_seerr_3.5.0.json
+    - test/fixtures/truenas/auth_me_full_admin.json
+    - test/fixtures/truenas/auth_me_readonly_admin.json
+    - test/fixtures/truenas/rpc_error_eacces.json
+    - test/fixtures/unraid/array.json
+    - test/fixtures/unraid/docker.json
+    - test/fixtures/unraid/error_forbidden.json
+    - test/fixtures/unraid/error_unauthenticated.json
+    - test/fixtures/unraid/info.json
+    - test/fixtures/unraid/me_admin.json
+    - test/fixtures/unraid/me_viewer.json
 
   # To add assets to your application, add an assets section, like this:
   # assets:

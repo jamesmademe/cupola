@@ -1,12 +1,12 @@
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-import 'config_profile.dart';
-import 'fake_socket.dart';
-import 'fakes/arr_fakes.dart';
-import 'fakes/client_fakes.dart';
-import 'fakes/infra_fakes.dart';
-import 'fakes/media_fakes.dart';
-import 'profile_network.dart';
+import 'package:cupola/demo/world/config_profile.dart';
+import 'package:cupola/demo/world/fake_socket.dart';
+import 'package:cupola/demo/world/fakes/arr_fakes.dart';
+import 'package:cupola/demo/world/fakes/client_fakes.dart';
+import 'package:cupola/demo/world/fakes/infra_fakes.dart';
+import 'package:cupola/demo/world/fakes/media_fakes.dart';
+import 'package:cupola/demo/world/profile_network.dart';
 
 /// A decoded JSON object, the shape every canned answer is built from.
 typedef JsonMap = Map<String, Object?>;

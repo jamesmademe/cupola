@@ -4,13 +4,13 @@ library;
 import 'package:cupola/features/discover/domain/seerr_permission.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-import '../../fixtures.dart';
-import '../config_profile.dart';
-import '../profile_network.dart';
-import '../service_fakes.dart';
-import '../world.dart';
-import 'arr_fakes.dart';
-import 'seerr_sessions.dart';
+import 'package:cupola/demo/world/fixtures.dart';
+import 'package:cupola/demo/world/config_profile.dart';
+import 'package:cupola/demo/world/profile_network.dart';
+import 'package:cupola/demo/world/service_fakes.dart';
+import 'package:cupola/demo/world/world.dart';
+import 'package:cupola/demo/world/fakes/arr_fakes.dart';
+import 'package:cupola/demo/world/fakes/seerr_sessions.dart';
 
 // === Seerr =================================================================
 
@@ -46,10 +46,10 @@ class SeerrFake extends ServiceFake {
   // Seerr reads a key it does not know as nobody, and refuses nobody the way
   // `isAuthenticated` does.
   @override
-  NetworkReply refuseKey(NetworkRequest r) => seerrEndpointRefused();
+  NetworkReply refuseKey(NetworkRequest request) => seerrEndpointRefused();
 
   @override
-  NetworkReply refuseWrite(NetworkRequest r) => seerrEndpointRefused();
+  NetworkReply refuseWrite(NetworkRequest request) => seerrEndpointRefused();
 
   /// A web page still answers in front of everything; otherwise Seerr's own
   /// middleware decides: the CSRF guard, then the key or the session, then
@@ -63,8 +63,11 @@ class SeerrFake extends ServiceFake {
   }
 
   @override
-  NetworkReply finish(NetworkRequest r, ServerContext c, NetworkReply reply) =>
-      seerrFinish(r, reply);
+  NetworkReply finish(
+    NetworkRequest request,
+    ServerContext context,
+    NetworkReply reply,
+  ) => seerrFinish(request, reply);
 
   // Search and discovery are GETs; every write is a POST, PUT or DELETE.
 
@@ -1067,31 +1070,32 @@ class JellyfinFake extends ServiceFake {
   static const serverId = '9f2c1b7e4a3d4f0e8b6c5a1d2e3f4a5b';
 
   @override
-  bool isPublic(NetworkRequest r) =>
-      r.method == 'GET' &&
-      (r.path == '/System/Info/Public' || r.path == '/System/Ping');
+  bool isPublic(NetworkRequest request) =>
+      request.method == 'GET' &&
+      (request.path == '/System/Info/Public' || request.path == '/System/Ping');
 
   @override
-  NetworkReply refuseKey(NetworkRequest r) => const NetworkReply(401);
+  NetworkReply refuseKey(NetworkRequest request) => const NetworkReply(401);
 
   @override
-  bool isAdminRead(NetworkRequest r) =>
-      r.method == 'GET' &&
-      (r.path == '/System/Info' ||
-          r.path == '/Users' ||
-          r.path == '/Devices' ||
-          r.path == '/ScheduledTasks' ||
-          r.path == '/System/ActivityLog/Entries' ||
-          r.path == '/Library/VirtualFolders');
+  bool isAdminRead(NetworkRequest request) =>
+      request.method == 'GET' &&
+      (request.path == '/System/Info' ||
+          request.path == '/Users' ||
+          request.path == '/Devices' ||
+          request.path == '/ScheduledTasks' ||
+          request.path == '/System/ActivityLog/Entries' ||
+          request.path == '/Library/VirtualFolders');
 
   // Playback reporting and session commands are POSTs a non-admin may send
   // for its own sessions, so only the admin writes count here.
   @override
-  bool isWrite(NetworkRequest r) =>
-      r.method != 'GET' &&
-      (r.path.startsWith('/Library/') ||
-          r.path.startsWith('/ScheduledTasks/') ||
-          r.path.startsWith('/Items/') && r.path.endsWith('/Refresh'));
+  bool isWrite(NetworkRequest request) =>
+      request.method != 'GET' &&
+      (request.path.startsWith('/Library/') ||
+          request.path.startsWith('/ScheduledTasks/') ||
+          request.path.startsWith('/Items/') &&
+              request.path.endsWith('/Refresh'));
 
   static JsonMap _item(ServerContext c, WorldTitle t, {String? type}) {
     final unverified = c.profile.unverifiedMatches.contains(t.key);
@@ -1400,23 +1404,25 @@ class PlexFake extends ServiceFake {
   const PlexFake();
 
   @override
-  bool isPublic(NetworkRequest r) => r.method == 'GET' && r.path == '/identity';
+  bool isPublic(NetworkRequest request) =>
+      request.method == 'GET' && request.path == '/identity';
 
   @override
-  NetworkReply refuseKey(NetworkRequest r) => NetworkReply.text(
+  NetworkReply refuseKey(NetworkRequest request) => NetworkReply.text(
     '<html><head><title>Unauthorized</title></head></html>',
     status: 401,
   );
 
   @override
-  bool isAdminRead(NetworkRequest r) =>
-      r.method == 'GET' &&
-      (r.path == '/status/sessions' || r.path == '/statistics/bandwidth');
+  bool isAdminRead(NetworkRequest request) =>
+      request.method == 'GET' &&
+      (request.path == '/status/sessions' ||
+          request.path == '/statistics/bandwidth');
 
   // A shared user's token is refused the owner's routes the way a bad token
   // is refused everything: 401, Plex's only word for it.
   @override
-  NetworkReply refuseWrite(NetworkRequest r) => refuseKey(r);
+  NetworkReply refuseWrite(NetworkRequest request) => refuseKey(request);
 
   static JsonMap _metadata(ServerContext c, WorldTitle t, int key) {
     final unverified = c.profile.unverifiedMatches.contains(t.key);

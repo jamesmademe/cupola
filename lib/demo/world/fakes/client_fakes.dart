@@ -5,10 +5,10 @@
 /// Radarr or Sonarr queue share the download id the Dashboard joins on.
 library;
 
-import '../../fixtures.dart';
-import '../profile_network.dart';
-import '../service_fakes.dart';
-import '../world.dart';
+import 'package:cupola/demo/world/fixtures.dart';
+import 'package:cupola/demo/world/profile_network.dart';
+import 'package:cupola/demo/world/service_fakes.dart';
+import 'package:cupola/demo/world/world.dart';
 
 List<WorldDownload> _rowsOf(ServerContext c, String client) => [
   for (final d in c.profile.downloads)
@@ -28,15 +28,16 @@ class QbittorrentFake extends ServiceFake {
   static const _login = '/api/v2/auth/login';
 
   @override
-  bool isWrite(NetworkRequest r) => r.method == 'POST' && r.path != _login;
+  bool isWrite(NetworkRequest request) =>
+      request.method == 'POST' && request.path != _login;
 
   @override
-  NetworkReply refuseKey(NetworkRequest r) => r.path == _login
+  NetworkReply refuseKey(NetworkRequest request) => request.path == _login
       ? NetworkReply.text('Fails.')
       : NetworkReply.text('Forbidden', status: 403);
 
   @override
-  NetworkReply refuseWrite(NetworkRequest r) =>
+  NetworkReply refuseWrite(NetworkRequest request) =>
       NetworkReply.text('Forbidden', status: 403);
 
   static String _state(WorldDownload d) => switch (d.state) {
@@ -224,17 +225,17 @@ class TransmissionFake extends ServiceFake {
       d.state == DownloadState.failed || d.state == DownloadState.missingFiles;
 
   @override
-  bool isWrite(NetworkRequest r) => !_reads.contains(_method(r));
+  bool isWrite(NetworkRequest request) => !_reads.contains(_method(request));
 
   @override
-  NetworkReply refuseKey(NetworkRequest r) =>
+  NetworkReply refuseKey(NetworkRequest request) =>
       NetworkReply.text('<h1>401: Unauthorized</h1>', status: 401);
 
   @override
-  NetworkReply? gate(NetworkRequest r, ServerContext c) {
-    final refused = super.gate(r, c);
+  NetworkReply? gate(NetworkRequest request, ServerContext context) {
+    final refused = super.gate(request, context);
     if (refused != null) return refused;
-    if (r.headers['x-transmission-session-id'] != sessionId) {
+    if (request.headers['x-transmission-session-id'] != sessionId) {
       return NetworkReply.text(
         '<h1>409: Conflict</h1>',
         status: 409,
@@ -348,21 +349,21 @@ class SabnzbdFake extends ServiceFake {
   String _mode(NetworkRequest r) => r.query['mode'] ?? '';
 
   @override
-  bool isPublic(NetworkRequest r) => _mode(r) == 'version';
+  bool isPublic(NetworkRequest request) => _mode(request) == 'version';
 
   // `mode=queue&name=delete` and friends change things; a bare queue reads.
   @override
-  bool isWrite(NetworkRequest r) =>
-      !_reads.contains(_mode(r)) || r.query.containsKey('name');
+  bool isWrite(NetworkRequest request) =>
+      !_reads.contains(_mode(request)) || request.query.containsKey('name');
 
   @override
-  NetworkReply refuseKey(NetworkRequest r) =>
+  NetworkReply refuseKey(NetworkRequest request) =>
       NetworkReply.json({'status': false, 'error': 'API Key Incorrect'});
 
   // SABnzbd has no read-only full key; the NZB key it can hand out is refused
   // on every full-API call, reads included, in the same words.
   @override
-  NetworkReply refuseWrite(NetworkRequest r) => refuseKey(r);
+  NetworkReply refuseWrite(NetworkRequest request) => refuseKey(request);
 
   @override
   NetworkReply? answer(NetworkRequest r, ServerContext c) {
@@ -506,10 +507,10 @@ class NzbgetFake extends ServiceFake {
   }
 
   @override
-  bool isWrite(NetworkRequest r) => !_reads.contains(_method(r));
+  bool isWrite(NetworkRequest request) => !_reads.contains(_method(request));
 
   @override
-  NetworkReply refuseKey(NetworkRequest r) => const NetworkReply(401);
+  NetworkReply refuseKey(NetworkRequest request) => const NetworkReply(401);
 
   @override
   NetworkReply? answer(NetworkRequest r, ServerContext c) {

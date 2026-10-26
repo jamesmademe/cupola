@@ -8,10 +8,17 @@ own. This folder holds the profiles of the config inventory, P8 behind
 Cloudflare Access among them, so that a fix can be tested against the same
 small set of configurations.
 
+The world lives in `lib/` because the app serves it too: the demo mode
+installs a profile's network in its own process. It is the one copy. Tests
+reach it through `test/test_helpers/profiles/profiles.dart`, which adds the
+test-only harness (`profile_harness.dart`); nothing here imports a test
+library (`test/demo/world_fixtures_guard_test.dart`).
+
 
 A profile is a value (`ConfigProfile`). It describes which connections
 exist, how each one behaves, where the instance lens rests and what Seerr
-knows beyond them. `ProfileHarness` turns a profile into a live test. It
+knows beyond them. `ProfileHarness` (in `test/test_helpers/profiles/`)
+turns a profile into a live test. It
 installs a fake network as `HttpOverrides.global` and overrides only the
 startup settings.
 
@@ -175,7 +182,8 @@ reports.
 Names, hosts (`nas.home.arpa`) and titles come from the design brief's
 world (`world.dart`). Rows are built in Dart because they join across
 services by download id and their times are relative to `network.now`.
-Shapes that carry no title come from `test/fixtures/`.
+Shapes that carry no title come from `test/fixtures/`, read through
+`fixtures.dart`: every file the world names is an app asset too.
 
 ## Seerr accounts
 

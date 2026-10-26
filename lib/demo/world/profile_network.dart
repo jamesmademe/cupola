@@ -3,16 +3,13 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter_test/flutter_test.dart'
-    show TestWidgetsFlutterBinding, addTearDown;
-
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-import 'config_profile.dart';
-import 'fake_socket.dart';
-import 'fakes/plex_tv_fake.dart';
-import 'fakes/seerr_sessions.dart';
-import 'service_fakes.dart';
+import 'package:cupola/demo/world/config_profile.dart';
+import 'package:cupola/demo/world/fake_socket.dart';
+import 'package:cupola/demo/world/fakes/plex_tv_fake.dart';
+import 'package:cupola/demo/world/fakes/seerr_sessions.dart';
+import 'package:cupola/demo/world/service_fakes.dart';
 
 /// One request that reached the fake network.
 class NetworkRequest {
@@ -350,19 +347,12 @@ class ProfileNetwork {
   /// clock of its own: 31 days, and a session nobody used is over.
   void elapse(Duration duration) => _elapsed += duration;
 
-  /// Moves [currentTime] with the widget test's fake clock from here on, so
+  /// Moves [currentTime] with another clock from here on: [elapsed] answers
+  /// how much time that clock has seen pass. A widget test follows its fake
+  /// clock (`followFakeTime` in `test/test_helpers/profiles/`), so
   /// `tester.pump(const Duration(minutes: 31))` expires a PIN as the app's
-  /// own timers see it. `pumpWithProfile` does this; a test that pumps its
-  /// own tree after `ProfileHarness.start` calls it itself.
-  void followFakeTime(TestWidgetsFlutterBinding binding) {
-    final start = binding.clock.now();
-    var last = Duration.zero;
-    _followed = () {
-      // Outside a test body the binding has no fake clock to read.
-      if (binding.inTest) last = binding.clock.now().difference(start);
-      return last;
-    };
-  }
+  /// own timers see it.
+  void followClock(Duration Function() elapsed) => _followed = elapsed;
 
   // === Seerr sign-in and plex.tv ===========================================
 
@@ -505,17 +495,18 @@ class ProfileNetwork {
     String method,
   ) => _rpcRoutes[serverId]?[method];
 
-  /// Makes this the network every `HttpClient` in the test is built on, and
-  /// restores the previous one when the test ends.
+  /// Makes this the network every `HttpClient` in the process is built on,
+  /// and returns what puts the previous one back: a test calls it when it
+  /// ends, the demo when it is left.
   ///
   /// Global rather than zoned on purpose: a provider's request starts in
   /// whatever zone built the widget, never inside a `runZoned` a helper could
   /// wrap around `pumpWidget`. `flutter_test` installs its own global (every
-  /// request answers 400), and this replaces it for the test's duration only.
-  void install() {
+  /// request answers 400), and this replaces it until it is restored.
+  void Function() install() {
     final previous = HttpOverrides.current;
     HttpOverrides.global = _ProfileHttpOverrides(this);
-    addTearDown(() => HttpOverrides.global = previous);
+    return () => HttpOverrides.global = previous;
   }
 
   // === Dialling ============================================================

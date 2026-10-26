@@ -24,9 +24,9 @@ import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../../test_helpers/decision_rows.dart';
-import '../../../test_helpers/profiles/fakes/arr_fakes.dart';
+import 'package:cupola/demo/world/fakes/arr_fakes.dart';
 import '../../../test_helpers/profiles/profiles.dart';
-import '../../../test_helpers/profiles/service_fakes.dart';
+import 'package:cupola/demo/world/service_fakes.dart';
 
 const _tall = Size(430, 6000);
 
