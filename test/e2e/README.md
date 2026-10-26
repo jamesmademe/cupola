@@ -128,7 +128,7 @@ control plane creates one proxy per service and writes the map to
 | Readarr | 28787 | 8787 |
 | Prowlarr | 29696 | 9696 |
 | Bazarr | 26767 | 6767 |
-| qBittorrent | 28080 | 8080 |
+| qBittorrent | 8080 | 18080 |
 | Transmission | 29091 | 9091 |
 | SABnzbd | 28082 | 8082 |
 | NZBGet | 26789 | 6789 |
