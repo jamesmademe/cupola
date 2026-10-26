@@ -93,9 +93,6 @@ abstract interface class StreamServerClient {
   /// Throws on a remote failure, for the reason [getSessions] does.
   Future<List<StreamLibrary>> getLibraries();
 
-  /// Queue a scan for one library.
-  Future<void> refreshLibrary(String libraryId);
-
   /// How many items one library holds, or null when the server would not say.
   ///
   /// **One call per library, and never on the list.** Both servers can answer a
@@ -226,53 +223,11 @@ abstract interface class StreamServerClient {
     CancelToken? cancelToken,
   });
 
-  /// Whether an item the *arrs* know about is on this server, and where the
-  /// viewer stopped in it.
-  ///
-  /// This is what lets a Radarr or Sonarr detail page say "On Jellyfin · 34 min
-  /// in" instead of Cupola shipping a second, near-identical catalogue. The join
-  /// is on an external database id rather than on a title, because a title match
-  /// across two catalogues is a guess and this has to be a fact: Radarr carries
-  /// `tmdbId`, Sonarr `tvdbId`, and both servers index the same ids
-  /// (Jellyfin as `ProviderIds`, Plex as `Guid[]` entries like `tmdb://1234`).
-  ///
-  /// Returns null when the item is not there or when the server is too old to
-  /// filter by provider id. Both are "we cannot say it is watchable", and the
-  /// caller renders nothing rather than a wrong claim.
-  ///
-  /// **The answer is checked, never taken on trust.** An implementation returns
-  /// only a row that `streamExternalMatchScore` accepts against these same
-  /// arguments: the item's *own* reported ids agreeing with the ones asked
-  /// about, and [kind] (or, without it, "a film or a show"), and the
-  /// best-supported one when several do. The server returning a row is not
-  /// evidence it matched: one that ignores the filter answers 200 with the start
-  /// of the whole library. [title] and [year] only settle a row whose ids cannot
-  /// be compared at all; they are never a search key.
-  ///
-  /// A missing viewer is **not** one of those cases. It costs the *watch state*
-  /// (the slot reads "Ready to watch" instead of "34 min in"), but presence and
-  /// a route to open the item are still facts, and they are the media server's
-  /// facts rather than a restatement of the arr's: the arr knows a file is on
-  /// disk, the server knows it is in the library and playable. Refusing to
-  /// answer without a viewer made this slot Plex-only in practice.
-  Future<StreamItem?> findByExternalId({
-    String? tmdbId,
-    String? tvdbId,
-    String? imdbId,
-    StreamItemKind? kind,
-    String? title,
-    int? year,
-    CancelToken? cancelToken,
-  });
-
-  /// [findByExternalId], with its nothings told apart: the verified item, "not
-  /// in the library" (the server answered with no rows), or "not verified"
-  /// (rows came back and none is this title). **Throws when the server did not
-  /// answer or answered with a failure**, that is neither of the other two,
-  /// and the availability slot says it in its own words.
-  ///
-  /// The same checking contract as [findByExternalId], which is this with every
-  /// nothing, and every failure, flattened to null.
+  /// The verified item, "not in the library" (the server answered with no
+  /// rows), or "not verified" (rows came back and none is this title). **Throws
+  /// when the server did not answer or answered with a failure**, that is
+  /// neither of the other two, and the availability slot says it in its own
+  /// words.
   Future<StreamExternalLookup> lookupByExternalId({
     String? tmdbId,
     String? tvdbId,
