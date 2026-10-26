@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart'
     show LicenseEntryWithLineBreaks, LicenseRegistry;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart'
     show getApplicationCacheDirectory;
@@ -35,6 +37,15 @@ import 'package:cupola/features/shell/presentation/startup_failure_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // A library of a few hundred titles outgrows the package default of 200
+  // cached posters, and every scroll past them then fetches them again.
+  CachedNetworkImageProvider.defaultCacheManager = CacheManager(
+    Config(
+      'cupola_artwork',
+      stalePeriod: const Duration(days: 30),
+      maxNrOfCacheObjects: 1500,
+    ),
+  );
   // Prepares the frameless window, still hidden: it is shown once something
   // is drawn in it (see [_start]), so no await below can leave a black
   // rectangle on the screen. Inert on iOS and Android.
