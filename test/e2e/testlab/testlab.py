@@ -705,6 +705,16 @@ def reset(name: str = "golden") -> dict[str, Any]:
             wipe_state_except_dind()
             copy_tree(staging, STATE_ROOT, keep_dind=True, merge=True)
             verify_restored(source)
+            # A snapshot carries the world it was taken with. The world is the
+            # code's (world.dart), so the copy is re-exported from this
+            # checkout: a stale one would seed the wrong library.
+            try:
+                export_world()
+            except LabError as error:
+                raise LabError(
+                    f"snapshot {name!r} restored, but its world could not be "
+                    f"exported from this checkout, so the reset is undone: {error}"
+                ) from error
         except Exception as error:
             # Put the lab back the way it was before trying the snapshot.
             try:
