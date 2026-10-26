@@ -81,25 +81,6 @@ void main() {
       expect(radarrItem.isSelectable, isFalse);
     });
 
-    test('includes episode code in sonarr media subtitle', () {
-      final item = ManualImportItem.fromJson({
-        'path': '/downloads/Frieren.S02E05.mkv',
-        'name': 'Frieren.S02E05.mkv',
-        'series': {'id': 10, 'title': 'Frieren', 'year': 2023},
-        'seasonNumber': 2,
-        'episodes': [
-          {
-            'id': 50,
-            'seasonNumber': 2,
-            'episodeNumber': 5,
-            'title': 'Episode 5',
-          },
-        ],
-      });
-
-      expect(item.mediaSubtitle, contains('S2 E5'));
-    });
-
     test('preserves original size when resolved with assignment', () {
       final original = ManualImportItem.fromJson({
         'path': '/downloads/Frieren.S02E05.mkv',
@@ -154,7 +135,6 @@ void main() {
       );
 
       expect(resolved.size, 1300000000);
-      expect(resolved.mediaSubtitle, contains('S2 E5'));
       expect(resolved.hasMatchFor(ServiceKey.sonarr), isTrue);
     });
 

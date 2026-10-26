@@ -1,4 +1,3 @@
-import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/episode_code.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -256,8 +255,6 @@ class ManualImportItem {
   bool get isSample =>
       rejections.any((item) => _sampleReason.hasMatch(item.reason));
 
-  bool get hasMatch => movie != null || series != null || artist != null;
-
   bool hasMatchFor(ServiceKey service) {
     return switch (service) {
       ServiceKey.radarr => movie != null,
@@ -290,10 +287,6 @@ class ManualImportItem {
   /// or deliberately sent again.
   bool isSubmittableFor(ServiceKey service) {
     return isReadyForImportFor(service) || isReimportableFor(service);
-  }
-
-  bool isMatchedFor(ServiceKey service) {
-    return hasMatchFor(service) && !hasBlockingIdentityRejection;
   }
 
   bool hasBlockingRequirementsFor(ServiceKey service) {
@@ -447,18 +440,6 @@ class ManualImportItem {
         stringOrNull(artist?['artistName']) ??
         stringOrNull(artist?['title']) ??
         'Unmatched';
-  }
-
-  String get mediaSubtitle {
-    final episodeSummary = _episodeSummary(episodes);
-    final parts = [
-      stringOrNull(movie?['year']),
-      stringOrNull(series?['year']),
-      seasonNumber == null ? null : 'Season $seasonNumber',
-      episodeSummary,
-      tracks.isEmpty ? null : '${tracks.length} tracks',
-    ].whereType<String>();
-    return parts.isEmpty ? 'Needs assignment' : parts.join(dotSeparator);
   }
 
   String get qualityLabel {
@@ -926,23 +907,4 @@ String? _extractQualityName(Map<String, dynamic>? quality) {
       stringOrNull(directQuality?['name']) ??
       stringOrNull(quality?['title']) ??
       stringOrNull(quality?['name']);
-}
-
-String? _episodeSummary(List<Map<String, dynamic>> episodes) {
-  if (episodes.isEmpty) return null;
-
-  final labels = episodes
-      .map((episode) {
-        return formatArrEpisodeCode(
-          intOrNull(episode['seasonNumber']),
-          intOrNull(episode['episodeNumber']),
-        );
-      })
-      .whereType<String>()
-      .toList(growable: false);
-
-  if (labels.isEmpty) return null;
-  if (labels.length == 1) return labels.first;
-  if (labels.length == 2) return '${labels[0]}, ${labels[1]}';
-  return '${labels.take(2).join(', ')} +${labels.length - 2}';
 }

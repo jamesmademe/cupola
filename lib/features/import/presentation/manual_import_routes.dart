@@ -85,41 +85,6 @@ VoidCallback? openManualImportCallback(
   );
 }
 
-/// Derives a browsable folder from a **history** record's own fields.
-///
-/// A failed import is the scene manual import exists for, and the queue record
-/// that would have carried `outputPath` is gone by the time the failure is in
-/// History, so the folder has to come out of the event itself.
-///
-/// `droppedPath` is where the download client left the release: the folder for
-/// a pack, the file itself for a single-file download, which is why it still
-/// goes through the same last-segment test as [manualImportFolderFromOutputPath]
-/// (the filesystem endpoint lists folders, and handing it a file path returns
-/// nothing).
-///
-/// `importedPath` is the opposite default: it names a file the service *did*
-/// place, so it is always trimmed to its parent, never tested, because a
-/// library file with no extension the test recognises would otherwise be
-/// browsed as if it were a folder.
-String? manualImportFolderFromFailedImport({
-  String? droppedPath,
-  String? importedPath,
-}) {
-  final dropped = manualImportFolderFromOutputPath(droppedPath);
-  if (dropped != null) return dropped;
-
-  final imported = importedPath?.trim();
-  if (imported == null || imported.isEmpty) return null;
-
-  final separator = imported.contains('\\') ? '\\' : '/';
-  final trimmed = imported.endsWith(separator)
-      ? imported.substring(0, imported.length - 1)
-      : imported;
-  final lastSeparator = trimmed.lastIndexOf(separator);
-  if (lastSeparator <= 0) return null;
-  return trimmed.substring(0, lastSeparator);
-}
-
 /// Derives a browsable folder from a queue item's `outputPath`.
 ///
 /// The \*arr queue reports where the download client put the data, usually a
