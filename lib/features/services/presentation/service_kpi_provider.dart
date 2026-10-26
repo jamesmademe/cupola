@@ -1372,22 +1372,29 @@ Future<List<ServiceKpi>> _readarrKpis(Ref ref) async {
   // [_radarrKpis]. The two fetches fail independently: a library that answers
   // over a queue endpoint that does not is the ordinary case on a Readarr
   // mid-upgrade, so each figure says for itself whether it was answered.
-  List<ReadarrAuthor>? authors;
+  // Both reads start before either is awaited, as in [_readarrKpisFor].
   Object? authorsError;
-  try {
-    authors = await ref.watch(readarrKpiLibraryProvider.future);
-  } catch (error) {
-    authors = null;
-    authorsError = error;
-  }
-  ArrRecordPage? queued;
+  final authorsFuture = ref
+      .watch(readarrKpiLibraryProvider.future)
+      .then<List<ReadarrAuthor>?>(
+        (value) => value,
+        onError: (Object error) {
+          authorsError = error;
+          return null;
+        },
+      );
   Object? queueError;
-  try {
-    queued = await ref.watch(readarrQueueProvider.future);
-  } catch (error) {
-    queued = null;
-    queueError = error;
-  }
+  final queueFuture = ref
+      .watch(readarrQueueProvider.future)
+      .then<ArrRecordPage?>(
+        (value) => value,
+        onError: (Object error) {
+          queueError = error;
+          return null;
+        },
+      );
+  final authors = await authorsFuture;
+  final queued = await queueFuture;
 
   return _readarrKpisFrom(
     authors,
@@ -1498,15 +1505,13 @@ String queueFigure(ArrRecordPage page) {
 }
 
 Future<List<ServiceKpi>> _sabnzbdKpis(Ref ref) async {
-  final queue = await ref.watch(sabnzbdQueueProvider.future);
-  SabnzbdServerStats? stats;
-  try {
-    stats = await ref.watch(sabnzbdServerStatsProvider.future);
-  } catch (_) {
-    // Ignore: the queue KPIs are still useful when the optional stats call
-    // fails.
-  }
-  return _sabnzbdKpisFrom(queue, stats);
+  // Started together (see [_sabnzbdKpisFor]). The stats call is optional: its
+  // failure is ignored, so the queue KPIs still show when it fails.
+  final queueFuture = ref.watch(sabnzbdQueueProvider.future);
+  final statsFuture = ref
+      .watch(sabnzbdServerStatsProvider.future)
+      .then<SabnzbdServerStats?>((value) => value, onError: (_) => null);
+  return _sabnzbdKpisFrom(await queueFuture, await statsFuture);
 }
 
 Future<List<ServiceKpi>> _sabnzbdKpisFor(Ref ref, String instanceId) async {
