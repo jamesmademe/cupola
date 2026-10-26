@@ -263,10 +263,14 @@ class DockgePeer extends WebSocketPeer {
   void _ack(String id, Object? payload) =>
       send('43$id${jsonEncode([payload])}');
 
+  /// The stacks as the world stands: as written, or as the demo left them.
+  Map<String, int> get _stacks =>
+      context.life?.stacks(context.server.id, stacks) ?? stacks;
+
   JsonMap get _stackList => {
     'ok': true,
     'stackList': {
-      for (final entry in stacks.entries)
+      for (final entry in _stacks.entries)
         entry.key: {
           'name': entry.key,
           'status': entry.value,
@@ -347,9 +351,39 @@ class DockgePeer extends WebSocketPeer {
           });
         }
         if (command == 'requestStackList') _emit('stackList', _stackList);
+        if (write && _act(command, args.length > 3 ? '${args[3]}' : '')) {
+          _emit('stackList', _stackList);
+        }
       default:
         if (ackId.isNotEmpty) _ack(ackId, {'ok': true});
     }
+  }
+
+  /// What a stack command does to a living world, and whether it changed
+  /// anything the list shows.
+  bool _act(String command, String stack) {
+    final life = context.life;
+    if (life == null) return false;
+    final all = _stacks;
+    switch (command) {
+      case 'startStack' || 'restartStack' || 'updateStack':
+        if (!all.containsKey(stack)) return false;
+        all[stack] = 3;
+      case 'stopStack':
+        if (!all.containsKey(stack)) return false;
+        all[stack] = 4;
+      case 'downStack':
+        if (!all.containsKey(stack)) return false;
+        all[stack] = 1;
+      case 'deleteStack':
+        return all.remove(stack) != null;
+      case 'deployStack':
+        if (stack.isEmpty) return false;
+        all[stack] = 3;
+      default:
+        return false;
+    }
+    return true;
   }
 }
 

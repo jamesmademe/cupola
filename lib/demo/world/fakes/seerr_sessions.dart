@@ -278,6 +278,35 @@ class SeerrSetup {
   static final Map<String, Map<String, dynamic>> _fixtures = {};
 }
 
+/// One request as a living world keeps it.
+class LiveSeerrRequest {
+  LiveSeerrRequest({
+    required this.id,
+    required this.title,
+    required this.requester,
+    required this.status,
+    required this.created,
+    required this.is4k,
+    this.fromWorld = false,
+  });
+
+  final int id;
+  final WorldTitle title;
+
+  /// The Seerr user who asked.
+  final int requester;
+
+  /// 1 pending, 2 approved, 3 declined.
+  int status;
+  final DateTime created;
+  final bool is4k;
+
+  /// One of the world's own requests, which says nothing of the title's
+  /// status until the demo decides on it ([changed]).
+  final bool fromWorld;
+  bool changed = false;
+}
+
 /// One Seerr server's state between requests.
 class SeerrServerState {
   SeerrServerState._(this._network, this.serverId);
@@ -300,6 +329,11 @@ class SeerrServerState {
   /// the edit, and the approval, see it.
   final Map<int, ({Object? serverId, Object? profileId, Object? rootFolder})>
   requestEdits = {};
+
+  /// The requests, once the world lives (`ProfileNetwork.live`): the world's
+  /// own on first read, then what the demo asked for, decided or took back.
+  /// Null while the world answers as written.
+  List<LiveSeerrRequest>? liveRequests;
 
   /// Requests somebody decided on in Seerr itself since the app read them:
   /// an edit of one is refused as Seerr refuses an edit of a request that no

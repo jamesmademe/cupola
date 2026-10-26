@@ -119,6 +119,153 @@ class SeerrFake extends ServiceFake {
     _ => null,
   };
 
+  /// The requests as the world stands: as written, or, once it lives, as the
+  /// demo left them.
+  static List<(int, WorldTitle, int, int, Duration, bool)> _requestsOf(
+    ServerContext c,
+  ) {
+    final live = _live(c);
+    if (live == null) return _requests;
+    return [
+      for (final q in live)
+        (
+          q.id,
+          q.title,
+          q.requester,
+          q.status,
+          c.now.difference(q.created),
+          q.is4k,
+        ),
+    ];
+  }
+
+  /// The living world's requests, read from the written ones the first time.
+  static List<LiveSeerrRequest>? _live(ServerContext c) {
+    if (c.life == null) return null;
+    return seerrStateOf(c.network, c.server.id).liveRequests ??= [
+      for (final (id, title, by, status, age, is4k) in _requests)
+        LiveSeerrRequest(
+          id: id,
+          title: title,
+          requester: by,
+          status: status,
+          created: c.now.subtract(age),
+          is4k: is4k,
+          fromWorld: true,
+        ),
+    ];
+  }
+
+  /// What Seerr knows of [t]: as written, or, once the world lives, what its
+  /// arr holds and fetches and what the demo asked for.
+  static (int, int)? _mediaStatusOf(ServerContext c, WorldTitle t) {
+    final written = _mediaStatus(t);
+    if (c.life == null) return written;
+    final hd = _liveStatus(c, t, is4k: false) ?? written?.$1;
+    final uhd = _liveStatus(c, t, is4k: true) ?? written?.$2;
+    if (hd == null && uhd == null) return null;
+    return (hd ?? 1, uhd ?? 1);
+  }
+
+  /// One copy's status as the living world says it, or null to keep the
+  /// written one: on disk is available, a download under way is processing,
+  /// and a request the demo made or decided waits, is processing, or, once
+  /// declined, leaves the title unknown.
+  static int? _liveStatus(ServerContext c, WorldTitle t, {required bool is4k}) {
+    final life = c.life!;
+    final arr = _arrFor(c, t, is4k);
+    if (arr != null) {
+      if (t.isSeries) {
+        final held = life.arrs.seriesOf(arr, t);
+        if (held != null && !held.seeded && held.arrivedSeasons.isNotEmpty) {
+          return 5;
+        }
+      } else if (life.arrs.movieOf(arr, t)?.hasFile ?? false) {
+        return 5;
+      }
+      final fetching = life.downloads.any(
+        (d) =>
+            d.arr == arr &&
+            d.title == t &&
+            d.state != DownloadState.seeding &&
+            d.state != DownloadState.stopped,
+      );
+      if (fetching) return 3;
+    }
+    // Only what the demo asked for or decided speaks: the world's own
+    // requests are in the written status already.
+    final decided = [
+      for (final q in _live(c)!)
+        if (q.title == t && q.is4k == is4k && (!q.fromWorld || q.changed)) q,
+    ];
+    if (decided.isEmpty) return null;
+    final open = decided.where((q) => q.status != 3);
+    // Declined, and nothing else asked: Seerr knows nothing of it again.
+    if (open.isEmpty) return 1;
+    return open.any((q) => q.status == 2) ? 3 : 2;
+  }
+
+  /// The network's id of the arr Seerr sends a request for [t] to, or null
+  /// when Seerr knows none this device reaches.
+  static String? _arrFor(ServerContext c, WorldTitle t, bool is4k) {
+    final kind = t.isSeries ? ServiceKey.sonarr : ServiceKey.radarr;
+    final servers = _known(c, kind).where((s) => s.is4k == is4k).toList();
+    if (servers.isEmpty) return null;
+    final known =
+        servers.where((s) => s.isDefault).firstOrNull ?? servers.first;
+    return c.network.serverAt(Uri.parse(known.url))?.id;
+  }
+
+  /// A request approved in a living world goes to its arr, which adds the
+  /// title and searches for it.
+  static void _send(ServerContext c, LiveSeerrRequest q) {
+    final arr = _arrFor(c, q.title, q.is4k);
+    final arrs = c.life?.arrs;
+    if (arr == null || arrs == null) return;
+    if (q.title.isSeries) {
+      arrs.addSeries(arr, q.title, search: true);
+    } else {
+      arrs.addMovie(arr, q.title, search: true);
+    }
+  }
+
+  /// A request made in a living world: kept, and sent on at once when it is
+  /// approved as it is made.
+  static (int, WorldTitle, int, int, Duration, bool) _keep(
+    ServerContext c, {
+    required WorldTitle title,
+    required int requester,
+    required bool approved,
+    required bool is4k,
+  }) {
+    final live = _live(c)!;
+    final q = LiveSeerrRequest(
+      id: live.fold<int>(0, (top, q) => q.id > top ? q.id : top) + 1,
+      title: title,
+      requester: requester,
+      status: approved ? 2 : 1,
+      created: c.now,
+      is4k: is4k,
+    );
+    live.add(q);
+    if (approved) _send(c, q);
+    return (q.id, title, requester, q.status, Duration.zero, is4k);
+  }
+
+  /// The id [t] has on the arr Seerr sends it to: the world's, or the one a
+  /// living arr gave it.
+  static int? _externalId(ServerContext c, WorldTitle t, {required bool is4k}) {
+    final written = t.isSeries
+        ? (is4k ? null : SonarrFake.idOf(t))
+        : RadarrFake.idOf(t, is4k: is4k);
+    final arrs = c.life?.arrs;
+    final arr = arrs == null ? null : _arrFor(c, t, is4k);
+    if (arrs == null || arr == null) return written;
+    return t.isSeries
+        ? arrs.seriesOf(arr, t)?.id ?? written
+        : arrs.movieOf(arr, t)?.id ?? written;
+  }
+
   /// The collection every Blender film belongs to: 5 of 8 on the server,
   /// 2 on the way, 1 requested.
   static const collectionId = 90101;
@@ -159,13 +306,11 @@ class SeerrFake extends ServiceFake {
   }
 
   static JsonMap? _media(ServerContext c, WorldTitle t) {
-    final status = _mediaStatus(t);
+    final status = _mediaStatusOf(c, t);
     if (status == null) return null;
     final (hd, uhd) = status;
-    final hdId = t.isSeries
-        ? SonarrFake.idOf(t)
-        : RadarrFake.idOf(t, is4k: false);
-    final uhdId = t.isSeries ? null : RadarrFake.idOf(t, is4k: true);
+    final hdId = _externalId(c, t, is4k: false);
+    final uhdId = t.isSeries ? null : _externalId(c, t, is4k: true);
     return {
       'id': t.tmdbId,
       'tmdbId': t.tmdbId,
@@ -217,7 +362,7 @@ class SeerrFake extends ServiceFake {
       'updatedAt': c.ago(const Duration(hours: 1)),
       // Seerr's own: every request for the title, as `/movie/:id` sends it.
       'requests': [
-        for (final row in _requests)
+        for (final row in _requestsOf(c))
           if (row.$2 == t) _requestRecord(c, row),
       ],
     };
@@ -539,7 +684,7 @@ class SeerrFake extends ServiceFake {
           }
           final by = everyone ? requestedBy : caller?.user.id;
           final rows = [
-            for (final row in _requests)
+            for (final row in _requestsOf(c))
               if (by == null || row.$3 == by) _request(c, row),
           ];
           final filter = r.query['filter'];
@@ -571,20 +716,20 @@ class SeerrFake extends ServiceFake {
           };
           return NetworkReply.json(_page(r, filtered));
         case '/api/v1/request/count':
-          final pending = _requests.where((q) => q.$4 == 1).length;
+          final pending = _requestsOf(c).where((q) => q.$4 == 1).length;
           return NetworkReply.json({
-            'total': _requests.length,
-            'movie': _requests.where((q) => !q.$2.isSeries).length,
-            'tv': _requests.where((q) => q.$2.isSeries).length,
+            'total': _requestsOf(c).length,
+            'movie': _requestsOf(c).where((q) => !q.$2.isSeries).length,
+            'tv': _requestsOf(c).where((q) => q.$2.isSeries).length,
             'pending': pending,
-            'approved': _requests.length - pending,
-            'declined': 0,
-            'processing': _requests
-                .where((q) => _mediaStatus(q.$2)?.$1 == 3)
-                .length,
-            'available': _requests
-                .where((q) => _mediaStatus(q.$2)?.$1 == 5)
-                .length,
+            'approved': _requestsOf(c).where((q) => q.$4 == 2).length,
+            'declined': _requestsOf(c).where((q) => q.$4 == 3).length,
+            'processing': _requestsOf(
+              c,
+            ).where((q) => _mediaStatusOf(c, q.$2)?.$1 == 3).length,
+            'available': _requestsOf(
+              c,
+            ).where((q) => _mediaStatusOf(c, q.$2)?.$1 == 5).length,
           });
         case '/api/v1/user':
           // `user/index.ts:160-163`: the email only for MANAGE_USERS.
@@ -751,7 +896,7 @@ class SeerrFake extends ServiceFake {
       final one = RegExp(r'^/api/v1/request/(\d+)$').firstMatch(path);
       if (one != null) {
         final id = int.parse(one.group(1)!);
-        final row = _requests.where((q) => q.$1 == id).firstOrNull;
+        final row = _requestsOf(c).where((q) => q.$1 == id).firstOrNull;
         if (row == null) {
           return NetworkReply.json({
             'message': 'Request not found.',
@@ -823,7 +968,8 @@ class SeerrFake extends ServiceFake {
       final detail = RegExp(r'^/api/v1/(movie|tv)/(\d+)$').firstMatch(path);
       if (detail != null) {
         final id = int.parse(detail.group(2)!);
-        final title = WorldTitles.all
+        // A living world opens every title its search finds.
+        final title = (c.life == null ? WorldTitles.all : WorldTitles.catalogue)
             .where(
               (t) => t.tmdbId == id && t.isSeries == (detail.group(1) == 'tv'),
             )
@@ -895,7 +1041,7 @@ class SeerrFake extends ServiceFake {
     final edit = RegExp(r'^/api/v1/request/(\d+)$').firstMatch(path);
     if (r.method == 'PUT' && edit != null) {
       final id = int.parse(edit.group(1)!);
-      final row = _requests.where((q) => q.$1 == id).firstOrNull;
+      final row = _requestsOf(c).where((q) => q.$1 == id).firstOrNull;
       if (row == null) {
         return NetworkReply.json({
           'message': 'Request not found.',
@@ -944,9 +1090,21 @@ class SeerrFake extends ServiceFake {
     if (r.method == 'POST' &&
         RegExp(r'^/api/v1/request/\d+/(approve|decline)$').hasMatch(path)) {
       final id = int.parse(path.split('/')[4]);
-      final row = _requests.where((q) => q.$1 == id).firstOrNull;
+      final row = _requestsOf(c).where((q) => q.$1 == id).firstOrNull;
       if (row == null) {
         return NetworkReply.json({'message': 'Not found'}, status: 404);
+      }
+      // A living world keeps the decision, and an approval goes to the arr.
+      final live = _live(c)?.where((q) => q.id == id).firstOrNull;
+      if (live != null && live.status == 1) {
+        final approve = path.endsWith('/approve');
+        live
+          ..status = approve ? 2 : 3
+          ..changed = true;
+        if (approve) _send(c, live);
+        return NetworkReply.json(
+          _request(c, _requestsOf(c).firstWhere((q) => q.$1 == id)),
+        );
       }
       return NetworkReply.json(_request(c, row));
     }
@@ -963,14 +1121,36 @@ class SeerrFake extends ServiceFake {
       // The operator's answer is the world's first row, as it always was:
       // the request sheet's tests read it.
       if (caller == null || caller.byKey) {
-        return NetworkReply.json(_request(c, _requests.first), status: 201);
+        // A living world keeps what the operator asked for: an admin's
+        // request is approved as it is made, and goes to the arr.
+        final title = c.life == null ? null : _titleAsked(r);
+        if (title != null) {
+          final body = r.json as Map;
+          return NetworkReply.json(
+            _request(
+              c,
+              _keep(
+                c,
+                title: title,
+                requester: WorldSeerrUsers.admin.id,
+                approved: true,
+                is4k: body['is4k'] == true,
+              ),
+            ),
+            status: 201,
+          );
+        }
+        return NetworkReply.json(
+          _request(c, _requestsOf(c).first),
+          status: 201,
+        );
       }
       return _newRequest(r, c, caller, setup);
     }
     final cancel = RegExp(r'^/api/v1/request/(\d+)$').firstMatch(path);
     if (r.method == 'DELETE' && cancel != null && caller != null) {
       final id = int.parse(cancel.group(1)!);
-      final row = _requests.where((q) => q.$1 == id).firstOrNull;
+      final row = _requestsOf(c).where((q) => q.$1 == id).firstOrNull;
       if (row == null) return seerrError(404, 'Request not found.');
       // `request.ts:706-737`: a 401, not a 403, for a request that is not
       // one's own or no longer waits.
@@ -981,6 +1161,7 @@ class SeerrFake extends ServiceFake {
           'You do not have permission to delete this request.',
         );
       }
+      _live(c)?.removeWhere((q) => q.id == id);
       return const NetworkReply(204);
     }
     // `issue.ts:326-372`: past the route's MANAGE_ISSUES or CREATE_ISSUES
@@ -1011,6 +1192,17 @@ class SeerrFake extends ServiceFake {
     return null;
   }
 
+  /// The title `POST /api/v1/request` asks for, by its TMDB id and kind,
+  /// from everything the world's Seerr can find.
+  static WorldTitle? _titleAsked(NetworkRequest r) {
+    final body = r.json;
+    if (body is! Map) return null;
+    final series = body['mediaType'] == 'tv';
+    return WorldTitles.catalogue
+        .where((t) => t.tmdbId == body['mediaId'] && t.isSeries == series)
+        .firstOrNull;
+  }
+
   /// `POST /api/v1/request` by a household member's own account: the
   /// permission and quota checks of `MediaRequest.request`, then a request of
   /// theirs, waiting unless the account is auto-approved.
@@ -1039,6 +1231,21 @@ class SeerrFake extends ServiceFake {
             .firstOrNull ??
         WorldTitles.all.firstWhere((t) => t.isSeries == series);
     final approved = seerrAutoApproves(caller, movie: !series, is4k: is4k);
+    if (c.life != null) {
+      return NetworkReply.json(
+        _request(
+          c,
+          _keep(
+            c,
+            title: _titleAsked(r) ?? title,
+            requester: caller.user.id,
+            approved: approved,
+            is4k: is4k,
+          ),
+        ),
+        status: 201,
+      );
+    }
     return NetworkReply.json(
       _request(c, (
         100 + c.network.requestsTo(c.server.id).length,

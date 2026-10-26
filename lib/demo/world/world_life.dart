@@ -215,6 +215,13 @@ class WorldLife {
   /// usenet queue's order.
   void add(WorldDownload download) => _downloads = [..._downloads, download];
 
+  /// Dockge [serverId]'s stacks and their status (3 running, 4 exited, 1
+  /// inactive), from [seed] the first time they are asked for.
+  Map<String, int> stacks(String serverId, Map<String, int> seed) =>
+      _stacks.putIfAbsent(serverId, () => {...seed});
+
+  final Map<String, Map<String, int>> _stacks = {};
+
   /// Pauses or resumes the whole queue of usenet client [connectionId].
   void setQueuePaused(String connectionId, {required bool paused}) =>
       _queuePaused[connectionId] = paused;
