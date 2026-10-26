@@ -41,6 +41,13 @@ class PollClock {
     return remaining.isNegative ? Duration.zero : remaining;
   }
 
+  /// Whether [id] ticked within the last [within]: what a second poll over the
+  /// same work asks before reading it again, so two clocks do not read twice.
+  bool ranWithin(String id, Duration within) {
+    final last = _last[id];
+    return last != null && now().difference(last) < within;
+  }
+
   /// Whether [id] has ever ticked: the signal a stale-on-return check reads.
   bool hasRun(String id) => _last.containsKey(id);
 

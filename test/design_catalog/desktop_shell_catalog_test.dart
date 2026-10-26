@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cupola/features/shell/presentation/desktop/desktop_downloads_poll.dart';
 import 'package:cupola/features/activity/data/activity_live.dart';
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
@@ -315,6 +316,7 @@ class _WindowState extends State<_Window> {
       desktopRailServicesProvider.overrideWithValue(_railServices),
       // The sidebar's "In flight" poll: the sheet is a still.
       sidebarInFlightPollProvider.overrideWith((ref) {}),
+      desktopDownloadsPollProvider.overrideWith((ref) {}),
       if (widget.requester) ...[
         shellAudienceProvider.overrideWith(_Requester.new),
         requestsProvider.overrideWith((ref) async => const []),

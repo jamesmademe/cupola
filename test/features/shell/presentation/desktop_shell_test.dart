@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cupola/features/shell/presentation/desktop/desktop_downloads_poll.dart';
 import 'package:cupola/features/activity/data/selected_download.dart';
 import 'package:cupola/features/activity/data/activity_live.dart';
 import 'package:cupola/core/capability/audience.dart';
@@ -882,6 +883,7 @@ Future<_Harness> _pumpShell(
       // The sidebar's "In flight" thirty-second poll: a test about the shell
       // ends before the container that holds its timer is disposed.
       sidebarInFlightPollProvider.overrideWith((ref) {}),
+      desktopDownloadsPollProvider.overrideWith((ref) {}),
       ...overrides,
     ],
   );

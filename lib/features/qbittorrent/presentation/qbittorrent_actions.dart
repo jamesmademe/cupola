@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
 import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/features/home/data/home_live.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_service.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 
@@ -32,6 +33,7 @@ Future<bool> runTorrentAction(
     for (final provider in invalidate) {
       container.invalidate(provider);
     }
+    readDownloadsAfterWrite(container, invalidate);
     if (successMessage != null && context.mounted) {
       SnackBarHelper.success(context, successMessage);
     }
