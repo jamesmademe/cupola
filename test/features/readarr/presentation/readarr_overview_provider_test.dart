@@ -472,7 +472,7 @@ void main() {
 
       // Twenty minutes old and still out: the heading says "today", and a
       // heading is a promise.
-      expect(entries.map((entry) => entry.title), ['Just after midnight']);
+      expect(entries.map((entry) => entry.subject), ['Just after midnight']);
     });
 
     test('is newest first and capped at the limit', () {
@@ -487,7 +487,7 @@ void main() {
         limit: 2,
       );
 
-      expect(entries.map((entry) => entry.title), ['Afternoon', 'Midday']);
+      expect(entries.map((entry) => entry.subject), ['Afternoon', 'Midday']);
     });
 
     test('drops a record with no readable date rather than guessing one', () {
@@ -624,7 +624,7 @@ void main() {
 
       final entries = await container.read(readarrHistoryTodayProvider.future);
 
-      expect(entries.map((entry) => entry.title), ['Today']);
+      expect(entries.map((entry) => entry.subject), ['Today']);
     });
   });
 

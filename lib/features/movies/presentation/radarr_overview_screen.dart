@@ -528,7 +528,7 @@ class _HistoryRow extends StatelessWidget {
         margin: const EdgeInsets.only(top: 5),
         decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
       ),
-      title: '${entry.title}\u00A0· ${entry.event.toLowerCase()}',
+      title: '${entry.subject}\u00A0· ${entry.event.toLowerCase()}',
       detail: entry.detail,
     );
   }

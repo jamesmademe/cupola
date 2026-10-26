@@ -30,11 +30,10 @@ import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/arr_overview.dart';
 import 'package:cupola/core/utils/date_format.dart' show formatRelativeDateTime;
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 import 'package:cupola/core/utils/episode_code.dart';
-import 'package:cupola/core/utils/release_utils.dart';
-import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/series/presentation/series_provider.dart';
@@ -125,7 +124,7 @@ class SonarrAiringWeek {
 bool sonarrCanReportAirings(List<SonarrSeries> series) {
   var expectsDates = false;
   for (final entry in series) {
-    if (_parseLocal(entry.nextAiring) != null) return true;
+    if (parseLocalInstant(entry.nextAiring) != null) return true;
     if (sonarrMayStillAir(entry)) expectsDates = true;
   }
   return !expectsDates;
@@ -171,7 +170,7 @@ SonarrAiringWeek sonarrAiringWeek(
 
   final entries = <SonarrAiringEntry>[];
   for (final entry in series) {
-    final airsAt = _parseLocal(entry.nextAiring);
+    final airsAt = parseLocalInstant(entry.nextAiring);
     if (airsAt == null) continue;
     if (airsAt.isBefore(start) || !airsAt.isBefore(end)) continue;
     entries.add(SonarrAiringEntry(series: entry, airsAt: airsAt));
@@ -225,7 +224,7 @@ final sonarrAiringWeekProvider = FutureProvider.autoDispose<SonarrAiringWeek>((
 /// neutral. Painting the backlog amber is the single most common way that rule
 /// is broken: a library with twelve episodes still to find is not a library
 /// that is broken.
-enum SonarrAttentionKind {
+enum SonarrAttentionKind implements ArrAttentionKind {
   /// Sonarr grabbed the release and could not move it into the library.
   importFailed(StatusTone.warning, Icons.file_download_off_rounded),
 
@@ -241,67 +240,15 @@ enum SonarrAttentionKind {
 
   const SonarrAttentionKind(this.tone, this.icon);
 
+  @override
   final StatusTone tone;
+
+  @override
   final IconData icon;
 }
 
-/// One row of Needs attention: what happened, to what, and when.
-///
-/// Every row leads somewhere: a download's own page for one stuck or failed
-/// download, the Queue tab for the several a folded row stands for, the
-/// Wanted tab for the backlog. What Sonarr can do about a download it cannot
-/// import is not a call this client makes ("Manual import" needs a bridge into
-/// the download client, and "Search all missing" would have to walk every page
-/// of `wanted/missing` for the episode ids the only search command here
-/// takes), so no row carries a verb: the page it opens does.
-@immutable
-class SonarrAttentionItem {
-  const SonarrAttentionItem({
-    required this.kind,
-    required this.headline,
-    required this.detail,
-    this.door,
-    this.subject,
-    this.count = 1,
-    String? spokenHeadline,
-  }) : _spokenHeadline = spokenHeadline;
-
-  final SonarrAttentionKind kind;
-
-  /// The fault and its subject: `Import failed · Slow Horses S04`.
-  final String headline;
-
-  /// The evidence: the service's own message, the client, the timestamp.
-  /// Empty when the record carried none.
-  final String detail;
-
-  /// Where the row leads, or null where the app has no place that shows it.
-  final AttentionDoor? door;
-
-  /// What the fault is about, bare (`Slow Horses S4`), for a folded row to
-  /// name.
-  final String? subject;
-
-  /// How many faults the row stands for: one, or the downloads a folded row
-  /// folds. The section's own count adds these, so folding never changes how
-  /// many things need attention.
-  final int count;
-
-  /// [headline] as the ear should hear it, where it differs (`at least 3`
-  /// for a floor).
-  final String? _spokenHeadline;
-
-  StatusTone get tone => kind.tone;
-  IconData get icon => kind.icon;
-
-  /// The row as a sentence, with the dots the layout uses turned back into
-  /// commas: `·` is decoration, and a screen reader either names it or drops
-  /// it depending on the user's punctuation setting.
-  String get spoken => joinSpokenParts([
-    spokenFromDotted(_spokenHeadline ?? headline),
-    spokenFromDotted(detail),
-  ]);
-}
+/// One row of Needs attention (`ArrAttentionItem`).
+typedef SonarrAttentionItem = ArrAttentionItem<SonarrAttentionKind>;
 
 /// The slot a queue or history record is about: `S2 E5`, or `S4` for a season
 /// pack, or null when the record names neither.
@@ -364,14 +311,14 @@ List<SonarrAttentionItem> sonarrQueueFaults(
   for (final download in _byDownload(records)) {
     // The download's fault is its worst record's: a stall before an import
     // (a transfer that is not moving has not reached the import stage).
-    final stalled = download.where(_isStalled).firstOrNull;
-    final record = stalled ?? download.where(_isImportFault).firstOrNull;
+    final stalled = download.where(isStalledRecord).firstOrNull;
+    final record = stalled ?? download.where(isImportFaultRecord).firstOrNull;
     if (record == null) continue;
 
     final subject = download.length == 1
         ? sonarrRecordSubject(record)
         : _packSubject(download) ?? sonarrRecordSubject(record);
-    final when = _parseLocal(stringOrNull(record['added']));
+    final when = parseLocalInstant(stringOrNull(record['added']));
     final age = when == null ? null : formatRelativeDateTime(when, now: now);
     final message =
         stringOrNull(record['errorMessage']) ?? arrQueueWarningMessage(record);
@@ -535,31 +482,6 @@ int? sonarrSeriesSpread(ArrRecordPage page) {
   return ids.isEmpty ? null : ids.length;
 }
 
-bool _isStalled(Map<String, dynamic> record) {
-  final haystack = [
-    stringOrNull(record['errorMessage']),
-    stringOrNull(record['status']),
-    ...extractArrStatusMessages(record['statusMessages']),
-  ].whereType<String>().join(' ').toLowerCase();
-  return haystack.contains('stall');
-}
-
-bool _isImportFault(Map<String, dynamic> record) {
-  final state = stringOrNull(record['trackedDownloadState'])?.toLowerCase();
-  if (state == 'failed' ||
-      state == 'failedpending' ||
-      state == 'importfailed' ||
-      state == 'importblocked') {
-    return true;
-  }
-  // Sonarr's canonical "One or more episodes expected in this release were not
-  // imported or missing" arrives as a pending import carrying a status message,
-  // which is how the service says a human has to look at it: see
-  // `arrQueueSeverity`.
-  return state == 'importpending' &&
-      arrQueueSeverity(record) != ArrQueueSeverity.ok;
-}
-
 /// The raw `/queue` walk, with its envelope.
 ///
 /// The equivalent of the private `_loadServiceQueueItems` in
@@ -720,7 +642,7 @@ List<SonarrDownloadedEpisode> sonarrRecentlyDownloaded(
       continue;
     }
 
-    final date = _parseLocal(stringOrNull(record['date']));
+    final date = parseLocalInstant(stringOrNull(record['date']));
     if (date == null) continue;
 
     final series = mapOrNull(record['series']);
@@ -760,33 +682,7 @@ final sonarrRecentlyDownloadedProvider =
     });
 
 /// One history record, resolved into the two lines the row draws.
-@immutable
-class SonarrHistoryEntry {
-  const SonarrHistoryEntry({
-    required this.subject,
-    required this.event,
-    required this.tone,
-    required this.detail,
-    required this.date,
-  });
-
-  /// The series and the slot: `Severance S2 E4`.
-  final String subject;
-
-  /// What happened to it, in the shared history vocabulary: `Imported`,
-  /// `Grabbed`, `Failed`.
-  final String event;
-
-  final StatusTone tone;
-
-  /// Quality, size and how long ago, as far as the record carried them.
-  final String detail;
-
-  final DateTime date;
-
-  String get spoken =>
-      joinSpokenParts([subject, event, spokenFromDotted(detail)]);
-}
+typedef SonarrHistoryEntry = OverviewHistoryEntry;
 
 /// The records from today, newest first, capped at [limit].
 ///
@@ -797,41 +693,12 @@ List<SonarrHistoryEntry> sonarrHistoryToday(
   List<dynamic> records, {
   required DateTime now,
   int limit = sonarrHistoryTodayLimit,
-}) {
-  final local = now.toLocal();
-  final entries = <SonarrHistoryEntry>[];
-
-  for (final raw in records) {
-    final record = mapOrNull(raw);
-    if (record == null) continue;
-    final date = _parseLocal(stringOrNull(record['date']));
-    if (date == null) continue;
-    if (date.year != local.year ||
-        date.month != local.month ||
-        date.day != local.day) {
-      continue;
-    }
-
-    final eventType = stringOrNull(record['eventType']) ?? 'unknown';
-    final (event, tone) = historyEventDisplay(eventType);
-    entries.add(
-      SonarrHistoryEntry(
-        subject: sonarrRecordSubject(record),
-        event: event,
-        tone: tone,
-        detail: joinDisplayParts([
-          _qualityName(record['quality']),
-          _size(record),
-          formatRelativeDateTime(date, now: now),
-        ]),
-        date: date,
-      ),
-    );
-  }
-
-  entries.sort((a, b) => b.date.compareTo(a.date));
-  return List.unmodifiable(entries.take(limit));
-}
+}) => overviewHistoryToday(
+  records,
+  now: now,
+  limit: limit,
+  subjectOf: (record) => sonarrRecordSubject(record),
+);
 
 final sonarrHistoryTodayProvider =
     FutureProvider.autoDispose<List<SonarrHistoryEntry>>((ref) async {
@@ -840,30 +707,3 @@ final sonarrHistoryTodayProvider =
     });
 
 // ─── Shared parsing ─────────────────────────────────────────────────────────
-
-/// Parses an \*arr ISO timestamp into local time, or null when it is absent or
-/// unreadable.
-///
-/// Local, always: every window on this screen is a run of local calendar days,
-/// and Sonarr answers in UTC.
-DateTime? _parseLocal(String? raw) {
-  final value = raw?.trim();
-  if (value == null || value.isEmpty) return null;
-  final parsed = DateTime.tryParse(value);
-  return parsed?.toLocal();
-}
-
-String? _qualityName(dynamic value) {
-  final quality = mapOrNull(value);
-  if (quality == null) return stringOrNull(value);
-  return stringOrNull(mapOrNull(quality['quality'])?['name']) ??
-      stringOrNull(quality['name']);
-}
-
-String? _size(Map<String, dynamic> record) {
-  final bytes =
-      intOrNull(record['size']) ??
-      intOrNull(mapOrNull(record['data'])?['size']);
-  if (bytes == null || bytes <= 0) return null;
-  return formatReleaseSize(bytes);
-}
