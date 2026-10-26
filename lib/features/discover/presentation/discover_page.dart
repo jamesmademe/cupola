@@ -50,6 +50,7 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/core/widgets/screen_title.dart';
 
 /// The Discover tab: at rest it browses Seerr's catalogue (the atrium);
 /// focused and empty, it offers the recent searches; typing, it searches
@@ -251,7 +252,6 @@ class _DiscoverTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final room = CupolaRoom.of(context);
     return Padding(
       padding: EdgeInsets.fromLTRB(
         AppSpacing.gutter,
@@ -262,12 +262,9 @@ class _DiscoverTitle extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Semantics(
-              header: true,
-              child: Text(
-                'Discover',
-                style: AppType.screen.copyWith(color: room.ink),
-              ),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: ScreenTitle('Discover'),
             ),
           ),
           if (region) const DiscoverRegionChip(),

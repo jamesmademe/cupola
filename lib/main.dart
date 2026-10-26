@@ -86,6 +86,7 @@ Future<void> _start() async {
     case StartupReady(value: final overrides):
       runApp(
         ProviderScope(
+          key: UniqueKey(),
           overrides: [...overrides, demoDoorProvider.overrideWithValue(_door)],
           child: const CupolaApp(),
         ),
@@ -104,12 +105,21 @@ Future<void> _start() async {
 }
 
 /// The way into the demo and out of it: see [DemoSession].
+///
+/// Each `runApp` hands over a `ProviderScope` with a key of its own. Without
+/// one Flutter keeps the scope already drawn and only updates its overrides,
+/// so the demo would run in the real app's container (Riverpod refuses that
+/// outright: the number of overrides changes).
 const _door = DemoDoor(enter: _enterDemo, leave: _leaveDemo);
 
+/// The demo running now, which leaving ends.
+DemoSession? _demo;
+
 Future<void> _enterDemo(SettingsModel leaving) async {
-  final session = await DemoSession.start(leaving: leaving);
+  final session = _demo = await DemoSession.start(leaving: leaving);
   runApp(
     ProviderScope(
+      key: UniqueKey(),
       overrides: [
         ...session.overrides,
         demoDoorProvider.overrideWithValue(_door),
@@ -117,10 +127,13 @@ Future<void> _enterDemo(SettingsModel leaving) async {
       child: const CupolaApp(),
     ),
   );
+  LinkHandoff.routerReadyWhenDrawn();
 }
 
-Future<void> _leaveDemo(DemoSession session) async {
-  await session.end();
+Future<void> _leaveDemo() async {
+  final session = _demo;
+  _demo = null;
+  await session?.end();
   await _start();
 }
 

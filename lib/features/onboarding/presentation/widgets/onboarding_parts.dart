@@ -539,6 +539,7 @@ class OnboardingWelcome extends StatelessWidget {
     required this.onSetUp,
     required this.onCopy,
     required this.onSignIn,
+    this.onDemo,
     this.onBack,
   });
 
@@ -551,6 +552,9 @@ class OnboardingWelcome extends StatelessWidget {
   /// Opens the sign-in with a Seerr account.
   final VoidCallback onSignIn;
 
+  /// Opens the demo home; null where it is not offered (`SetupDoors.onDemo`).
+  final VoidCallback? onDemo;
+
   /// Back where the visit came from, for a Welcome opened from inside the app
   /// ("Revisit onboarding"). Null on a first run, which came from nowhere.
   final VoidCallback? onBack;
@@ -560,6 +564,10 @@ class OnboardingWelcome extends StatelessWidget {
   /// size: 152pt and 268pt, measured with the bundled faces on phones 390 to
   /// 440pt wide (a phone's width moves the sentence by a line at most).
   static const _claimAndDoors = 152.0 + 268.0;
+
+  /// The demo's door and its line under the copy's, when the Welcome offers
+  /// it (`onDemo`), measured the same way.
+  static const _demoDoor = 78.0;
 
   /// One more line of the sentence, so a narrower phone that wraps it once
   /// more still has the room the rule counted.
@@ -576,18 +584,23 @@ class OnboardingWelcome extends StatelessWidget {
   /// size (`scale`, as the ring's own reservation does). A 402 by 874pt
   /// phone's beat is 450pt tall at 1x, short of the 516pt this asks for, so
   /// its doors keep their verbs and say the lines as hints; a 440 by 956pt
-  /// phone's is 532pt, and has them.
+  /// phone's is 532pt, and has them, unless the demo's door is offered too:
+  /// four doors ask 594pt, so a first run says every line as a hint.
   ///
   /// Beside the ring in a window, where nothing is pinned, the lines are the
-  /// default's.
-  static bool roomForDoorLines(BuildContext context, double height) {
+  /// default's. [demo] counts the demo's door too.
+  static bool roomForDoorLines(
+    BuildContext context,
+    double height, {
+    bool demo = false,
+  }) {
     if (!SetupDoors.showsLines(context)) return false;
     if (onboardingSideBySide(context) || !height.isFinite) return true;
     final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
     final needed =
         onboardingPadding.vertical +
         AppSpacing.lg +
-        _claimAndDoors * scale +
+        (_claimAndDoors + (demo ? _demoDoor : 0)) * scale +
         _spare;
     return height >= needed;
   }
@@ -606,7 +619,12 @@ class OnboardingWelcome extends StatelessWidget {
               onSetUp: onSetUp,
               onCopy: onCopy,
               onSignIn: onSignIn,
-              showLines: roomForDoorLines(context, constraints.maxHeight),
+              onDemo: onDemo,
+              showLines: roomForDoorLines(
+                context,
+                constraints.maxHeight,
+                demo: onDemo != null,
+              ),
             ),
             if (onBack case final back?) ...[
               const SizedBox(height: AppSpacing.sm),

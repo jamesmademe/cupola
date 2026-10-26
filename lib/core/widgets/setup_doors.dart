@@ -14,12 +14,17 @@ import 'package:cupola/core/widgets/failure_remedy.dart';
 /// buttons: whoever copies already has Cupola somewhere, and the camera
 /// pointed at the other device's code opens the copy without passing here, so
 /// this door is mostly the way of a computer, which pastes the link.
+///
+/// "Explore a demo home", on the Welcome alone ([onDemo]), is the last link,
+/// as quiet as the copy: the way for someone with no server yet to see what
+/// Cupola does, and the one an App Store reviewer takes.
 class SetupDoors extends StatelessWidget {
   const SetupDoors({
     super.key,
     required this.onSetUp,
     required this.onCopy,
     required this.onSignIn,
+    this.onDemo,
     this.showLines,
   });
 
@@ -31,6 +36,10 @@ class SetupDoors extends StatelessWidget {
 
   /// Opens the sign-in with a Seerr account.
   final VoidCallback onSignIn;
+
+  /// Opens the demo home, or null where the demo is not offered: anywhere
+  /// but a Welcome with no connection.
+  final VoidCallback? onDemo;
 
   /// Whether the lines under the doors are drawn; null leaves it to
   /// [showsLines]. A caller that knows how much room the doors have says.
@@ -47,6 +56,9 @@ class SetupDoors extends StatelessWidget {
 
   /// What the account door is for, under it the same way.
   static const signInHint = 'Sign in to ask for movies and series.';
+
+  /// What the demo door is for, under it the same way.
+  static const demoHint = 'No server needed. Nothing is saved.';
 
   /// Whether the doors' lines are drawn when the caller does not say
   /// ([SetupDoors.showLines]): not past the reading size where two buttons
@@ -101,7 +113,7 @@ class SetupDoors extends StatelessWidget {
         Center(
           child: TextButton(
             onPressed: onCopy,
-            style: retryInkStyle(Theme.of(context).colorScheme),
+            style: _quietStyle(context),
             child: Semantics(
               hint: copyHint,
               child: const Text('Copy from another device'),
@@ -112,9 +124,39 @@ class SetupDoors extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           const _Hint(copyHint, align: TextAlign.center),
         ],
+        if (onDemo case final onDemo?) ...[
+          SizedBox(height: lines ? AppSpacing.sm : 0),
+          Center(
+            child: TextButton(
+              onPressed: onDemo,
+              style: _quietStyle(context),
+              child: Semantics(
+                hint: demoHint,
+                child: const Text('Explore a demo home'),
+              ),
+            ),
+          ),
+          if (lines) ...[
+            const SizedBox(height: AppSpacing.xs),
+            const _Hint(demoHint, align: TextAlign.center),
+          ],
+        ],
       ],
     );
   }
+}
+
+/// The quiet doors' links, in ink. 44pt tall on iOS, its floor, rather than
+/// the 48 Material pads every button to: on a 667pt phone at 1.4 times the
+/// reading size the four doors otherwise cover the end of the Welcome's
+/// sentence. Android keeps its 48dp.
+ButtonStyle _quietStyle(BuildContext context) {
+  final theme = Theme.of(context);
+  return retryInkStyle(theme.colorScheme).copyWith(
+    tapTargetSize: theme.platform == TargetPlatform.iOS
+        ? MaterialTapTargetSize.shrinkWrap
+        : null,
+  );
 }
 
 /// A door's line under it, silent: the door already says it as its hint.

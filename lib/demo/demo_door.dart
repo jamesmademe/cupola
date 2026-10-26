@@ -13,8 +13,8 @@ class DemoDoor {
   /// ([DemoRefused]) when they hold a connection.
   final Future<void> Function(SettingsModel leaving) enter;
 
-  /// Ends `session` and starts the app again from its real stores.
-  final Future<void> Function(DemoSession session) leave;
+  /// Ends the running demo and starts the app again from its real stores.
+  final Future<void> Function() leave;
 }
 
 /// The door, or null where there is no app to swap: a test's container, the

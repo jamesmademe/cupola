@@ -12,6 +12,7 @@ import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/discover/presentation/library_calendar_provider.dart';
 import 'package:cupola/features/shell/domain/stack_health.dart';
+import 'package:cupola/core/widgets/screen_title.dart';
 
 /// The top of the Home: the day, large, and under it the month and how many
 /// services answered, which opens Stack.
@@ -42,10 +43,7 @@ class HomeHeader extends ConsumerWidget {
     final health = showsHealth ? ref.watch(stackHealthProvider) : null;
     final line = health == null ? '' : homeHealthLine(health);
 
-    final title = Semantics(
-      header: true,
-      child: Text(day, style: AppType.screen.copyWith(color: room.ink)),
-    );
+    final title = ScreenTitle(day);
     final monthStyle = AppType.body.copyWith(color: room.inkSecondary);
 
     return Padding(

@@ -15,6 +15,7 @@ import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/utils/url_utils.dart';
 import 'package:cupola/core/widgets/ambient_background.dart';
 import 'package:cupola/core/widgets/service_ring.dart';
+import 'package:cupola/demo/demo_door.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/onboarding/presentation/widgets/onboarding_found.dart';
 import 'package:cupola/features/onboarding/presentation/widgets/onboarding_parts.dart';
@@ -926,6 +927,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     _goTo(_welcomePage);
   }
 
+  /// The demo's door, where it is offered: an app with a door to swap
+  /// (`main.dart` provides it) and no connection to put aside.
+  VoidCallback? _demoDoor() {
+    final door = ref.watch(demoDoorProvider);
+    final settings = ref.watch(currentSettingsProvider);
+    if (door == null || settings.instances.isNotEmpty) return null;
+    return () async {
+      try {
+        await door.enter(settings);
+      } catch (_) {
+        if (!mounted) return;
+        SnackBarHelper.error(context, 'Could not open the demo home.');
+      }
+    };
+  }
+
   /// Back where a visit from inside the app came from.
   void _leave() {
     if (context.canPop()) {
@@ -1240,6 +1257,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                                     onSignIn: () => context.push(
                                       ServiceRoutes.welcomeSignIn,
                                     ),
+                                    onDemo: _demoDoor(),
                                     onBack: context.canPop() ? _leave : null,
                                   ),
                                   OnboardingStart(

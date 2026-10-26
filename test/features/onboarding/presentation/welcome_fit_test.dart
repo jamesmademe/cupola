@@ -10,6 +10,9 @@
 /// The doors' lines are drawn only where the sentence and they both fit
 /// (`OnboardingWelcome.roomForDoorLines`); where they do not, each is still
 /// said as its door's hint.
+///
+/// Every case runs twice: the Welcome of an app that offers the demo (a
+/// fourth door, `Explore a demo home`) and the one that does not.
 library;
 
 import 'package:flutter/foundation.dart';
@@ -20,6 +23,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/setup_doors.dart';
+import 'package:cupola/demo/demo_door.dart';
 import 'package:cupola/features/onboarding/data/onboarding_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
@@ -45,6 +49,7 @@ Future<void> _pump(
   _Phone phone, {
   double scale = 1,
   bool safeArea = true,
+  required bool demo,
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = phone.size;
@@ -63,6 +68,10 @@ Future<void> _pump(
       secureSettingsStoreProvider.overrideWithValue(FakeSecureSettingsStore()),
       initialSettingsProvider.overrideWith((ref) => const SettingsModel()),
       initialOnboardingCompletedProvider.overrideWith((ref) => false),
+      if (demo)
+        demoDoorProvider.overrideWithValue(
+          DemoDoor(enter: (_) async {}, leave: () async {}),
+        ),
     ],
   );
   addTearDown(container.dispose);
@@ -92,18 +101,19 @@ Finder _body() => find.textContaining('Cupola talks straight');
 
 Finder _lines() => find.text(SetupDoors.copyHint);
 
-void _doorsAreOnTheScreen(WidgetTester tester, _Phone phone, bool safeArea) {
+void _doorsAreOnTheScreen(
+  WidgetTester tester,
+  _Phone phone,
+  bool safeArea,
+  List<String> labels,
+) {
   final doors = tester.getRect(find.byType(SetupDoors));
   expect(doors.top, greaterThanOrEqualTo(safeArea ? phone.top : 0));
   expect(
     doors.bottom,
     lessThanOrEqualTo(phone.size.height - (safeArea ? phone.bottom : 0)),
   );
-  for (final label in [
-    'Set up a service',
-    'Copy from another device',
-    'I have a Seerr account',
-  ]) {
+  for (final label in labels) {
     expect(
       tester.getRect(find.text(label)).bottom,
       lessThanOrEqualTo(phone.size.height),
@@ -114,6 +124,20 @@ void _doorsAreOnTheScreen(WidgetTester tester, _Phone phone, bool safeArea) {
 
 void main() {
   setUpAll(loadAppFonts);
+  for (final demo in [false, true]) {
+    group(demo ? 'with the demo door' : 'without the demo door', () {
+      _cases(demo: demo);
+    });
+  }
+}
+
+void _cases({required bool demo}) {
+  final doorLabels = [
+    'Set up a service',
+    'Copy from another device',
+    'I have a Seerr account',
+    if (demo) 'Explore a demo home',
+  ];
 
   for (final phone in _phones) {
     group('on ${phone.name} (${phone.size.width.toInt()}x'
@@ -125,7 +149,7 @@ void main() {
         ) async {
           debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
           try {
-            await _pump(tester, phone, safeArea: safeArea);
+            await _pump(tester, phone, safeArea: safeArea, demo: demo);
 
             expect(tester.takeException(), isNull);
             final body = tester.getRect(_body());
@@ -137,7 +161,7 @@ void main() {
                   'the sentence ends at ${body.bottom}, the doors begin at '
                   '${doors.top}',
             );
-            _doorsAreOnTheScreen(tester, phone, safeArea);
+            _doorsAreOnTheScreen(tester, phone, safeArea, doorLabels);
           } finally {
             debugDefaultTargetPlatformOverride = null;
           }
@@ -149,14 +173,14 @@ void main() {
             'whether or not their lines are drawn', (tester) async {
           debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
           try {
-            await _pump(tester, phone, scale: scale);
+            await _pump(tester, phone, scale: scale, demo: demo);
 
             expect(tester.takeException(), isNull);
             expect(
               tester.getRect(_body()).bottom,
               lessThanOrEqualTo(tester.getRect(find.byType(SetupDoors)).top),
             );
-            _doorsAreOnTheScreen(tester, phone, true);
+            _doorsAreOnTheScreen(tester, phone, true, doorLabels);
           } finally {
             debugDefaultTargetPlatformOverride = null;
           }
@@ -169,11 +193,11 @@ void main() {
       ) async {
         debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
         try {
-          await _pump(tester, phone, scale: 2);
+          await _pump(tester, phone, scale: 2, demo: demo);
 
           expect(tester.takeException(), isNull);
           expect(_lines(), findsNothing);
-          _doorsAreOnTheScreen(tester, phone, true);
+          _doorsAreOnTheScreen(tester, phone, true, doorLabels);
         } finally {
           debugDefaultTargetPlatformOverride = null;
         }
@@ -185,12 +209,13 @@ void main() {
         debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
         final handle = tester.ensureSemantics();
         try {
-          await _pump(tester, phone);
+          await _pump(tester, phone, demo: demo);
 
           for (final (label, hint) in [
             ('Set up a service', SetupDoors.setUpHint),
             ('Copy from another device', SetupDoors.copyHint),
             ('I have a Seerr account', SetupDoors.signInHint),
+            if (demo) ('Explore a demo home', SetupDoors.demoHint),
           ]) {
             expect(
               find.semantics.byLabel(label),
@@ -207,31 +232,37 @@ void main() {
   }
 
   group('the lines under the doors', () {
-    testWidgets('are drawn where the sentence and they both fit: a 440x956pt '
-        'phone at rest', (tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-      try {
-        await _pump(tester, _phones[2]);
+    // With the demo's door the four doors and their lines are 590pt with the
+    // claim, more than the 532 a 440x956pt phone's beat has: no listed phone
+    // draws them, and each is said as its door's hint.
+    if (!demo) {
+      testWidgets('are drawn where the sentence and they both fit: a '
+          '440x956pt phone at rest', (tester) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+        try {
+          await _pump(tester, _phones[2], demo: demo);
 
-        expect(_lines(), findsOneWidget);
-        expect(find.text(SetupDoors.setUpHint), findsOneWidget);
-        expect(find.text(SetupDoors.signInHint), findsOneWidget);
-      } finally {
-        debugDefaultTargetPlatformOverride = null;
-      }
-    });
+          expect(_lines(), findsOneWidget);
+          expect(find.text(SetupDoors.setUpHint), findsOneWidget);
+          expect(find.text(SetupDoors.signInHint), findsOneWidget);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+    }
 
-    for (final index in [0, 1, 3]) {
+    for (final index in demo ? [0, 1, 2, 3] : [0, 1, 3]) {
       final phone = _phones[index];
       testWidgets('are left out where they do not: ${phone.name}, inside its '
           'safe area', (tester) async {
         debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
         try {
-          await _pump(tester, phone);
+          await _pump(tester, phone, demo: demo);
 
           expect(_lines(), findsNothing);
           expect(find.text(SetupDoors.setUpHint), findsNothing);
           expect(find.text(SetupDoors.signInHint), findsNothing);
+          expect(find.text(SetupDoors.demoHint), findsNothing);
         } finally {
           debugDefaultTargetPlatformOverride = null;
         }

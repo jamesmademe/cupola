@@ -28,6 +28,7 @@ import 'package:cupola/features/settings/presentation/widgets/settings_section_l
 import 'package:cupola/features/settings/presentation/widgets/test_all_connections_button.dart';
 import 'package:cupola/features/shell/domain/portal_hints.dart';
 import 'package:cupola/features/shell/domain/shell_audience.dart';
+import 'package:cupola/demo/presentation/demo_settings_card.dart';
 
 /// The six cards of the settings summary, and the rule all six obey: **print
 /// only what is wrong.**
@@ -69,6 +70,7 @@ class SettingsSummaryPane extends ConsumerWidget {
         padding: padding,
         children: [
           ?heading,
+          const DemoSettingsCard(),
           const RequesterAccountCard(),
           const SizedBox(height: AppSpacing.xl),
           const _RegionSummaryCard(),
@@ -91,6 +93,7 @@ class SettingsSummaryPane extends ConsumerWidget {
       padding: padding,
       children: [
         ?heading,
+        const DemoSettingsCard(),
         const ConnectionsSummaryCard(),
         const SizedBox(height: AppSpacing.xl),
         const _TrustedCertificatesSummaryCard(),

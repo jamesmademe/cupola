@@ -149,6 +149,11 @@ class DemoSession {
 /// The running demo, or null outside it.
 final demoSessionProvider = Provider<DemoSession?>((ref) => null);
 
+/// Whether the demo runs: what a screen reads to draw the demo's mark.
+final demoRunningProvider = Provider<bool>(
+  (ref) => ref.watch(demoSessionProvider) != null,
+);
+
 /// The demo was asked for over an app that has connections.
 class DemoRefused implements Exception {
   const DemoRefused();
