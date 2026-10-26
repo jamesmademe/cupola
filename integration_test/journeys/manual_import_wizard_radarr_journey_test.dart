@@ -1,5 +1,5 @@
-/// The manual import wizard on Radarr: catalogue M-01, M-02, M-03, M-08, M-09,
-/// M-14 and M-15.
+/// The manual import wizard on Radarr: catalogue M-01, M-02, M-03, M-04, M-08,
+/// M-09, M-14 and M-15.
 ///
 /// Every case puts its own folder in the client's downloads through its
 /// scenario (`import-*`, `test/e2e/testlab/scenarios/import_wizard_cases.py`),
@@ -17,6 +17,7 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
+import 'package:cupola/features/discover/presentation/widgets/search_row.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import 'manual_import_driver.dart';
@@ -142,6 +143,50 @@ void main() {
 
       final movie = await radarr.movieWithFile(tester, 'Sprite Fright', 2024);
       expect(ImportReadings.fileOf(movie).path, contains('Fright.Sprite'));
+    },
+    timeout: const Timeout(Duration(minutes: 10)),
+  );
+
+  testWidgets(
+    'M-04 · a title two movies share goes to the movie the person picked',
+    (tester) async {
+      final (:app, :wizard, :radarr) = await open(tester, 'import-ambiguous');
+
+      await wizard.openWizard(ServiceKey.radarr);
+      await wizard.reviewFolder('$_root/l13-ambiguous');
+      await app.surface.see('1 needs a match');
+      await wizard.openFix();
+      await app.surface.see('Which movie?');
+      await wizard.search('Psycho');
+      // Two results named Psycho. The row is the one whose meta line carries
+      // 1998, and that row must also name Psycho.
+      final remakeRow = find.ancestor(
+        of: find.textContaining('1998'),
+        matching: find.byType(SearchRow),
+      );
+      await wizard.need(remakeRow, 'the search drew no 1998 result');
+      expect(
+        find.descendant(of: remakeRow, matching: find.text('Psycho')),
+        findsOneWidget,
+        reason: 'the 1998 row is not the Psycho row',
+      );
+      await app.tapIn(tester, remakeRow);
+      await settle(tester, const Duration(milliseconds: 500));
+      final match = find.text('Match to Psycho');
+      await wizard.need(match, 'the sheet never offered the match');
+      await tester.tap(match);
+      await settle(tester, const Duration(seconds: 1));
+      await wizard.confirmImport(1);
+      await wizard.waitTrack('Completed');
+
+      final remake = await radarr.movieWithFile(tester, 'Psycho', 1998);
+      expect(ImportReadings.fileOf(remake).path, contains('Psycho'));
+      final original = await radarr.movie('Psycho', 1960);
+      expect(
+        original['hasFile'],
+        isNot(true),
+        reason: 'the file went to the 1960 movie, not the one picked',
+      );
     },
     timeout: const Timeout(Duration(minutes: 10)),
   );

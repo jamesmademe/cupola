@@ -18,7 +18,7 @@ from typing import Callable
 import import_lab as lab
 from import_lab import Media
 
-from .base import Scenario, ScenarioError
+from .base import STATE_ROOT, Scenario, ScenarioError
 
 FEATURE = 600
 
@@ -118,6 +118,44 @@ class ImportUnrecognised(WizardCase):
     files = (Media(f"{folder}.mkv", seconds=FEATURE),)
     movies = (("Sprite Fright", 2024),)
     expect = staticmethod(_unmatched(1))
+
+
+def _ensure_remake() -> None:
+    """Puts the 1998 remake of Psycho (D47) in the library, as the seed does.
+
+    The seed adds the world's missing movies and nothing else, so a golden
+    snapshot taken before the movie was in the world gets it here, from the
+    same builder, and every later run finds it already there.
+    """
+    try:
+        lab.movie_by_title("Psycho", 1998)
+    except ScenarioError:
+        import seed_lab
+
+        seed_lab.seed_radarr_library(seed_lab.load_world(STATE_ROOT))
+
+
+class ImportAmbiguous(WizardCase):
+    """M-04: a file whose name names both Psycho movies, 1960 and 1998.
+
+    Radarr's scan cannot choose, so the file waits for `Which movie?`. The
+    journey picks the 1998 movie, and the server must file it under that id.
+    """
+
+    name = "import-ambiguous"
+    folder = "l13-ambiguous"
+    files = (Media("Psycho.mkv", seconds=FEATURE),)
+    movies = (("Psycho", 1998),)
+    expect = staticmethod(_unmatched(1))
+
+    def apply(self) -> None:
+        _ensure_remake()
+        super().apply()
+
+    def teardown(self) -> None:
+        # The movie record stays; only the file the journey imported goes.
+        lab.delete_movie_file(lab.movie_by_title("Psycho", 1998)["id"])
+        lab.remove_wizard(self.folder)
 
 
 class ImportSample(WizardCase):
