@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -10,7 +9,6 @@ import 'package:cupola/features/dockge/presentation/dockge_overview_provider.dar
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
-import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The first tab of Dockge's service home.
@@ -67,96 +65,47 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// Sections load and fail independently. A Dockge that pushes a stack list but
 /// no agent list still draws two regions, and the third simply is not there.
-class DockgeOverviewScreen extends ConsumerWidget {
-  const DockgeOverviewScreen({super.key, this.topPadding = _hostedTopPadding});
-
-  /// The room the two glass bands above this page occupy.
-  ///
-  /// Composed from the same two constants the router composes its own from, so
-  /// a screen built outside the router (a test, a preview) reserves the right
-  /// space instead of tucking its first region under the tab bar.
-  static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
+class DockgeOverviewScreen extends StatelessWidget {
+  const DockgeOverviewScreen({
+    super.key,
+    this.topPadding = ServiceOverviewPage.hostedTopPadding,
+  });
 
   /// Height of the chrome the host draws above this page.
   final double topPadding;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Checked **before** any provider is reached. `dockgeClientProvider` throws
-    // `Dockge not configured`, and letting `AsyncValueWidget` catch that throw
-    // would draw the same pixels while leaving failed providers behind it, each
-    // scheduling a retry with backoff for a condition no amount of waiting
-    // changes: a pending timer in tests and a battery cost on device. It is
-    // the same order `DockgeAgentLensButton` keeps, and for the same reason.
-    final configured = ref.watch(
-      currentSettingsProvider.select(
-        (settings) => settings.isServiceConfigured(ServiceKey.dockge),
-      ),
-    );
-
-    return AmbientScaffold(
-      accent: ServiceKey.dockge.accent,
-      body: SafeArea(
-        bottom: false,
-        child: configured
-            ? _OverviewBody(topPadding: topPadding)
-            // `.forService`, never the generic form: this is a service
-            // dashboard, so the door goes to Dockge's own connection form
-            // rather than the settings index.
-            : NotConfiguredPlaceholder.forService(ServiceKey.dockge),
-      ),
+  Widget build(BuildContext context) {
+    return ServiceOverviewPage(
+      service: ServiceKey.dockge,
+      topPadding: topPadding,
+      kpis: (ref) => ref
+          .watch(dockgeOverviewCensusProvider)
+          .whenData(
+            (census) => dockgeKpisFromCounts(
+              total: census.total,
+              running: census.running,
+              stopped: census.stopped,
+            ),
+          ),
+      refresh: _refresh,
+      sections: (ref) => [const _StacksSection(), const _AgentsSection()],
     );
   }
 }
 
-class _OverviewBody extends ConsumerWidget {
-  const _OverviewBody({required this.topPadding});
-
-  final double topPadding;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return RefreshIndicator(
-      onRefresh: () async {
-        // The probe as well as the wrapper over it: the probe is not
-        // `autoDispose`, so a pull that left it alone redrew the band from the
-        // answer it already had.
-        invalidateServiceReadout(ref, ServiceKey.dockge);
-        // The two pushes every region is folded from, and the three folds
-        // derived from them.
-        ref.invalidate(dockgeStackListProvider);
-        ref.invalidate(dockgeAgentsProvider);
-        ref.invalidate(dockgeOverviewCensusProvider);
-        ref.invalidate(dockgeOverviewStacksProvider);
-        ref.invalidate(dockgeOverviewAgentsProvider);
-        await Future<void>.delayed(AppAnimation.durationMd);
-      },
-      // One scroll view for the whole page: the regions are one column of
-      // reading, not independently scrolling panes.
-      child: ServiceOverviewScroll(
-        topPadding: topPadding,
-        children: [
-          const ServiceOverviewIdentity(service: ServiceKey.dockge),
-          ...sectionsOrOneLine(ref, ServiceKey.dockge, [
-            ServiceKpiPeek.room(
-              kpis: ref
-                  .watch(dockgeOverviewCensusProvider)
-                  .whenData(
-                    (census) => dockgeKpisFromCounts(
-                      total: census.total,
-                      running: census.running,
-                      stopped: census.stopped,
-                    ),
-                  ),
-              service: ServiceKey.dockge,
-            ),
-            const _StacksSection(),
-            const _AgentsSection(),
-          ]),
-        ],
-      ),
-    );
-  }
+/// What a pull re-reads besides the readout (`ServiceOverviewPage`).
+void _refresh(WidgetRef ref) {
+  // The probe as well as the wrapper over it: the probe is not
+  // `autoDispose`, so a pull that left it alone redrew the band from the
+  // answer it already had.
+  // The two pushes every region is folded from, and the three folds
+  // derived from them.
+  ref.invalidate(dockgeStackListProvider);
+  ref.invalidate(dockgeAgentsProvider);
+  ref.invalidate(dockgeOverviewCensusProvider);
+  ref.invalidate(dockgeOverviewStacksProvider);
+  ref.invalidate(dockgeOverviewAgentsProvider);
 }
 
 // ─── 1. Stacks ──────────────────────────────────────────────────────────────

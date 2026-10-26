@@ -4,6 +4,7 @@ import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/readarr/data/readarr_service.dart';
 import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
+import 'package:cupola/features/settings/data/connection_providers.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -11,27 +12,14 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// Throws if Readarr is not configured; widgets must check
 /// `settings.isServiceConfigured(ServiceKey.readarr)` before reading.
-final readarrServiceProvider = Provider<ReadarrService>((ref) {
-  return _readarrService(ref, instanceId: null);
-});
+final readarrServiceProvider = _readarr.lens;
 
-/// Readarr service bound to one named connection, independent of the lens.
-final readarrServiceForProvider = Provider.family<ReadarrService, String>((
-  ref,
-  instanceId,
-) {
-  final lens = ref.read(activeInstanceProvider(ServiceKey.readarr))?.id ?? '';
-  if (instanceId.isEmpty || instanceId == lens) {
-    return ref.watch(readarrServiceProvider);
-  }
-  return _readarrService(ref, instanceId: instanceId);
-});
+final readarrServiceForProvider = _readarr.forConnection;
 
-ReadarrService _readarrService(Ref ref, {required String? instanceId}) {
-  return ReadarrService(
-    watchApiClient(ref, ServiceKey.readarr, instanceId: instanceId),
-  );
-}
+final _readarr = ConnectionProviders<ReadarrService>.apiClient(
+  ServiceKey.readarr,
+  create: ReadarrService.new,
+);
 
 /// All authors in the library, with a failed fetch allowed to reach the caller.
 ///

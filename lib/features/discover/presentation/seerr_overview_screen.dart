@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:cupola/core/app_animation.dart';
-
 import 'package:cupola/core/app_spacing.dart';
 
 import 'package:cupola/core/capability/role_gate_provider.dart';
@@ -29,8 +27,6 @@ import 'package:cupola/features/requests/presentation/widgets/request_answer_con
 
 import 'package:cupola/features/services/domain/service_tab.dart';
 
-import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
-
 import 'package:cupola/features/discover/presentation/widgets/seerr_not_set_up.dart';
 
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -54,68 +50,38 @@ import 'package:cupola/features/media/presentation/open_media.dart';
 ///
 /// Sections load and fail independently: a Seerr that answers its requests and
 /// not TMDB still draws its decisions.
-class SeerrOverviewScreen extends ConsumerWidget {
-  const SeerrOverviewScreen({super.key, this.topPadding = _hostedTopPadding});
-
-  static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
+class SeerrOverviewScreen extends StatelessWidget {
+  const SeerrOverviewScreen({
+    super.key,
+    this.topPadding = ServiceOverviewPage.hostedTopPadding,
+  });
 
   /// Height of the chrome the host draws above this page.
   final double topPadding;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // The lens's Seerr, which this page reads: a signed-out one reads signed
-    // out before anything is asked of it.
-    final configured = watchSeerrConfigured(ref);
-
-    return AmbientScaffold(
-      accent: ServiceKey.seerr.accent,
-      body: SafeArea(
-        bottom: false,
-        child: configured
-            ? _OverviewBody(topPadding: topPadding)
-            // `.forService`: this is a service dashboard, so the door goes to
-            // Seerr's own connection form rather than to the settings index.
-            : NotConfiguredPlaceholder.forService(ServiceKey.seerr),
-      ),
+  Widget build(BuildContext context) {
+    return ServiceOverviewPage(
+      service: ServiceKey.seerr,
+      topPadding: topPadding,
+      configured: watchSeerrConfigured,
+      refresh: _refresh,
+      sections: (ref) => [
+        const _DecisionsSection(),
+        const _ProcessingSection(),
+        const _TrendingSection(),
+      ],
     );
   }
 }
 
-class _OverviewBody extends ConsumerWidget {
-  const _OverviewBody({required this.topPadding});
-
-  final double topPadding;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return RefreshIndicator(
-      onRefresh: () async {
-        invalidateServiceReadout(ref, ServiceKey.seerr);
-        invalidateSeerrRequestsOf(ref.container, '');
-        ref.invalidate(seerrOverviewDecisionsProvider);
-        ref.invalidate(seerrOverviewProcessingProvider);
-        ref.invalidate(discoverTrendingProvider);
-        ref.invalidate(seerrOverviewTrendingProvider);
-        await Future<void>.delayed(AppAnimation.durationMd);
-      },
-      child: ServiceOverviewScroll(
-        topPadding: topPadding,
-        children: [
-          const ServiceOverviewIdentity(service: ServiceKey.seerr),
-          ...sectionsOrOneLine(ref, ServiceKey.seerr, [
-            ServiceKpiPeek.room(
-              kpis: ref.watch(serviceKpiProvider(ServiceKey.seerr)),
-              service: ServiceKey.seerr,
-            ),
-            const _DecisionsSection(),
-            const _ProcessingSection(),
-            const _TrendingSection(),
-          ]),
-        ],
-      ),
-    );
-  }
+/// What a pull re-reads besides the readout (`ServiceOverviewPage`).
+void _refresh(WidgetRef ref) {
+  invalidateSeerrRequestsOf(ref.container, '');
+  ref.invalidate(seerrOverviewDecisionsProvider);
+  ref.invalidate(seerrOverviewProcessingProvider);
+  ref.invalidate(discoverTrendingProvider);
+  ref.invalidate(seerrOverviewTrendingProvider);
 }
 
 // ─── 1. Needs a decision ────────────────────────────────────────────────────

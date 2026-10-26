@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_overview_provider.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
-import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
-import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The first tab of NZBGet's service home.
@@ -42,92 +39,47 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// Sections load independently and fail independently: an NZBGet that answers
 /// `listgroups` and not `history` still draws its queue, and the region that
 /// could not load says so in its own slot rather than taking the page with it.
-class NzbgetOverviewScreen extends ConsumerWidget {
-  const NzbgetOverviewScreen({super.key, this.topPadding = _hostedTopPadding});
-
-  /// The room the two glass bands above this page occupy.
-  ///
-  /// Composed from the same two constants the router composes its own from, so
-  /// a screen built outside the router (a test, a preview) reserves the right
-  /// space instead of tucking its first region under the tab bar.
-  static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
+class NzbgetOverviewScreen extends StatelessWidget {
+  const NzbgetOverviewScreen({
+    super.key,
+    this.topPadding = ServiceOverviewPage.hostedTopPadding,
+  });
 
   /// Height of the chrome the host draws above this page.
   final double topPadding;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Checked **before** any NZBGet provider is watched. `nzbgetClientProvider`
-    // throws "NZBGet not configured", and a `FutureProvider` that throws is a
-    // failed provider: Riverpod schedules a retry with backoff for a condition
-    // that no amount of waiting changes, and the test that navigates here fails
-    // on a pending timer rather than on anything it meant to assert.
-    final configured = ref.watch(
-      currentSettingsProvider.select(
-        (settings) => settings.isServiceConfigured(ServiceKey.nzbget),
-      ),
-    );
+  Widget build(BuildContext context) {
+    return ServiceOverviewPage(
+      service: ServiceKey.nzbget,
+      topPadding: topPadding,
+      refresh: _refresh,
+      sections: (ref) => [
+        // The shared rail, not a private one: Speed, Queue, Remaining and
+        // Status are the same four figures the stack matrix shows for this
+        // service, and a second copy computed here would be free to drift.
+        // The board's fifth and sixth tiles (Disk free, and "no limit"
+        // under Speed) are not drawn: the free space speaks through Status,
+        // which says `Disk full` when the disk stopped the queue.
 
-    return AmbientScaffold(
-      accent: ServiceKey.nzbget.accent,
-      body: SafeArea(
-        bottom: false,
-        child: configured
-            ? _OverviewBody(topPadding: topPadding)
-            // `.forService`, never the generic form: this is a service
-            // dashboard, so the door goes to NZBGet's own connection form
-            // rather than to the settings index.
-            : NotConfiguredPlaceholder.forService(ServiceKey.nzbget),
-      ),
+        const _HistorySection(),
+        const _QueueSection(),
+      ],
     );
   }
 }
 
-class _OverviewBody extends ConsumerWidget {
-  const _OverviewBody({required this.topPadding});
-
-  final double topPadding;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return RefreshIndicator(
-      onRefresh: () async {
-        // The three source calls, then the two derived regions. Invalidating
-        // the sources alone would be enough. The derived providers watch them.
-        // But naming all five keeps a pull-to-refresh honest if one of them
-        // is ever given its own fetch.
-        invalidateServiceReadout(ref, ServiceKey.nzbget);
-        ref.invalidate(nzbgetStatusProvider);
-        ref.invalidate(nzbgetQueueProvider);
-        ref.invalidate(nzbgetHistoryProvider);
-        ref.invalidate(nzbgetOverviewHistoryProvider);
-        ref.invalidate(nzbgetOverviewQueueProvider);
-        await Future<void>.delayed(AppAnimation.durationMd);
-      },
-      // One scroll view for the whole page: the regions are one column of
-      // reading, not two independently scrolling panes.
-      child: ServiceOverviewScroll(
-        topPadding: topPadding,
-        children: [
-          const ServiceOverviewIdentity(service: ServiceKey.nzbget),
-          ...sectionsOrOneLine(ref, ServiceKey.nzbget, [
-            // The shared rail, not a private one: Speed, Queue, Remaining and
-            // Status are the same four figures the stack matrix shows for this
-            // service, and a second copy computed here would be free to drift.
-            // The board's fifth and sixth tiles (Disk free, and "no limit"
-            // under Speed) are not drawn: the free space speaks through Status,
-            // which says `Disk full` when the disk stopped the queue.
-            ServiceKpiPeek.room(
-              kpis: ref.watch(serviceKpiProvider(ServiceKey.nzbget)),
-              service: ServiceKey.nzbget,
-            ),
-            const _HistorySection(),
-            const _QueueSection(),
-          ]),
-        ],
-      ),
-    );
-  }
+/// What a pull re-reads besides the readout (`ServiceOverviewPage`).
+void _refresh(WidgetRef ref) {
+  // The three source calls, then the two derived regions. Invalidating
+  // the sources alone would be enough. The derived providers watch them.
+  // But naming all five keeps a pull-to-refresh honest if one of them
+  // is ever given its own fetch.
+  ref.invalidate(nzbgetStatusProvider);
+  ref.invalidate(nzbgetQueueProvider);
+  ref.invalidate(nzbgetHistoryProvider);
+  ref.invalidate(nzbgetOverviewHistoryProvider);
+  ref.invalidate(nzbgetOverviewQueueProvider);
 }
 
 // ─── 1. History ─────────────────────────────────────────────────────────────

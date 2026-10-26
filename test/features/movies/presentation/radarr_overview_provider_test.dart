@@ -322,7 +322,7 @@ void main() {
         ),
       ], now: now);
 
-      expect(entries.map((entry) => entry.title), ['Today']);
+      expect(entries.map((entry) => entry.subject), ['Today']);
     });
 
     test('is newest first and capped at three', () {
@@ -335,7 +335,7 @@ void main() {
       ], now: now);
 
       expect(entries, hasLength(radarrHistoryTodayLimit));
-      expect(entries.map((entry) => entry.title), [
+      expect(entries.map((entry) => entry.subject), [
         'Film 4',
         'Film 3',
         'Film 2',
@@ -632,7 +632,7 @@ void main() {
 
       final entries = await container.read(radarrHistoryTodayProvider.future);
 
-      expect(entries.map((entry) => entry.title), ['Today']);
+      expect(entries.map((entry) => entry.subject), ['Today']);
     });
 
     test(

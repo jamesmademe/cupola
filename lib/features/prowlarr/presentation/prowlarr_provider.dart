@@ -4,6 +4,7 @@ import 'package:cupola/core/providers/provider_retry.dart';
 
 import 'package:cupola/features/prowlarr/data/prowlarr_service.dart';
 import 'package:cupola/features/prowlarr/domain/models/prowlarr_models.dart';
+import 'package:cupola/features/settings/data/connection_providers.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -46,31 +47,15 @@ enum ProwlarrStatsWindow {
 /// invalidating only the derivation re-reads the source's cached failure.
 ///
 /// This build throws "not configured", which the default would retry too.
-final prowlarrServiceProvider = Provider<ProwlarrService>((ref) {
-  return _prowlarrService(ref, instanceId: null);
-}, retry: noProviderRetry);
+final prowlarrServiceProvider = _prowlarr.lens;
 
-/// Prowlarr service bound to one named connection, independent of the lens.
-///
-/// Empty and active-lens ids reuse [prowlarrServiceProvider], preserving one
-/// client and its overrides for the ordinary path. A different id is resolved
-/// explicitly so folded surfaces cannot read the lens under another label.
-final prowlarrServiceForProvider = Provider.family<ProwlarrService, String>((
-  ref,
-  instanceId,
-) {
-  final lens = ref.read(activeInstanceProvider(ServiceKey.prowlarr))?.id ?? '';
-  if (instanceId.isEmpty || instanceId == lens) {
-    return ref.watch(prowlarrServiceProvider);
-  }
-  return _prowlarrService(ref, instanceId: instanceId);
-}, retry: noProviderRetry);
+final prowlarrServiceForProvider = _prowlarr.forConnection;
 
-ProwlarrService _prowlarrService(Ref ref, {required String? instanceId}) {
-  return ProwlarrService(
-    watchApiClient(ref, ServiceKey.prowlarr, instanceId: instanceId),
-  );
-}
+final _prowlarr = ConnectionProviders<ProwlarrService>.apiClient(
+  ServiceKey.prowlarr,
+  retry: noProviderRetry,
+  create: ProwlarrService.new,
+);
 
 /// Configured indexers.
 final prowlarrIndexersProvider = FutureProvider<List<ProwlarrIndexer>>((

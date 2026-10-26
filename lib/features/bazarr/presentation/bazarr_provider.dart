@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/bazarr/data/bazarr_service.dart';
 import 'package:cupola/features/bazarr/domain/models/bazarr_models.dart';
-import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/data/connection_providers.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 const int _defaultDashboardPageSize = 20;
@@ -20,27 +20,14 @@ typedef BazarrHistoryQuery = ({
 ///
 /// Throws if Bazarr is not configured; widgets must check
 /// `settings.isServiceConfigured(ServiceKey.bazarr)` before reading.
-final bazarrServiceProvider = Provider<BazarrService>((ref) {
-  return _bazarrService(ref, instanceId: null);
-});
+final bazarrServiceProvider = _bazarr.lens;
 
-/// Bazarr service bound to one named connection, independent of the lens.
-final bazarrServiceForProvider = Provider.family<BazarrService, String>((
-  ref,
-  instanceId,
-) {
-  final lens = ref.read(activeInstanceProvider(ServiceKey.bazarr))?.id ?? '';
-  if (instanceId.isEmpty || instanceId == lens) {
-    return ref.watch(bazarrServiceProvider);
-  }
-  return _bazarrService(ref, instanceId: instanceId);
-});
+final bazarrServiceForProvider = _bazarr.forConnection;
 
-BazarrService _bazarrService(Ref ref, {required String? instanceId}) {
-  return BazarrService(
-    watchApiClient(ref, ServiceKey.bazarr, instanceId: instanceId),
-  );
-}
+final _bazarr = ConnectionProviders<BazarrService>.apiClient(
+  ServiceKey.bazarr,
+  create: BazarrService.new,
+);
 
 /// Aggregated counts for the Bazarr dashboard stat row.
 ///

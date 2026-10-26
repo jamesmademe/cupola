@@ -9,70 +9,28 @@ import 'package:cupola/features/dockge/data/dockge_service.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_agent.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack_detail.dart';
+import 'package:cupola/features/settings/data/connection_providers.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
-import 'package:cupola/features/settings/domain/service_not_configured.dart';
 
 /// Long-lived Socket.IO client for Dockge, rebuilt when its URL/credentials
 /// change. Closed automatically when disposed.
-final dockgeClientProvider = Provider<DockgeClient>((ref) {
-  // One `watchTransport` in place of four hand-written selects, and it is the
-  // only one of the five that follows the lens: the four read `dockgeUrl` and
-  // friends, which are always the first connection, so a second Dockge could be
-  // named in the app bar and never reached.
-  final transport = watchTransport(ref, ServiceKey.dockge);
-  if (transport.url.isEmpty) {
-    throw const ServiceNotConfigured(ServiceKey.dockge);
-  }
-  final client = DockgeClient(
+final dockgeClientProvider = _dockge.lens;
+
+final dockgeClientForProvider = _dockge.forConnection;
+
+final _dockge = ConnectionProviders<DockgeClient>.transport(
+  ServiceKey.dockge,
+  create: (ref, transport) => DockgeClient(
     baseUrl: transport.url,
-    username: transport.username.isEmpty ? null : transport.username,
-    password: transport.apiKey.isEmpty ? null : transport.apiKey,
+    username: transport.usernameOrNull,
+    password: transport.secretOrNull,
     certFingerprint: transport.pin,
     accessHeaders: transport.access.headers(),
     onlyAtHome: transport.onlyAtHomeOf(ServiceKey.dockge),
-  );
-  ref.onDispose(client.close);
-  return client;
-});
-
-/// Dockge client bound to one configured connection.
-///
-/// Empty and active ids intentionally collapse to [dockgeClientProvider], so
-/// the ordinary lens remains the single owner of the live connection. A
-/// non-active id is built directly from its transport and never reads the
-/// agent lens: agent selection belongs to the Dockge login, not to the
-/// settings connection id.
-final dockgeClientForProvider = Provider.family<DockgeClient, String>((
-  ref,
-  instanceId,
-) {
-  final activeId =
-      ref.read(activeInstanceProvider(ServiceKey.dockge))?.id ?? '';
-  if (instanceId.isEmpty || instanceId == activeId) {
-    return ref.watch(dockgeClientProvider);
-  }
-  return _dockgeClient(ref, instanceId: instanceId);
-});
-
-DockgeClient _dockgeClient(Ref ref, {required String? instanceId}) {
-  final transport = watchTransport(
-    ref,
-    ServiceKey.dockge,
-    instanceId: instanceId,
-  );
-  transport.ensureConfigured(ServiceKey.dockge);
-  final client = DockgeClient(
-    baseUrl: transport.url,
-    username: transport.username.isEmpty ? null : transport.username,
-    password: transport.apiKey.isEmpty ? null : transport.apiKey,
-    certFingerprint: transport.pin,
-    accessHeaders: transport.access.headers(),
-    onlyAtHome: transport.onlyAtHomeOf(ServiceKey.dockge),
-  );
-  ref.onDispose(client.close);
-  return client;
-}
+  ),
+  close: (client) => client.close(),
+);
 
 /// Which Dockge instance the app is looking through: the empty string for the
 /// hub this login belongs to, an agent's `host:port` otherwise.

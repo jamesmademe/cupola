@@ -99,6 +99,13 @@ extension AskableTransport on ServiceTransport {
   /// `test/core/network/route_reach_guard_test.dart` holds that every client
   /// built off a transport is handed this.
   ServiceKey? onlyAtHomeOf(ServiceKey service) => onlyAtHome ? service : null;
+
+  /// The username, or null for the services that authenticate on a key alone:
+  /// what a client takes where it treats an empty one as none.
+  String? get usernameOrNull => username.isEmpty ? null : username;
+
+  /// The secret (password, token), or null when there is none.
+  String? get secretOrNull => apiKey.isEmpty ? null : apiKey;
 }
 
 /// The lens: which instance of each service the app is currently looking
