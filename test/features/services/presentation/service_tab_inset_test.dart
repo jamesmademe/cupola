@@ -702,10 +702,7 @@ void main() {
             ServiceKey.dockge,
           ).overrideWith((ref) => _pending()),
         ],
-        child: const DockgeScreen(
-          showAppBar: false,
-          topPadding: _hostedTopPadding,
-        ),
+        child: const DockgeScreen(topPadding: _hostedTopPadding),
       );
 
       expectClearsTheBar(tester, find.byType(ServiceKpiPeek));
@@ -721,10 +718,7 @@ void main() {
             (ref) => const Stream<List<DockgeStack>>.empty(),
           ),
         ],
-        child: const DockgeTerminalScreen(
-          showAppBar: false,
-          topPadding: _hostedTopPadding,
-        ),
+        child: const DockgeTerminalScreen(topPadding: _hostedTopPadding),
       );
 
       expectClearsTheBar(tester, find.byType(SectionHeader));
@@ -741,10 +735,7 @@ void main() {
           ).overrideWith((ref) => _pending()),
           unraidArrayProvider.overrideWith((ref) => _pending()),
         ],
-        child: const UnraidScreen.array(
-          showAppBar: false,
-          topPadding: _hostedTopPadding,
-        ),
+        child: const UnraidScreen.array(topPadding: _hostedTopPadding),
       );
 
       expectClearsTheBar(tester, find.byType(SectionHeader));
@@ -766,8 +757,7 @@ void main() {
           // reach a real server would draw first) is not what leads the page.
           capabilityOverride(),
         ],
-        child: const NpmScreen.proxyHosts(topPadding: _hostedTopPadding,
-        ),
+        child: const NpmScreen.proxyHosts(topPadding: _hostedTopPadding),
       );
 
       expectClearsTheBar(tester, find.byType(SectionHeader));

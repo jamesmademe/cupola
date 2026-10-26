@@ -11,16 +11,14 @@ import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/dockge/data/dockge_client.dart';
 import 'package:cupola/features/dockge/domain/models/dockge_stack.dart';
 import 'package:cupola/features/dockge/presentation/dockge_actions.dart';
-import 'package:cupola/features/dockge/presentation/dockge_agent_lens_button.dart';
 import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 class DockgeScreen extends ConsumerWidget {
-  const DockgeScreen({super.key, this.showAppBar = true, this.topPadding = 0});
+  const DockgeScreen({super.key, this.topPadding = 0});
 
-  final bool showAppBar;
   final double topPadding;
 
   @override
@@ -30,18 +28,6 @@ class DockgeScreen extends ConsumerWidget {
 
     return AmbientScaffold(
       accent: ServiceKey.dockge.accent,
-      appBar: showAppBar
-          ? const GlassAppBar(
-              title: Text('Dockge'),
-              // The lens belongs beside the title, not in a tab: it says which
-              // Dockge the rows below came off (decision 41). It draws nothing
-              // until there are two instances to tell apart.
-              actions: [
-                DockgeAgentLensButton(),
-                SizedBox(width: AppSpacing.sm),
-              ],
-            )
-          : null,
       // The top inset is consumed here whether or not this page draws an app
       // bar. With one, the `Scaffold` has already taken it off the body and
       // this changes nothing. Without one (the tab shell), the service band

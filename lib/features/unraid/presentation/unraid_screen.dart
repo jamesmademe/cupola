@@ -29,18 +29,7 @@ import 'package:cupola/features/unraid/presentation/unraid_provider.dart';
 /// Public since the tab model: Array and Docker are two entries on Unraid's own
 /// bar now, so the choice is made by the router rather than by scrolling past
 /// one section to reach the other.
-enum UnraidSection {
-  array('Array'),
-  docker('Docker'),
-  vms('VMs'),
-  notifications('Notifications'),
-  shares('Shares');
-
-  const UnraidSection(this.label);
-
-  /// The word the app bar prints when this page draws one of its own.
-  final String label;
-}
+enum UnraidSection { array, docker, vms, notifications, shares }
 
 /// One section of Unraid: the array's disks, or the Docker containers.
 ///
@@ -71,45 +60,23 @@ enum UnraidSection {
 /// the API already returns.
 class UnraidScreen extends ConsumerWidget {
   /// The array half: Unraid's Array tab.
-  const UnraidScreen.array({
-    super.key,
-    this.showAppBar = true,
-    this.topPadding = 0,
-  }) : section = UnraidSection.array;
+  const UnraidScreen.array({super.key, this.topPadding = 0})
+    : section = UnraidSection.array;
 
   /// The container half: Unraid's Docker tab.
-  const UnraidScreen.docker({
-    super.key,
-    this.showAppBar = true,
-    this.topPadding = 0,
-  }) : section = UnraidSection.docker;
+  const UnraidScreen.docker({super.key, this.topPadding = 0})
+    : section = UnraidSection.docker;
 
-  const UnraidScreen.vms({
-    super.key,
-    this.showAppBar = true,
-    this.topPadding = 0,
-  }) : section = UnraidSection.vms;
+  const UnraidScreen.vms({super.key, this.topPadding = 0})
+    : section = UnraidSection.vms;
 
-  const UnraidScreen.notifications({
-    super.key,
-    this.showAppBar = true,
-    this.topPadding = 0,
-  }) : section = UnraidSection.notifications;
+  const UnraidScreen.notifications({super.key, this.topPadding = 0})
+    : section = UnraidSection.notifications;
 
-  const UnraidScreen.shares({
-    super.key,
-    this.showAppBar = true,
-    this.topPadding = 0,
-  }) : section = UnraidSection.shares;
+  const UnraidScreen.shares({super.key, this.topPadding = 0})
+    : section = UnraidSection.shares;
 
   final UnraidSection section;
-
-  /// Whether to draw this screen's own app bar.
-  ///
-  /// False inside the tab shell, where `ServiceHomeScreen` draws the service
-  /// band and `ServiceTabScaffold` the tab bar above it: a third bar of its own
-  /// would put two titles and two back chevrons in one corner.
-  final bool showAppBar;
 
   /// Room those two glass bands take above this page, since they float over it
   /// rather than pushing it down.
@@ -126,7 +93,6 @@ class UnraidScreen extends ConsumerWidget {
 
     return AmbientScaffold(
       accent: ServiceKey.unraid.accent,
-      appBar: showAppBar ? GlassAppBar(title: Text(section.label)) : null,
       // The inset is consumed here with or without an app bar: with one the
       // `Scaffold` has already taken it off the body, and without one (the tab
       // shell) the band above consumes it and the tab bar sits an inset lower

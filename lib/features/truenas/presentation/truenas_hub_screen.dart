@@ -10,7 +10,6 @@ import 'package:cupola/core/widgets/ambient_scaffold.dart';
 import 'package:cupola/core/widgets/app_card.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
-import 'package:cupola/core/widgets/glass_app_bar.dart';
 import 'package:cupola/core/widgets/pressable_scale.dart';
 import 'package:cupola/core/widgets/service_kpi_peek.dart';
 import 'package:cupola/core/widgets/staggered_entrance.dart';
@@ -25,14 +24,9 @@ import 'package:cupola/features/truenas/presentation/widgets/truenas_version_ban
 /// TrueNAS root: a grid of management sections, each drilling into its own
 /// screen. Replaces the former single-dashboard layout.
 class TrueNasHubScreen extends ConsumerWidget {
-  final bool showAppBar;
   final double topPadding;
 
-  const TrueNasHubScreen({
-    super.key,
-    this.showAppBar = true,
-    this.topPadding = 0,
-  });
+  const TrueNasHubScreen({super.key, this.topPadding = 0});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -44,7 +38,6 @@ class TrueNasHubScreen extends ConsumerWidget {
 
     return AmbientScaffold(
       accent: ServiceKey.truenas.accent,
-      appBar: showAppBar ? const GlassAppBar(title: Text('TrueNAS')) : null,
       // No `TrueNasConsoleShell` here, deliberately. The rail IS this page's
       // Sections grid (the same nine doors), so drawing it beside them put the
       // list on screen twice, once as a 232pt column and once as the content.

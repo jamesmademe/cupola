@@ -1541,7 +1541,7 @@ GoRoute _dockgeBranchRoot(ServiceTab tab) => switch (tab) {
     (state) => const ServiceTabScaffold(
       service: ServiceKey.dockge,
       tab: ServiceTab.stacks,
-      child: DockgeScreen(showAppBar: false, topPadding: _serviceTabTopPadding),
+      child: DockgeScreen(topPadding: _serviceTabTopPadding),
     ),
     routes: [
       // `new` before `stack/:name`, though nothing here forces it: both are
@@ -1578,10 +1578,7 @@ GoRoute _dockgeBranchRoot(ServiceTab tab) => switch (tab) {
     (state) => const ServiceTabScaffold(
       service: ServiceKey.dockge,
       tab: ServiceTab.terminal,
-      child: DockgeTerminalScreen(
-        showAppBar: false,
-        topPadding: _serviceTabTopPadding,
-      ),
+      child: DockgeTerminalScreen(topPadding: _serviceTabTopPadding),
     ),
   ),
   _ => throw UnsupportedError(
@@ -2143,10 +2140,7 @@ GoRoute _unraidBranchRoot(ServiceTab tab) => switch (tab) {
     (state) => const ServiceTabScaffold(
       service: ServiceKey.unraid,
       tab: ServiceTab.array,
-      child: UnraidScreen.array(
-        showAppBar: false,
-        topPadding: _serviceTabTopPadding,
-      ),
+      child: UnraidScreen.array(topPadding: _serviceTabTopPadding),
     ),
   ),
   ServiceTab.docker => _page(
@@ -2154,10 +2148,7 @@ GoRoute _unraidBranchRoot(ServiceTab tab) => switch (tab) {
     (state) => const ServiceTabScaffold(
       service: ServiceKey.unraid,
       tab: ServiceTab.docker,
-      child: UnraidScreen.docker(
-        showAppBar: false,
-        topPadding: _serviceTabTopPadding,
-      ),
+      child: UnraidScreen.docker(topPadding: _serviceTabTopPadding),
     ),
   ),
   ServiceTab.vms => _page(
@@ -2165,10 +2156,7 @@ GoRoute _unraidBranchRoot(ServiceTab tab) => switch (tab) {
     (state) => const ServiceTabScaffold(
       service: ServiceKey.unraid,
       tab: ServiceTab.vms,
-      child: UnraidScreen.vms(
-        showAppBar: false,
-        topPadding: _serviceTabTopPadding,
-      ),
+      child: UnraidScreen.vms(topPadding: _serviceTabTopPadding),
     ),
   ),
   ServiceTab.notifications => _page(
@@ -2176,10 +2164,7 @@ GoRoute _unraidBranchRoot(ServiceTab tab) => switch (tab) {
     (state) => const ServiceTabScaffold(
       service: ServiceKey.unraid,
       tab: ServiceTab.notifications,
-      child: UnraidScreen.notifications(
-        showAppBar: false,
-        topPadding: _serviceTabTopPadding,
-      ),
+      child: UnraidScreen.notifications(topPadding: _serviceTabTopPadding),
     ),
   ),
   ServiceTab.shares => _page(
@@ -2187,10 +2172,7 @@ GoRoute _unraidBranchRoot(ServiceTab tab) => switch (tab) {
     (state) => const ServiceTabScaffold(
       service: ServiceKey.unraid,
       tab: ServiceTab.shares,
-      child: UnraidScreen.shares(
-        showAppBar: false,
-        topPadding: _serviceTabTopPadding,
-      ),
+      child: UnraidScreen.shares(topPadding: _serviceTabTopPadding),
     ),
   ),
   _ => throw UnsupportedError(
@@ -2365,8 +2347,7 @@ GoRoute _npmBranchRoot(ServiceTab tab) => switch (tab) {
     (state) => const ServiceTabScaffold(
       service: ServiceKey.nginxProxyManager,
       tab: ServiceTab.proxyHosts,
-      child: NpmScreen.proxyHosts(topPadding: _serviceTabTopPadding,
-      ),
+      child: NpmScreen.proxyHosts(topPadding: _serviceTabTopPadding),
     ),
     // A child, so the URL leaves the tab root and the service header steps
     // aside for the page's own app bar (`isServiceTabRoot`).
@@ -2388,8 +2369,7 @@ GoRoute _npmBranchRoot(ServiceTab tab) => switch (tab) {
     (state) => const ServiceTabScaffold(
       service: ServiceKey.nginxProxyManager,
       tab: ServiceTab.certificates,
-      child: NpmScreen.certificates(topPadding: _serviceTabTopPadding,
-      ),
+      child: NpmScreen.certificates(topPadding: _serviceTabTopPadding),
     ),
   ),
   ServiceTab.accessLists => _page(
@@ -2397,8 +2377,7 @@ GoRoute _npmBranchRoot(ServiceTab tab) => switch (tab) {
     (state) => const ServiceTabScaffold(
       service: ServiceKey.nginxProxyManager,
       tab: ServiceTab.accessLists,
-      child: NpmScreen.accessLists(topPadding: _serviceTabTopPadding,
-      ),
+      child: NpmScreen.accessLists(topPadding: _serviceTabTopPadding),
     ),
   ),
   ServiceTab.auditLog => _page(
@@ -2406,8 +2385,7 @@ GoRoute _npmBranchRoot(ServiceTab tab) => switch (tab) {
     (state) => const ServiceTabScaffold(
       service: ServiceKey.nginxProxyManager,
       tab: ServiceTab.auditLog,
-      child: NpmScreen.auditLog(topPadding: _serviceTabTopPadding,
-      ),
+      child: NpmScreen.auditLog(topPadding: _serviceTabTopPadding),
     ),
   ),
   _ => throw UnsupportedError(
@@ -2726,10 +2704,7 @@ GoRoute _truenasRoutes({required String path}) {
     path,
     (state) => ServiceHomeScreen(
       service: ServiceKey.truenas,
-      child: const TrueNasHubScreen(
-        showAppBar: false,
-        topPadding: _serviceHomeTopPadding,
-      ),
+      child: const TrueNasHubScreen(topPadding: _serviceHomeTopPadding),
     ),
     routes: _truenasSectionRoutes(),
   );
