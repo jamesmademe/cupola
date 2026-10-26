@@ -214,6 +214,30 @@ void main() {
     expect(other.approved, [42]);
     expect(lens.approved, isEmpty);
   });
+
+  testWidgets('and so does a decline', (tester) async {
+    final lens = _RequestsSeerrService([_request(42, 'From the first')]);
+    final other = _RequestsSeerrService([_request(42, 'From the second')]);
+
+    final container = ProviderContainer(
+      overrides: [
+        ...await _settings(),
+        seerrServiceProvider.overrideWith((ref) => lens),
+        seerrServiceForProvider(_second.id).overrideWithValue(other),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await _pump(tester, container: container, instanceId: _second.id);
+
+    await tester.tap(find.byTooltip('Decline From the second'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Decline request'));
+    await tester.pumpAndSettle();
+
+    expect(other.declined, [42]);
+    expect(lens.declined, isEmpty);
+  });
 }
 
 class _RequestsSeerrService extends FakeSeerrService {
