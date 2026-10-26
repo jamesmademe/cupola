@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/network/network_change.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -56,6 +57,10 @@ final truenasClientProvider = Provider<TrueNasWsClient>((ref) {
     onlyAtHome: transport.onlyAtHomeOf(ServiceKey.truenas),
   );
   ref.onDispose(client.close);
+  // A network change may have left the open socket half-open: the next call
+  // pings it rather than waiting out the call timeout. Listened to, never
+  // watched, so the client is not rebuilt (and its socket closed) by it.
+  ref.listen(networkChangesProvider, (_, _) => client.markSuspect());
   return client;
 }, retry: noProviderRetry);
 
