@@ -876,7 +876,11 @@ class _UpNextSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final queue = ref.watch(servicesQueueProvider).value;
+    // Only the queue's value: a reload keeps the previous value while it is
+    // loading, so this rebuilds once per change, not on the loading frame too.
+    final queue = ref.watch(
+      servicesQueueProvider.select((async) => async.value),
+    );
     if (queue == null) return const SizedBox.shrink();
     final queued = [
       for (final item in queue.items)
