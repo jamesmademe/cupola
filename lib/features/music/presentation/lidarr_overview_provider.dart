@@ -438,7 +438,7 @@ final lidarrQueueRecordsProvider = FutureProvider.autoDispose<ArrRecordPage>((
 
 /// One page of the wishlist, kept as a page so its envelope survives.
 ///
-/// `getMissingPage` and not `getMissing`: the record-only getter throws the
+/// `getMissingPage` and not the records-only read: that one throws the
 /// `totalRecords` away, and the total is the entire reason this is fetched.
 final lidarrMissingPageProvider = FutureProvider.autoDispose<ArrRecordPage>((
   ref,

@@ -79,17 +79,14 @@ class FakeRadarrService extends RadarrService {
     Map<String, dynamic>? queryParameters,
   }) async => const [];
 
-  @override
   Future<List<dynamic>> getBlocklist() async => const [];
 
-  @override
   Future<List<dynamic>> getMissing({
     int page = 1,
     int pageSize = 20,
     Map<String, dynamic>? queryParameters,
   }) async => const [];
 
-  @override
   Future<List<dynamic>> getCutoff({
     int page = 1,
     int pageSize = 20,
@@ -223,17 +220,14 @@ class FakeSonarrService extends SonarrService {
     Map<String, dynamic>? queryParameters,
   }) async => const [];
 
-  @override
   Future<List<dynamic>> getBlocklist() async => const [];
 
-  @override
   Future<List<dynamic>> getMissing({
     int page = 1,
     int pageSize = 20,
     Map<String, dynamic>? queryParameters,
   }) async => const [];
 
-  @override
   Future<List<dynamic>> getCutoff({
     int page = 1,
     int pageSize = 20,
@@ -351,17 +345,14 @@ class FakeLidarrService extends LidarrService {
     Map<String, dynamic>? queryParameters,
   }) async => const [];
 
-  @override
   Future<List<dynamic>> getBlocklist() async => const [];
 
-  @override
   Future<List<dynamic>> getMissing({
     int page = 1,
     int pageSize = 20,
     Map<String, dynamic>? queryParameters,
   }) async => const [];
 
-  @override
   Future<List<dynamic>> getCutoff({
     int page = 1,
     int pageSize = 20,

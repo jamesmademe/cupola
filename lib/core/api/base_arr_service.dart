@@ -132,8 +132,8 @@ Future<List<ArrRecordPage>> _fetchPageRange(
 ///
 /// Every paged \*arr endpoint answers with the same envelope:
 /// `{page, pageSize, totalRecords, records}`, and for a long time this app
-/// threw away three quarters of it. `getHistory`, `getMissing` and `getCutoff`
-/// each returned `response.data['records']` and nothing else, so **every count
+/// threw away three quarters of it. `getHistory` and the wanted and cutoff
+/// readers each returned `response.data['records']` and nothing else, so **every count
 /// derived from them was the size of the page, not the size of the set**: a
 /// library with 340 missing episodes read "20 missing" on the Activity pill,
 /// because 20 is the default page size. The number was not approximate, it was
@@ -485,23 +485,17 @@ mixin ArrActivityMixin {
     return _fetchAllPages('blocklist', pageSize: 200);
   }
 
-  /// The blocklist, records only.
-  Future<List<dynamic>> getBlocklist() async {
-    final result = await getBlocklistPage();
-    return result.records;
-  }
-
   /// Fetches one page of missing items (wanted), **with the envelope's total**.
   ///
   /// This is the one the "34 missing" figure has to come from. `wanted/missing`
-  /// defaults to 20 rows, so a count taken from [getMissing] said 20 for every
+  /// defaults to 20 rows, so a count taken from the records alone said 20 for every
   /// library with more than twenty gaps in it: a number that is wrong in the
   /// one direction that matters, since it makes a large backlog look small.
   /// [queryParameters] is where a service's own wanted embeds ride, and it has
   /// to be **here**, on the primitive, for the reason [getHistoryPage] gives:
-  /// [getMissing] delegates to this, so an override of this one reaches both
-  /// spellings, while an override of [getMissing] leaves every caller that
-  /// needs the envelope's total, which is every caller that prints a figure:
+  /// the records-only spelling delegates to this, so an override of this one
+  /// reaches both, while an override of the records-only one leaves every caller
+  /// that needs the envelope's total, which is every caller that prints a figure:
   /// holding records the embed would have filled. Lidarr's `includeArtist` is
   /// the live case: the Overview's backlog clause counts distinct artists over
   /// this page, and without the embed that set is empty on every real server.
@@ -520,20 +514,6 @@ mixin ArrActivityMixin {
       },
     );
     return ArrRecordPage.fromEnvelope(response.data);
-  }
-
-  /// Fetches missing items (wanted), records only.
-  Future<List<dynamic>> getMissing({
-    int page = 1,
-    int pageSize = 20,
-    Map<String, dynamic>? queryParameters,
-  }) async {
-    final result = await getMissingPage(
-      page: page,
-      pageSize: pageSize,
-      queryParameters: queryParameters,
-    );
-    return result.records;
   }
 
   /// Fetches all missing items across all pages.
@@ -579,20 +559,6 @@ mixin ArrActivityMixin {
       // Cutoff endpoint may not be available on all *arr variants.
       return const ArrRecordPage(records: [], total: null);
     }
-  }
-
-  /// Fetches items with cutoff unmet, records only.
-  Future<List<dynamic>> getCutoff({
-    int page = 1,
-    int pageSize = 20,
-    Map<String, dynamic>? queryParameters,
-  }) async {
-    final result = await getCutoffPage(
-      page: page,
-      pageSize: pageSize,
-      queryParameters: queryParameters,
-    );
-    return result.records;
   }
 
   /// Fetches all cutoff unmet items across all pages.
