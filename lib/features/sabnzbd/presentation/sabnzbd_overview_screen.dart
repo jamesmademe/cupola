@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
@@ -9,8 +8,6 @@ import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_overview_provider.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
-import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
-import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -44,92 +41,37 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// Sections load and fail independently: a SABnzbd that answers `mode=queue`
 /// and not `mode=history` still draws its queue, and the region that could not
 /// load says so in its own slot rather than taking the page down.
-class SabnzbdOverviewScreen extends ConsumerWidget {
-  const SabnzbdOverviewScreen({super.key, this.topPadding = _hostedTopPadding});
-
-  /// The room the two glass bands above this page occupy.
-  ///
-  /// Composed from the same two constants the router composes its own from, so
-  /// a screen built outside the router (a test, a preview) reserves the right
-  /// space instead of tucking its first region under the tab bar.
-  static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
+class SabnzbdOverviewScreen extends StatelessWidget {
+  const SabnzbdOverviewScreen({
+    super.key,
+    this.topPadding = ServiceOverviewPage.hostedTopPadding,
+  });
 
   /// Height of the chrome the host draws above this page.
   final double topPadding;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Checked **before** anything reaches a provider. `sabnzbdClientProvider`
-    // throws "SABnzbd not configured", and letting `AsyncValueWidget` catch
-    // that throw would paint the same pixels, but a `FutureProvider` that
-    // throws is a *failed* provider, and Riverpod schedules a backoff retry for
-    // a condition no amount of waiting changes. It surfaces in tests as a
-    // pending timer and on device as a wake-up every few seconds for a server
-    // nobody has entered yet.
-    final configured = ref.watch(
-      currentSettingsProvider.select(
-        (settings) => settings.isServiceConfigured(ServiceKey.sabnzbd),
-      ),
-    );
-
-    return AmbientScaffold(
-      accent: ServiceKey.sabnzbd.accent,
-      body: SafeArea(
-        bottom: false,
-        child: configured
-            ? _OverviewBody(topPadding: topPadding)
-            // `.forService`, never the generic form: this is a service
-            // dashboard, so the door goes to SABnzbd's own connection form
-            // rather than to the settings index.
-            : NotConfiguredPlaceholder.forService(ServiceKey.sabnzbd),
-      ),
+  Widget build(BuildContext context) {
+    return ServiceOverviewPage(
+      service: ServiceKey.sabnzbd,
+      topPadding: topPadding,
+      kpis: (ref) =>
+          ref.watch(sabnzbdQueueProvider).whenData(sabnzbdOverviewReadouts),
+      refresh: _refresh,
+      sections: (ref) => [const _QueueSection(), const _HistoryTodaySection()],
     );
   }
 }
 
-class _OverviewBody extends ConsumerWidget {
-  const _OverviewBody({required this.topPadding});
-
-  final double topPadding;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return RefreshIndicator(
-      onRefresh: () async {
-        invalidateServiceReadout(ref, ServiceKey.sabnzbd);
-        // The two fetches, then the two derivations. Invalidating only the
-        // derivations would recompute them over the cached payloads and leave
-        // the page showing the same figures after a deliberate pull.
-        ref.invalidate(sabnzbdQueueProvider);
-        ref.invalidate(sabnzbdOverviewHistoryPageProvider);
-        ref.invalidate(sabnzbdOverviewQueueProvider);
-        ref.invalidate(sabnzbdOverviewHistoryProvider);
-        await Future<void>.delayed(AppAnimation.durationMd);
-      },
-      // One scroll view for the whole page: the regions are one column of
-      // reading, not three independently scrolling panes.
-      child: ServiceOverviewScroll(
-        topPadding: topPadding,
-        children: [
-          const ServiceOverviewIdentity(service: ServiceKey.sabnzbd),
-          ...sectionsOrOneLine(ref, ServiceKey.sabnzbd, [
-            ServiceKpiPeek.room(
-              // Built from the queue this page already watches, so the rail and
-              // the rows below it are the same poll. `whenData` keeps the
-              // loading and error arms intact: the rail shimmers and then
-              // collapses, which is what it does everywhere else.
-              kpis: ref
-                  .watch(sabnzbdQueueProvider)
-                  .whenData(sabnzbdOverviewReadouts),
-              service: ServiceKey.sabnzbd,
-            ),
-            const _QueueSection(),
-            const _HistoryTodaySection(),
-          ]),
-        ],
-      ),
-    );
-  }
+/// What a pull re-reads besides the readout (`ServiceOverviewPage`).
+void _refresh(WidgetRef ref) {
+  // The two fetches, then the two derivations. Invalidating only the
+  // derivations would recompute them over the cached payloads and leave
+  // the page showing the same figures after a deliberate pull.
+  ref.invalidate(sabnzbdQueueProvider);
+  ref.invalidate(sabnzbdOverviewHistoryPageProvider);
+  ref.invalidate(sabnzbdOverviewQueueProvider);
+  ref.invalidate(sabnzbdOverviewHistoryProvider);
 }
 
 // ─── 1. Queue ───────────────────────────────────────────────────────────────

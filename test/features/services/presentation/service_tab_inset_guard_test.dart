@@ -97,6 +97,12 @@ void main() {
     );
   });
 
+  test('the page the Overviews share has a case in the inset test', () {
+    // The excuses of the `*OverviewScreen` classes lean on it: take the case
+    // away and fourteen screens are excused by a page nothing measures.
+    expect(_hasCase(insetTest, 'ServiceOverviewPage'), isTrue);
+  });
+
   test('an excuse names a class that is still hosted, and still needs it', () {
     final stale = [
       for (final name in _excused.keys)
@@ -259,8 +265,15 @@ final Map<String, ({RegExp present, RegExp absent})> _anchors = {
   // The page reserves the room the bands take with a `SizedBox` of
   // `topPadding`, below the `SafeArea` that took the inset.
   'SizedBox': _anchor(r'\bSizedBox\(\s*height:\s*topPadding\b'),
-  // An Overview hands `topPadding` to its one scroll view, which pads its
-  // column by it, below the `SafeArea` that took the inset.
+  // An Overview hands `topPadding` to `ServiceOverviewPage`, whose body is a
+  // `SafeArea` that takes the inset and pads its one scroll view by it (the
+  // page has its own case in the inset test: see the test that says so).
+  'ServiceOverviewPage': _anchor(
+    r'\bServiceOverviewPage\(\s*service:\s*[\w.]+,\s*topPadding:\s*topPadding\b',
+  ),
+  // An Overview of its own, with no page behind it (Stream's), hands
+  // `topPadding` to its one scroll view, which pads its column by it, below
+  // the `SafeArea` that took the inset.
   'ServiceOverviewScroll': _anchor(
     r'\bServiceOverviewScroll\(\s*topPadding:\s*topPadding\b',
   ),
@@ -275,6 +288,10 @@ const String _safeAreaOverview =
     'its body is a SafeArea, which takes the inset, and the page reserves '
     'the room the bands take by handing topPadding to ServiceOverviewScroll';
 
+const String _overviewPage =
+    'it hands topPadding to ServiceOverviewPage, which has its own case in '
+    'the inset test';
+
 const String _safeAreaDashboard =
     'its body is a SafeArea, which takes the inset, and the dashboard '
     'reserves the room the bands take with a SizedBox of topPadding';
@@ -282,21 +299,21 @@ const String _safeAreaDashboard =
 /// Hosted screens with no case of their own, each with the reason they need
 /// none. A reason is true of the class's code: read it before copying one.
 const Map<String, String> _excused = {
-  'BazarrOverviewScreen': _safeAreaOverview,
-  'DockgeOverviewScreen': _safeAreaOverview,
-  'LidarrOverviewScreen': _safeAreaOverview,
-  'NpmOverviewScreen': _safeAreaOverview,
-  'NzbgetOverviewScreen': _safeAreaOverview,
-  'ProwlarrOverviewScreen': _safeAreaOverview,
-  'QbittorrentOverviewScreen': _safeAreaOverview,
-  'RadarrOverviewScreen': _safeAreaOverview,
-  'ReadarrOverviewScreen': _safeAreaOverview,
-  'SabnzbdOverviewScreen': _safeAreaOverview,
-  'SeerrOverviewScreen': _safeAreaOverview,
-  'SonarrOverviewScreen': _safeAreaOverview,
+  'BazarrOverviewScreen': _overviewPage,
+  'DockgeOverviewScreen': _overviewPage,
+  'LidarrOverviewScreen': _overviewPage,
+  'NpmOverviewScreen': _overviewPage,
+  'NzbgetOverviewScreen': _overviewPage,
+  'ProwlarrOverviewScreen': _overviewPage,
+  'QbittorrentOverviewScreen': _overviewPage,
+  'RadarrOverviewScreen': _overviewPage,
+  'ReadarrOverviewScreen': _overviewPage,
+  'SabnzbdOverviewScreen': _overviewPage,
+  'SeerrOverviewScreen': _overviewPage,
+  'SonarrOverviewScreen': _overviewPage,
   'StreamOverviewScreen': _safeAreaOverview,
-  'TransmissionOverviewScreen': _safeAreaOverview,
-  'UnraidOverviewScreen': _safeAreaOverview,
+  'TransmissionOverviewScreen': _overviewPage,
+  'UnraidOverviewScreen': _overviewPage,
   'NzbgetScreen': _safeAreaDashboard,
   'SabnzbdScreen': _safeAreaDashboard,
   'TransmissionScreen': _safeAreaDashboard,

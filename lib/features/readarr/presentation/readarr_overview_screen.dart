@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/readarr/presentation/readarr_overview_provider.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
-import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -37,98 +35,49 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// SECTION failure level: a Readarr that answers the library and not the queue
 /// still draws its other regions, and the one that could not load says so in
 /// its own slot rather than taking the page with it.
-class ReadarrOverviewScreen extends ConsumerWidget {
-  const ReadarrOverviewScreen({super.key, this.topPadding = _hostedTopPadding});
-
-  /// The room the two glass bands above this page occupy.
-  ///
-  /// Composed from the same two constants the router composes its own from, so
-  /// a screen built outside the router (a test, a preview) reserves the right
-  /// space instead of tucking its first region under the tab bar.
-  static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
+class ReadarrOverviewScreen extends StatelessWidget {
+  const ReadarrOverviewScreen({
+    super.key,
+    this.topPadding = ServiceOverviewPage.hostedTopPadding,
+  });
 
   /// Height of the chrome the host draws above this page.
   final double topPadding;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Before any provider, never after: `readarrServiceProvider` throws for a
-    // Readarr that was never set up, and a `FutureProvider` that throws is a
-    // *failed* provider: Riverpod schedules a retry with backoff for a
-    // condition no amount of waiting changes, which surfaces in tests as a
-    // pending timer and on device as a request loop against nothing.
-    final configured = ref.watch(
-      currentSettingsProvider.select(
-        (settings) => settings.isServiceConfigured(ServiceKey.readarr),
-      ),
-    );
-
-    return AmbientScaffold(
-      accent: ServiceKey.readarr.accent,
-      body: SafeArea(
-        bottom: false,
-        child: configured
-            ? _OverviewBody(topPadding: topPadding)
-            // `.forService`, never the generic form: this is a service
-            // dashboard, so the door goes to Readarr's own connection form
-            // rather than to the settings index. Resolved once here rather than
-            // three times inside three sections, which is what a page made only
-            // of `AsyncValueWidget`s would print on a server that was never set
-            // up.
-            : NotConfiguredPlaceholder.forService(ServiceKey.readarr),
-      ),
+  Widget build(BuildContext context) {
+    return ServiceOverviewPage(
+      service: ServiceKey.readarr,
+      topPadding: topPadding,
+      refresh: _refresh,
+      sections: (ref) => [
+        const _NeedsAttentionSection(),
+        const _RootFolderSection(),
+        const _HistoryTodaySection(),
+      ],
     );
   }
 }
 
-class _OverviewBody extends ConsumerWidget {
-  const _OverviewBody({required this.topPadding});
-
-  final double topPadding;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return RefreshIndicator(
-      onRefresh: () async {
-        invalidateServiceReadout(ref, ServiceKey.readarr);
-        // The authors list feeds both the rail and the backlog row, so a pull
-        // that refreshed only the derived provider would redraw the same
-        // cached figure and look broken.
-        ref.invalidate(readarrAuthorsProvider);
-        // And the rail's own non-swallowing read of it. See
-        // `readarrKpiLibraryProvider`.
-        ref.invalidate(readarrKpiLibraryProvider);
-        // And the queue behind the rail's fourth figure. `serviceKpiProvider`
-        // is autoDispose; `readarrQueueProvider` is not, so invalidating only
-        // the derived provider redrew the same cached count for the life of the
-        // scope: `Queue` frozen while Authors, Books and Missing moved.
-        ref.invalidate(readarrQueueProvider);
-        ref.invalidate(readarrQueueRecordsProvider);
-        ref.invalidate(readarrBelowCutoffProvider);
-        ref.invalidate(readarrNeedsAttentionProvider);
-        ref.invalidate(readarrRootFoldersProvider);
-        ref.invalidate(readarrHistoryTodayProvider);
-        await Future<void>.delayed(AppAnimation.durationMd);
-      },
-      // One scroll view for the whole page: the regions are one column of
-      // reading, not three independently scrolling panes.
-      child: ServiceOverviewScroll(
-        topPadding: topPadding,
-        children: [
-          const ServiceOverviewIdentity(service: ServiceKey.readarr),
-          ...sectionsOrOneLine(ref, ServiceKey.readarr, [
-            ServiceKpiPeek.room(
-              kpis: ref.watch(serviceKpiProvider(ServiceKey.readarr)),
-              service: ServiceKey.readarr,
-            ),
-            const _NeedsAttentionSection(),
-            const _RootFolderSection(),
-            const _HistoryTodaySection(),
-          ]),
-        ],
-      ),
-    );
-  }
+/// What a pull re-reads besides the readout (`ServiceOverviewPage`).
+void _refresh(WidgetRef ref) {
+  // The authors list feeds both the rail and the backlog row, so a pull
+  // that refreshed only the derived provider would redraw the same
+  // cached figure and look broken.
+  ref.invalidate(readarrAuthorsProvider);
+  // And the rail's own non-swallowing read of it. See
+  // `readarrKpiLibraryProvider`.
+  ref.invalidate(readarrKpiLibraryProvider);
+  // And the queue behind the rail's fourth figure. `serviceKpiProvider`
+  // is autoDispose; `readarrQueueProvider` is not, so invalidating only
+  // the derived provider redrew the same cached count for the life of the
+  // scope: `Queue` frozen while Authors, Books and Missing moved.
+  ref.invalidate(readarrQueueProvider);
+  ref.invalidate(readarrQueueRecordsProvider);
+  ref.invalidate(readarrBelowCutoffProvider);
+  ref.invalidate(readarrNeedsAttentionProvider);
+  ref.invalidate(readarrRootFoldersProvider);
+  ref.invalidate(readarrHistoryTodayProvider);
 }
 
 // ─── Needs attention ────────────────────────────────────────────────────────

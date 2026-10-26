@@ -4,8 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:go_router/go_router.dart';
 
-import 'package:cupola/core/app_animation.dart';
-
 import 'package:cupola/core/app_spacing.dart';
 
 import 'package:cupola/core/text_scale.dart';
@@ -62,97 +60,50 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// SECTION failure level: a Lidarr that answers the library and not the queue
 /// still draws three regions, and the one that could not load says so in its
 /// own slot rather than taking the page with it.
-class LidarrOverviewScreen extends ConsumerWidget {
-  const LidarrOverviewScreen({super.key, this.topPadding = _hostedTopPadding});
-
-  /// The room the two glass bands above this page occupy.
-  ///
-  /// Composed from the same two constants the router composes its own from, so
-  /// a screen built outside the router (a test, a preview) reserves the right
-  /// space instead of tucking its first region under the tab bar.
-  static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
+class LidarrOverviewScreen extends StatelessWidget {
+  const LidarrOverviewScreen({
+    super.key,
+    this.topPadding = ServiceOverviewPage.hostedTopPadding,
+  });
 
   /// Height of the chrome the host draws above this page.
   final double topPadding;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final configured = ref.watch(
-      currentSettingsProvider.select(
-        (settings) => settings.isServiceConfigured(ServiceKey.lidarr),
-      ),
-    );
-
-    return AmbientScaffold(
-      accent: ServiceKey.lidarr.accent,
-      body: SafeArea(
-        bottom: false,
-        // Checked **before** anything reaches a provider, not after: a fetch on
-        // an unconfigured service throws "Lidarr not configured", and a
-        // FutureProvider that throws is a failed provider. Riverpod schedules
-        // a backoff retry for a condition no amount of waiting changes, which
-        // surfaces in tests as a pending timer and on device as four doomed
-        // requests per section.
-        child: configured
-            ? _OverviewBody(topPadding: topPadding)
-            // `.forService`, never the generic form: this is a service
-            // dashboard, so the door goes to Lidarr's own connection form
-            // rather than to the settings index.
-            : NotConfiguredPlaceholder.forService(ServiceKey.lidarr),
-      ),
+  Widget build(BuildContext context) {
+    return ServiceOverviewPage(
+      service: ServiceKey.lidarr,
+      topPadding: topPadding,
+      refresh: _refresh,
+      sections: (ref) => [
+        const _NeedsAttentionSection(),
+        const _RecentlyAddedSection(),
+        const _HistoryTodaySection(),
+        const _RootFoldersSection(),
+      ],
     );
   }
 }
 
-class _OverviewBody extends ConsumerWidget {
-  const _OverviewBody({required this.topPadding});
-
-  final double topPadding;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return RefreshIndicator(
-      onRefresh: () async {
-        invalidateServiceReadout(ref, ServiceKey.lidarr);
-        // The artist list itself, and not only the two things derived from it.
-        // `lidarrRecentlyAddedProvider` re-runs on invalidation but re-reads a
-        // library that is still holding the answer it already had, so without
-        // these a pull-to-refresh re-sorts the same six artists and reports
-        // itself finished. Both reads: the grid's degrading one and this
-        // screen's own. See `lidarrOverviewArtistsProvider`.
-        ref.invalidate(musicProvider);
-        ref.invalidate(lidarrOverviewArtistsProvider);
-        // And the rail's own non-swallowing read of it. See
-        // `sonarrKpiLibraryProvider`.
-        ref.invalidate(lidarrKpiLibraryProvider);
-        ref.invalidate(lidarrRecentlyAddedProvider);
-        ref.invalidate(lidarrQueueRecordsProvider);
-        ref.invalidate(lidarrMissingPageProvider);
-        ref.invalidate(lidarrNeedsAttentionProvider);
-        ref.invalidate(lidarrHistoryTodayProvider);
-        ref.invalidate(lidarrRootFoldersProvider);
-        await Future<void>.delayed(AppAnimation.durationMd);
-      },
-      // One scroll view for the whole page: the regions are one column of
-      // reading, not four independently scrolling panes.
-      child: ServiceOverviewScroll(
-        topPadding: topPadding,
-        children: [
-          const ServiceOverviewIdentity(service: ServiceKey.lidarr),
-          ...sectionsOrOneLine(ref, ServiceKey.lidarr, [
-            ServiceKpiPeek.room(
-              kpis: ref.watch(serviceKpiProvider(ServiceKey.lidarr)),
-              service: ServiceKey.lidarr,
-            ),
-            const _NeedsAttentionSection(),
-            const _RecentlyAddedSection(),
-            const _HistoryTodaySection(),
-            const _RootFoldersSection(),
-          ]),
-        ],
-      ),
-    );
-  }
+/// What a pull re-reads besides the readout (`ServiceOverviewPage`).
+void _refresh(WidgetRef ref) {
+  // The artist list itself, and not only the two things derived from it.
+  // `lidarrRecentlyAddedProvider` re-runs on invalidation but re-reads a
+  // library that is still holding the answer it already had, so without
+  // these a pull-to-refresh re-sorts the same six artists and reports
+  // itself finished. Both reads: the grid's degrading one and this
+  // screen's own. See `lidarrOverviewArtistsProvider`.
+  ref.invalidate(musicProvider);
+  ref.invalidate(lidarrOverviewArtistsProvider);
+  // And the rail's own non-swallowing read of it. See
+  // `sonarrKpiLibraryProvider`.
+  ref.invalidate(lidarrKpiLibraryProvider);
+  ref.invalidate(lidarrRecentlyAddedProvider);
+  ref.invalidate(lidarrQueueRecordsProvider);
+  ref.invalidate(lidarrMissingPageProvider);
+  ref.invalidate(lidarrNeedsAttentionProvider);
+  ref.invalidate(lidarrHistoryTodayProvider);
+  ref.invalidate(lidarrRootFoldersProvider);
 }
 
 // ─── 1. Needs attention ─────────────────────────────────────────────────────

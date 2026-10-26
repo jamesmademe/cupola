@@ -4,8 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:go_router/go_router.dart';
 
-import 'package:cupola/core/app_animation.dart';
-
 import 'package:cupola/core/app_spacing.dart';
 
 import 'package:cupola/core/text_scale.dart';
@@ -63,110 +61,66 @@ import 'package:cupola/core/utils/arr_model_helpers.dart';
 /// SECTION failure level: a Radarr that answers the library and not the queue
 /// still draws four regions, and the one that could not load says so in its own
 /// slot rather than taking the page with it.
-class RadarrOverviewScreen extends ConsumerWidget {
-  const RadarrOverviewScreen({super.key, this.topPadding = _hostedTopPadding});
-
-  /// The room the two glass bands above this page occupy.
-  ///
-  /// Composed from the same two constants the router composes its own from, so
-  /// a screen built outside the router (a test, a preview) reserves the right
-  /// space instead of tucking its first region under the tab bar.
-  static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
+class RadarrOverviewScreen extends StatelessWidget {
+  const RadarrOverviewScreen({
+    super.key,
+    this.topPadding = ServiceOverviewPage.hostedTopPadding,
+  });
 
   /// Height of the chrome the host draws above this page.
   final double topPadding;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final configured = ref.watch(
-      currentSettingsProvider.select(
-        (settings) => settings.isServiceConfigured(ServiceKey.radarr),
-      ),
-    );
-
-    return AmbientScaffold(
-      accent: ServiceKey.radarr.accent,
-      body: SafeArea(
-        bottom: false,
-        child: configured
-            ? _OverviewBody(topPadding: topPadding)
-            // `.forService`, never the generic form: this is a service
-            // dashboard, so the door goes to Radarr's own connection form
-            // rather than to the settings index. Resolved once here rather than
-            // five times inside five sections, which is what a page made only
-            // of `AsyncValueWidget`s would print on a server that was never set
-            // up.
-            : NotConfiguredPlaceholder.forService(ServiceKey.radarr),
-      ),
+  Widget build(BuildContext context) {
+    return ServiceOverviewPage(
+      service: ServiceKey.radarr,
+      topPadding: topPadding,
+      refresh: _refresh,
+      sections: (ref) => [
+        const _ComingUpSection(),
+        const _NeedsAttentionSection(),
+        const _RecentlyAddedSection(),
+        const _HistoryTodaySection(),
+      ],
     );
   }
 }
 
-class _OverviewBody extends ConsumerWidget {
-  const _OverviewBody({required this.topPadding});
-
-  final double topPadding;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return RefreshIndicator(
-      onRefresh: () async {
-        invalidateServiceReadout(ref, ServiceKey.radarr);
-        // The library itself, not only the three readings of it. Coming up,
-        // Recently added and all four figures on the rail fall out of
-        // `moviesProvider`, which is a plain `FutureProvider` fetched once for
-        // the life of the app, so invalidating only the derived trio re-ran
-        // the window functions against the same cached list with a new clock
-        // and re-read the rail off the same cached list again. A pull that
-        // refetched nothing: a film that landed, one that was added or a
-        // release date that moved never appeared.
-        ref.invalidate(moviesProvider);
-        // The Overview's own throwing read of it. See
-        // `radarrOverviewMoviesProvider`.
-        ref.invalidate(radarrOverviewMoviesProvider);
-        // And the rail's own non-swallowing read of it. See
-        // `radarrKpiLibraryProvider`.
-        ref.invalidate(radarrKpiLibraryProvider);
-        // And the queue snapshot behind the rail's fourth figure, for the same
-        // reason: `serviceKpiProvider` is autoDispose, this one is not, so
-        // Queued stayed frozen for the life of the scope while the three
-        // figures beside it moved.
-        //
-        // The **family**, not `radarrQueueSnapshotProvider`: that one only
-        // resolves the lens and re-watches `radarrQueueSnapshotForProvider`,
-        // so invalidating it re-reads the member's cached future and fetches
-        // nothing. Invalidating the family is what reaches the request, and it
-        // takes the lens-resolving provider and the queued-id set down with it
-        // as dependents.
-        ref.invalidate(radarrQueueSnapshotForProvider);
-        ref.invalidate(radarrComingUpProvider);
-        ref.invalidate(radarrNeedsAttentionProvider);
-        ref.invalidate(radarrQueueRecordsProvider);
-        ref.invalidate(radarrCutoffUnmetCountProvider);
-        ref.invalidate(radarrRecentlyAddedProvider);
-        ref.invalidate(radarrHistoryTodayProvider);
-        await Future<void>.delayed(AppAnimation.durationMd);
-      },
-      // One scroll view for the whole page: the regions are one column of
-      // reading, not five independently scrolling panes.
-      child: ServiceOverviewScroll(
-        topPadding: topPadding,
-        children: [
-          const ServiceOverviewIdentity(service: ServiceKey.radarr),
-          ...sectionsOrOneLine(ref, ServiceKey.radarr, [
-            ServiceKpiPeek.room(
-              kpis: ref.watch(serviceKpiProvider(ServiceKey.radarr)),
-              service: ServiceKey.radarr,
-            ),
-            const _ComingUpSection(),
-            const _NeedsAttentionSection(),
-            const _RecentlyAddedSection(),
-            const _HistoryTodaySection(),
-          ]),
-        ],
-      ),
-    );
-  }
+/// What a pull re-reads besides the readout (`ServiceOverviewPage`).
+void _refresh(WidgetRef ref) {
+  // The library itself, not only the three readings of it. Coming up,
+  // Recently added and all four figures on the rail fall out of
+  // `moviesProvider`, which is a plain `FutureProvider` fetched once for
+  // the life of the app, so invalidating only the derived trio re-ran
+  // the window functions against the same cached list with a new clock
+  // and re-read the rail off the same cached list again. A pull that
+  // refetched nothing: a film that landed, one that was added or a
+  // release date that moved never appeared.
+  ref.invalidate(moviesProvider);
+  // The Overview's own throwing read of it. See
+  // `radarrOverviewMoviesProvider`.
+  ref.invalidate(radarrOverviewMoviesProvider);
+  // And the rail's own non-swallowing read of it. See
+  // `radarrKpiLibraryProvider`.
+  ref.invalidate(radarrKpiLibraryProvider);
+  // And the queue snapshot behind the rail's fourth figure, for the same
+  // reason: `serviceKpiProvider` is autoDispose, this one is not, so
+  // Queued stayed frozen for the life of the scope while the three
+  // figures beside it moved.
+  //
+  // The **family**, not `radarrQueueSnapshotProvider`: that one only
+  // resolves the lens and re-watches `radarrQueueSnapshotForProvider`,
+  // so invalidating it re-reads the member's cached future and fetches
+  // nothing. Invalidating the family is what reaches the request, and it
+  // takes the lens-resolving provider and the queued-id set down with it
+  // as dependents.
+  ref.invalidate(radarrQueueSnapshotForProvider);
+  ref.invalidate(radarrComingUpProvider);
+  ref.invalidate(radarrNeedsAttentionProvider);
+  ref.invalidate(radarrQueueRecordsProvider);
+  ref.invalidate(radarrCutoffUnmetCountProvider);
+  ref.invalidate(radarrRecentlyAddedProvider);
+  ref.invalidate(radarrHistoryTodayProvider);
 }
 
 // ─── 2. Coming up ───────────────────────────────────────────────────────────

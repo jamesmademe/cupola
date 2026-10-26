@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -9,8 +8,6 @@ import 'package:cupola/features/qbittorrent/presentation/qbittorrent_actions.dar
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_overview_provider.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
-import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
-import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The first tab of qBittorrent's service home.
@@ -51,94 +48,44 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// Sections load and fail independently, each in its own slot, though today
 /// they all read one answer and so mostly fail together.
-class QbittorrentOverviewScreen extends ConsumerWidget {
+class QbittorrentOverviewScreen extends StatelessWidget {
   const QbittorrentOverviewScreen({
     super.key,
-    this.topPadding = _hostedTopPadding,
+    this.topPadding = ServiceOverviewPage.hostedTopPadding,
   });
-
-  /// The room the two glass bands above this page occupy.
-  ///
-  /// Composed from the same two constants the router composes its own from, so
-  /// a screen built outside the router (a test, a preview) reserves the right
-  /// space instead of tucking its first region under the tab bar.
-  static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
 
   /// Height of the chrome the host draws above this page.
   final double topPadding;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Checked **before** any provider is reached. `qbittorrentServiceProvider`
-    // throws `qBittorrent not configured`, and letting `AsyncValueWidget` catch
-    // that throw would draw the same pixels while leaving four *failed*
-    // providers behind it, each scheduling a retry with backoff for a condition
-    // no amount of waiting changes, which surfaces in tests as a pending timer
-    // and on device as a battery cost.
-    final configured = ref.watch(
-      currentSettingsProvider.select(
-        (settings) => settings.isServiceConfigured(ServiceKey.qbittorrent),
-      ),
-    );
-
-    return AmbientScaffold(
-      accent: ServiceKey.qbittorrent.accent,
-      body: SafeArea(
-        bottom: false,
-        child: configured
-            ? _OverviewBody(topPadding: topPadding)
-            // `.forService`, never the generic form: this is a service
-            // dashboard, so the door goes to qBittorrent's own connection form
-            // rather than the settings index.
-            : NotConfiguredPlaceholder.forService(ServiceKey.qbittorrent),
-      ),
+  Widget build(BuildContext context) {
+    return ServiceOverviewPage(
+      service: ServiceKey.qbittorrent,
+      topPadding: topPadding,
+      beforeRefresh: clearQbittorrentLoginRefusal,
+      refresh: _refresh,
+      sections: (ref) => [
+        const _NeedsAttentionSection(),
+        const _QueueSection(),
+        const _CategoriesSection(),
+        const _SessionSection(),
+      ],
     );
   }
 }
 
-class _OverviewBody extends ConsumerWidget {
-  const _OverviewBody({required this.topPadding});
-
-  final double topPadding;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return RefreshIndicator(
-      onRefresh: () async {
-        clearQbittorrentLoginRefusal(ref);
-        invalidateServiceReadout(ref, ServiceKey.qbittorrent);
-        // The two sources every region on this page is folded from, and the
-        // folds derived from them.
-        ref.invalidate(allTorrentsProvider);
-        ref.invalidate(transferInfoProvider);
-        ref.invalidate(qbittorrentOverviewAttentionProvider);
-        ref.invalidate(qbittorrentOverviewTransfersProvider);
-        ref.invalidate(qbittorrentOverviewCountsProvider);
-        ref.invalidate(qbittorrentOverviewCategoriesProvider);
-        ref.invalidate(qbittorrentOverviewCategoryCountProvider);
-        ref.invalidate(qbittorrentOverviewSessionProvider);
-        await Future<void>.delayed(AppAnimation.durationMd);
-      },
-      // One scroll view for the whole page: the regions are one column of
-      // reading, not four independently scrolling panes.
-      child: ServiceOverviewScroll(
-        topPadding: topPadding,
-        children: [
-          const ServiceOverviewIdentity(service: ServiceKey.qbittorrent),
-          ...sectionsOrOneLine(ref, ServiceKey.qbittorrent, [
-            ServiceKpiPeek.room(
-              kpis: ref.watch(serviceKpiProvider(ServiceKey.qbittorrent)),
-              service: ServiceKey.qbittorrent,
-            ),
-            const _NeedsAttentionSection(),
-            const _QueueSection(),
-            const _CategoriesSection(),
-            const _SessionSection(),
-          ]),
-        ],
-      ),
-    );
-  }
+/// What a pull re-reads besides the readout (`ServiceOverviewPage`).
+void _refresh(WidgetRef ref) {
+  // The two sources every region on this page is folded from, and the
+  // folds derived from them.
+  ref.invalidate(allTorrentsProvider);
+  ref.invalidate(transferInfoProvider);
+  ref.invalidate(qbittorrentOverviewAttentionProvider);
+  ref.invalidate(qbittorrentOverviewTransfersProvider);
+  ref.invalidate(qbittorrentOverviewCountsProvider);
+  ref.invalidate(qbittorrentOverviewCategoriesProvider);
+  ref.invalidate(qbittorrentOverviewCategoryCountProvider);
+  ref.invalidate(qbittorrentOverviewSessionProvider);
 }
 
 // ─── 1. Needs attention ─────────────────────────────────────────────────────

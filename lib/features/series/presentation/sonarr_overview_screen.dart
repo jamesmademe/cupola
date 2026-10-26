@@ -4,8 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:go_router/go_router.dart';
 
-import 'package:cupola/core/app_animation.dart';
-
 import 'package:cupola/core/app_spacing.dart';
 
 import 'package:cupola/core/text_scale.dart';
@@ -79,102 +77,55 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// SECTION failure level: a Sonarr that answers the library and not the queue
 /// still draws three regions, and the one that could not load says so in its
 /// own slot rather than taking the page with it.
-class SonarrOverviewScreen extends ConsumerWidget {
-  const SonarrOverviewScreen({super.key, this.topPadding = _hostedTopPadding});
-
-  /// The room the two glass bands above this page occupy.
-  ///
-  /// Composed from the same two constants the router composes its own from, so
-  /// a screen built outside the router (a test, a preview) reserves the right
-  /// space instead of tucking its first region under the tab bar.
-  static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
+class SonarrOverviewScreen extends StatelessWidget {
+  const SonarrOverviewScreen({
+    super.key,
+    this.topPadding = ServiceOverviewPage.hostedTopPadding,
+  });
 
   /// Height of the chrome the host draws above this page.
   final double topPadding;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final configured = ref.watch(
-      currentSettingsProvider.select(
-        (settings) => settings.isServiceConfigured(ServiceKey.sonarr),
-      ),
-    );
-
-    return AmbientScaffold(
-      accent: ServiceKey.sonarr.accent,
-      body: SafeArea(
-        bottom: false,
-        child: configured
-            // Checked BEFORE anything reaches a provider: a `FutureProvider`
-            // that throws "Sonarr not configured" is a *failed* provider, and
-            // Riverpod schedules a backoff retry for a condition no waiting
-            // changes, which surfaces in a widget test as a pending timer.
-            //
-            // `.forService`, never the generic form: this is a service
-            // dashboard, so the door goes to Sonarr's own connection form
-            // rather than to the settings index. Resolved once here rather than
-            // four times inside four sections.
-            ? _OverviewBody(topPadding: topPadding)
-            : NotConfiguredPlaceholder.forService(ServiceKey.sonarr),
-      ),
+  Widget build(BuildContext context) {
+    return ServiceOverviewPage(
+      service: ServiceKey.sonarr,
+      topPadding: topPadding,
+      refresh: _refresh,
+      sections: (ref) => [
+        const _AiringSection(),
+        const _NeedsAttentionSection(),
+        const _RecentlyDownloadedSection(),
+        const _HistoryTodaySection(),
+      ],
     );
   }
 }
 
-class _OverviewBody extends ConsumerWidget {
-  const _OverviewBody({required this.topPadding});
-
-  final double topPadding;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return RefreshIndicator(
-      onRefresh: () async {
-        invalidateServiceReadout(ref, ServiceKey.sonarr);
-        // The two libraries, not only the readings of them. Both are plain
-        // `FutureProvider`s cached for the session, so invalidating just the
-        // derived pair re-ran `sonarrAiringWeek` against the same cached list
-        // with a new clock, and re-read the KPI rail off the same cached list
-        // again, a pull-to-refresh that refetched nothing. An episode that
-        // aired, a series added, a show that ended: none of it appeared.
-        // One read of the library, which the rail and the week share
-        // (`sonarrKpiLibraryProvider` and `sonarrOverviewSeriesProvider` are
-        // names for it): invalidating it moves all three.
-        ref.invalidate(seriesProvider);
-        ref.invalidate(sonarrKpiLibraryProvider);
-        ref.invalidate(sonarrOverviewSeriesProvider);
-        ref.invalidate(sonarrAiringWeekProvider);
-        ref.invalidate(sonarrNeedsAttentionProvider);
-        ref.invalidate(sonarrQueueRecordsProvider);
-        ref.invalidate(sonarrBacklogProvider);
-        // The page, not the two readings of it: invalidating only the derived
-        // pair would re-read a cached page and call a pull-to-refresh a
-        // refresh.
-        ref.invalidate(sonarrHistoryPageProvider);
-        ref.invalidate(sonarrRecentlyDownloadedProvider);
-        ref.invalidate(sonarrHistoryTodayProvider);
-        await Future<void>.delayed(AppAnimation.durationMd);
-      },
-      // One scroll view for the whole page: the regions are one column of
-      // reading, not four independently scrolling panes.
-      child: ServiceOverviewScroll(
-        topPadding: topPadding,
-        children: [
-          const ServiceOverviewIdentity(service: ServiceKey.sonarr),
-          ...sectionsOrOneLine(ref, ServiceKey.sonarr, [
-            ServiceKpiPeek.room(
-              kpis: ref.watch(serviceKpiProvider(ServiceKey.sonarr)),
-              service: ServiceKey.sonarr,
-            ),
-            const _AiringSection(),
-            const _NeedsAttentionSection(),
-            const _RecentlyDownloadedSection(),
-            const _HistoryTodaySection(),
-          ]),
-        ],
-      ),
-    );
-  }
+/// What a pull re-reads besides the readout (`ServiceOverviewPage`).
+void _refresh(WidgetRef ref) {
+  // The two libraries, not only the readings of them. Both are plain
+  // `FutureProvider`s cached for the session, so invalidating just the
+  // derived pair re-ran `sonarrAiringWeek` against the same cached list
+  // with a new clock, and re-read the KPI rail off the same cached list
+  // again, a pull-to-refresh that refetched nothing. An episode that
+  // aired, a series added, a show that ended: none of it appeared.
+  // One read of the library, which the rail and the week share
+  // (`sonarrKpiLibraryProvider` and `sonarrOverviewSeriesProvider` are
+  // names for it): invalidating it moves all three.
+  ref.invalidate(seriesProvider);
+  ref.invalidate(sonarrKpiLibraryProvider);
+  ref.invalidate(sonarrOverviewSeriesProvider);
+  ref.invalidate(sonarrAiringWeekProvider);
+  ref.invalidate(sonarrNeedsAttentionProvider);
+  ref.invalidate(sonarrQueueRecordsProvider);
+  ref.invalidate(sonarrBacklogProvider);
+  // The page, not the two readings of it: invalidating only the derived
+  // pair would re-read a cached page and call a pull-to-refresh a
+  // refresh.
+  ref.invalidate(sonarrHistoryPageProvider);
+  ref.invalidate(sonarrRecentlyDownloadedProvider);
+  ref.invalidate(sonarrHistoryTodayProvider);
 }
 
 // ─── 2. Airing this week ────────────────────────────────────────────────────

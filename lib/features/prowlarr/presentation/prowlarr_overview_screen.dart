@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:cupola/core/app_animation.dart';
-
 import 'package:cupola/core/utils/unit_space.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 
@@ -13,10 +11,6 @@ import 'package:cupola/features/prowlarr/presentation/prowlarr_overview_provider
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 
 import 'package:cupola/features/services/domain/service_tab.dart';
-
-import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
-
-import 'package:cupola/features/settings/data/settings_provider.dart';
 
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -41,76 +35,40 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// its rows are per-application sync state: "synced 12 min ago", "sync failed
 /// · API key rejected", and `GET /api/v1/applications` carries no sync
 /// timestamp and no per-app failure, so those rows could only be invented.
-class ProwlarrOverviewScreen extends ConsumerWidget {
+class ProwlarrOverviewScreen extends StatelessWidget {
   const ProwlarrOverviewScreen({
     super.key,
-    this.topPadding = _hostedTopPadding,
+    this.topPadding = ServiceOverviewPage.hostedTopPadding,
   });
-
-  static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
 
   /// Height of the chrome the host draws above this page.
   final double topPadding;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final configured = ref.watch(
-      currentSettingsProvider.select(
-        (settings) => settings.isServiceConfigured(ServiceKey.prowlarr),
-      ),
-    );
-
-    return AmbientScaffold(
-      accent: ServiceKey.prowlarr.accent,
-      body: SafeArea(
-        bottom: false,
-        child: configured
-            ? _OverviewBody(topPadding: topPadding)
-            // `.forService`: this is a service dashboard, so the door goes to
-            // Prowlarr's own connection form rather than the settings index.
-            : NotConfiguredPlaceholder.forService(ServiceKey.prowlarr),
-      ),
+  Widget build(BuildContext context) {
+    return ServiceOverviewPage(
+      service: ServiceKey.prowlarr,
+      topPadding: topPadding,
+      refresh: _refresh,
+      sections: (ref) => [
+        const _AttentionSection(),
+        const _IndexersSection(),
+        const _RecentSection(),
+      ],
     );
   }
 }
 
-class _OverviewBody extends ConsumerWidget {
-  const _OverviewBody({required this.topPadding});
-
-  final double topPadding;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return RefreshIndicator(
-      onRefresh: () async {
-        invalidateServiceReadout(ref, ServiceKey.prowlarr);
-        ref.invalidate(prowlarrIndexersProvider);
-        ref.invalidate(prowlarrIndexerStatsProvider);
-        ref.invalidate(prowlarrIndexerStatusProvider);
-        ref.invalidate(prowlarrHealthProvider);
-        ref.invalidate(prowlarrRecentHistoryProvider);
-        ref.invalidate(prowlarrOverviewAttentionProvider);
-        ref.invalidate(prowlarrOverviewIndexersProvider);
-        ref.invalidate(prowlarrOverviewRecentProvider);
-        await Future<void>.delayed(AppAnimation.durationMd);
-      },
-      child: ServiceOverviewScroll(
-        topPadding: topPadding,
-        children: [
-          const ServiceOverviewIdentity(service: ServiceKey.prowlarr),
-          ...sectionsOrOneLine(ref, ServiceKey.prowlarr, [
-            ServiceKpiPeek.room(
-              kpis: ref.watch(serviceKpiProvider(ServiceKey.prowlarr)),
-              service: ServiceKey.prowlarr,
-            ),
-            const _AttentionSection(),
-            const _IndexersSection(),
-            const _RecentSection(),
-          ]),
-        ],
-      ),
-    );
-  }
+/// What a pull re-reads besides the readout (`ServiceOverviewPage`).
+void _refresh(WidgetRef ref) {
+  ref.invalidate(prowlarrIndexersProvider);
+  ref.invalidate(prowlarrIndexerStatsProvider);
+  ref.invalidate(prowlarrIndexerStatusProvider);
+  ref.invalidate(prowlarrHealthProvider);
+  ref.invalidate(prowlarrRecentHistoryProvider);
+  ref.invalidate(prowlarrOverviewAttentionProvider);
+  ref.invalidate(prowlarrOverviewIndexersProvider);
+  ref.invalidate(prowlarrOverviewRecentProvider);
 }
 
 // ─── 1. Needs attention ─────────────────────────────────────────────────────

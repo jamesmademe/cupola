@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
-import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
-import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/transmission/domain/models/transmission_models.dart';
 import 'package:cupola/features/transmission/presentation/transmission_overview_provider.dart';
@@ -32,95 +29,45 @@ import 'package:cupola/features/transmission/presentation/widgets/transmission_t
 /// `free-space`, can be the odd one out. That is the shape worth having: a
 /// daemon that lists its torrents but will not report its own free space still
 /// draws three full regions.
-class TransmissionOverviewScreen extends ConsumerWidget {
+class TransmissionOverviewScreen extends StatelessWidget {
   const TransmissionOverviewScreen({
     super.key,
-    this.topPadding = _hostedTopPadding,
+    this.topPadding = ServiceOverviewPage.hostedTopPadding,
   });
-
-  /// The room the two glass bands above this page occupy.
-  ///
-  /// Composed from the same two constants the router composes its own from, so
-  /// a screen built outside the router (a test, a preview) reserves the right
-  /// space instead of tucking its first region under the tab bar.
-  static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
 
   /// Height of the chrome the host draws above this page.
   final double topPadding;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Asked **before** any provider is watched, and that ordering is the whole
-    // point: `transmissionClientProvider` throws "Transmission not configured",
-    // so letting a section's `AsyncValueWidget` catch it would paint the same
-    // pixels while leaving four *failed* providers behind, each scheduling a
-    // retry with backoff for a condition no amount of waiting changes, and each
-    // surfacing in a widget test as a pending timer.
-    final configured = ref.watch(
-      currentSettingsProvider.select(
-        (settings) => settings.isServiceConfigured(ServiceKey.transmission),
-      ),
-    );
-
-    return AmbientScaffold(
-      accent: ServiceKey.transmission.accent,
-      body: SafeArea(
-        bottom: false,
-        child: configured
-            ? _OverviewBody(topPadding: topPadding)
-            // `.forService`, never the generic form: this is a service
-            // dashboard, so the door goes to Transmission's own connection form
-            // rather than to the settings index.
-            : NotConfiguredPlaceholder.forService(ServiceKey.transmission),
-      ),
+  Widget build(BuildContext context) {
+    return ServiceOverviewPage(
+      service: ServiceKey.transmission,
+      topPadding: topPadding,
+      refresh: _refresh,
+      sections: (ref) => [
+        const _TransferringSection(),
+        const _LabelsSection(),
+        const _SessionSection(),
+        const _FinishedTodaySection(),
+      ],
     );
   }
 }
 
-class _OverviewBody extends ConsumerWidget {
-  const _OverviewBody({required this.topPadding});
-
-  final double topPadding;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return RefreshIndicator(
-      onRefresh: () async {
-        // The two sources first, then everything derived from them. Invalidating
-        // only the derived providers would refresh nothing: they would rebuild
-        // off the same cached `torrent-get` and print the figures the user just
-        // pulled to replace.
-        ref.invalidate(transmissionTorrentsProvider);
-        ref.invalidate(transmissionSessionProvider);
-        ref.invalidate(transmissionStatsProvider);
-        invalidateServiceReadout(ref, ServiceKey.transmission);
-        ref.invalidate(transmissionTransferringProvider);
-        ref.invalidate(transmissionLabelsProvider);
-        ref.invalidate(transmissionFreeSpaceProvider);
-        ref.invalidate(transmissionSessionFactsProvider);
-        ref.invalidate(transmissionFinishedTodayProvider);
-        await Future<void>.delayed(AppAnimation.durationMd);
-      },
-      // One scroll view for the whole page: the regions are one column of
-      // reading, not four independently scrolling panes.
-      child: ServiceOverviewScroll(
-        topPadding: topPadding,
-        children: [
-          const ServiceOverviewIdentity(service: ServiceKey.transmission),
-          ...sectionsOrOneLine(ref, ServiceKey.transmission, [
-            ServiceKpiPeek.room(
-              kpis: ref.watch(serviceKpiProvider(ServiceKey.transmission)),
-              service: ServiceKey.transmission,
-            ),
-            const _TransferringSection(),
-            const _LabelsSection(),
-            const _SessionSection(),
-            const _FinishedTodaySection(),
-          ]),
-        ],
-      ),
-    );
-  }
+/// What a pull re-reads besides the readout (`ServiceOverviewPage`).
+void _refresh(WidgetRef ref) {
+  // The two sources first, then everything derived from them. Invalidating
+  // only the derived providers would refresh nothing: they would rebuild
+  // off the same cached `torrent-get` and print the figures the user just
+  // pulled to replace.
+  ref.invalidate(transmissionTorrentsProvider);
+  ref.invalidate(transmissionSessionProvider);
+  ref.invalidate(transmissionStatsProvider);
+  ref.invalidate(transmissionTransferringProvider);
+  ref.invalidate(transmissionLabelsProvider);
+  ref.invalidate(transmissionFreeSpaceProvider);
+  ref.invalidate(transmissionSessionFactsProvider);
+  ref.invalidate(transmissionFinishedTodayProvider);
 }
 
 // ─── 1. Transferring ────────────────────────────────────────────────────────

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/npm/domain/models/npm_models.dart';
@@ -12,8 +11,6 @@ import 'package:cupola/features/npm/presentation/npm_provider.dart';
 import 'package:cupola/features/npm/presentation/npm_screen.dart'
     show NpmDefaultAdminWarning;
 import 'package:cupola/features/services/domain/service_tab.dart';
-import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
-import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The first tab of Nginx Proxy Manager's service home.
@@ -74,101 +71,51 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// Sections load and fail independently. An NPM answering `/nginx/proxy-hosts`
 /// but not `/nginx/certificates` still draws two regions, and the third says so
 /// in its own slot instead of taking the page down.
-class NpmOverviewScreen extends ConsumerWidget {
-  const NpmOverviewScreen({super.key, this.topPadding = _hostedTopPadding});
-
-  /// The room the two glass bands above this page occupy.
-  ///
-  /// Composed from the same two constants the router composes its own from, so
-  /// a screen built outside the router (a test, a preview) reserves the right
-  /// space instead of tucking its first region under the tab bar.
-  static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
+class NpmOverviewScreen extends StatelessWidget {
+  const NpmOverviewScreen({
+    super.key,
+    this.topPadding = ServiceOverviewPage.hostedTopPadding,
+  });
 
   /// Height of the chrome the host draws above this page.
   final double topPadding;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Checked **before** any provider is reached. `npmClientProvider` throws
-    // `Nginx Proxy Manager not configured`, and letting `AsyncValueWidget`
-    // catch that throw would draw the same pixels while leaving five *failed*
-    // providers behind it, each scheduling a retry with backoff for a condition
-    // no amount of waiting changes: a battery cost on device and a pending
-    // timer in tests.
-    final configured = ref.watch(
-      currentSettingsProvider.select(
-        (settings) =>
-            settings.isServiceConfigured(ServiceKey.nginxProxyManager),
-      ),
-    );
-
-    return AmbientScaffold(
-      accent: ServiceKey.nginxProxyManager.accent,
-      body: SafeArea(
-        bottom: false,
-        child: configured
-            ? _OverviewBody(topPadding: topPadding)
-            // `.forService`, never the generic form: this is a service
-            // dashboard, so the door goes to NPM's own connection form rather
-            // than the settings index. NPM is the one service whose form asks
-            // for an email and a password instead of an API key, which makes
-            // landing on the right form matter more here than anywhere else.
-            : NotConfiguredPlaceholder.forService(ServiceKey.nginxProxyManager),
-      ),
+  Widget build(BuildContext context) {
+    return ServiceOverviewPage(
+      service: ServiceKey.nginxProxyManager,
+      topPadding: topPadding,
+      refresh: _refresh,
+      sections: (ref) => [
+        // Above every section, in this order: a box that still answers to
+        // `changeme` outranks anything a section could say, and the band
+        // that explains an attenuated control has to be readable before the
+        // control is reached.
+        const NpmDefaultAdminWarning(),
+        const NpmCapabilityBannerSlot(),
+        const SizedBox(height: AppSpacing.sm),
+        const _NeedsAttentionSection(),
+        const _ProxyHostsSection(),
+        const _CertificatesSection(),
+      ],
     );
   }
 }
 
-class _OverviewBody extends ConsumerWidget {
-  const _OverviewBody({required this.topPadding});
-
-  final double topPadding;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return RefreshIndicator(
-      onRefresh: () async {
-        invalidateServiceReadout(ref, ServiceKey.nginxProxyManager);
-        // The two documents every region is folded from. The upstream probe is
-        // deliberately absent: it awaits `npmProxyHostsProvider.future`, so one
-        // gesture re-reads the table and re-probes it, and invalidating it
-        // separately would run a second pass of up to eight sockets.
-        ref.invalidate(npmProxyHostsProvider);
-        ref.invalidate(npmCertificatesProvider);
-        // The account probe rides nothing, and a permission changed on the
-        // server is exactly what a person pulls to refresh for. The server info
-        // is what the default-admin warning reads.
-        ref.invalidate(npmAccountProvider);
-        ref.invalidate(npmServerInfoProvider);
-        ref.invalidate(npmOverviewAttentionProvider);
-        await Future<void>.delayed(AppAnimation.durationMd);
-      },
-      // One scroll view for the whole page: the regions are one column of
-      // reading, not three independently scrolling panes.
-      child: ServiceOverviewScroll(
-        topPadding: topPadding,
-        children: [
-          const ServiceOverviewIdentity(service: ServiceKey.nginxProxyManager),
-          ...sectionsOrOneLine(ref, ServiceKey.nginxProxyManager, [
-            ServiceKpiPeek.room(
-              kpis: ref.watch(serviceKpiProvider(ServiceKey.nginxProxyManager)),
-              service: ServiceKey.nginxProxyManager,
-            ),
-            // Above every section, in this order: a box that still answers to
-            // `changeme` outranks anything a section could say, and the band
-            // that explains an attenuated control has to be readable before the
-            // control is reached.
-            const NpmDefaultAdminWarning(),
-            const NpmCapabilityBannerSlot(),
-            const SizedBox(height: AppSpacing.sm),
-            const _NeedsAttentionSection(),
-            const _ProxyHostsSection(),
-            const _CertificatesSection(),
-          ]),
-        ],
-      ),
-    );
-  }
+/// What a pull re-reads besides the readout (`ServiceOverviewPage`).
+void _refresh(WidgetRef ref) {
+  // The two documents every region is folded from. The upstream probe is
+  // deliberately absent: it awaits `npmProxyHostsProvider.future`, so one
+  // gesture re-reads the table and re-probes it, and invalidating it
+  // separately would run a second pass of up to eight sockets.
+  ref.invalidate(npmProxyHostsProvider);
+  ref.invalidate(npmCertificatesProvider);
+  // The account probe rides nothing, and a permission changed on the
+  // server is exactly what a person pulls to refresh for. The server info
+  // is what the default-admin warning reads.
+  ref.invalidate(npmAccountProvider);
+  ref.invalidate(npmServerInfoProvider);
+  ref.invalidate(npmOverviewAttentionProvider);
 }
 
 // ─── 1. Needs attention ─────────────────────────────────────────────────────

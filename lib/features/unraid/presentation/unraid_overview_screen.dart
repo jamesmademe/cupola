@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
-import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
-import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/unraid/domain/unraid_alerts.dart';
 import 'package:cupola/features/unraid/domain/models/unraid_models.dart';
@@ -56,89 +53,42 @@ import 'package:cupola/features/unraid/presentation/unraid_provider.dart';
 /// Sections load and fail independently. An Unraid answering `array` but not
 /// `dockerContainers` still draws two regions, and the third says so in its own
 /// slot instead of taking the page down.
-class UnraidOverviewScreen extends ConsumerWidget {
-  const UnraidOverviewScreen({super.key, this.topPadding = _hostedTopPadding});
-
-  /// The room the two glass bands above this page occupy.
-  ///
-  /// Composed from the same two constants the router composes its own from, so
-  /// a screen built outside the router (a test, a preview) reserves the right
-  /// space instead of tucking its first region under the tab bar.
-  static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
+class UnraidOverviewScreen extends StatelessWidget {
+  const UnraidOverviewScreen({
+    super.key,
+    this.topPadding = ServiceOverviewPage.hostedTopPadding,
+  });
 
   /// Height of the chrome the host draws above this page.
   final double topPadding;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Checked **before** any provider is reached. `unraidClientProvider` throws
-    // `Unraid not configured`, and letting `AsyncValueWidget` catch that throw
-    // would draw the same pixels while leaving three *failed* providers behind
-    // it, each scheduling a retry with backoff for a condition no amount of
-    // waiting changes, which surfaces in tests as a pending timer and on
-    // device as a battery cost.
-    final configured = ref.watch(
-      currentSettingsProvider.select(
-        (settings) => settings.isServiceConfigured(ServiceKey.unraid),
-      ),
-    );
-
-    return AmbientScaffold(
-      accent: ServiceKey.unraid.accent,
-      body: SafeArea(
-        bottom: false,
-        child: configured
-            ? _OverviewBody(topPadding: topPadding)
-            // `.forService`, never the generic form: this is a service
-            // dashboard, so the door goes to Unraid's own connection form
-            // rather than the settings index.
-            : NotConfiguredPlaceholder.forService(ServiceKey.unraid),
-      ),
+  Widget build(BuildContext context) {
+    return ServiceOverviewPage(
+      service: ServiceKey.unraid,
+      topPadding: topPadding,
+      refresh: _refresh,
+      sections: (ref) => [
+        // The order the mobile board keeps once the regions with no read
+        // layer fall away: the array, then the containers. System comes
+        // last because it is the only region nobody opens the app to check.
+        const _ArraySection(),
+        const _DockerSection(),
+        const _SystemSection(),
+      ],
     );
   }
 }
 
-class _OverviewBody extends ConsumerWidget {
-  const _OverviewBody({required this.topPadding});
-
-  final double topPadding;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return RefreshIndicator(
-      onRefresh: () async {
-        invalidateServiceReadout(ref, ServiceKey.unraid);
-        // The three documents, and then the folds derived from them.
-        ref.invalidate(unraidArrayProvider);
-        ref.invalidate(unraidDockerProvider);
-        ref.invalidate(unraidInfoProvider);
-        ref.invalidate(unraidOverviewArrayProvider);
-        ref.invalidate(unraidOverviewDockerProvider);
-        ref.invalidate(unraidOverviewSystemProvider);
-        await Future<void>.delayed(AppAnimation.durationMd);
-      },
-      // One scroll view for the whole page: the regions are one column of
-      // reading, not three independently scrolling panes.
-      child: ServiceOverviewScroll(
-        topPadding: topPadding,
-        children: [
-          const ServiceOverviewIdentity(service: ServiceKey.unraid),
-          ...sectionsOrOneLine(ref, ServiceKey.unraid, [
-            ServiceKpiPeek.room(
-              kpis: ref.watch(serviceKpiProvider(ServiceKey.unraid)),
-              service: ServiceKey.unraid,
-            ),
-            // The order the mobile board keeps once the regions with no read
-            // layer fall away: the array, then the containers. System comes
-            // last because it is the only region nobody opens the app to check.
-            const _ArraySection(),
-            const _DockerSection(),
-            const _SystemSection(),
-          ]),
-        ],
-      ),
-    );
-  }
+/// What a pull re-reads besides the readout (`ServiceOverviewPage`).
+void _refresh(WidgetRef ref) {
+  // The three documents, and then the folds derived from them.
+  ref.invalidate(unraidArrayProvider);
+  ref.invalidate(unraidDockerProvider);
+  ref.invalidate(unraidInfoProvider);
+  ref.invalidate(unraidOverviewArrayProvider);
+  ref.invalidate(unraidOverviewDockerProvider);
+  ref.invalidate(unraidOverviewSystemProvider);
 }
 
 // ─── 1. Array ───────────────────────────────────────────────────────────────

@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/core/capability/audience.dart';
 import 'package:cupola/core/capability/role_gate.dart';
 import 'package:cupola/core/capability/role_gate_provider.dart';
+import 'package:cupola/core/models/service_kpi.dart';
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/glass_app_bar.dart';
@@ -17,6 +18,7 @@ import 'package:cupola/core/widgets/search_bar_header.dart';
 import 'package:cupola/core/widgets/section_header.dart';
 import 'package:cupola/core/widgets/service_kpi_peek.dart';
 import 'package:cupola/core/widgets/service_list_page.dart';
+import 'package:cupola/core/widgets/service_overview.dart';
 import 'package:cupola/core/widgets/service_tab_bar.dart';
 import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/features/activity/presentation/widgets/requests_board.dart';
@@ -72,6 +74,7 @@ import 'package:cupola/features/services/presentation/service_home_screen.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/features/services/presentation/service_tab_scaffold.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/presentation/stream_libraries_screen.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_now_playing_section.dart';
@@ -272,6 +275,35 @@ void main() {
 
       expect(find.byType(AppEmptyState), findsNothing);
       expectClearsTheBar(tester, find.byType(ShimmerList));
+    });
+  });
+
+  group('ServiceOverviewPage clears the glass bars', () {
+    // The one page every Overview but Stream's is: its body is a `SafeArea`
+    // that takes the status bar's inset and hands `topPadding` to the scroll
+    // view, so a first region starts below the tab bar on a notched phone.
+    // The guard excuses each `*OverviewScreen` by leaning on this case.
+    testWidgets('the first region starts below the tab bar', (tester) async {
+      await pumpHosted(
+        tester,
+        service: ServiceKey.radarr,
+        tab: ServiceTab.overview,
+        overrides: [
+          serviceSummaryProvider(
+            ServiceKey.radarr,
+          ).overrideWith((ref) => Completer<ServiceSummary>().future),
+        ],
+        child: ServiceOverviewPage(
+          service: ServiceKey.radarr,
+          topPadding: _hostedTopPadding,
+          kpis: (ref) => const AsyncData(<ServiceKpi>[]),
+          refresh: (ref) {},
+          sections: (ref) => const [Text('First region')],
+        ),
+      );
+
+      expectClearsTheBar(tester, find.byType(ServiceOverviewIdentity));
+      expectClearsTheBar(tester, find.text('First region'));
     });
   });
 
