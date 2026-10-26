@@ -336,14 +336,14 @@ const _exceptions = <String, ({int count, String reason})>{
     count: 2,
     reason: 'The host a picker cell names.',
   ),
-  'lib/features/services/presentation/services_provider.dart  .url': (
+  'lib/features/services/presentation/services_probe.dart  .url': (
     count: 2,
     reason:
         'The host a probe\'s summary names; the probe asks the route\'s '
         'address. And the host a summary only at home names: nothing is '
         'asked, and home is the only address it has.',
   ),
-  'lib/features/services/presentation/services_provider.dart  urlFor(': (
+  'lib/features/services/presentation/services_probe.dart  urlFor(': (
     count: 1,
     reason: 'The host an offline summary names when no lens is set.',
   ),
