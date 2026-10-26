@@ -62,8 +62,13 @@ final _nudge = RegExp(
   r'AppSpacing\.\w+\s*[-+]\s*[1-3](?![\d.]|\s*[*/])|(?<=[(,:=?]\s*)[1-3]\s*\+\s*AppSpacing\.\w+',
 );
 
-List<String> _hitsIn(String path, String code) => [
-  for (final hit in _nudge.allMatches(code))
-    '$path:${'\n'.allMatches(code.substring(0, hit.start)).length + 1}  '
-        '${hit.group(0)}',
-];
+List<String> _hitsIn(String path, String code) {
+  // Both alternatives name `AppSpacing.`, so a file without it cannot hit.
+  // Most of lib/ does not name it, and the regex is the slow part of the scan.
+  if (!code.contains('AppSpacing.')) return const [];
+  return [
+    for (final hit in _nudge.allMatches(code))
+      '$path:${'\n'.allMatches(code.substring(0, hit.start)).length + 1}  '
+          '${hit.group(0)}',
+  ];
+}
