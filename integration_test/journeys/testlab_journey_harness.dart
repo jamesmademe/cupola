@@ -98,7 +98,10 @@ class LabEndpoints {
     ServiceKey.readarr: (proxy: 28787, direct: 8787),
     ServiceKey.prowlarr: (proxy: 29696, direct: 9696),
     ServiceKey.bazarr: (proxy: 26767, direct: 6767),
-    ServiceKey.qbittorrent: (proxy: 28080, direct: 8080),
+    // Through the fault layer on the WebUI's own port, so qBittorrent accepts
+    // the Host the app sends; read directly on another published port (see
+    // docker-compose.testlab.yml), with the Host its WebUI expects.
+    ServiceKey.qbittorrent: (proxy: 8080, direct: 18080),
     ServiceKey.transmission: (proxy: 29091, direct: 9091),
     ServiceKey.sabnzbd: (proxy: 28082, direct: 8082),
     ServiceKey.nzbget: (proxy: 26789, direct: 6789),

@@ -49,11 +49,18 @@ INDEXER = "http://testlab-indexer:8088/torrents"
 
 @dataclass(frozen=True)
 class Media:
-    """One forged file: its name, frame size and duration in seconds."""
+    """One forged file: its name, frame size and duration in seconds.
+
+    ``track``, ``title`` and ``album`` tag an audio file, as the Lidarr cases
+    write them; a video file leaves them unset.
+    """
 
     name: str
     size: str = "1920x1080"
     seconds: int = 600
+    track: int = 0
+    title: str = ""
+    album: str = ""
 
 
 def arr(service: str, path: str, method: str = "GET", payload: Any = None) -> Any:

@@ -1,3 +1,38 @@
+/// The manual import journeys (catalogue M-01 to M-15): the verbs, the server
+/// readers, and the runbook for the people and agents who run them.
+///
+/// Running the family. The journeys share one simulator, so run one
+/// `flutter test` at a time and wait for its last line before the next:
+///
+/// ```bash
+/// flutter test integration_test/journeys/manual_import_wizard_radarr_journey_test.dart \
+///   -d 403B5E0A-6A4E-4CB4-A151-87A6DA34E55F --tags e2e --run-skipped
+/// ```
+///
+/// The same command runs the Sonarr and Lidarr wizard files, and the two queue
+/// files (`manual_import_queue_*_journey_test.dart`). Name one case with
+/// `--plain-name 'M-14'`. The lab must be up (`testlab.py up`, then `doctor`).
+/// The queue files reset the lab to `l13-golden` before each case; the wizard
+/// files only apply their scenario, and M-04 puts Psycho (1998) back when it is
+/// missing. Never run `flutter test` on the lab's simulator while another run
+/// is still going: a second run on the same device ends the first one with
+/// `did not complete`, and that is not an app fault.
+///
+/// Reading a failure. The message says which side broke:
+///
+/// - `The surface never drew "X". It drew: …` is the app: it says something
+///   else than the catalogue's words. Compare the list it drew with the
+///   catalogue row and fix the word in the finder, not the app.
+/// - `the lab refused "scenario apply …"` is the lab: the case's preconditions
+///   are not there (a file already taken, a track with a file). Run the
+///   scenario's teardown from the lab's own directory, or reset the lab.
+/// - A failed `expect` with a server reading (`reason:`) is the server: the
+///   app said `Completed` or `Imported`, and the arr does not hold the file.
+///   The reader prints the record the arr sent.
+/// - `Bad state: No element` on a finder is a word the app does not draw:
+///   the surface text is in the log just before the stack.
+library;
+
 import 'dart:convert';
 import 'dart:io';
 
@@ -249,5 +284,107 @@ class ImportReadings {
       ],
       path: file['relativePath'] as String,
     );
+  }
+}
+
+/// Any arr's own answers, straight to its API, for the server half of a manual
+/// import journey: Sonarr and Lidarr, where [ImportReadings] reads Radarr.
+class ArrApi {
+  ArrApi(this.base, this.apiKey);
+
+  /// `http://127.0.0.1:<port>/api/v<n>`.
+  final String base;
+  final String apiKey;
+
+  Future<Object?> get(String path) async {
+    final client = HttpClient();
+    try {
+      final request = await client.getUrl(Uri.parse('$base$path'));
+      request.headers.set('X-Api-Key', apiKey);
+      final response = await request.close();
+      final body = await response.transform(utf8.decoder).join();
+      if (response.statusCode != 200) {
+        fail('$path answered ${response.statusCode}: $body');
+      }
+      return jsonDecode(body);
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  /// Sonarr's episode [season]x[number] of the series named [title].
+  Future<Map<String, dynamic>> episode(
+    String title,
+    int season,
+    int number,
+  ) async {
+    final series = (await get('/series') as List).cast<Map<String, dynamic>>();
+    final id = series.firstWhere((item) => item['title'] == title)['id'];
+    final episodes = (await get('/episode?seriesId=$id') as List)
+        .cast<Map<String, dynamic>>();
+    return episodes.firstWhere(
+      (item) =>
+          item['seasonNumber'] == season && item['episodeNumber'] == number,
+    );
+  }
+
+  /// The titles of the downloads in Sonarr's queue.
+  Future<List<String>> queueTitles() async {
+    final page = await get('/queue?page=1&pageSize=100') as Map;
+    return [
+      for (final record in (page['records'] as List))
+        (record as Map)['title'] as String,
+    ];
+  }
+
+  /// The path of the file Sonarr holds for [episode], or null.
+  Future<String?> episodeFilePath(Map<String, dynamic> episode) async {
+    final id = episode['episodeFileId'] as int? ?? 0;
+    if (id == 0) return null;
+    final file = await get('/episodefile/$id') as Map<String, dynamic>;
+    return file['relativePath'] as String?;
+  }
+
+  /// The tracks of [album] by [artist], each with the file it holds
+  /// (`trackFileId` 0 when none).
+  Future<List<Map<String, dynamic>>> albumTracks(
+    String artist,
+    String album,
+  ) async {
+    final artists = (await get('/artist') as List).cast<Map<String, dynamic>>();
+    final artistId = artists.firstWhere(
+      (item) => item['artistName'] == artist,
+    )['id'];
+    final albums = (await get('/album?artistId=$artistId') as List)
+        .cast<Map<String, dynamic>>();
+    final albumId = albums.firstWhere((item) => item['title'] == album)['id'];
+    return (await get('/track?albumId=$albumId') as List)
+        .cast<Map<String, dynamic>>();
+  }
+
+  /// The tracks numbered [numbers] (Lidarr's `a1`, `b2`…) of [album] once
+  /// Lidarr holds a file for each: the server's state, not a fixed wait. A
+  /// command can say `Completed` a moment before the file is on the record.
+  Future<List<Map<String, dynamic>>> albumTracksWithFiles(
+    String artist,
+    String album,
+    List<String> numbers, {
+    Duration timeout = const Duration(minutes: 2),
+  }) async {
+    final end = DateTime.now().add(timeout);
+    while (true) {
+      final chosen = (await albumTracks(
+        artist,
+        album,
+      )).where((track) => numbers.contains(track['trackNumber'])).toList();
+      final filed =
+          chosen.length == numbers.length &&
+          chosen.every((track) => (track['trackFileId'] as int? ?? 0) > 0);
+      if (filed) return chosen;
+      if (DateTime.now().isAfter(end)) {
+        fail('Lidarr never gave ${numbers.join(', ')} a file');
+      }
+      await Future<void>.delayed(const Duration(seconds: 1));
+    }
   }
 }

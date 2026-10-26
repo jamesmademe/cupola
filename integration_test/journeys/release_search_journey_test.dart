@@ -15,6 +15,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/main.dart' as cupola;
 
 import '../../test/test_helpers/settings_scope.dart';
+import 'testlab_journey_harness.dart';
 
 /// The app's interactive release search, with the real Prowlarr-synced
 /// indexer: the sheet shows the catalogue and the reason a row is rejected.
@@ -26,20 +27,25 @@ void main() {
     (tester) async {
       binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
       final id = await _movieId();
+      final lab = Lab.load();
       final container = ProviderContainer(
         overrides: [
           ...await settingsScopeOverrides(
             customize: (settings) => settings
                 .copyWithService(
                   ServiceKey.radarr,
-                  url: 'http://127.0.0.1:27878',
-                  apiKey: 'test-key',
+                  url: LabEndpoints.appUrlOf(ServiceKey.radarr),
+                  apiKey: lab.arrKeys[ServiceKey.radarr] ?? '',
                 )
                 .copyWithCredentials(
                   ServiceKey.qbittorrent,
-                  url: 'http://127.0.0.1:8080',
-                  username: 'admin',
-                  password: 'cupola-pass',
+                  url: LabEndpoints.appUrlOf(ServiceKey.qbittorrent),
+                  username: lab.credentials.require(
+                    'CUPOLA_TESTLAB_QBITTORRENT_USERNAME',
+                  ),
+                  password: lab.credentials.require(
+                    'CUPOLA_TESTLAB_QBITTORRENT_PASSWORD',
+                  ),
                 ),
           ),
         ],
@@ -95,7 +101,10 @@ Future<int> _movieId() async {
     final request = await client.getUrl(
       Uri.parse('http://127.0.0.1:7878/api/v3/movie?tmdbId=10378'),
     );
-    request.headers.set('X-Api-Key', 'test-key');
+    request.headers.set(
+      'X-Api-Key',
+      Lab.load().arrKeys[ServiceKey.radarr] ?? '',
+    );
     final response = await request.close();
     final body = await response.transform(utf8.decoder).join();
     final value = jsonDecode(body) as List;

@@ -169,10 +169,12 @@ services:
         condition: service_healthy
     environment: *linuxserver-env
     ports:
-      # qBittorrent 5.1 validates the WebUI Host/Origin port. Keep its
-      # conventional port on the host so the client can send the same origin
-      # it uses inside the container; SABnzbd uses 8082 below.
-      - "127.0.0.1:8080:8080"
+      # qBittorrent 5.1 validates the Host and Origin port of a request against
+      # its own WebUI port (8080). The app reaches it through the fault layer on
+      # 8080 (see toxiproxy below), so its requests carry the port qBittorrent
+      # expects. The lab's own readings go straight to this container on 18080
+      # and send that Host explicitly (seed_lab, queue_probe).
+      - "127.0.0.1:18080:8080"
     volumes:
       - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/qbittorrent:/config"
       - "${CUPOLA_TESTLAB_STATE_DIR:-.ai/scratch/zz_testlab/state}/downloads:/downloads"
@@ -471,7 +473,7 @@ services:
       - "127.0.0.1:28097:28097"  # Jellyfin
       - "127.0.0.1:26768:26768"  # Bazarr
       - "127.0.0.1:28990:28990"  # Sonarr
-      - "127.0.0.1:28080:28080"
+      - "127.0.0.1:8080:8080"  # qBittorrent, on its WebUI port (see the client)
       - "127.0.0.1:28082:28082"
       - "127.0.0.1:28096:28096"
       - "127.0.0.1:28181:28181"
