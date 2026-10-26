@@ -34,6 +34,16 @@ fi
 
 cd "$ROOT_DIR"
 
+# A release is the production identity (AGENTS.md, App identities). Flutter
+# hands every FLUTTER_XCODE_* variable to xcodebuild as a build setting, so a
+# shell left over from scripts/run_dev.sh or the testlab would ship a suffixed
+# bundle id or isolated entitlements.
+if env | grep -q '^FLUTTER_XCODE_'; then
+  printf 'Refusing to release with FLUTTER_XCODE_* set: %s\n' \
+    "$(env | grep '^FLUTTER_XCODE_' | cut -d= -f1 | tr '\n' ' ')" >&2
+  exit 1
+fi
+
 # The macOS app ships exported for Developer ID (macos/ExportOptions.plist):
 # signed with the team's Developer ID certificate, carrying a Developer ID
 # profile that opens on any Mac and keeps the data protection keychain, then

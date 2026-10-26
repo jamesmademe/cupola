@@ -91,8 +91,8 @@ enum OutsideChannel {
   /// The group the extension reads (`outsideGroup` in
   /// `CupolaWidgets/OutsideShelf.swift`) and both entitlements carry: change
   /// one and the others with it, or the widgets read a folder the app never
-  /// writes. The build setting lets the testlab build carry an App Group of
-  /// its own, so it never reads or writes the house's widgets.
+  /// writes. The build setting lets an isolated build (testlab, dev) carry an
+  /// App Group of its own, so it never reads or writes the house's widgets.
   static let group =
     (Bundle.main.object(forInfoDictionaryKey: "CupolaAppGroup") as? String)
     ?? "group.com.matthwlabs.cupola"

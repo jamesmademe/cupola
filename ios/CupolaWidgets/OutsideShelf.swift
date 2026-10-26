@@ -5,7 +5,8 @@ import ImageIO
 /// The App Group the app and the extension both carry in their entitlements:
 /// the one folder they share. Kept in step with `OutsideChannel.group` in
 /// `Runner/AppDelegate.swift`, which names the same group for the app's side.
-/// The build setting gives the testlab build an App Group of its own.
+/// The build setting gives an isolated build (testlab, dev) an App Group of
+/// its own.
 let outsideGroup =
   (Bundle.main.object(forInfoDictionaryKey: "CupolaAppGroup") as? String)
   ?? "group.com.matthwlabs.cupola"

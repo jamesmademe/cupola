@@ -36,9 +36,11 @@ SecureSettingsStore createSecureSettingsStore() {
   // Keychain accessibility to this device only. Without this the default
   // accessibility lets credentials sync to backups.
   const deviceOnly = KeychainAccessibility.first_unlock_this_device;
-  // An isolated build (the testlab) names a keychain service and, where the
-  // entitlement carries one, an access group of its own. The default build
-  // compiles neither and keeps the house's keychain untouched.
+  // An isolated build (the testlab, or the dev identity from
+  // scripts/run_dev.sh) names a keychain service and, where the entitlement
+  // carries one, an access group of its own. The defines keep the testlab's
+  // names while its task owns them. The default build compiles neither and
+  // keeps the house's keychain untouched.
   const keychainService = String.fromEnvironment(
     'CUPOLA_TESTLAB_KEYCHAIN_SERVICE',
   );

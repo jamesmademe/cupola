@@ -1,8 +1,8 @@
 #include "../../Flutter/Flutter-Release.xcconfig"
 #include "Warnings.xcconfig"
 
-// The production identity. The testlab build overrides it through
-// FLUTTER_XCODE_CUPOLA_BUNDLE_SUFFIX.
+// The production identity (AGENTS.md, App identities). The testlab and dev
+// builds override it through FLUTTER_XCODE_CUPOLA_BUNDLE_SUFFIX.
 CUPOLA_BUNDLE_SUFFIX =
 
 // Flutter 3.38.7 invokes lipo with multiple architectures, which Xcode 27
