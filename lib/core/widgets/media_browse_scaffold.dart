@@ -402,14 +402,12 @@ class _MediaBrowseScaffoldState<T>
   @override
   void didUpdateWidget(MediaBrowseScaffold<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // The comparator reads both extractors, so a rebuild that re-closes over
-    // new ones has to re-sort even when the list itself is unchanged.
-    if (!identical(widget.titleExtractor, oldWidget.titleExtractor) ||
-        !identical(widget.sortTitleExtractor, oldWidget.sortTitleExtractor) ||
-        !identical(widget.sorts, oldWidget.sorts)) {
-      _sortedSource = null;
-      _sorted = null;
-    }
+    // No cache reset on a new closure. The four screens that use this widget
+    // pass extractors and sort comparators that read only the item's own fields
+    // and capture nothing, so a rebuild that re-creates them computes the same
+    // order. The cache is keyed on the library list and the chosen order (see
+    // `_sortedItems`), and a rebuild that keeps both reuses the sort; before
+    // this, every parent rebuild re-sorted the whole library.
     // A service that offered five orders and now offers two must not stay
     // parked on an index that no longer exists.
     if (_sortIndex >= _sortOptions.length) {
