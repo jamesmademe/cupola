@@ -752,6 +752,9 @@ final lidarrKpiLibraryProvider = musicProvider;
 final readarrKpiLibraryProvider = readarrAuthorsProvider;
 
 Future<List<ServiceKpi>> _radarrKpis(Ref ref) async {
+  // The queue starts with the library, not after it: the snapshot never throws,
+  // so a library that fails leaves nothing unhandled.
+  final queue = ref.watch(radarrQueueSnapshotProvider.future);
   final List<RadarrMovie> movies;
   try {
     movies = await ref.watch(radarrKpiLibraryProvider.future);
@@ -765,10 +768,7 @@ Future<List<ServiceKpi>> _radarrKpis(Ref ref) async {
       note: _notAnswering(ServiceKey.radarr, error),
     );
   }
-  return _radarrKpisFrom(
-    movies,
-    await ref.watch(radarrQueueSnapshotProvider.future),
-  );
+  return _radarrKpisFrom(movies, await queue);
 }
 
 /// The same four figures for one **named** connection, whatever the lens is on.
@@ -777,6 +777,8 @@ Future<List<ServiceKpi>> _radarrKpis(Ref ref) async {
 /// [serviceKpiForProvider], which collapses the lens back onto the plain
 /// builder so the card and the library screen keep reading one cache.
 Future<List<ServiceKpi>> _radarrKpisFor(Ref ref, String instanceId) async {
+  // The queue starts with the library (see [_radarrKpis]).
+  final queue = ref.watch(radarrQueueSnapshotForProvider(instanceId).future);
   final List<RadarrMovie> movies;
   try {
     // The connection's one library read, cached for the session like the
@@ -790,10 +792,7 @@ Future<List<ServiceKpi>> _radarrKpisFor(Ref ref, String instanceId) async {
       note: _notAnswering(ServiceKey.radarr, error),
     );
   }
-  return _radarrKpisFrom(
-    movies,
-    await ref.watch(radarrQueueSnapshotForProvider(instanceId).future),
-  );
+  return _radarrKpisFrom(movies, await queue);
 }
 
 /// Null means the server did not answer: see [_figure]. Never `[]`, which is
