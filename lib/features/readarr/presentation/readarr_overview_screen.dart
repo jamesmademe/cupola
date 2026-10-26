@@ -4,9 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/readarr/presentation/readarr_overview_provider.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
-import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
-import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The first tab of Readarr's service home.
@@ -51,9 +49,24 @@ class ReadarrOverviewScreen extends StatelessWidget {
       topPadding: topPadding,
       refresh: _refresh,
       sections: (ref) => [
-        const _NeedsAttentionSection(),
+        ArrNeedsAttentionSection(
+          service: ServiceKey.readarr,
+          items: readarrNeedsAttentionProvider,
+          queueRecords: readarrQueueRecordsProvider,
+          retry: [
+            readarrNeedsAttentionProvider,
+            readarrQueueRecordsProvider,
+            // The library is plain, not autoDispose: a Retry that re-ran the
+            // fold alone read its cached failure straight back.
+            readarrAuthorsProvider,
+          ],
+        ),
         const _RootFolderSection(),
-        const _HistoryTodaySection(),
+        ArrHistoryTodaySection(
+          service: ServiceKey.readarr,
+          entries: readarrHistoryTodayProvider,
+          retry: [readarrHistoryTodayProvider],
+        ),
       ],
     );
   }
@@ -78,104 +91,6 @@ void _refresh(WidgetRef ref) {
   ref.invalidate(readarrNeedsAttentionProvider);
   ref.invalidate(readarrRootFoldersProvider);
   ref.invalidate(readarrHistoryTodayProvider);
-}
-
-// ─── Needs attention ────────────────────────────────────────────────────────
-
-class _NeedsAttentionSection extends ConsumerWidget {
-  const _NeedsAttentionSection();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final items = ref.watch(readarrNeedsAttentionProvider);
-    // `hasValue`, never `asData`: `asData` is null on an `AsyncError` even when
-    // Riverpod retained the value it had, while `AsyncValueWidget` under this
-    // header draws exactly that retained list at full ink beneath the
-    // unreachable band. Read through `asData` the header printed "—" over rows
-    // it was still showing. A source that never answered has no retained value
-    // and still reads "—".
-    //
-    // The faults the rows stand for, not the rows: a folded row of three
-    // downloads is three.
-    final count = items.hasValue
-        ? items.requireValue.fold(0, (sum, item) => sum + item.count)
-        : null;
-    // A queue walk that stopped short: see the Radarr home's twin.
-    final floor =
-        ref.watch(readarrQueueRecordsProvider).value?.cutShort ?? false;
-
-    return ServiceOverviewSection(
-      service: ServiceKey.readarr,
-      title: 'Needs attention',
-      // "—" while the queue and the library are loading or after either failed:
-      // a "0" printed over an unanswered question is a claim nobody made.
-      subtitle: count == null ? '—' : (floor ? Lexicon.floor(count) : '$count'),
-      // No link: these rows belong to different tabs: Queue for a stalled
-      // import, Wanted for the backlog, and a single destination would have to
-      // lie about one of the two. Each row is its own door instead.
-      child: AsyncValueWidget<List<ReadarrAttentionItem>>.section(
-        value: items,
-        service: ServiceKey.readarr,
-        consequence: 'what needs attention is not shown',
-        loadingLabel: 'Loading what needs attention',
-        onRetry: () {
-          ref.invalidate(readarrNeedsAttentionProvider);
-          ref.invalidate(readarrQueueRecordsProvider);
-          // The library is plain, not autoDispose: a Retry that re-ran the
-          // fold alone read its cached failure straight back.
-          ref.invalidate(readarrAuthorsProvider);
-        },
-        skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
-        isEmpty: (data) => data.isEmpty,
-        // The resting case, and it has to be reachable: every row here is
-        // derived from a condition that can clear, so a Readarr with a quiet
-        // queue and a complete library says so rather than badging a standing
-        // 1. A resting state wears no alarm chrome: nothing is wrong, and
-        // saying so is not an error state.
-        emptyBuilder: const ServiceOverviewEmpty(
-          icon: Icons.check_circle_outline_rounded,
-          label: 'Nothing needs you',
-        ),
-        data: (data) => Column(
-          children: [for (final item in data) _AttentionRow(item: item)],
-        ),
-      ),
-    );
-  }
-}
-
-class _AttentionRow extends StatelessWidget {
-  const _AttentionRow({required this.item});
-
-  final ReadarrAttentionItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    // Through the tone rule, never a raw `AppColors.*`: amber is a fault and
-    // the two backlog rows are neutral by construction.
-    final tone = statusToneColor(
-      colorScheme,
-      item.tone,
-      surface: colorScheme.surfaceContainerLow,
-    );
-
-    final door = item.door;
-
-    return ServiceOverviewRow(
-      spoken: item.spoken,
-      leading: Icon(item.icon, size: 18, color: tone),
-      title: item.headline,
-      titleColor: tone,
-      detail: item.detail,
-      onTap: door == null
-          ? null
-          : () => openAttentionDoor(context, ServiceKey.readarr, door),
-      doorHint: door == null
-          ? null
-          : attentionDoorHint(ServiceKey.readarr, door),
-    );
-  }
 }
 
 // ─── Root folder ────────────────────────────────────────────────────────────
@@ -260,68 +175,6 @@ class _RootFolderRow extends StatelessWidget {
       // it belongs on the right, where the eye scans a column of sizes.
       detail: '',
       trailing: folder.freeLabel,
-    );
-  }
-}
-
-// ─── History today ──────────────────────────────────────────────────────────
-
-class _HistoryTodaySection extends ConsumerWidget {
-  const _HistoryTodaySection();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final entries = ref.watch(readarrHistoryTodayProvider);
-
-    return ServiceOverviewSection(
-      service: ServiceKey.readarr,
-      title: 'History',
-      subtitle: 'today',
-      destination: ServiceTab.history,
-      child: AsyncValueWidget<List<ReadarrHistoryEntry>>.section(
-        value: entries,
-        service: ServiceKey.readarr,
-        consequence: "today's history is not shown",
-        loadingLabel: "Loading today's history",
-        onRetry: () => ref.invalidate(readarrHistoryTodayProvider),
-        skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
-        isEmpty: (items) => items.isEmpty,
-        emptyBuilder: const ServiceOverviewEmpty(
-          icon: Icons.history_rounded,
-          label: 'Nothing yet today',
-        ),
-        data: (items) => Column(
-          children: [for (final entry in items) _HistoryRow(entry: entry)],
-        ),
-      ),
-    );
-  }
-}
-
-class _HistoryRow extends StatelessWidget {
-  const _HistoryRow({required this.entry});
-
-  final ReadarrHistoryEntry entry;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final tone = statusToneColor(
-      colorScheme,
-      entry.tone,
-      surface: colorScheme.surfaceContainerLow,
-    );
-
-    return ServiceOverviewRow(
-      spoken: entry.spoken,
-      leading: Container(
-        width: 8,
-        height: 8,
-        margin: const EdgeInsets.only(top: 5),
-        decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
-      ),
-      title: '${entry.subject}\u00A0· ${entry.event.toLowerCase()}',
-      detail: entry.detail,
     );
   }
 }

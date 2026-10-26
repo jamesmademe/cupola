@@ -6,10 +6,6 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 
-import 'package:cupola/core/text_scale.dart';
-
-import 'package:cupola/core/theme.dart';
-
 import 'package:cupola/core/title_light.dart';
 
 import 'package:cupola/core/utils/arr_activity_display.dart';
@@ -17,8 +13,6 @@ import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/arr_model_helpers.dart';
 
 import 'package:cupola/core/utils/date_format.dart';
-
-import 'package:cupola/core/utils/image_utils.dart';
 
 import 'package:cupola/core/utils/service_routes.dart';
 
@@ -37,9 +31,6 @@ import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
-
-import 'package:cupola/features/settings/data/connection_reach_provider.dart';
-import 'package:cupola/features/settings/data/settings_provider.dart';
 
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -96,7 +87,11 @@ class SonarrOverviewScreen extends StatelessWidget {
         const _AiringSection(),
         const _NeedsAttentionSection(),
         const _RecentlyDownloadedSection(),
-        const _HistoryTodaySection(),
+        ArrHistoryTodaySection(
+          service: ServiceKey.sonarr,
+          entries: sonarrHistoryTodayProvider,
+          retry: [sonarrHistoryTodayProvider, sonarrHistoryPageProvider],
+        ),
       ],
     );
   }
@@ -279,45 +274,12 @@ class _NeedsAttentionSection extends ConsumerWidget {
           label: 'Nothing needs you',
         ),
         data: (data) => Column(
-          children: [for (final item in data) _AttentionRow(item: item)],
+          children: [
+            for (final item in data)
+              ServiceAttentionRow(service: ServiceKey.sonarr, item: item),
+          ],
         ),
       ),
-    );
-  }
-}
-
-class _AttentionRow extends StatelessWidget {
-  const _AttentionRow({required this.item});
-
-  final SonarrAttentionItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    // Through the tone rule, never a raw `AppColors.*`: amber is a fault, and
-    // the backlog rows (missing episodes, episodes below the cutoff) are
-    // neutral by construction. `surface:` is the container this row actually
-    // lands on, which is what the walk needs to guarantee contrast.
-    final tone = statusToneColor(
-      colorScheme,
-      item.tone,
-      surface: colorScheme.surfaceContainerLow,
-    );
-
-    final door = item.door;
-
-    return ServiceOverviewRow(
-      spoken: item.spoken,
-      leading: Icon(item.icon, size: 18, color: tone),
-      title: item.headline,
-      titleColor: tone,
-      detail: item.detail,
-      onTap: door == null
-          ? null
-          : () => openAttentionDoor(context, ServiceKey.sonarr, door),
-      doorHint: door == null
-          ? null
-          : attentionDoorHint(ServiceKey.sonarr, door),
     );
   }
 }
@@ -358,198 +320,25 @@ class _RecentlyDownloadedSection extends ConsumerWidget {
             label: 'Nothing downloaded recently',
           ),
         ),
-        data: (items) => _PosterRail(episodes: items),
-      ),
-    );
-  }
-}
-
-class _PosterRail extends ConsumerWidget {
-  const _PosterRail({required this.episodes});
-
-  final List<SonarrDownloadedEpisode> episodes;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final instance = ref.watch(activeInstanceProvider(ServiceKey.sonarr));
-    // The posters at the address the lens's connection is reached at now.
-    final reachedAt = instance == null
-        ? ''
-        : ref.watch(connectionReachProvider(instance.id))?.url ?? '';
-
-    return SizedBox(
-      // 138pt poster, the gap, and two label lines, grown by the reading size
-      // so the captions are not clipped at an accessibility text size.
-      height: TextScaleMetrics.boxHeight(context, base: 176, textHeight: 34),
-      // The box grew by the *clamped* scale, so the text has to be laid out at
-      // the same clamp: unclamped, the rail is sized for 1.6x and painted at
-      // 3.0x, which is an overflow stripe.
-      child: MediaQuery(
-        data: MediaQuery.of(
-          context,
-        ).copyWith(textScaler: TextScaleMetrics.clampedScalerOf(context)),
-        child: ListView.separated(
-          controller: RailArrows.controllerOf(context),
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          itemCount: episodes.length,
-          separatorBuilder: (_, _) =>
-              const SizedBox(width: AppSpacing.carouselGap),
-          itemBuilder: (context, index) => _PosterTile(
-            episode: episodes[index],
-            baseUrl: reachedAt,
-            apiKey: instance?.credential ?? '',
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PosterTile extends StatelessWidget {
-  const _PosterTile({
-    required this.episode,
-    required this.baseUrl,
-    required this.apiKey,
-  });
-
-  final SonarrDownloadedEpisode episode;
-  final String baseUrl;
-  final String apiKey;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final poster = ImageUtils.extractPosterUrl(
-      episode.images,
-      baseUrl: baseUrl,
-      apiKey: apiKey,
-    );
-    // Its own namespace: the Library tab's grid is alive in a sibling branch
-    // and tags a poster of the same series, and two live Heroes sharing a tag
-    // is an assertion, not a flight.
-    final heroTag = 'sonarr_overview_recent_${episode.seriesId}';
-    final caption = episode.caption;
-
-    return SizedBox(
-      width: 96,
-      child: PressableScale(
-        // The tile links to the *series*, not to the episode: the series'
-        // own page, under this tab, by the TMDB id the record embeds; else
-        // the way through its id here.
-        onTap: () => switch (episode.tmdbId) {
-          final tmdbId? when tmdbId > 0 => context.openMedia(
-            MediaKey.tv(tmdbId),
-            heroTag: heroTag,
-            posterUrl: remotePosterOf(episode.images),
-          ),
-          _ => context.push(
-            ServiceRoutes.sonarrSeries(episode.seriesId, heroTag: heroTag),
-          ),
-        },
-        // A poster is an image with no name of its own; the tile announces the
-        // series, the slot and the age as one button.
-        semanticLabel: episode.seriesTitle,
-        semanticValue: caption.isEmpty ? null : spokenFromDotted(caption),
-        excludeChildSemantics: true,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 96,
-              height: 138,
-              child: MediaPosterCard(
-                heroTag: heroTag,
-                imageUrl: poster.url,
-                imageHeaders: poster.headers,
-              ),
+        data: (items) => ServicePosterRail<SonarrDownloadedEpisode>(
+          service: ServiceKey.sonarr,
+          items: items,
+          idOf: (episode) => episode.seriesId,
+          titleOf: (episode) => episode.seriesTitle,
+          imagesOf: (episode) => episode.images,
+          captionOf: (episode) => episode.caption,
+          onTap: (context, episode, heroTag) => switch (episode.tmdbId) {
+            final tmdbId? when tmdbId > 0 => context.openMedia(
+              MediaKey.tv(tmdbId),
+              heroTag: heroTag,
+              posterUrl: remotePosterOf(episode.images),
             ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              episode.seriesTitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelSmall
-                  ?.weight(FontWeight.w600)
-                  .copyWith(color: colorScheme.onSurface),
+            _ => context.push(
+              ServiceRoutes.sonarrSeries(episode.seriesId, heroTag: heroTag),
             ),
-            if (caption.isNotEmpty)
-              Text(
-                caption,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-          ],
+          },
         ),
       ),
-    );
-  }
-}
-
-// ─── 5. History today ───────────────────────────────────────────────────────
-
-class _HistoryTodaySection extends ConsumerWidget {
-  const _HistoryTodaySection();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final entries = ref.watch(sonarrHistoryTodayProvider);
-
-    return ServiceOverviewSection(
-      service: ServiceKey.sonarr,
-      title: 'History',
-      subtitle: 'today',
-      destination: ServiceTab.history,
-      child: AsyncValueWidget<List<SonarrHistoryEntry>>.section(
-        value: entries,
-        service: ServiceKey.sonarr,
-        consequence: "today's history is not shown",
-        loadingLabel: "Loading today's history",
-        onRetry: () {
-          ref.invalidate(sonarrHistoryTodayProvider);
-          ref.invalidate(sonarrHistoryPageProvider);
-        },
-        skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
-        isEmpty: (items) => items.isEmpty,
-        emptyBuilder: const ServiceOverviewEmpty(
-          icon: Icons.history_rounded,
-          label: 'Nothing yet today',
-        ),
-        data: (items) => Column(
-          children: [for (final entry in items) _HistoryRow(entry: entry)],
-        ),
-      ),
-    );
-  }
-}
-
-class _HistoryRow extends StatelessWidget {
-  const _HistoryRow({required this.entry});
-
-  final SonarrHistoryEntry entry;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final tone = statusToneColor(
-      colorScheme,
-      entry.tone,
-      surface: colorScheme.surfaceContainerLow,
-    );
-
-    return ServiceOverviewRow(
-      spoken: entry.spoken,
-      leading: Container(
-        width: 8,
-        height: 8,
-        margin: const EdgeInsets.only(top: 5),
-        decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
-      ),
-      title: '${entry.subject}\u00A0· ${entry.event.toLowerCase()}',
-      detail: entry.detail,
     );
   }
 }

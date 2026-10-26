@@ -6,12 +6,6 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 
-import 'package:cupola/core/text_scale.dart';
-
-import 'package:cupola/core/theme.dart';
-
-import 'package:cupola/core/utils/image_utils.dart';
-
 import 'package:cupola/core/utils/service_routes.dart';
 
 import 'package:cupola/core/widgets/widgets.dart';
@@ -27,9 +21,6 @@ import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
-
-import 'package:cupola/features/settings/data/connection_reach_provider.dart';
-import 'package:cupola/features/settings/data/settings_provider.dart';
 
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -78,7 +69,11 @@ class LidarrOverviewScreen extends StatelessWidget {
       sections: (ref) => [
         const _NeedsAttentionSection(),
         const _RecentlyAddedSection(),
-        const _HistoryTodaySection(),
+        ArrHistoryTodaySection(
+          service: ServiceKey.lidarr,
+          entries: lidarrHistoryTodayProvider,
+          retry: [lidarrHistoryTodayProvider],
+        ),
         const _RootFoldersSection(),
       ],
     );
@@ -150,45 +145,12 @@ class _NeedsAttentionSection extends ConsumerWidget {
           label: 'Nothing needs you',
         ),
         data: (data) => Column(
-          children: [for (final item in data) _AttentionRow(item: item)],
+          children: [
+            for (final item in data)
+              ServiceAttentionRow(service: ServiceKey.lidarr, item: item),
+          ],
         ),
       ),
-    );
-  }
-}
-
-class _AttentionRow extends StatelessWidget {
-  const _AttentionRow({required this.item});
-
-  final LidarrAttentionItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    // Through the tone rule, never a raw `AppColors.*`: amber is a fault, and
-    // the backlog row (monitored albums with no files) is neutral by
-    // construction. Walking it against the surface it actually lands on is the
-    // other half: the accent-tinted section ground is not `surface`.
-    final tone = statusToneColor(
-      colorScheme,
-      item.tone,
-      surface: colorScheme.surfaceContainerLow,
-    );
-
-    final door = item.door;
-
-    return ServiceOverviewRow(
-      spoken: item.spoken,
-      leading: Icon(item.icon, size: 18, color: tone),
-      title: item.headline,
-      titleColor: tone,
-      detail: item.detail,
-      onTap: door == null
-          ? null
-          : () => openAttentionDoor(context, ServiceKey.lidarr, door),
-      doorHint: door == null
-          ? null
-          : attentionDoorHint(ServiceKey.lidarr, door),
     );
   }
 }
@@ -234,201 +196,28 @@ class _RecentlyAddedSection extends ConsumerWidget {
             label: 'Nothing added yet',
           ),
         ),
-        data: (items) => _PosterRail(artists: items),
-      ),
-    );
-  }
-}
-
-class _PosterRail extends ConsumerWidget {
-  const _PosterRail({required this.artists});
-
-  final List<LidarrArtist> artists;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final instance = ref.watch(activeInstanceProvider(ServiceKey.lidarr));
-    // The posters at the address the lens's connection is reached at now.
-    final reachedAt = instance == null
-        ? ''
-        : ref.watch(connectionReachProvider(instance.id))?.url ?? '';
-
-    return SizedBox(
-      // 138pt poster, the gap, and two label lines, grown by the reading size
-      // so the captions are not clipped at an accessibility text size.
-      height: TextScaleMetrics.boxHeight(context, base: 176, textHeight: 34),
-      // The box grew by the *clamped* scale, so the text has to be laid out at
-      // the same clamp: unclamped, the rail is sized for 1.6x and painted at
-      // 3.0x, which is an overflow stripe.
-      child: MediaQuery(
-        data: MediaQuery.of(
-          context,
-        ).copyWith(textScaler: TextScaleMetrics.clampedScalerOf(context)),
-        child: ListView.separated(
-          controller: RailArrows.controllerOf(context),
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          itemCount: artists.length,
-          separatorBuilder: (_, _) =>
-              const SizedBox(width: AppSpacing.carouselGap),
-          itemBuilder: (context, index) => _PosterTile(
-            artist: artists[index],
-            baseUrl: reachedAt,
-            apiKey: instance?.credential ?? '',
+        data: (items) => ServicePosterRail<LidarrArtist>(
+          service: ServiceKey.lidarr,
+          items: items,
+          idOf: (artist) => artist.id,
+          titleOf: (artist) => artist.artistName,
+          imagesOf: (artist) => artist.images,
+          // Albums, never tracks: the two are different counts of different
+          // things. Zero is silence, not a caption: `albumCount` reads
+          // `statistics`, which is absent from any artist record the server
+          // sent without it, so "0 albums" would be a fact about the payload
+          // wearing the clothes of a fact about the artist.
+          captionOf: (artist) => switch (artist.albumCount) {
+            0 => null,
+            1 => '1 album',
+            final count => '$count albums',
+          },
+          onTap: (context, artist, heroTag) => context.push(
+            ServiceRoutes.lidarrArtist(artist.id, heroTag: heroTag),
+            extra: artist,
           ),
         ),
       ),
-    );
-  }
-}
-
-class _PosterTile extends StatelessWidget {
-  const _PosterTile({
-    required this.artist,
-    required this.baseUrl,
-    required this.apiKey,
-  });
-
-  final LidarrArtist artist;
-  final String baseUrl;
-  final String apiKey;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final poster = ImageUtils.extractPosterUrl(
-      artist.images,
-      baseUrl: baseUrl,
-      apiKey: apiKey,
-    );
-    // Its own namespace: the Library tab's grid is alive in a sibling branch
-    // and tags a poster of the same artist, and two live Heroes sharing a tag
-    // is an assertion, not a flight.
-    final heroTag = 'lidarr_overview_recent_${artist.id}';
-    // Albums, never tracks. The two are different counts of different things:
-    // an artist with four albums has some hundreds of tracks, and the model
-    // carries both, which is exactly how they get swapped.
-    //
-    // Zero is silence, not a caption. `albumCount` reads `statistics`, which is
-    // nullable on the model and absent from any artist record the server sent
-    // without it, so a plain `'${artist.albumCount} albums'` captions the tile
-    // "0 albums" and says it to a screen reader too, which is a fact about the
-    // payload wearing the clothes of a fact about the artist, in the reassuring
-    // direction. The same guard `global_search_provider.dart` puts on the same
-    // getter for the same reason.
-    final caption = switch (artist.albumCount) {
-      0 => null,
-      1 => '1 album',
-      final count => '$count albums',
-    };
-
-    return SizedBox(
-      width: 96,
-      child: PressableScale(
-        onTap: () => context.push(
-          ServiceRoutes.lidarrArtist(artist.id, heroTag: heroTag),
-          extra: artist,
-        ),
-        // A poster is an image with no name of its own; the tile announces the
-        // artist and the size of their discography as one button.
-        semanticLabel: artist.artistName,
-        semanticValue: caption,
-        excludeChildSemantics: true,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 96,
-              height: 138,
-              child: MediaPosterCard(
-                heroTag: heroTag,
-                imageUrl: poster.url,
-                imageHeaders: poster.headers,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              artist.artistName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelSmall
-                  ?.weight(FontWeight.w600)
-                  .copyWith(color: colorScheme.onSurface),
-            ),
-            if (caption != null)
-              Text(
-                caption,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── 3. History today ───────────────────────────────────────────────────────
-
-class _HistoryTodaySection extends ConsumerWidget {
-  const _HistoryTodaySection();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final entries = ref.watch(lidarrHistoryTodayProvider);
-
-    return ServiceOverviewSection(
-      service: ServiceKey.lidarr,
-      title: 'History',
-      subtitle: 'today',
-      destination: ServiceTab.history,
-      child: AsyncValueWidget<List<LidarrHistoryEntry>>.section(
-        value: entries,
-        service: ServiceKey.lidarr,
-        consequence: "today's history is not shown",
-        loadingLabel: "Loading today's history",
-        onRetry: () => ref.invalidate(lidarrHistoryTodayProvider),
-        skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
-        isEmpty: (items) => items.isEmpty,
-        emptyBuilder: const ServiceOverviewEmpty(
-          icon: Icons.history_rounded,
-          label: 'Nothing yet today',
-        ),
-        data: (items) => Column(
-          children: [for (final entry in items) _HistoryRow(entry: entry)],
-        ),
-      ),
-    );
-  }
-}
-
-class _HistoryRow extends StatelessWidget {
-  const _HistoryRow({required this.entry});
-
-  final LidarrHistoryEntry entry;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final tone = statusToneColor(
-      colorScheme,
-      entry.tone,
-      surface: colorScheme.surfaceContainerLow,
-    );
-
-    return ServiceOverviewRow(
-      spoken: entry.spoken,
-      leading: Container(
-        width: 8,
-        height: 8,
-        margin: const EdgeInsets.only(top: 5),
-        decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
-      ),
-      title: '${entry.subject}\u00A0· ${entry.event.toLowerCase()}',
-      detail: entry.detail,
     );
   }
 }
