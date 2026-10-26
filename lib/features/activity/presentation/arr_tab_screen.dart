@@ -14,7 +14,6 @@ import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_item_tiles.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_tab_helpers.dart';
-import 'package:cupola/features/activity/presentation/widgets/segment_selector.dart';
 import 'package:cupola/features/activity/presentation/widgets/sonarr_wanted_hierarchy.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
@@ -22,6 +21,19 @@ import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 enum ArrTabMode { queue, wanted, history }
+
+enum WantedSegment {
+  missing('Missing'),
+  // Sentence case. The same state is spelled in three places: this pill, the
+  // global screen's pill and `resolveWantedStatus`'s label, and Title Case
+  // here was the odd one out of an app that capitalises a state like a
+  // sentence.
+  cutoffUnmet('Cutoff unmet');
+
+  final String label;
+
+  const WantedSegment(this.label);
+}
 
 /// A tab-sized view over the shared *arr activity contract.
 ///

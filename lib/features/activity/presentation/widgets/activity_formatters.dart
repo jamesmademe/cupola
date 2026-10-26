@@ -324,30 +324,6 @@ String? historySubtitle(Map<String, dynamic> item, ServiceType serviceType) {
   );
 }
 
-String blocklistTitle(Map<String, dynamic> item, ServiceType serviceType) {
-  return switch (serviceType) {
-    ServiceType.movies =>
-      arrPrimaryMediaTitle(item, includeMovieYear: true) ??
-          stringOrNull(item['sourceTitle']) ??
-          'Unknown release',
-    ServiceType.series || ServiceType.music =>
-      arrPrimaryMediaTitle(item) ??
-          stringOrNull(item['sourceTitle']) ??
-          'Unknown release',
-    ServiceType.discover =>
-      stringOrNull(item['sourceTitle']) ?? 'Unknown release',
-  };
-}
-
-String? blocklistSubtitle(Map<String, dynamic> item, ServiceType serviceType) {
-  return activitySecondaryLine(
-    serviceType,
-    item,
-    title: blocklistTitle(item, serviceType),
-    release: stringOrNull(item['sourceTitle']),
-  );
-}
-
 /// The one secondary line every \*arr activity row prints under its title.
 ///
 /// Queue, history and blocklist rows all describe the same thing: "which
