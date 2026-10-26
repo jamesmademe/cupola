@@ -51,24 +51,21 @@ class SeerrAccounts {
     ServiceInstance instance,
     SeerrAccountSignIn account,
   ) async {
-    final settings = _ref.read(currentSettingsProvider);
-    final live = settings.instanceById(instance.id) ?? instance;
-    await _ref
-        .read(settingsProvider.notifier)
-        .updateSettings(
-          settings.copyWithInstance(
-            live.copyWith(
-              url: instance.url,
-              access: instance.access,
-              // An invite's address away comes with the draft; a draft
-              // without one keeps the saved one.
-              away: instance.away,
-              label: instance.label,
-              credential: '',
-              account: account,
-            ),
-          ),
-        );
+    await _ref.read(settingsProvider.notifier).update((settings) {
+      final live = settings.instanceById(instance.id) ?? instance;
+      return settings.copyWithInstance(
+        live.copyWith(
+          url: instance.url,
+          access: instance.access,
+          // An invite's address away comes with the draft; a draft
+          // without one keeps the saved one.
+          away: instance.away,
+          label: instance.label,
+          credential: '',
+          account: account,
+        ),
+      );
+    });
   }
 
   /// Signs [connectionId]'s account out of the server, then empties the
@@ -92,11 +89,10 @@ class SeerrAccounts {
     final instance = settings.instanceById(connectionId);
     if (instance == null) return;
     await signOutOfSeerr(instance, reach: _reachOf(connectionId));
-    final now = _ref.read(currentSettingsProvider);
     await _ref
         .read(settingsProvider.notifier)
-        .updateSettings(
-          now
+        .update(
+          (now) => now
               .copyWithoutInstance(connectionId)
               .copyWithoutUnusedCertificatesOf(instance),
         );
@@ -174,17 +170,16 @@ class SeerrAccounts {
     String connectionId,
     SeerrAccountSignIn Function(SeerrAccountSignIn account) change,
   ) async {
-    final settings = _ref.read(currentSettingsProvider);
-    final instance = settings.instanceById(connectionId);
-    final account = instance?.account;
-    if (instance == null || account == null) return;
-    final next = change(account);
-    if (next == account) return;
-    await _ref
-        .read(settingsProvider.notifier)
-        .updateSettings(
-          settings.copyWithInstance(instance.copyWith(account: next)),
-        );
+    // Read when this change's turn comes, not now: two accounts answering at
+    // once each start from the other's result, and neither is lost.
+    await _ref.read(settingsProvider.notifier).update((settings) {
+      final instance = settings.instanceById(connectionId);
+      final account = instance?.account;
+      if (instance == null || account == null) return settings;
+      final next = change(account);
+      if (next == account) return settings;
+      return settings.copyWithInstance(instance.copyWith(account: next));
+    });
   }
 }
 

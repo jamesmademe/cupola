@@ -723,20 +723,22 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     }
     _liftCredentialsFromAddress();
 
-    final current = ref.read(currentSettingsProvider);
     // Captured before the write: an edited address moves this service off an
     // origin whose certificate may have been pinned, at home or away, and
     // `_maybePromptCertTrust` below can only ever *add* a pin. Left behind,
     // the entry outlives the address: and because `pinForUrl` is keyed purely
     // by origin, any service later pointed back at it would silently reuse
     // the stale trust with no prompt.
-    final prior = current.instanceById(_target.id);
-    var updated = _updateServiceSettings(
-      current,
-    ).copyWithoutUnusedCertificatesOf(prior);
-
+    ServiceInstance? priorInstance;
+    late SettingsModel updated;
     final notifier = ref.read(settingsProvider.notifier);
-    await notifier.updateSettings(updated);
+    await notifier.update((current) {
+      priorInstance = current.instanceById(_target.id);
+      return updated = _updateServiceSettings(
+        current,
+      ).copyWithoutUnusedCertificatesOf(priorInstance);
+    });
+    final prior = priorInstance;
     if (!mounted) return;
     // Saving is the person's word that the credentials are worth trying
     // again, even unchanged (the password was fixed on the daemon, not here).
@@ -805,11 +807,16 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
       );
       if (!mounted || !trust) return null;
 
-      final pinned = updated.copyWithTrustedCertificate(
-        url: url,
-        fingerprint: probe.certificate.fingerprint,
+      // Pinned onto the settings as they are now: the probe and the dialog
+      // took seconds, and what changed meanwhile (a Seerr session ending, a
+      // second form) must not be written back as it was.
+      await notifier.update(
+        (current) => current.copyWithTrustedCertificate(
+          url: url,
+          fingerprint: probe.certificate.fingerprint,
+        ),
       );
-      await notifier.updateSettings(pinned);
+      final pinned = ref.read(currentSettingsProvider);
       return pinned;
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -2182,11 +2189,14 @@ class _ServiceSettingsScreenState extends ConsumerState<ServiceSettingsScreen> {
     );
     if (!result.confirmed || !mounted) return;
 
-    final updated = settings.copyWithTrustedCertificate(
-      url: rawUrl,
-      fingerprint: '',
-    );
-    await ref.read(settingsProvider.notifier).updateSettings(updated);
+    // From the settings as they are now, not as they were before the person
+    // read the dialog.
+    await ref
+        .read(settingsProvider.notifier)
+        .update(
+          (current) =>
+              current.copyWithTrustedCertificate(url: rawUrl, fingerprint: ''),
+        );
     if (!mounted) return;
     SnackBarHelper.info(context, 'Certificate forgotten');
   }

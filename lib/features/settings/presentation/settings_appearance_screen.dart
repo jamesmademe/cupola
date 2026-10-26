@@ -70,6 +70,10 @@ class SettingsAppearanceScreen extends ConsumerWidget {
 
     await ref
         .read(settingsProvider.notifier)
-        .updateSettings(settings.copyWith(themeMode: value));
+        .update(
+          (current) => current.themeMode == value
+              ? current
+              : current.copyWith(themeMode: value),
+        );
   }
 }

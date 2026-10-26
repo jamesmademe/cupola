@@ -383,6 +383,10 @@ class SettingsNotifier extends Notifier<SettingsModel> {
   /// next one writes the same difference again.
   SettingsModel _persisted = const SettingsModel();
 
+  /// Saves run one after the other: a change that reads [state] starts from
+  /// the result of the one before it.
+  Future<void> _queue = Future<void>.value();
+
   @override
   SettingsModel build() {
     final initial = ref.watch(initialSettingsProvider);
@@ -390,20 +394,41 @@ class SettingsNotifier extends Notifier<SettingsModel> {
     return initial;
   }
 
-  Future<void> updateSettings(SettingsModel newSettings) async {
-    await ref
-        .read(settingsServiceProvider)
-        .saveSettings(newSettings, previous: _persisted);
-    _persisted = newSettings;
-    state = newSettings;
-  }
+  /// Applies [change] to the settings as they are *when its turn comes* and
+  /// saves the result; state follows the write, so a failure leaves it as it
+  /// was and throws. Two changes made at once both land, where two
+  /// `updateSettings` built from the same snapshot would have kept one.
+  ///
+  /// [change] returning the model it was given writes nothing.
+  Future<void> update(SettingsModel Function(SettingsModel current) change) =>
+      _inTurn(() async {
+        final next = change(state);
+        if (identical(next, state)) return;
+        await ref
+            .read(settingsServiceProvider)
+            .saveSettings(next, previous: _persisted);
+        _persisted = next;
+        state = next;
+      });
 
-  Future<void> resetSettings() async {
+  /// [update] with a model built beforehand; prefer [update] wherever the
+  /// change is a function of the current settings.
+  Future<void> updateSettings(SettingsModel newSettings) =>
+      update((_) => newSettings);
+
+  Future<void> resetSettings() => _inTurn(() async {
     await ref.read(settingsServiceProvider).clearAll();
     // The Home's last drawings go with the connections they were read from,
     // on disk too: a reset leaves nothing of what the app showed.
     await ref.read(lastKnownStoreProvider).clear();
     _persisted = const SettingsModel();
     state = const SettingsModel();
+  });
+
+  Future<void> _inTurn(Future<void> Function() work) {
+    final run = _queue.then((_) => work());
+    // A failed turn is its caller's to hear about and the next one's to skip.
+    _queue = run.then((_) {}, onError: (Object _) {});
+    return run;
   }
 }
