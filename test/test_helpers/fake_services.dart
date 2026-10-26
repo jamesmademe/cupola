@@ -467,18 +467,24 @@ class FakeSeerrService extends SeerrService {
   }) async => const SeerrSearchAnswer();
 
   @override
-  Future<List<SeerrRequest>> getRequests() async => const [];
+  Future<List<SeerrRequest>> getRequestRows() async => const [];
+
+  /// The rows a test hands over are the rows it means: no title page is read
+  /// for them, as none was when a fake answered `getRequests` whole.
+  @override
+  Future<List<SeerrRequest>> hydrate(List<SeerrRequest> requests) async =>
+      requests;
 
   @override
   Future<List<SeerrRequest>> getActiveRequests() async =>
-      seerrRequestsInMotion(await getRequests());
+      seerrRequestsInMotion(await getRequestRows());
 
   /// The `pending` filter's page, with its count, the way the server
   /// answers it.
   @override
   Future<List<SeerrRequest>> getPendingRequests() async {
     final pending = [
-      for (final request in await getRequests())
+      for (final request in await getRequestRows())
         if (request.status == RequestStatus.pendingApproval) request,
     ];
     return SeerrRequestList(pending, total: pending.length);

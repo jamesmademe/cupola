@@ -76,7 +76,7 @@ class _CountingSeerrService extends FakeSeerrService {
   int calls = 0;
 
   @override
-  Future<List<SeerrRequest>> getRequests() async {
+  Future<List<SeerrRequest>> getRequestRows() async {
     calls++;
     if (failFirst && calls == 1) throw Exception('connection refused');
     return [

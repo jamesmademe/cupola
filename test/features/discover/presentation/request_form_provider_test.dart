@@ -642,7 +642,7 @@ class _CountingSeerr extends _FakeSeerr {
   int requestReads = 0;
 
   @override
-  Future<List<SeerrRequest>> getRequests() async {
+  Future<List<SeerrRequest>> getRequestRows() async {
     requestReads++;
     return const [];
   }

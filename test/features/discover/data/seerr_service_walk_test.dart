@@ -129,4 +129,39 @@ void main() {
     // Pages of three and four overlap too, so the ceiling is the larger.
     expect(client.peakOpen, lessThanOrEqualTo(4));
   });
+
+  test(
+    'the rows come without a title read, and hydrate names them after',
+    () async {
+      final client = _OverlapClient(
+        requests: 120,
+        titleOf: (tmdbId) => 'Movie $tmdbId',
+      );
+      final service = SeerrService(client, numbering: SeerrNumbering.seerr);
+
+      final rows = await service.getRequestRows();
+
+      expect(
+        client.paths.where((p) => p.startsWith('/api/v1/movie/')),
+        isEmpty,
+      );
+      expect(rows, hasLength(120));
+      expect(rows.first.media?.title, 'Unknown Media');
+
+      // Only the rows handed over are named: five rows, five titles at most.
+      final named = await service.hydrate(rows.take(5).toList());
+      expect(
+        named.every((r) => r.media?.title?.startsWith('Movie ') ?? false),
+        isTrue,
+      );
+      expect(
+        client.paths.where((p) => p.startsWith('/api/v1/movie/')).length,
+        lessThanOrEqualTo(5),
+      );
+
+      // A list keeps what the server said of its size.
+      final whole = await service.hydrate(rows);
+      expect((whole as SeerrRequestList).total, 120);
+    },
+  );
 }

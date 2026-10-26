@@ -433,16 +433,47 @@ class SeerrService {
   /// Seerr's own rather than the length of whatever arrived. Declared as a
   /// plain list so that the fakes overriding this, and the providers typed on
   /// it, stay as they are.
-  Future<List<SeerrRequest>> getRequests() async {
+  Future<List<SeerrRequest>> getRequests() async =>
+      hydrate(await getRequestRows());
+
+  /// Every request this server holds, **as Seerr's rows carry them**: no
+  /// title, no artwork, no score, and not one TMDB call.
+  ///
+  /// What a figure is counted from (the KPI strip, how many wait for a
+  /// decision) needs the state of each request and nothing about its title,
+  /// and used to wait for [getRequests] to read a title page for every row
+  /// first. A surface that draws a row hands it to [hydrate]. The contract
+  /// of [getRequests] is this one's: it throws when the first page does not
+  /// come back.
+  Future<List<SeerrRequest>> getRequestRows() async {
     // Asked beside the pages rather than before them: a page waits for it
     // only to decode its rows, never to be sent.
     final numberingRead = numbering();
     final walk = await _walkRequests('all', numbering: numberingRead);
     return SeerrRequestList(
-      await _hydrateRequests(walk.items),
+      walk.items,
       total: walk.total,
       isPartial: walk.isPartial,
     );
+  }
+
+  /// [requests] with the title, the artwork and the score Seerr's rows lack,
+  /// read from the title's page ([_hydrationConcurrency] at a time, once per
+  /// title for as long as this service lives).
+  ///
+  /// A title that cannot be read leaves its row as it was. A
+  /// [SeerrRequestList] keeps its count and its partiality, so the figures
+  /// made of the hydrated rows say what they said of the rows.
+  Future<List<SeerrRequest>> hydrate(List<SeerrRequest> requests) async {
+    final hydrated = await _hydrateRequests(requests);
+    return switch (requests) {
+      SeerrRequestList(:final total, :final isPartial) => SeerrRequestList(
+        hydrated,
+        total: total,
+        isPartial: isPartial,
+      ),
+      _ => hydrated,
+    };
   }
 
   /// The requests still in motion: waiting for approval, being processed, or

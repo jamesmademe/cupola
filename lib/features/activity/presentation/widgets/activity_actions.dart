@@ -459,10 +459,7 @@ class ActivityActions {
   /// Every list the write may have changed, read again.
   static void _refresh(WidgetRef ref, {required bool invalidateRequests}) {
     if (invalidateRequests) {
-      ref.invalidate(requestsProvider);
-      ref.invalidate(requestsForProvider);
-      ref.invalidate(activeRequestsForProvider);
-      ref.invalidate(pendingRequestsForProvider);
+      invalidateSeerrRequests(ref.container);
     }
     ref.read(activityRefreshVersionProvider.notifier).state++;
   }
