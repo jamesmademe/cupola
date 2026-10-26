@@ -3,12 +3,6 @@ import 'package:cupola/core/utils/image_utils.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/features/discover/domain/models/discover_detail_model.dart';
 
-typedef DiscoverDetailRating = ({
-  String name,
-  double value,
-  int votes,
-  String icon,
-});
 
 typedef DiscoverCastMember = ({
   int id,

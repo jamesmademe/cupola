@@ -89,14 +89,8 @@ class AppRadius {
   /// BorderRadius for a selected affordance (nav indicator, segment pills)
   static final BorderRadius borderRadiusPill = BorderRadius.circular(pill);
 
-  /// BorderRadius for extra large elements (the floating bar)
-  static final BorderRadius borderRadiusXl = BorderRadius.circular(xl);
-
   /// BorderRadius for fully rounded elements
   static final BorderRadius borderRadiusFull = BorderRadius.circular(full);
-
-  /// BorderRadius for a poster.
-  static final BorderRadius borderRadiusPoster = BorderRadius.circular(poster);
 
   /// BorderRadius for a text field.
   static final BorderRadius borderRadiusField = BorderRadius.circular(field);

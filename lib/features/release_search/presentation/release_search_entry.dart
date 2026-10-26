@@ -558,17 +558,3 @@ void _recordHeadroom(Ref ref, ReleaseSearchJob job) {
 bool isPathCutoff(ReleaseSearchFailureKind? kind) =>
     kind == ReleaseSearchFailureKind.gatewayTimeout ||
     kind == ReleaseSearchFailureKind.cloudflareCap;
-
-/// Builds the target for a Sonarr season or whole-series action.
-///
-/// Sonarr's `/release` has no series-wide form, so the "whole series" button
-/// searches season 1: that is upstream behaviour, not a shortcut here.
-ReleaseSearchTarget sonarrSeasonTarget({
-  required int seriesId,
-  required int? seasonNumber,
-  required String label,
-}) => ReleaseSearchTarget.season(
-  seriesId: seriesId,
-  seasonNumber: seasonNumber ?? 1,
-  label: label,
-);

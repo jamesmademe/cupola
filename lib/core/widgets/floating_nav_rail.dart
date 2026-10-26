@@ -90,13 +90,6 @@ class FloatingNavRail extends StatelessWidget {
     return wanted > _item ? wanted.ceilToDouble() : _item;
   }
 
-  /// The strip the rail takes from the page: the pill and its margin on
-  /// either side.
-  static double gutterOf(
-    BuildContext context,
-    List<FloatingNavDestination> destinations,
-  ) => _itemWidthOf(context, destinations) + (_inset + _edge) * 2 + margin * 2;
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);

@@ -94,22 +94,6 @@ String formatActivityDateTime(String? isoDate) {
   return parsed == null ? isoDate : formatDateTimeStamp(parsed);
 }
 
-/// `08:12`: the clock and nothing else.
-///
-/// A sibling of [formatActivityDateTime] rather than a change to it: every one
-/// of that function's callers wants the date, and the one surface that does not
-/// is "Finished today", where the date is in the heading. Repeating it on six
-/// consecutive rows is how a band that answers "when today" ends up answering
-/// "which day" six times instead.
-///
-/// 24-hour, like every other clock in the app, and zero-padded so the column
-/// stays a column.
-String formatActivityTimeOnly(String? isoDate) {
-  if (isoDate == null || isoDate.trim().isEmpty) return '—';
-  final parsed = DateTime.tryParse(isoDate);
-  return parsed == null ? isoDate : formatClockTime(parsed);
-}
-
 /// `2026-09-30`: the day an *instant* fell on, on this device's calendar. For a
 /// record that happened at a moment (a History event's `date`), so it names the
 /// same day as its clock time ([formatActivityDateTime]), its relative age and
