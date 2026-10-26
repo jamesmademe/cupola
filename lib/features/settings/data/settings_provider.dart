@@ -377,24 +377,33 @@ ApiClient watchApiClient(Ref ref, ServiceKey service, {String? instanceId}) {
 }
 
 class SettingsNotifier extends Notifier<SettingsModel> {
-  late final SettingsService _service;
+  /// The model last written to disk successfully: what a save is measured
+  /// against, so only the difference is written. [state] is assigned only
+  /// once a write has finished, so a write that fails changes neither, and the
+  /// next one writes the same difference again.
+  SettingsModel _persisted = const SettingsModel();
 
   @override
   SettingsModel build() {
-    _service = ref.watch(settingsServiceProvider);
-    return ref.watch(initialSettingsProvider);
+    final initial = ref.watch(initialSettingsProvider);
+    _persisted = initial;
+    return initial;
   }
 
   Future<void> updateSettings(SettingsModel newSettings) async {
-    await _service.saveSettings(newSettings);
+    await ref
+        .read(settingsServiceProvider)
+        .saveSettings(newSettings, previous: _persisted);
+    _persisted = newSettings;
     state = newSettings;
   }
 
   Future<void> resetSettings() async {
-    await _service.clearAll();
+    await ref.read(settingsServiceProvider).clearAll();
     // The Home's last drawings go with the connections they were read from,
     // on disk too: a reset leaves nothing of what the app showed.
     await ref.read(lastKnownStoreProvider).clear();
+    _persisted = const SettingsModel();
     state = const SettingsModel();
   }
 }

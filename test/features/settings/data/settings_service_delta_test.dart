@@ -278,13 +278,49 @@ SettingsModel _withKey(SettingsModel model, String id, String credential) =>
     );
 
 void main() {
+  test('a typical save writes only what it changed', () async {
+    final disk = await _Disk.empty();
+    final service = await disk.service();
+    final base = _installed();
+    await service.saveSettings(base);
+
+    Future<({int prefs, int secure})> cost(
+      SettingsModel next,
+      SettingsModel previous,
+    ) async {
+      final prefs = disk.prefsStore.prefsWrites;
+      final secure = disk.secure.secureWrites;
+      await service.saveSettings(next, previous: previous);
+      return (
+        prefs: disk.prefsStore.prefsWrites - prefs,
+        secure: disk.secure.secureWrites - secure,
+      );
+    }
+
+    final theme = base.copyWith(themeMode: AppThemeMode.dark);
+    expect(await cost(theme, base), (prefs: 1, secure: 0));
+
+    final region = theme.copyWith(region: 'DE');
+    expect(await cost(region, theme), (prefs: 1, secure: 0));
+
+    final key = _withKey(region, 'sonarr', 'sentinel-sonarr-key-2');
+    final oneKey = await cost(key, region);
+    // That connection's own keys and nothing of the other five.
+    expect(oneKey.secure, lessThanOrEqualTo(4));
+    expect(oneKey.prefs, lessThanOrEqualTo(8));
+
+    expect(await cost(key, key), (prefs: 0, secure: 0));
+  });
+
   for (final delta in [false, true]) {
     group(delta ? 'saving against the last persisted' : 'whole-model', () {
       Future<void> save(
         SettingsService service,
         SettingsModel next,
         SettingsModel? previous,
-      ) => service.saveSettings(next);
+      ) => delta
+          ? service.saveSettings(next, previous: previous)
+          : service.saveSettings(next);
 
       Future<_Disk> savedThrough(List<SettingsModel> models) async {
         final disk = await _Disk.empty();
@@ -471,6 +507,44 @@ void main() {
             await _differences(disk, await wholeOnEmpty(_afterwards())),
             isEmpty,
             reason: 'saved again after write $k',
+          );
+        }
+      });
+
+      test('what an interrupted save half-wrote is not kept when the next '
+          'model no longer differs on it', () async {
+        final calmer = _installed().copyWith(themeMode: AppThemeMode.dark);
+
+        final probe = await _Disk.empty();
+        final probeService = await probe.service();
+        await save(probeService, _installed(), null);
+        probe.ops.writes = 0;
+        await save(probeService, _afterwards(), _installed());
+        final total = probe.ops.writes;
+
+        for (var k = 1; k <= total; k++) {
+          final disk = await _Disk.empty();
+          final service = await disk.service();
+          await save(service, _installed(), null);
+
+          final saving = delta ? service : await disk.service();
+          disk.ops
+            ..writes = 0
+            ..interruptAt = k;
+          try {
+            await save(saving, _afterwards(), _installed());
+          } on StateError {
+            // the interruption
+          }
+          disk.ops.interruptAt = null;
+
+          // The notifier left state alone, so the next change starts from
+          // the model before the interrupted one.
+          await save(saving, calmer, _installed());
+          expect(
+            await _differences(disk, await wholeOnEmpty(calmer)),
+            isEmpty,
+            reason: 'next save after write $k',
           );
         }
       });
