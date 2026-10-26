@@ -14,6 +14,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/utils/parallel_reads.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/lexicon.dart';
@@ -442,8 +443,12 @@ final radarrCutoffUnmetCountProvider = FutureProvider.autoDispose<int?>((
 /// `radarrQueueRecordsProvider`'s `cutShort` beside this.
 final radarrNeedsAttentionProvider =
     FutureProvider.autoDispose<List<RadarrAttentionItem>>((ref) async {
-      final page = await ref.watch(radarrQueueRecordsProvider.future);
-      final cutoff = await ref.watch(radarrCutoffUnmetCountProvider.future);
+      // Both reads start together: the cutoff count does not wait for the
+      // queue. `.wait` surfaces a failure through `unwrapFailure`.
+      final (page, cutoff) = await readTogether(
+        ref.watch(radarrQueueRecordsProvider.future),
+        ref.watch(radarrCutoffUnmetCountProvider.future),
+      );
       final backlog = radarrBelowCutoffItem(cutoff);
       return [
         ...radarrQueueFaults(

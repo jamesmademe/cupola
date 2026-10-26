@@ -27,6 +27,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/utils/parallel_reads.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/lexicon.dart';
@@ -403,9 +404,12 @@ final readarrBelowCutoffProvider =
 /// backoff that its source had declined.
 final readarrNeedsAttentionProvider =
     FutureProvider.autoDispose<List<ReadarrAttentionItem>>((ref) async {
-      final page = await ref.watch(readarrQueueRecordsProvider.future);
-      final authors = await ref.watch(readarrAuthorsProvider.future);
-      final cutoff = await ref.watch(readarrBelowCutoffProvider.future);
+      // The three reads start together (see radarrNeedsAttentionProvider).
+      final (page, authors, cutoff) = await readTogether3(
+        ref.watch(readarrQueueRecordsProvider.future),
+        ref.watch(readarrAuthorsProvider.future),
+        ref.watch(readarrBelowCutoffProvider.future),
+      );
       final backlog = readarrMissingBooksItem(authors);
       return [
         ...readarrQueueFaults(

@@ -24,6 +24,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/utils/parallel_reads.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/lexicon.dart';
@@ -585,31 +586,25 @@ final sonarrBacklogProvider =
     FutureProvider.autoDispose<List<SonarrAttentionItem>>((ref) async {
       final service = ref.watch(sonarrServiceProvider);
 
-      SonarrAttentionItem? missing;
-      try {
-        final page = await service.getMissingPage(
-          page: 1,
-          pageSize: sonarrBacklogPageSize,
-        );
-        missing = sonarrMissingEpisodesItem(
-          page.total,
-          seriesCount: sonarrSeriesSpread(page),
-        );
-      } catch (_) {
-        missing = null;
-      }
+      // Both reads start together; each degrades to nothing on its own.
+      final missingRead = service
+          .getMissingPage(page: 1, pageSize: sonarrBacklogPageSize)
+          .then<SonarrAttentionItem?>(
+            (page) => sonarrMissingEpisodesItem(
+              page.total,
+              seriesCount: sonarrSeriesSpread(page),
+            ),
+          )
+          .catchError((Object _) => null);
+      final cutoffRead = service
+          .getCutoffPage(page: 1, pageSize: sonarrBacklogPageSize)
+          .then<SonarrAttentionItem?>(
+            (page) => sonarrBelowCutoffItem(page.total),
+          )
+          .catchError((Object _) => null);
 
-      SonarrAttentionItem? cutoff;
-      try {
-        final page = await service.getCutoffPage(
-          page: 1,
-          pageSize: sonarrBacklogPageSize,
-        );
-        cutoff = sonarrBelowCutoffItem(page.total);
-      } catch (_) {
-        cutoff = null;
-      }
-
+      final missing = await missingRead;
+      final cutoff = await cutoffRead;
       return [?missing, ?cutoff];
     });
 
@@ -619,8 +614,10 @@ final sonarrBacklogProvider =
 /// outstanding.
 final sonarrNeedsAttentionProvider =
     FutureProvider.autoDispose<List<SonarrAttentionItem>>((ref) async {
-      final page = await ref.watch(sonarrQueueRecordsProvider.future);
-      final backlog = await ref.watch(sonarrBacklogProvider.future);
+      final (page, backlog) = await readTogether(
+        ref.watch(sonarrQueueRecordsProvider.future),
+        ref.watch(sonarrBacklogProvider.future),
+      );
       return [
         ...sonarrQueueFaults(
           page.recordMaps,
