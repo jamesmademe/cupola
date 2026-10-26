@@ -1434,7 +1434,7 @@ class LidarrFake extends ArrFake {
         'albumType': 'Album',
         'monitored': true,
         'releaseDate': id == 4
-            ? c.ahead(const Duration(days: 2, hours: 3))
+            ? c.ahead(const Duration(days: 1, hours: 6))
             : '$year-01-01T00:00:00Z',
         'images': const <Object?>[],
         'duration': id == 3 ? 1260000 : 0,
@@ -1454,6 +1454,125 @@ class LidarrFake extends ArrFake {
     for (final album in _albums(c))
       if (album['id'] == 4) album,
   ];
+
+  /// The wishlist: the albums Lidarr monitors and holds no file of, which
+  /// in this library is the anniversary edition alone.
+  @override
+  List<JsonMap> missing(ServerContext c) => [
+    for (final album in _albums(c))
+      if ((album['statistics'] as JsonMap)['trackFileCount'] == 0) album,
+  ];
+
+  /// What Lidarr's history holds, newest first: Sintel's tags rewritten
+  /// today, then the two older albums grabbed and filed weeks ago, a record
+  /// per track file as Lidarr writes them (the app folds them back into one
+  /// album). No import is from this week, so the Arrived band, which counts
+  /// the week's imports, stays the films' and episodes'. The queue is empty:
+  /// every download of the world is a film or an episode, and a Lidarr row
+  /// has to join one.
+  @override
+  List<JsonMap> history(ServerContext c) {
+    final albums = {for (final album in _albums(c)) album['id'] as int: album};
+    var id = 0;
+    final records = <JsonMap>[];
+
+    // The album as a record embeds it: without its own copy of the artist.
+    JsonMap embedded(int albumId) => {...albums[albumId]!}..remove('artist');
+
+    void grabbed(int albumId, String release, String date) {
+      records.add({
+        'id': ++id,
+        'albumId': albumId,
+        'artistId': 1,
+        'eventType': 'grabbed',
+        'sourceTitle': release,
+        'date': date,
+        'quality': _format('FLAC', 6),
+        'downloadId': _albumDownloadId(albumId),
+        'artist': _artist(c),
+        'album': embedded(albumId),
+        'data': {'indexer': 'Fjord Tracker', 'downloadClient': 'qBittorrent'},
+      });
+    }
+
+    // One record per track file, newest first: the last track on top.
+    void perTrack(
+      int albumId,
+      String eventType,
+      int tracks,
+      String Function(int track) date, {
+      required String release,
+      bool retag = false,
+    }) {
+      final album = albums[albumId]!;
+      final folder =
+          '${album['title']} (${(album['releaseDate'] as String).substring(0, 4)})';
+      for (var n = tracks; n >= 1; n--) {
+        final name =
+            '${n.toString().padLeft(2, '0')} ${_trackTitle(albumId, n)}.flac';
+        final path = '${rootFolder(c)}/Jan Morgenstern/$folder/$name';
+        records.add({
+          'id': ++id,
+          'albumId': albumId,
+          'artistId': 1,
+          'trackId': albumId * 100 + n,
+          'eventType': eventType,
+          'sourceTitle': retag ? path : release,
+          'date': date(n),
+          'quality': _format('FLAC', 6),
+          'downloadId': _albumDownloadId(albumId),
+          'artist': _artist(c),
+          'album': embedded(albumId),
+          'data': {
+            if (!retag)
+              'droppedPath': '/mnt/tank/downloads/complete/$release/$name',
+            if (!retag) 'importedPath': path,
+            if (retag) 'path': path,
+            'size': 60000000,
+          },
+        });
+      }
+    }
+
+    const sintel = 'Jan Morgenstern - Sintel (2010) FLAC';
+    const bunny = 'Jan Morgenstern - Big Buck Bunny (2008) FLAC';
+    const elephants = 'Jan Morgenstern - Elephants Dream (2006) FLAC';
+    perTrack(
+      3,
+      'trackFileRetagged',
+      5,
+      (n) => c.agoToday(Duration(hours: 1, minutes: 50 - n)),
+      release: sintel,
+      retag: true,
+    );
+    perTrack(
+      2,
+      'trackFileImported',
+      5,
+      (n) => c.ago(Duration(days: 9, hours: 4, minutes: 50 - n)),
+      release: bunny,
+    );
+    grabbed(2, bunny, c.ago(const Duration(days: 9, hours: 5)));
+    perTrack(
+      1,
+      'trackFileImported',
+      5,
+      (n) => c.ago(Duration(days: 31, hours: 7, minutes: 50 - n)),
+      release: elephants,
+    );
+    grabbed(1, elephants, c.ago(const Duration(days: 31, hours: 8)));
+    return records;
+  }
+
+  /// The id a torrent of album [albumId] carries in history: forty hex
+  /// digits, upper-cased as the arrs record a hash.
+  static String _albumDownloadId(int albumId) =>
+      'D0C1A2B3${albumId.toString().padLeft(32, '0')}';
+
+  /// Track [n] of album [albumId]: Sintel's own, a numbered one elsewhere.
+  static String _trackTitle(int albumId, int n) => albumId == 3
+      ? _sintelTracks[n - 1].$2
+      : 'Track ${n.toString().padLeft(2, '0')}';
 
   @override
   NetworkReply? own(NetworkRequest r, ServerContext c) {
@@ -1520,6 +1639,130 @@ class ReadarrFake extends ArrFake {
     (7, 'Michael Strogoff', 1876, true),
   ];
 
+  /// A book as a wanted, calendar or history record embeds it: the book
+  /// itself and, for the rows that name one, its author.
+  JsonMap _book(
+    ServerContext c,
+    (int, String, int, bool) entry, {
+    String? releaseDate,
+    bool withAuthor = true,
+  }) {
+    final (id, title, year, onDisk) = entry;
+    return {
+      'id': id,
+      'authorId': 1,
+      'title': title,
+      'monitored': true,
+      'releaseDate': releaseDate ?? '$year-01-01T00:00:00Z',
+      'images': const <Object?>[],
+      'statistics': {
+        'bookFileCount': onDisk ? 1 : 0,
+        'bookCount': 1,
+        'totalBookCount': 1,
+      },
+      if (withAuthor) 'author': _author(c),
+    };
+  }
+
+  /// The wishlist: the one book of his Readarr monitors and holds no file of.
+  @override
+  List<JsonMap> missing(ServerContext c) => [
+    for (final entry in _books)
+      if (!entry.$4) _book(c, entry),
+  ];
+
+  /// A posthumous manuscript of his, out in two days: the one dated thing
+  /// the calendar holds. Not in his book list, which is the seven he wrote.
+  @override
+  List<JsonMap> calendar(ServerContext c) => [
+    _book(c, (
+      8,
+      'Paris in the Twentieth Century',
+      1994,
+      false,
+    ), releaseDate: c.ahead(const Duration(days: 2))),
+  ];
+
+  /// What Readarr's history holds, newest first: Around the World in Eighty
+  /// Days retagged today, then two older books of his grabbed and filed
+  /// weeks ago. No import is from this week, so the Arrived band, which
+  /// counts the week's imports, stays the films' and episodes'. The queue is
+  /// empty: every download of the world is a film or an episode, and a
+  /// Readarr row has to join one.
+  @override
+  List<JsonMap> history(ServerContext c) {
+    var id = 0;
+    final records = <JsonMap>[];
+
+    void event(
+      int bookId,
+      String eventType,
+      String release,
+      String date, {
+      Map<String, Object?> data = const {},
+    }) {
+      final entry = _books.firstWhere((b) => b.$1 == bookId);
+      records.add({
+        'id': ++id,
+        'bookId': bookId,
+        'authorId': 1,
+        'eventType': eventType,
+        'sourceTitle': release,
+        'date': date,
+        'quality': _format('EPUB', 3),
+        'downloadId': 'E0B0C0D0${bookId.toString().padLeft(32, '0')}',
+        'book': _book(c, entry, withAuthor: false),
+        'author': _author(c),
+        'data': data,
+      });
+    }
+
+    void filed(int bookId, String release, String date) {
+      final entry = _books.firstWhere((b) => b.$1 == bookId);
+      final file = '${entry.$2}.epub';
+      event(
+        bookId,
+        'bookFileImported',
+        release,
+        date,
+        data: {
+          'droppedPath': '/mnt/user/downloads/complete/$release/$file',
+          'importedPath': '${rootFolder(c)}/Jules Verne/${entry.$2}/$file',
+          'size': 7000000,
+        },
+      );
+    }
+
+    const strogoff = 'Jules.Verne.Michael.Strogoff.EPUB-WORLD';
+    const island = 'Jules.Verne.The.Mysterious.Island.EPUB-WORLD';
+    // Today a retag, which Readarr writes when it rewrites a file's tags.
+    event(
+      5,
+      'bookFileRetagged',
+      '${rootFolder(c)}/Jules Verne/Around the World in Eighty Days/'
+          'Around the World in Eighty Days.epub',
+      c.agoToday(const Duration(hours: 1, minutes: 20)),
+      data: const {'size': 7000000},
+    );
+    filed(7, strogoff, c.ago(const Duration(days: 9, hours: 3)));
+    event(
+      7,
+      'grabbed',
+      strogoff,
+      c.ago(const Duration(days: 9, hours: 3, minutes: 20)),
+      data: const {'indexer': 'Archive', 'downloadClient': 'NZBGet'},
+    );
+    filed(6, island, c.ago(const Duration(days: 23, hours: 9)));
+    event(
+      6,
+      'grabbed',
+      island,
+      c.ago(const Duration(days: 23, hours: 9, minutes: 25)),
+      data: const {'indexer': 'Archive', 'downloadClient': 'NZBGet'},
+    );
+    return records;
+  }
+
   @override
   NetworkReply? answer(NetworkRequest r, ServerContext c) {
     // Readarr's own profile, for books.
@@ -1540,20 +1783,7 @@ class ReadarrFake extends ArrFake {
       '/api/v1/author/1' => NetworkReply.json(_author(c)),
       '/api/v1/book' => NetworkReply.json([
         if (r.query['authorId'] case null || '1')
-          for (final (id, title, year, onDisk) in _books)
-            {
-              'id': id,
-              'authorId': 1,
-              'title': title,
-              'monitored': true,
-              'releaseDate': '$year-01-01T00:00:00Z',
-              'images': const <Object?>[],
-              'statistics': {
-                'bookFileCount': onDisk ? 1 : 0,
-                'bookCount': 1,
-                'totalBookCount': 1,
-              },
-            },
+          for (final entry in _books) _book(c, entry, withAuthor: false),
       ]),
       _ => null,
     };
@@ -1822,36 +2052,15 @@ class BazarrFake extends ServiceFake {
       case '/api/movies/history':
       case '/api/episodes/history':
         return NetworkReply.json({'data': const <Object?>[], 'total': 0});
-      // By id, the one title each page of the world opens; the whole
-      // library is not modelled and reads empty.
+      // The library as a page, or, by id, the one title a page of the world
+      // opens.
       case '/api/movies':
-        final ids = _ids(r, 'radarrid[]');
-        return _rows([
-          if (ids != null && ids.contains(_tearsOfSteel))
-            {
-              'radarrId': _tearsOfSteel,
-              'title': WorldTitles.tearsOfSteel.title,
-              'year': WorldTitles.tearsOfSteel.year,
-              'monitored': true,
-              'missing_subtitles': _german,
-              'subtitles': const <Object?>[],
-            },
-        ]);
+        return _library(r, _movies(), 'radarrid[]', 'radarrId');
       case '/api/series':
-        final ids = _ids(r, 'seriesid[]');
-        return _rows([
-          if (ids != null &&
-              ids.contains(_cosmosLaundromat) &&
-              c.profile.bazarrFollows.contains(ServiceKey.sonarr))
-            {
-              'sonarrSeriesId': _cosmosLaundromat,
-              'title': WorldTitles.cosmosLaundromat.title,
-              'year': WorldTitles.cosmosLaundromat.year,
-              'monitored': true,
-              'episodeMissingCount': 3,
-              'episodeFileCount': 4,
-            },
-        ]);
+        if (!c.profile.bazarrFollows.contains(ServiceKey.sonarr)) {
+          return _rows(const []);
+        }
+        return _library(r, _series(), 'seriesid[]', 'sonarrSeriesId');
       case '/api/episodes':
         // Bazarr refuses this read without an id.
         final ids = _ids(r, 'seriesid[]');
@@ -1861,9 +2070,11 @@ class BazarrFake extends ServiceFake {
             status: 404,
           );
         }
+        if (!c.profile.bazarrFollows.contains(ServiceKey.sonarr)) {
+          return _rows(const []);
+        }
         return _rows([
-          if (ids.contains(_cosmosLaundromat) &&
-              c.profile.bazarrFollows.contains(ServiceKey.sonarr))
+          if (ids.contains(_cosmosLaundromat))
             for (var e = 1; e <= 4; e++)
               {
                 'sonarrSeriesId': _cosmosLaundromat,
@@ -1880,6 +2091,30 @@ class BazarrFake extends ServiceFake {
                 ],
                 'missing_subtitles': e < 4 ? _italian : const <Object?>[],
               },
+          // Night Shift has both languages on all of its four.
+          if (ids.contains(_nightShift))
+            for (var e = 1; e <= 4; e++)
+              {
+                'sonarrSeriesId': _nightShift,
+                'sonarrEpisodeId': 2010 + e,
+                'season': 2,
+                'episode': e,
+                'title': 'Episode $e',
+                'monitored': true,
+                'subtitles': [
+                  for (final (language, code) in const [
+                    (_english, 'en'),
+                    (_italian, 'it'),
+                  ])
+                    {
+                      ...language[0],
+                      'path':
+                          '/mnt/tank/media/series/Night Shift/Season 02/'
+                          'Night Shift S02E0$e.$code.srt',
+                    },
+                ],
+                'missing_subtitles': const <Object?>[],
+              },
         ]);
     }
     return null;
@@ -1888,6 +2123,87 @@ class BazarrFake extends ServiceFake {
   /// The Radarr and Sonarr ids Bazarr follows the world's titles under.
   static const _tearsOfSteel = 5;
   static const _cosmosLaundromat = 1;
+  static const _nightShift = 2;
+
+  /// The films Bazarr holds subtitles for: the ones the first Radarr has a
+  /// file of. Tears of Steel is the one still wanting a language, German, as
+  /// the Wanted tab says; the others have theirs.
+  List<JsonMap> _movies() => [
+    for (final (id, title, languages) in const [
+      (3, WorldTitles.coffeeRun, [_english, _italian]),
+      (4, WorldTitles.sintel, [_english, _italian, _german]),
+      (_tearsOfSteel, WorldTitles.tearsOfSteel, [_english]),
+      (6, WorldTitles.elephantsDream, [_english, _italian]),
+    ])
+      {
+        'radarrId': id,
+        'title': title.title,
+        'sortTitle': title.title.toLowerCase(),
+        'year': title.year,
+        'path': '/mnt/tank/media/films/${title.title} (${title.year})',
+        'monitored': true,
+        'profileId': 1,
+        'tags': const <Object?>[],
+        'missing_subtitles': id == _tearsOfSteel ? _german : const <Object?>[],
+        'subtitles': [
+          for (final language in languages)
+            {
+              ...language[0],
+              'path':
+                  '/mnt/tank/media/films/${title.title} (${title.year})/'
+                  '${title.title} (${title.year}).${language[0]['code2']}.srt',
+            },
+        ],
+      },
+  ];
+
+  /// The series Bazarr follows through Sonarr: Cosmos Laundromat, three of
+  /// whose four episodes still want Italian, and Night Shift, complete.
+  List<JsonMap> _series() => [
+    for (final (id, title, missing, files) in const [
+      (_cosmosLaundromat, WorldTitles.cosmosLaundromat, 3, 4),
+      (_nightShift, WorldTitles.nightShift, 0, 4),
+    ])
+      {
+        'sonarrSeriesId': id,
+        'title': title.title,
+        'sortTitle': title.title.toLowerCase(),
+        'year': title.year,
+        'path': '/mnt/tank/media/series/${title.title}',
+        'monitored': true,
+        'profileId': 1,
+        'tags': const <Object?>[],
+        'episodeMissingCount': missing,
+        'episodeFileCount': files,
+      },
+  ];
+
+  /// [rows] as Bazarr lists a library: the titles whose [idKey] a `name[]`
+  /// filter asked for, or, with no filter, a page of `start` and `length`
+  /// and the size of the whole.
+  static NetworkReply _library(
+    NetworkRequest r,
+    List<JsonMap> rows,
+    String name,
+    String idKey,
+  ) {
+    final ids = _ids(r, name);
+    if (ids != null) {
+      return _rows([
+        for (final row in rows)
+          if (ids.contains(row[idKey])) row,
+      ]);
+    }
+    final start = (int.tryParse(r.query['start'] ?? '') ?? 0).clamp(
+      0,
+      rows.length,
+    );
+    final length = int.tryParse(r.query['length'] ?? '') ?? rows.length;
+    return NetworkReply.json({
+      'data': rows.skip(start).take(length < 0 ? rows.length : length).toList(),
+      'total': rows.length,
+    });
+  }
 
   static const _german = [
     {'name': 'German', 'code2': 'de', 'code3': 'deu'},
@@ -2019,6 +2335,12 @@ Map<String, Object?> arrQueueRecord(
 }
 
 bool _usenet(WorldDownload d) => d.client == 'sabnzbd' || d.client == 'nzbget';
+
+/// The quality of a music or book file, which is its format: `FLAC`, `EPUB`.
+Map<String, Object?> _format(String name, int id) => {
+  'quality': {'id': id, 'name': name},
+  'revision': {'version': 1, 'real': 0, 'isRepack': false},
+};
 
 Map<String, Object?> _quality(String name) => {
   'quality': {
