@@ -251,3 +251,70 @@ class ImportReadings {
     );
   }
 }
+
+/// Any arr's own answers, straight to its API, for the server half of a manual
+/// import journey: Sonarr and Lidarr, where [ImportReadings] reads Radarr.
+class ArrApi {
+  ArrApi(this.base, this.apiKey);
+
+  /// `http://127.0.0.1:<port>/api/v<n>`.
+  final String base;
+  final String apiKey;
+
+  Future<Object?> get(String path) async {
+    final client = HttpClient();
+    try {
+      final request = await client.getUrl(Uri.parse('$base$path'));
+      request.headers.set('X-Api-Key', apiKey);
+      final response = await request.close();
+      final body = await response.transform(utf8.decoder).join();
+      if (response.statusCode != 200) {
+        fail('$path answered ${response.statusCode}: $body');
+      }
+      return jsonDecode(body);
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  /// Sonarr's episode [season]x[number] of the series named [title].
+  Future<Map<String, dynamic>> episode(
+    String title,
+    int season,
+    int number,
+  ) async {
+    final series = (await get('/series') as List).cast<Map<String, dynamic>>();
+    final id = series.firstWhere((item) => item['title'] == title)['id'];
+    final episodes = (await get('/episode?seriesId=$id') as List)
+        .cast<Map<String, dynamic>>();
+    return episodes.firstWhere(
+      (item) =>
+          item['seasonNumber'] == season && item['episodeNumber'] == number,
+    );
+  }
+
+  /// The path of the file Sonarr holds for [episode], or null.
+  Future<String?> episodeFilePath(Map<String, dynamic> episode) async {
+    final id = episode['episodeFileId'] as int? ?? 0;
+    if (id == 0) return null;
+    final file = await get('/episodefile/$id') as Map<String, dynamic>;
+    return file['relativePath'] as String?;
+  }
+
+  /// The tracks of [album] by [artist], each with the file it holds
+  /// (`trackFileId` 0 when none).
+  Future<List<Map<String, dynamic>>> albumTracks(
+    String artist,
+    String album,
+  ) async {
+    final artists = (await get('/artist') as List).cast<Map<String, dynamic>>();
+    final artistId = artists.firstWhere(
+      (item) => item['artistName'] == artist,
+    )['id'];
+    final albums = (await get('/album?artistId=$artistId') as List)
+        .cast<Map<String, dynamic>>();
+    final albumId = albums.firstWhere((item) => item['title'] == album)['id'];
+    return (await get('/track?albumId=$albumId') as List)
+        .cast<Map<String, dynamic>>();
+  }
+}
