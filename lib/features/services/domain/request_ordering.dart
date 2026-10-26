@@ -23,22 +23,6 @@ library;
 
 import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 
-/// How many requests the hub shows before deferring to the full list.
-///
-/// Five rather than the three the old rail showed: pending rows now sort to the
-/// top and carry their own actions, so a stack with two approvals waiting would
-/// otherwise have room for exactly one line of recent history behind them.
-const int servicesRequestsPreviewLimit = 5;
-
-/// The Requests header, spoken, when something is waiting on a decision.
-///
-/// The header silences its own subtree, so the visible "3 PENDING" badge is not
-/// announced unless it is folded in here.
-String servicesRequestsHeaderLabel({required int pending}) {
-  final noun = pending == 1 ? 'request' : 'requests';
-  return 'Requests, $pending $noun awaiting approval';
-}
-
 /// Whether this request is waiting on a human decision.
 ///
 /// Reads [SeerrRequest.status] and **not** `displayStatus`. That distinction is
@@ -80,11 +64,3 @@ List<SeerrRequest> sortRequestsPendingFirst(
 
   return sorted.take(limit).toList(growable: false);
 }
-
-/// How many requests are waiting on a decision, across the whole set.
-///
-/// Counted before [sortRequestsPendingFirst] applies its limit, so the header's
-/// count tells the truth even when there are more pending requests than the
-/// region has room to show.
-int countAwaitingApproval(List<SeerrRequest> requests) =>
-    requests.where(isAwaitingApproval).length;

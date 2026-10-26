@@ -86,20 +86,6 @@ const String servicesNotSetUpCellLabel = 'Not set up\u00A0· Add it';
 /// The card shows an em dash; this is the spoken form of it.
 const String servicesFiguresUnavailableLabel = 'figures unavailable';
 
-/// The STACK region header: `Stack · 16 · 1 more to set up`.
-///
-/// The count is the whole registry, not the configured subset, which is the
-/// point: the region is the inventory of what this app can talk to, and the
-/// trailing clause is how many of them are still dark.
-String servicesStackHeaderValue({
-  required int registrySize,
-  required int notSetUp,
-}) => joinSpokenParts([
-  '$registrySize services',
-  if (notSetUp > 0)
-    notSetUp == 1 ? '1 more to set up' : '$notSetUp more to set up',
-]);
-
 /// A domain band's permanent health line: `4 of 5 clean · Bazarr degraded`.
 ///
 /// Permanent, where the line it replaces appeared only while the band was folded,
@@ -315,29 +301,3 @@ String servicesRetryLabel(int count) => count == 2 ? 'Retry both' : 'Retry';
 /// single declared service, so it stayed silent instead.
 String servicesSectionOfflineMessage(List<String> offlineServiceTitles) =>
     servicesAlertBandMessage(offlineServiceTitles, maxNamed: 2);
-
-/// What one Downloading row announces after its title.
-///
-/// Warning first, then the progress the user came for, then the release detail
-/// last so it can be interrupted. On screen the progress bar and the "75%" sit
-/// in sibling subtrees; here they are one field.
-///
-/// [percent] is null when the client reports no progress, and is simply absent
-/// then, the row paints nothing in that slot either, and the section is already
-/// headed "Downloading".
-///
-/// [warning] is the client's own message ("Download stalled", "Not an upgrade"),
-/// spoken in full. It used to be a bool that produced the bare word "Warning",
-/// which named that something was wrong without saying what, while the actual
-/// reason sat unused in the model. The visible pill is still a scan marker
-/// because there is no room for a sentence in it; the reason lives one tap away
-/// on `/activity`, and now also in the ear.
-String downloadRowValue({
-  required String subtitle,
-  required int? percent,
-  required String? warning,
-}) => joinSpokenParts([
-  warning,
-  percent == null ? null : '${spokenPercent(percent)} downloaded',
-  spokenFromDotted(subtitle),
-]);

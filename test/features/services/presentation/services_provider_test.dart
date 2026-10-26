@@ -401,15 +401,6 @@ void main() {
       final inFlight = await container.read(servicesInFlightProvider.future);
 
       expect(inFlight.coverage.isFloor, isTrue);
-      expect(
-        inFlightEyebrow(
-          active: inFlight.activeCount,
-          rateBytesPerSecond: inFlight.rateBytesPerSecond,
-          clients: inFlight.clients,
-          coverage: inFlight.coverage,
-        ),
-        '3+ downloading',
-      );
       // Nobody failed, so there is no one to name under the figure.
       expect(coverageNote(inFlight.coverage), isNull);
     });

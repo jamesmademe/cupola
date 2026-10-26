@@ -36,7 +36,6 @@ import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
-import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 
@@ -100,39 +99,6 @@ enum DecisionSource {
 
   /// The services this source reads.
   final List<ServiceKey> services;
-}
-
-/// What the region shows. Three different things used to read the same:
-/// nothing at all, and only one of them is "nothing needs you".
-enum DecisionsRegion {
-  /// Nothing to show yet and a source still out: a skeleton, because absence
-  /// would claim nothing is waiting before anyone has said so.
-  loading,
-
-  /// Every source failed: one fault line, because absence would say the same
-  /// "nothing needs you" over a stack that could not be asked.
-  failed,
-
-  /// Every source that answered had nothing waiting: no region. Presence is
-  /// the signal.
-  absent,
-
-  /// Something is waiting.
-  shown,
-}
-
-/// Which of the four [decisions] and [coverage] call for.
-///
-/// Decisions win over everything else: a source still out or a source that
-/// failed is no reason to hold back the requests that did arrive.
-DecisionsRegion decisionsRegion(
-  List<DashboardDecision> decisions,
-  SourceCoverage coverage,
-) {
-  if (decisions.isNotEmpty) return DecisionsRegion.shown;
-  if (coverage.pending.isNotEmpty) return DecisionsRegion.loading;
-  if (coverage.everySourceFailed) return DecisionsRegion.failed;
-  return DecisionsRegion.absent;
 }
 
 /// What kind of thing is waiting.
@@ -500,12 +466,6 @@ String _titlesSummary(List<String> titles) {
   return '${distinct.take(2).join(', ')} and ${distinct.length - 2} more';
 }
 
-/// How many items the region stands for, grouped rows counted by their
-/// members. What "See all" and the eyebrow print: the number of rows is a
-/// layout fact, not a count of anything.
-int decisionItemCount(List<DashboardDecision> decisions) =>
-    decisions.fold(0, (sum, decision) => sum + decision.count);
-
 /// Faults before backlog, oldest first inside a kind.
 ///
 /// Stable by construction: the sort is decorated with the source index, because
@@ -556,42 +516,6 @@ int decisionCapFor({required bool desktopShell, required bool compact}) {
   if (!desktopShell) return 3;
   return compact ? 2 : 4;
 }
-
-/// The region's eyebrow: how many are waiting, and of what.
-///
-/// Names the kinds present rather than a fixed list, so a stack with nothing but
-/// requests does not advertise stalls and certificates it does not have.
-///
-/// [floor] when a source answered with only part of itself
-/// ([SourceCoverage.isFloor]): the queue's faults were found in the rows a walk
-/// read before it stopped, so there may be more, and the count is `3+`.
-String decisionsEyebrow(
-  List<DashboardDecision> decisions, {
-  bool floor = false,
-}) {
-  if (decisions.isEmpty) return '';
-  final total = decisionItemCount(decisions);
-  final noun = total == 1 && !floor ? 'item' : 'items';
-  final kinds = <String>[];
-  for (final decision in decisions) {
-    final word = _kindNoun(decision.kind);
-    if (!kinds.contains(word)) kinds.add(word);
-  }
-  final count = floor ? Lexicon.floor(total) : '$total';
-  return '$count $noun\u00A0· ${kinds.join(', ')}';
-}
-
-String _kindNoun(DecisionKind kind) => switch (kind) {
-  DecisionKind.stalledDownload => 'stalls',
-  DecisionKind.importBlocked => 'blocked imports',
-  DecisionKind.failedImport => 'imports',
-  DecisionKind.storageAlert => 'alerts',
-  DecisionKind.connectionFault => 'connections',
-  DecisionKind.serviceHealth => 'health checks',
-  DecisionKind.failingIndexer => 'faults',
-  DecisionKind.expiringCertificate => 'certs',
-  DecisionKind.pendingRequest => 'requests',
-};
 
 /// What the trailing control on a row is called.
 ///
