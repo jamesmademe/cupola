@@ -1,3 +1,38 @@
+/// The manual import journeys (catalogue M-01 to M-15): the verbs, the server
+/// readers, and the runbook for the people and agents who run them.
+///
+/// Running the family. The journeys share one simulator, so run one
+/// `flutter test` at a time and wait for its last line before the next:
+///
+/// ```bash
+/// flutter test integration_test/journeys/manual_import_wizard_radarr_journey_test.dart \
+///   -d 403B5E0A-6A4E-4CB4-A151-87A6DA34E55F --tags e2e --run-skipped
+/// ```
+///
+/// The same command runs the Sonarr and Lidarr wizard files, and the two queue
+/// files (`manual_import_queue_*_journey_test.dart`). Name one case with
+/// `--plain-name 'M-14'`. The lab must be up (`testlab.py up`, then `doctor`).
+/// The queue files reset the lab to `l13-golden` before each case; the wizard
+/// files only apply their scenario, and M-04 puts Psycho (1998) back when it is
+/// missing. Never run `flutter test` on the lab's simulator while another run
+/// is still going: a second run on the same device ends the first one with
+/// `did not complete`, and that is not an app fault.
+///
+/// Reading a failure. The message says which side broke:
+///
+/// - `The surface never drew "X". It drew: …` is the app: it says something
+///   else than the catalogue's words. Compare the list it drew with the
+///   catalogue row and fix the word in the finder, not the app.
+/// - `the lab refused "scenario apply …"` is the lab: the case's preconditions
+///   are not there (a file already taken, a track with a file). Run the
+///   scenario's teardown from the lab's own directory, or reset the lab.
+/// - A failed `expect` with a server reading (`reason:`) is the server: the
+///   app said `Completed` or `Imported`, and the arr does not hold the file.
+///   The reader prints the record the arr sent.
+/// - `Bad state: No element` on a finder is a word the app does not draw:
+///   the surface text is in the log just before the stack.
+library;
+
 import 'dart:convert';
 import 'dart:io';
 
