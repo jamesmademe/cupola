@@ -293,6 +293,15 @@ class ArrApi {
     );
   }
 
+  /// The titles of the downloads in Sonarr's queue.
+  Future<List<String>> queueTitles() async {
+    final page = await get('/queue?page=1&pageSize=100') as Map;
+    return [
+      for (final record in (page['records'] as List))
+        (record as Map)['title'] as String,
+    ];
+  }
+
   /// The path of the file Sonarr holds for [episode], or null.
   Future<String?> episodeFilePath(Map<String, dynamic> episode) async {
     final id = episode['episodeFileId'] as int? ?? 0;
