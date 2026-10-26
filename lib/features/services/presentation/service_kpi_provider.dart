@@ -517,7 +517,7 @@ String _notAnswering(ServiceKey service, Object? error) =>
 /// The shared KPI set for a media server, identical for Jellyfin and Plex.
 ///
 /// Three metrics, and the order is load-bearing in two ways that
-/// `resolveServiceSignal` depends on.
+/// `resolveServiceSignalPair` depends on.
 ///
 /// **`Streams` is first, so it is the resting fallback.** With nothing flagged
 /// the matrix cell shows `kpis.first`, and `0 streams` is both true and live:

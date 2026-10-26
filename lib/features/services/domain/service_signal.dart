@@ -130,16 +130,6 @@ const Set<String> _invariantLabels = {'series'};
 /// service added to the registry gets a correct live line for free, and the
 /// judgment stays in one place instead of being restated here and drifting.
 ///
-/// Returns null only when a service reports no KPIs at all, in which case the
-/// cell shows its reachability and nothing else.
-/// Kept as the head of [resolveServiceSignalPair] rather than as a second
-/// implementation of the same ranking: the deck, the status bar and the picker
-/// still ask for one figure, and two functions choosing "the most important KPI"
-/// by two rules is how the cell and the deck end up disagreeing about what a
-/// service is doing.
-ServiceSignal? resolveServiceSignal(List<ServiceKpi> kpis) =>
-    resolveServiceSignalPair(kpis)?.primary;
-
 /// The two figures one card carries, each keeping its own tone.
 ///
 /// The card draws two because one was never the whole answer: `2 038 movies` and
