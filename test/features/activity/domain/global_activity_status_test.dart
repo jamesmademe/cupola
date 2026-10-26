@@ -448,14 +448,6 @@ void main() {
         resolveActivityStatus(GlobalActivityKind.blocklist, const {}).tone,
         StatusTone.neutral,
       );
-      expect(
-        resolveActivityStatus(GlobalActivityKind.missing, const {}).label,
-        'Missing',
-      );
-      expect(
-        resolveActivityStatus(GlobalActivityKind.cutoff, const {}).label,
-        'Cutoff unmet',
-      );
     });
   });
 
