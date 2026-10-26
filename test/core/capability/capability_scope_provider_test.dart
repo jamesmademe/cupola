@@ -63,7 +63,7 @@ void main() {
         const CapabilityGrant.refused(),
       );
       expect(
-        container.read(capabilityScopeForProvider(unraidId)),
+        container.read(capabilityGrantForProvider(unraidId)).scope,
         CapabilityScope.readOnly,
       );
     });
@@ -82,7 +82,7 @@ void main() {
         const CapabilityGrant.unknown(),
       );
       expect(
-        container.read(capabilityScopeForProvider(unraidId)).canWrite,
+        container.read(capabilityGrantForProvider(unraidId)).scope.canWrite,
         isTrue,
       );
       pending.complete(const CapabilityGrant.readOnly());
