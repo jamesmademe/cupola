@@ -253,7 +253,6 @@ class AppColors {
   /// whose artwork has too little colour to light anything. Never a service's
   /// colour.
   static const Color lamp = DesignTokens.colorTitleLightFallback;
-
 }
 
 /// The room's own vocabulary, for the theme in use: its steps, lines, fills,

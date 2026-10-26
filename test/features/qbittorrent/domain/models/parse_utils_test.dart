@@ -208,5 +208,4 @@ void main() {
       expect(formatEpochDate(epoch), formatDateTimeStamp(local));
     });
   });
-
 }

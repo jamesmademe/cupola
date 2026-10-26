@@ -100,5 +100,4 @@ class ImageUtils {
     if (posterPath == null || posterPath.isEmpty) return '';
     return 'https://image.tmdb.org/t/p/$size$posterPath';
   }
-
 }

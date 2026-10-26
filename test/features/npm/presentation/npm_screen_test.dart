@@ -191,10 +191,7 @@ void main() {
   testWidgets('the Certificates tab draws certificates and no hosts', (
     tester,
   ) async {
-    await _pump(
-      tester,
-      screen: const NpmScreen.certificates(),
-    );
+    await _pump(tester, screen: const NpmScreen.certificates());
 
     expect(find.text('Certificates'), findsOneWidget);
     expect(find.text('cert-1.lan'), findsOneWidget);
@@ -206,19 +203,11 @@ void main() {
   testWidgets('Access lists and Audit log draw their real documents', (
     tester,
   ) async {
-    await _pump(
-      tester,
-      screen: const NpmScreen.accessLists(),
-      account: _admin,
-    );
+    await _pump(tester, screen: const NpmScreen.accessLists(), account: _admin);
     expect(find.text('LAN only'), findsOneWidget);
     expect(find.textContaining('2 hosts'), findsOneWidget);
 
-    await _pump(
-      tester,
-      screen: const NpmScreen.auditLog(),
-      account: _admin,
-    );
+    await _pump(tester, screen: const NpmScreen.auditLog(), account: _admin);
     // NPM's API words, said as a sentence: `updated` and `proxy-host`.
     expect(find.text('Updated\u00A0· photos.example.net'), findsOneWidget);
     expect(find.textContaining('Proxy host'), findsOneWidget);
@@ -227,11 +216,7 @@ void main() {
   testWidgets('Audit log explains the server-side admin capability', (
     tester,
   ) async {
-    await _pump(
-      tester,
-      screen: const NpmScreen.auditLog(),
-      account: _viewOnly,
-    );
+    await _pump(tester, screen: const NpmScreen.auditLog(), account: _viewOnly);
     expect(find.textContaining('administrators only'), findsOneWidget);
     expect(find.textContaining('photos.example.net'), findsNothing);
   });
@@ -272,10 +257,7 @@ void main() {
     // which is right for a peek and wrong for a tab called Certificates: eight
     // of nine, with nothing saying so, is a count the reader has no way to
     // doubt.
-    await _pump(
-      tester,
-      screen: const NpmScreen.certificates(),
-    );
+    await _pump(tester, screen: const NpmScreen.certificates());
 
     expect(find.text('cert-9.lan'), findsOneWidget);
   });
