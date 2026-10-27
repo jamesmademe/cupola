@@ -63,6 +63,7 @@ does.
 - [Project status](#project-status)
 - [Contributing](#contributing)
 - [FAQ](#faq)
+- [About this project](#about-this-project)
 - [Support](#support)
 - [License](#license)
 
@@ -629,6 +630,9 @@ stopped at the *arrs.
 
 We build it for getting the details right (polished interactions, honest error and
 empty states, and a test suite that keeps them honest) rather than for shipping fast.
+
+AI agents are part of how we build Cupola: we decide what it does, review every change
+they make, and test it on real devices before each release.
 
 ---
 
