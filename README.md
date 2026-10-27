@@ -9,8 +9,8 @@
 One native app for your entire self-hosted media stack, and the box it runs on.<br/>
 **17 services. iOS, Android, macOS. No cloud, no account, no middleman.**
 
-[![CI](https://github.com/matthw-labs/seekarr/actions/workflows/ci.yml/badge.svg)](https://github.com/matthw-labs/seekarr/actions/workflows/ci.yml)
-[![Latest release](https://img.shields.io/github/v/release/matthw-labs/seekarr?include_prereleases&label=release)](https://github.com/matthw-labs/seekarr/releases)
+[![CI](https://github.com/matthw-labs/cupola/actions/workflows/ci.yml/badge.svg)](https://github.com/matthw-labs/cupola/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/matthw-labs/cupola?include_prereleases&label=release)](https://github.com/matthw-labs/cupola/releases)
 ![Platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20Android%20%7C%20macOS-informational)
 ![Flutter](https://img.shields.io/badge/Flutter-3.47.7-02569B?logo=flutter&logoColor=white)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
@@ -306,7 +306,7 @@ running while Cupola is open.
 ## Install
 
 > **Just want to use it?** iPhone and iPad install through TestFlight; Android and
-> macOS download from [**Releases**](https://github.com/matthw-labs/seekarr/releases).
+> macOS download from [**Releases**](https://github.com/matthw-labs/cupola/releases).
 > No toolchain needed. The App Store and Google Play come later.
 
 | Platform | Status | Get it |
@@ -319,9 +319,10 @@ running while Cupola is open.
 
 > **Coming from Seekarr?** Cupola 1.0 is a **new app**, not an update. It installs
 > beside Seekarr and starts empty: add your services again (same URLs, same API keys),
-> check that they answer, then uninstall Seekarr. Obtainium users add Cupola as a new
-> app; the old entry stays on Seekarr 0.8.0. Releases before 1.0.0 were published as
-> Seekarr and cover fewer services than this page describes.
+> check that they answer, then uninstall Seekarr. In Obtainium, the Seekarr entry will
+> offer 1.0.0 and then refuse it, because the app ID changed: remove that entry and add
+> Cupola as a new app. Releases before 1.0.0 were published as Seekarr and cover fewer
+> services than this page describes.
 
 <details>
 <summary><b>iOS and iPadOS</b></summary>
@@ -450,8 +451,8 @@ The whole trust layer is one reviewable file: [`lib/core/network/cert_trust.dart
 - At least one reachable service from the [tables above](#supported-services)
 
 ```bash
-git clone https://github.com/matthw-labs/seekarr.git
-cd seekarr
+git clone https://github.com/matthw-labs/cupola.git
+cd cupola
 flutter pub get
 flutter run
 ```
