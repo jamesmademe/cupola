@@ -62,7 +62,7 @@ ${rows}
 
 ## Install
 
-- iPhone and iPad: TestFlight beta.
+- iPhone and iPad: TestFlight beta${site.downloads.testflight ? '' : ' (not open yet)'}.
 - Android: APK from GitHub releases.
 - Mac: signed and notarized .dmg.
 - Windows and Linux: builds in every release, not yet tested on real machines.

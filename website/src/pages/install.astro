@@ -23,7 +23,11 @@ import { site } from '../config';
   </ul>
 
   <h2 id="ios">iPhone and iPad</h2>
-  <p>Cupola is in beta on TestFlight, Apple's app for testing. Install TestFlight from the App Store, open the invitation link on the phone, and tap <strong>Install</strong>. TestFlight keeps it up to date.</p>
+  {site.downloads.testflight ? (
+    <p>Cupola is in beta on TestFlight, Apple's app for testing. Install TestFlight from the App Store, open the <a href={site.downloads.testflight} rel="noopener">invitation link</a> on the phone, and tap <strong>Install</strong>. TestFlight keeps it up to date.</p>
+  ) : (
+    <p>Cupola will come to iPhone and iPad as a public beta on TestFlight, Apple's app for testing. It is not open yet: <a href={site.watch} rel="noopener">watch releases</a> to hear when it is.</p>
+  )}
 
   <h2 id="android">Android</h2>
   <p>Download the <code>.apk</code> and open it. Android asks once to allow installs from your browser or file manager. A newer release installs over the old one.</p>
