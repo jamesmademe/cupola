@@ -2076,6 +2076,26 @@ class PlexFake extends ServiceFake {
     if (RegExp(r'^/library/metadata/[^/]+/matches$').hasMatch(r.path)) {
       return NetworkReply.json(_matches(r));
     }
+    // One item by its key: a film of the library, or the episode on deck.
+    final item = RegExp(r'^/library/metadata/(\d+)$').firstMatch(r.path);
+    if (item != null) {
+      final key = int.parse(item.group(1)!);
+      final metadata = key == 203
+          ? _partWatched(c)
+          : key >= 100 && key < 100 + _library.length
+          ? _metadata(c, _library[key - 100], key)
+          : null;
+      return metadata == null
+          ? NetworkReply.json({
+              'MediaContainer': {'size': 0},
+            }, status: 404)
+          : NetworkReply.json({
+              'MediaContainer': {
+                'size': 1,
+                'Metadata': [metadata],
+              },
+            });
+    }
     if (RegExp(r'^/library/sections/\d+/all$').hasMatch(r.path)) {
       return NetworkReply.json({
         'MediaContainer': {
