@@ -71,7 +71,7 @@ export const faq = {
   },
   seekarr: {
     q: 'What happened to Seekarr?',
-    a: 'Seekarr is now Cupola. Releases up to 0.8.0 were published as Seekarr and covered five services; Cupola 1.0 covers seventeen and is a new app rather than an update. It installs beside Seekarr and starts empty, so add your services again (same addresses, same keys), check they answer, then remove Seekarr. On Android the package name changed too, so Obtainium needs Cupola added as a new app. The source, the issues and the history are in the same repository.',
+    a: 'Seekarr is now Cupola. Releases up to 0.8.0 were published as Seekarr and covered five services; Cupola 1.0 covers seventeen and is a new app rather than an update. It installs beside Seekarr and starts empty, so add your services again (same addresses, same keys), check they answer, then remove Seekarr. On Android the package name changed too, so Obtainium cannot update Seekarr into Cupola: remove the Seekarr entry and add Cupola as a new app. The source, the issues and the history are in the same repository.',
   },
   widgets: {
     q: 'Are there widgets and notifications?',
