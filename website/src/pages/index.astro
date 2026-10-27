@@ -9,7 +9,6 @@ import Tones from '../components/Tones.astro';
 import Reach from '../components/Reach.astro';
 import Get from '../components/Get.astro';
 import Faq from '../components/Faq.astro';
-import Trailer from '../components/Trailer.astro';
 import Journey from '../components/Journey.astro';
 import { site } from '../config';
 import { lit, still } from '../data/titles';
@@ -123,15 +122,6 @@ const story = [
       <p class="t-meta credit">Frames from <a href="https://studio.blender.org/projects/singularity/" rel="noopener">Singularity</a> by Blender Studio, CC BY.</p>
     </div>
   </section>
-
-  {site.trailerYouTubeId && (
-    <section class="block" {...lit('tos')} aria-labelledby="trailer-h">
-      <div class="well">
-        <h2 id="trailer-h" class="t-screen rise">Seventy-seven seconds of it.</h2>
-        <div class="rise" style="--i:1; margin-top: 40px"><Trailer /></div>
-      </div>
-    </section>
-  )}
 
   <!-- The stack. -->
   <section class="block stackb" data-light="lamp" aria-labelledby="stack-h">

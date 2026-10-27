@@ -21,6 +21,4 @@ export const site = {
     apk: null as string | null,
     macos: null as string | null,
   },
-  // A YouTube id for the launch trailer. Left null, the trailer is not shown.
-  trailerYouTubeId: null as string | null,
 } as const;

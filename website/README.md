@@ -25,7 +25,7 @@ The site copies none of these, so it cannot drift from the app:
 
 ## Links that change
 
-`src/config.ts` holds every download link. A link left `null` is not offered: its platform reads *Not open yet* and points at GitHub releases, so no button leads nowhere. Set `downloads.testflight`, `downloads.apk` and `downloads.macos` when each is public, and `trailerYouTubeId` once the trailer is on YouTube (it loads only when someone presses play).
+`src/config.ts` holds every download link. A link left `null` is not offered: its platform reads *Not open yet* and points at GitHub releases, so no button leads nowhere. Set `downloads.testflight`, `downloads.apk` and `downloads.macos` when each is public.
 
 ## Deploy on Cloudflare Pages
 
