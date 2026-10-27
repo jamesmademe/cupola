@@ -21,7 +21,7 @@ export const site = {
   // next one only when these lines do.
   downloads: {
     testflight: null as string | null,
-    apk: `${repo}/releases/download/v1.0.0/cupola-1.0.0.apk` as string | null,
-    macos: `${repo}/releases/download/v1.0.0/cupola-1.0.0.dmg` as string | null,
+    apk: `${repo}/releases/download/v1.0.0-beta.1/cupola-1.0.0-beta.1.apk` as string | null,
+    macos: `${repo}/releases/download/v1.0.0-beta.1/cupola-1.0.0-beta.1.dmg` as string | null,
   },
 } as const;

@@ -2,7 +2,10 @@ name: Desktop builds
 
 # Windows and Linux build only on their own host, so they are built here.
 # Run it by hand from the Actions tab, or push a version tag: a tag also
-# attaches both archives to a draft release of the same name.
+# attaches both archives to a draft release of the same name. A tag with a
+# suffix (`v1.0.0-beta.1`) makes that draft a prerelease. The suffix lives only
+# in the tag and the file names: pubspec.yaml keeps `1.0.0`, because App Store
+# Connect refuses a version that is not three numbers.
 
 on:
   workflow_dispatch:
@@ -18,7 +21,41 @@ permissions:
   contents: read
 
 jobs:
+  label:
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.label.outputs.release }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      # A tag names the release; a manual run is named after pubspec.yaml. A
+      # tag whose version is not the one in pubspec.yaml fails here, before
+      # two hosts build an app that calls itself something else.
+      - name: Release label
+        id: label
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          version=$(grep '^version:' pubspec.yaml | sed 's/version: *//;s/+.*//')
+          release="$version"
+          if [[ "$REF_TYPE" == "tag" ]]; then
+            release="${REF_NAME#v}"
+            if [[ ! "$release" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+              echo "::error::Tag $REF_NAME is not vX.Y.Z or vX.Y.Z-suffix"
+              exit 1
+            fi
+            if [[ "${release%%-*}" != "$version" ]]; then
+              echo "::error::Tag $REF_NAME does not match pubspec.yaml version $version"
+              exit 1
+            fi
+          fi
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+
   linux:
+    needs: label
     # The oldest supported runner, so the binary loads on older glibc.
     runs-on: ubuntu-22.04
     steps:
@@ -47,9 +84,10 @@ jobs:
 
       - name: Package
         id: package
+        env:
+          RELEASE: ${{ needs.label.outputs.release }}
         run: |
-          version=$(grep '^version:' pubspec.yaml | sed 's/version: *//;s/+.*//')
-          archive="cupola-${version}-linux-x64.tar.gz"
+          archive="cupola-${RELEASE}-linux-x64.tar.gz"
           tar -C build/linux/x64/release/bundle -czf "$archive" .
           echo "archive=$archive" >> "$GITHUB_OUTPUT"
 
@@ -60,6 +98,7 @@ jobs:
           if-no-files-found: error
 
   windows:
+    needs: label
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -81,9 +120,10 @@ jobs:
       - name: Package
         id: package
         shell: pwsh
+        env:
+          RELEASE: ${{ needs.label.outputs.release }}
         run: |
-          $version = ((Select-String -Path pubspec.yaml -Pattern '^version:').Line -replace 'version: *', '') -replace '\+.*', ''
-          $archive = "cupola-$version-windows-x64.zip"
+          $archive = "cupola-$env:RELEASE-windows-x64.zip"
           Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath $archive
           "archive=$archive" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
@@ -105,12 +145,15 @@ jobs:
           path: archives
           merge-multiple: true
 
-      # The two archives are the only files the build jobs published. A digest
-      # is the one thing a reader can check without trusting this page.
+      # A digest is the one thing a reader can check without trusting this
+      # page. This one covers the two archives built here; the packages built
+      # on the Mac join the draft through scripts/release_attach.sh, which
+      # rewrites SHA256SUMS over every file the release carries.
       - name: Checksums
         run: cd archives && sha256sum * > SHA256SUMS
 
       - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           draft: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
           files: archives/*
