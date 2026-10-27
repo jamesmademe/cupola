@@ -96,7 +96,19 @@ def build():
     fb.setupCFF(FAMILY, {"FullName": FAMILY}, charstrings, {})
     fb.setupHorizontalMetrics({g: (UPM, 0) for g in order})
     fb.setupHorizontalHeader(ascent=UPM, descent=0)
-    fb.setupNameTable({"familyName": FAMILY, "styleName": "Regular"})
+    # App Store Connect refuses a binary whose font has no full name (ITMS-90853,
+    # 'name' table usability), so the table carries every record a font is
+    # looked up by, matching the CFF table's FontName and FullName.
+    fb.setupNameTable(
+        {
+            "familyName": FAMILY,
+            "styleName": "Regular",
+            "uniqueFontIdentifier": f"{FAMILY};Version 1.000",
+            "fullName": FAMILY,
+            "version": "Version 1.000",
+            "psName": FAMILY,
+        }
+    )
     fb.setupOS2(
         sTypoAscender=UPM,
         sTypoDescender=0,
