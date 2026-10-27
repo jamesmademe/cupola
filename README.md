@@ -9,8 +9,8 @@
 One native app for your entire self-hosted media stack, and the box it runs on.<br/>
 **17 services. iOS, Android, macOS. No cloud, no account, no middleman.**
 
-[![CI](https://github.com/matthw-labs/seekarr/actions/workflows/ci.yml/badge.svg)](https://github.com/matthw-labs/seekarr/actions/workflows/ci.yml)
-[![Latest release](https://img.shields.io/github/v/release/matthw-labs/seekarr?include_prereleases&label=release)](https://github.com/matthw-labs/seekarr/releases)
+[![CI](https://github.com/matthw-labs/cupola/actions/workflows/ci.yml/badge.svg)](https://github.com/matthw-labs/cupola/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/matthw-labs/cupola?include_prereleases&label=release)](https://github.com/matthw-labs/cupola/releases)
 ![Platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20Android%20%7C%20macOS-informational)
 ![Flutter](https://img.shields.io/badge/Flutter-3.47.7-02569B?logo=flutter&logoColor=white)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
@@ -63,6 +63,7 @@ does.
 - [Project status](#project-status)
 - [Contributing](#contributing)
 - [FAQ](#faq)
+- [About this project](#about-this-project)
 - [Support](#support)
 - [License](#license)
 
@@ -305,25 +306,47 @@ running while Cupola is open.
 
 ## Install
 
-> **Just want to use it?** Grab the file for your platform from
-> [**Releases**](https://github.com/matthw-labs/seekarr/releases). No toolchain
-> needed. Releases before 1.0.0 were published under the project's former name,
-> Seekarr, and cover fewer services than this page describes.
+> **Just want to use it?** iPhone and iPad install through TestFlight; Android and
+> macOS download from [**Releases**](https://github.com/matthw-labs/cupola/releases).
+> No toolchain needed. The App Store and Google Play come later.
 
-| Platform | Status | Download |
+| Platform | Status | Get it |
 | --- | --- | --- |
-| **Android** | Supported | `.apk` |
-| **macOS** | Supported | `.dmg` |
-| **iOS** | Supported (sideload) | unsigned `.ipa` |
-| Windows / Linux | Built by CI, untested | `.zip` / `.tar.gz` |
+| **iOS / iPadOS** | Supported, iOS 17+ | [TestFlight]({TESTFLIGHT_URL}) |
+| **Android** | Supported, Android 7.0+ | `.apk` from Releases, or Obtainium |
+| **macOS** | Supported, macOS 12+ | `.dmg` from Releases |
+| Windows / Linux | Built by CI, untested | `.zip` / `.tar.gz` from Releases |
 | Web | Not a goal | none |
+
+> **Coming from Seekarr?** Cupola 1.0 is a **new app**, not an update. It installs
+> beside Seekarr and starts empty: add your services again (same URLs, same API keys),
+> check that they answer, then uninstall Seekarr. In Obtainium, the Seekarr entry will
+> offer 1.0.0 and then refuse it, because the app ID changed: remove that entry and add
+> Cupola as a new app. Releases before 1.0.0 were published as Seekarr and cover fewer
+> services than this page describes.
+
+<details>
+<summary><b>iOS and iPadOS</b></summary>
+<br/>
+
+Open the [TestFlight link]({TESTFLIGHT_URL}) on your iPhone or iPad, install Apple's
+TestFlight app when it asks, then tap **Install**. TestFlight brings each new version
+on its own. The public link has a limited number of places: if it says the beta is
+full, try again after the next release.
+
+</details>
 
 <details>
 <summary><b>Android</b></summary>
 <br/>
 
-Download the `.apk` and install it. You may need to allow installs from unknown
-sources for your browser or file manager.
+Download `cupola-<version>.apk` from Releases and install it. You may need to allow
+installs from unknown sources for your browser or file manager. One file covers every
+device.
+
+To get updates without checking this page, add this repository's URL to
+[**Obtainium**](https://obtainium.imranr.dev/): it installs the `.apk` from each new
+release.
 
 </details>
 
@@ -333,22 +356,6 @@ sources for your browser or file manager.
 
 Download the `.dmg`, drag **Cupola** to `/Applications`, and launch it. The app is
 signed with a Developer ID and notarized by Apple, so it opens like any other.
-
-</details>
-
-<details>
-<summary><b>iOS</b></summary>
-<br/>
-
-The `.ipa` is **not signed by Apple**, so it has to go through a sideloading tool
-that applies an ad-hoc signature on install:
-
-- [**AltStore**](https://altstore.io/): refreshes over Wi-Fi from the same machine
-- [**Sideloadly**](https://sideloadly.io/): desktop tool, no account needed on macOS
-- [**SideStore**](https://sidestore.io/): AltStore's sibling, refreshes on the phone itself
-
-Ad-hoc signatures expire, so the app needs periodic re-installation: **7 days** with
-a free Apple ID, **1 year** with a paid Apple Developer account.
 
 </details>
 
@@ -445,8 +452,8 @@ The whole trust layer is one reviewable file: [`lib/core/network/cert_trust.dart
 - At least one reachable service from the [tables above](#supported-services)
 
 ```bash
-git clone https://github.com/matthw-labs/seekarr.git
-cd seekarr
+git clone https://github.com/matthw-labs/cupola.git
+cd cupola
 flutter pub get
 flutter run
 ```
@@ -623,6 +630,9 @@ stopped at the *arrs.
 
 We build it for getting the details right (polished interactions, honest error and
 empty states, and a test suite that keeps them honest) rather than for shipping fast.
+
+AI agents are part of how we build Cupola: we decide what it does, review every change
+they make, and test it on real devices before each release.
 
 ---
 
