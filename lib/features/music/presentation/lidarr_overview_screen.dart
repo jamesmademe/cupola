@@ -22,7 +22,6 @@ import 'package:cupola/features/services/domain/services_semantics.dart';
 
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 
-import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The first tab of Lidarr's service home.
@@ -67,7 +66,16 @@ class LidarrOverviewScreen extends StatelessWidget {
       topPadding: topPadding,
       refresh: _refresh,
       sections: (ref) => [
-        const _NeedsAttentionSection(),
+        ArrNeedsAttentionSection(
+          service: ServiceKey.lidarr,
+          items: lidarrNeedsAttentionProvider,
+          queueRecords: lidarrQueueRecordsProvider,
+          retry: [
+            lidarrNeedsAttentionProvider,
+            lidarrQueueRecordsProvider,
+            lidarrMissingPageProvider,
+          ],
+        ),
         const _RecentlyAddedSection(),
         ArrHistoryTodaySection(
           service: ServiceKey.lidarr,
@@ -102,58 +110,6 @@ void _refresh(WidgetRef ref) {
 }
 
 // ─── 1. Needs attention ─────────────────────────────────────────────────────
-
-class _NeedsAttentionSection extends ConsumerWidget {
-  const _NeedsAttentionSection();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final items = ref.watch(lidarrNeedsAttentionProvider);
-    // The faults the rows stand for, not the rows: a folded row of three
-    // downloads is three.
-    final count = items.asData?.value.fold(0, (sum, item) => sum + item.count);
-    // A queue walk that stopped short: see the Radarr home's twin.
-    final floor =
-        ref.watch(lidarrQueueRecordsProvider).value?.cutShort ?? false;
-
-    return ServiceOverviewSection(
-      service: ServiceKey.lidarr,
-      title: 'Needs attention',
-      // "—" while the queue and the wishlist are loading or after either
-      // failed: a "0" printed over an unanswered question is a claim nobody
-      // made, and it is the reassuring direction of wrong.
-      subtitle: count == null ? '—' : (floor ? Lexicon.floor(count) : '$count'),
-      // No link: the fault rows belong to Queue and the backlog row to Wanted,
-      // and a single destination would have to lie about one of them. Each row
-      // is its own door instead.
-      child: AsyncValueWidget<List<LidarrAttentionItem>>.section(
-        value: items,
-        service: ServiceKey.lidarr,
-        consequence: 'what needs attention is not shown',
-        loadingLabel: 'Loading what needs attention',
-        onRetry: () {
-          ref.invalidate(lidarrNeedsAttentionProvider);
-          ref.invalidate(lidarrQueueRecordsProvider);
-          ref.invalidate(lidarrMissingPageProvider);
-        },
-        skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
-        isEmpty: (data) => data.isEmpty,
-        // A resting state wears no alarm chrome: nothing is wrong, and saying
-        // so is not an error state.
-        emptyBuilder: const ServiceOverviewEmpty(
-          icon: Icons.check_circle_outline_rounded,
-          label: 'Nothing needs you',
-        ),
-        data: (data) => Column(
-          children: [
-            for (final item in data)
-              ServiceAttentionRow(service: ServiceKey.lidarr, item: item),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 // ─── 2. Recently added ──────────────────────────────────────────────────────
 

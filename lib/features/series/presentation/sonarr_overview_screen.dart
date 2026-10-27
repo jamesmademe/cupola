@@ -32,7 +32,6 @@ import 'package:cupola/features/services/domain/services_semantics.dart';
 
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 
-import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The first tab of Sonarr's service home.
@@ -85,7 +84,16 @@ class SonarrOverviewScreen extends StatelessWidget {
       refresh: _refresh,
       sections: (ref) => [
         const _AiringSection(),
-        const _NeedsAttentionSection(),
+        ArrNeedsAttentionSection(
+          service: ServiceKey.sonarr,
+          items: sonarrNeedsAttentionProvider,
+          queueRecords: sonarrQueueRecordsProvider,
+          retry: [
+            sonarrNeedsAttentionProvider,
+            sonarrQueueRecordsProvider,
+            sonarrBacklogProvider,
+          ],
+        ),
         const _RecentlyDownloadedSection(),
         ArrHistoryTodaySection(
           service: ServiceKey.sonarr,
@@ -234,55 +242,6 @@ class _AiringRow extends StatelessWidget {
 }
 
 // ─── 3. Needs attention ─────────────────────────────────────────────────────
-
-class _NeedsAttentionSection extends ConsumerWidget {
-  const _NeedsAttentionSection();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final items = ref.watch(sonarrNeedsAttentionProvider);
-    // The faults the rows stand for, not the rows: a folded row of three
-    // downloads is three.
-    final count = items.asData?.value.fold(0, (sum, item) => sum + item.count);
-    // A queue walk that stopped short: see the Radarr home's twin.
-    final floor =
-        ref.watch(sonarrQueueRecordsProvider).value?.cutShort ?? false;
-
-    return ServiceOverviewSection(
-      service: ServiceKey.sonarr,
-      title: 'Needs attention',
-      subtitle: count == null ? '—' : (floor ? Lexicon.floor(count) : '$count'),
-      // No link: every row here belongs to a different tab: a stalled download
-      // to Queue, a backlog to Wanted, and a single destination would have to
-      // lie about the rest. Each row is its own door instead.
-      child: AsyncValueWidget<List<SonarrAttentionItem>>.section(
-        value: items,
-        service: ServiceKey.sonarr,
-        consequence: 'what needs attention is not shown',
-        loadingLabel: 'Loading what needs attention',
-        onRetry: () {
-          ref.invalidate(sonarrNeedsAttentionProvider);
-          ref.invalidate(sonarrQueueRecordsProvider);
-          ref.invalidate(sonarrBacklogProvider);
-        },
-        skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
-        isEmpty: (data) => data.isEmpty,
-        // A resting state wears no alarm chrome: nothing is wrong, and saying
-        // so is not an error state.
-        emptyBuilder: const ServiceOverviewEmpty(
-          icon: Icons.check_circle_outline_rounded,
-          label: 'Nothing needs you',
-        ),
-        data: (data) => Column(
-          children: [
-            for (final item in data)
-              ServiceAttentionRow(service: ServiceKey.sonarr, item: item),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 // ─── 4. Recently downloaded ─────────────────────────────────────────────────
 

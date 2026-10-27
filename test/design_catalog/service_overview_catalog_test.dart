@@ -12,12 +12,14 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
+import 'package:cupola/core/utils/arr_overview.dart';
 import 'package:cupola/core/widgets/service_overview.dart';
 import 'package:cupola/core/widgets/service_tab_bar.dart';
 import 'package:cupola/core/widgets/status_badge.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/movies/presentation/radarr_overview_screen.dart';
+import 'package:cupola/features/series/presentation/sonarr_overview_provider.dart';
 import 'package:cupola/features/services/domain/service_summary.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_tab_scaffold.dart';
@@ -87,6 +89,56 @@ const _twoRadarrs = SettingsModel(
       credential: 'k',
     ),
   ],
+);
+
+const _oneSonarr = SettingsModel(
+  instances: [
+    ServiceInstance(
+      id: 'sonarr',
+      service: ServiceKey.sonarr,
+      label: '',
+      url: 'https://sonarr.lan:8989',
+      credential: 'k',
+    ),
+  ],
+);
+
+/// Sonarr's Needs attention after the queue answered once and then stopped:
+/// two faults still held, and the failure riding on top of them.
+class _SonarrAttention
+    extends AsyncNotifier<List<ArrAttentionItem<SonarrAttentionKind>>> {
+  @override
+  Future<List<ArrAttentionItem<SonarrAttentionKind>>> build() async => const [
+    ArrAttentionItem(
+      kind: SonarrAttentionKind.stalled,
+      headline: 'Stuck\u00A0· Slow Horses S04 E02',
+      detail: 'qBittorrent\u00A0· The download is stalled',
+    ),
+    ArrAttentionItem(
+      kind: SonarrAttentionKind.missing,
+      headline: '12 episodes missing',
+      detail: 'Sonarr keeps searching',
+    ),
+  ];
+
+  /// The queue stops answering: the error lands over the two rows held.
+  void stopAnswering() => state = AsyncError(
+    DioException(
+      requestOptions: RequestOptions(path: '/api/v3/queue'),
+      type: DioExceptionType.receiveTimeout,
+    ),
+    StackTrace.empty,
+  );
+}
+
+final _sonarrAttention =
+    AsyncNotifierProvider<
+      _SonarrAttention,
+      List<ArrAttentionItem<SonarrAttentionKind>>
+    >(_SonarrAttention.new);
+
+final _sonarrQueuePage = Provider<AsyncValue<ArrRecordPage>>(
+  (ref) => const AsyncData(ArrRecordPage(records: [], total: 2)),
 );
 
 final _now = catalogNow;
@@ -598,6 +650,38 @@ void main() {
         width: 390,
         height: 1600,
         textScale: catalogTextScale,
+      ),
+      CatalogScene(
+        'ArrNeedsAttentionSection · Sonarr, the queue stopped answering after '
+        'it had: the header keeps counting the two faults still drawn under it '
+        '(Sonarr and Lidarr printed a dash here, over rows they were showing)',
+        (_) => _radarr(
+          _ScriptedRadarr(),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: ArrNeedsAttentionSection<SonarrAttentionKind>(
+              service: ServiceKey.sonarr,
+              items: _sonarrAttention,
+              queueRecords: _sonarrQueuePage,
+              retry: const [],
+            ),
+          ),
+          settings: _oneSonarr,
+        ),
+        width: 390,
+        height: 440,
+        id: 'arr-needs-attention-failed-after-answering',
+        act: (tester, scene) async {
+          final section = find.descendant(
+            of: scene,
+            matching: find.byType(
+              ArrNeedsAttentionSection<SonarrAttentionKind>,
+            ),
+          );
+          ProviderScope.containerOf(
+            tester.element(section),
+          ).read(_sonarrAttention.notifier).stopAnswering();
+        },
       ),
       CatalogScene(
         'Text at 200% · RadarrOverviewScreen, the library timed out: the amber '
