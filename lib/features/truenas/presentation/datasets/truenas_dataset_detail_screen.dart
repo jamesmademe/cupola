@@ -154,105 +154,172 @@ class _DetailBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final snapshots = ref.watch(truenasSnapshotsProvider(dataset.id));
 
-    return ListView(
+    // A sliver page: the info card and the header above the snapshots are one
+    // box, and the snapshots are a lazy `SliverList`, so a dataset with hundreds
+    // of automatic snapshots builds only the rows on screen.
+    return CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.md,
-        AppSpacing.lg,
-        FloatingNavBarMetrics.getScrollViewBottomPadding(context),
-      ),
-      children: [
-        AppCard.surfaceOutlined(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TrueNasInfoRow(label: 'Path', value: dataset.id),
-              TrueNasInfoRow(label: 'Type', value: dataset.type),
-              TrueNasInfoRow(
-                label: 'Used',
-                value: dataset.usedBytes != null
-                    ? formatSize(dataset.usedBytes!)
-                    : null,
+      slivers: [
+        SliverToBoxAdapter(
+          child: RepaintBoundary(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                0,
               ),
-              TrueNasInfoRow(
-                label: 'Available',
-                value: dataset.availableBytes != null
-                    ? formatSize(dataset.availableBytes!)
-                    : null,
-              ),
-              if (dataset.quotaBytes != null && dataset.quotaBytes! > 0)
-                TrueNasInfoRow(
-                  label: 'Quota',
-                  value: formatSize(dataset.quotaBytes!),
-                ),
-              TrueNasInfoRow(label: 'Compression', value: dataset.compression),
-              TrueNasInfoRow(label: 'Ratio', value: dataset.compressionRatio),
-              TrueNasInfoRow(label: 'Record size', value: dataset.recordsize),
-              TrueNasInfoRow(label: 'Dedup', value: dataset.dedup),
-              TrueNasInfoRow(
-                label: 'Encrypted',
-                value: dataset.encrypted ? 'Yes' : 'No',
-              ),
-              TrueNasInfoRow(label: 'Comment', value: dataset.comments),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        SectionHeader.flushAction(
-          title: 'Snapshots',
-          trailing: trueNasGatedButton(
-            ref: ref,
-            area: TrueNasCapabilityArea.snapshotWrite.key,
-            verbPhrase: 'create snapshots',
-            onTap: () => createSnapshotFlow(context, ref, dataset.id),
-            builder: (context, onPressed, annotate) => TextButton(
-              onPressed: onPressed,
-              child: annotate(
-                const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.add_rounded, size: 16),
-                    SizedBox(width: AppSpacing.xs),
-                    Text('New'),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        snapshots.when(
-          loading: () => AppSkeleton.listRows(count: 3),
-          // The section's own fallback, never the raw exception: the page
-          // above still reads, and the snapshot list is the one part that did
-          // not answer. See `TrueNasDatasetApi.getSnapshots` for the upstream
-          // change that makes this likely on TrueNAS 25.10.
-          error: (error, _) => InlineErrorRetry(
-            message: sectionFailureMessage(
-              ServiceKey.truenas,
-              error,
-              consequence: 'the snapshots are not shown',
-            ),
-            error: error,
-            service: ServiceKey.truenas,
-            onRetry: () => ref.invalidate(truenasSnapshotsProvider(dataset.id)),
-          ),
-          data: (list) => list.isEmpty
-              ? AppCard.surfaceOutlined(
-                  child: Text(
-                    'No snapshots.',
-                    style: Theme.of(context).textTheme.bodySmall,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppCard.surfaceOutlined(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TrueNasInfoRow(label: 'Path', value: dataset.id),
+                        TrueNasInfoRow(label: 'Type', value: dataset.type),
+                        TrueNasInfoRow(
+                          label: 'Used',
+                          value: dataset.usedBytes != null
+                              ? formatSize(dataset.usedBytes!)
+                              : null,
+                        ),
+                        TrueNasInfoRow(
+                          label: 'Available',
+                          value: dataset.availableBytes != null
+                              ? formatSize(dataset.availableBytes!)
+                              : null,
+                        ),
+                        if (dataset.quotaBytes != null &&
+                            dataset.quotaBytes! > 0)
+                          TrueNasInfoRow(
+                            label: 'Quota',
+                            value: formatSize(dataset.quotaBytes!),
+                          ),
+                        TrueNasInfoRow(
+                          label: 'Compression',
+                          value: dataset.compression,
+                        ),
+                        TrueNasInfoRow(
+                          label: 'Ratio',
+                          value: dataset.compressionRatio,
+                        ),
+                        TrueNasInfoRow(
+                          label: 'Record size',
+                          value: dataset.recordsize,
+                        ),
+                        TrueNasInfoRow(label: 'Dedup', value: dataset.dedup),
+                        TrueNasInfoRow(
+                          label: 'Encrypted',
+                          value: dataset.encrypted ? 'Yes' : 'No',
+                        ),
+                        TrueNasInfoRow(
+                          label: 'Comment',
+                          value: dataset.comments,
+                        ),
+                      ],
+                    ),
                   ),
-                )
-              : Column(
-                  children: [
-                    for (final snap in list)
-                      _SnapshotTile(snapshot: snap, dataset: dataset.id),
-                  ],
-                ),
+                  const SizedBox(height: AppSpacing.md),
+                  SectionHeader.flushAction(
+                    title: 'Snapshots',
+                    trailing: trueNasGatedButton(
+                      ref: ref,
+                      area: TrueNasCapabilityArea.snapshotWrite.key,
+                      verbPhrase: 'create snapshots',
+                      onTap: () => createSnapshotFlow(context, ref, dataset.id),
+                      builder: (context, onPressed, annotate) => TextButton(
+                        onPressed: onPressed,
+                        child: annotate(
+                          const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.add_rounded, size: 16),
+                              SizedBox(width: AppSpacing.xs),
+                              Text('New'),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                ],
+              ),
+            ),
+          ),
+        ),
+        ..._snapshotSlivers(context, ref, dataset, snapshots),
+        SliverToBoxAdapter(
+          child: SizedBox(
+            height: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
+          ),
         ),
       ],
+    );
+  }
+
+  /// The snapshot section below the header: a skeleton, the section's own
+  /// fallback, the empty note, or the rows as one lazy list.
+  List<Widget> _snapshotSlivers(
+    BuildContext context,
+    WidgetRef ref,
+    TrueNasDataset dataset,
+    AsyncValue<List<TrueNasSnapshot>> snapshots,
+  ) {
+    return snapshots.when(
+      loading: () => [
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          sliver: SliverToBoxAdapter(child: AppSkeleton.listRows(count: 3)),
+        ),
+      ],
+      // The section's own fallback, never the raw exception: the page
+      // above still reads, and the snapshot list is the one part that did
+      // not answer. See `TrueNasDatasetApi.getSnapshots` for the upstream
+      // change that makes this likely on TrueNAS 25.10.
+      error: (error, _) => [
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          sliver: SliverToBoxAdapter(
+            child: InlineErrorRetry(
+              message: sectionFailureMessage(
+                ServiceKey.truenas,
+                error,
+                consequence: 'the snapshots are not shown',
+              ),
+              error: error,
+              service: ServiceKey.truenas,
+              onRetry: () =>
+                  ref.invalidate(truenasSnapshotsProvider(dataset.id)),
+            ),
+          ),
+        ),
+      ],
+      data: (list) => list.isEmpty
+          ? [
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                sliver: SliverToBoxAdapter(
+                  child: AppCard.surfaceOutlined(
+                    child: Text(
+                      'No snapshots.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                ),
+              ),
+            ]
+          : [
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                sliver: SliverList.builder(
+                  itemCount: list.length,
+                  itemBuilder: (context, index) =>
+                      _SnapshotTile(snapshot: list[index], dataset: dataset.id),
+                ),
+              ),
+            ],
     );
   }
 }
