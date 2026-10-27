@@ -874,6 +874,7 @@ Future<ServiceDiagnosis> diagnoseSavedInstance(
 /// That is exactly how a permission the user has not granted looks from the socket.
 bool localNetworkCouldExplain(ServiceFailureReason? reason) => switch (reason) {
   ServiceFailureReason.unauthorized ||
+  ServiceFailureReason.addressRefused ||
   // Nothing was sent: the secret never left the device's storage.
   ServiceFailureReason.secretUnread ||
   ServiceFailureReason.sessionEnded ||
@@ -950,6 +951,7 @@ Future<ServiceDiagnosis> diagnoseThroughLocalNetworkGate(
 /// trip to learn nothing.
 bool certProbeWorthwhile(ServiceFailureReason? reason) => switch (reason) {
   ServiceFailureReason.unauthorized ||
+  ServiceFailureReason.addressRefused ||
   // Nothing was sent: the secret never left the device's storage.
   ServiceFailureReason.secretUnread ||
   ServiceFailureReason.sessionEnded ||
@@ -1066,6 +1068,9 @@ String connectionFailureMessage(
     case ServiceFailureReason.noSecureConnection:
       return 'The secure connection broke off before a certificate arrived. '
           'Check that this port serves https.';
+    case ServiceFailureReason.addressRefused:
+      return '${service.title} refused this address. Allow it in its settings, '
+          'then check the connection.';
     case ServiceFailureReason.unauthorized:
       // The why, not the what again: the title above it already says the key
       // was refused, so this says where the right one comes from.

@@ -132,6 +132,7 @@ class TransmissionAddReport {
         ServiceFailureReason.noSecureConnection ||
         ServiceFailureReason.localNetworkBlocked ||
         ServiceFailureReason.unauthorized ||
+        ServiceFailureReason.addressRefused ||
         // The password never left the device's storage.
         ServiceFailureReason.secretUnread ||
         // Seerr's own two: never Transmission's, refused before anything

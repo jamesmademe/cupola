@@ -308,12 +308,15 @@ void main() {
       c.close();
     });
 
-    test('returns false on 401 (qBittorrent 5.1+ bad credentials)', () async {
-      final adapter = _ScriptableAdapter(script: [401]);
-      final c = _client(adapter, user: 'admin', pw: 'wrong');
-      expect(await c.authenticate(), isFalse);
-      c.close();
-    });
+    test(
+      'returns false on 401 (the address refused, not the password)',
+      () async {
+        final adapter = _ScriptableAdapter(script: [401]);
+        final c = _client(adapter, user: 'admin', pw: 'wrong');
+        expect(await c.authenticate(), isFalse);
+        c.close();
+      },
+    );
 
     test('shares inflight future across concurrent calls', () async {
       final adapter = _MockAdapter(response: 'Ok.');
@@ -482,7 +485,7 @@ void main() {
             isA<QbittorrentException>().having(
               (e) => e.reason,
               'reason',
-              ServiceFailureReason.unauthorized,
+              ServiceFailureReason.addressRefused,
             ),
           ),
         );
@@ -524,8 +527,7 @@ void main() {
   // behind a reverse proxy the banned address was everyone's.
   group('a refused sign-in is held', () {
     for (final (label, status, body) in const [
-      ('401 (qBittorrent 5.1+)', 401, ''),
-      ('200 Fails. (qBittorrent 5.0 and older)', 200, 'Fails.'),
+      ('200 Fails. (qBittorrent 5.1+ and 5.0 and older)', 200, 'Fails.'),
     ]) {
       test('$label: the password is sent once, however often asked', () async {
         final adapter = _LoginAdapter(loginStatus: status, loginBody: body);
@@ -547,6 +549,36 @@ void main() {
         expect(c.loginRefused, isTrue);
       });
     }
+
+    test(
+      'a 401 is the address refused: held, named, and not the password',
+      () async {
+        final adapter = _LoginAdapter(loginStatus: 401);
+        final c = _client(adapter, user: 'admin', pw: 'right');
+        addTearDown(c.close);
+
+        for (var i = 0; i < 5; i++) {
+          await expectLater(
+            c.getVersion(),
+            throwsA(
+              isA<QbittorrentException>()
+                  .having(
+                    (e) => e.reason,
+                    'reason',
+                    ServiceFailureReason.addressRefused,
+                  )
+                  .having(
+                    (e) => e.failureDetail,
+                    'detail',
+                    allOf(contains('Server domains'), contains('Host header')),
+                  ),
+            ),
+          );
+        }
+        expect(adapter.logins, 1, reason: 'the address is not asked again');
+        expect(adapter.dataCalls, 0);
+      },
+    );
 
     test('a ban is named, and not tried again', () async {
       final adapter = _LoginAdapter(
@@ -586,7 +618,8 @@ void main() {
 
       adapter
         ..dataStatus = 403
-        ..loginStatus = 401;
+        ..loginStatus = 200
+        ..loginBody = 'Fails.';
       await expectLater(c.getVersion(), throwsA(isA<DioException>()));
       final loginsAfterExpiry = adapter.logins;
 
@@ -616,7 +649,7 @@ void main() {
     );
 
     test('clearLoginRefusal allows exactly one more attempt', () async {
-      final adapter = _LoginAdapter(loginStatus: 401);
+      final adapter = _LoginAdapter(loginStatus: 200, loginBody: 'Fails.');
       final c = _client(adapter, user: 'admin', pw: 'wrong');
       addTearDown(c.close);
 

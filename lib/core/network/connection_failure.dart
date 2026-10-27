@@ -79,6 +79,14 @@ enum ServiceFailureReason {
   /// Reached the service, which rejected the credentials or the API key.
   unauthorized,
 
+  /// Reached the service, which refused the address Cupola connects through,
+  /// before it looked at any credential: qBittorrent's host header check (or a
+  /// reverse proxy's) answers `401` before it checks the password. Retrying the same
+  /// request fails the same way until its settings allow the address, so
+  /// the remedy is in the service's settings, never a password. Amber, like
+  /// every answer that is a fault rather than silence.
+  addressRefused,
+
   /// A Seerr account's session is over: it expired after 30 days unused, it
   /// was signed out elsewhere, or the operator removed the account. The
   /// server refused a request and then `/auth/me` itself
@@ -781,6 +789,7 @@ String failureLabel(
   ServiceFailureReason.unreachable ||
   ServiceFailureReason.unreachableAtBoth => StateWord.didNotAnswer.label,
   ServiceFailureReason.unauthorized => 'Refused the $credential',
+  ServiceFailureReason.addressRefused => 'Refused this address',
   ServiceFailureReason.sessionEnded => StateWord.signedOut.label,
   ServiceFailureReason.onlyAtHome => StateWord.onlyAtHome.label,
   ServiceFailureReason.secretUnread =>
@@ -831,6 +840,8 @@ String failureHeadline(
     '$subject did not answer at home or away',
   ServiceFailureReason.unauthorized =>
     '$subject answered but refused the $credential',
+  ServiceFailureReason.addressRefused =>
+    '$subject answered but refused this address',
   ServiceFailureReason.sessionEnded => 'Signed out of $subject',
   ServiceFailureReason.onlyAtHome => '$subject only works at home',
   ServiceFailureReason.secretUnread =>
@@ -891,6 +902,8 @@ String? failureGroupHeadline(
     credential == kRefusedSignIn
         ? '$subjects answered but refused the sign-in'
         : '$subjects answered but refused their ${_pluralCredential(credential)}',
+  ServiceFailureReason.addressRefused =>
+    '$subjects answered but refused this address',
   ServiceFailureReason.sessionEnded => 'Signed out of $subjects',
   ServiceFailureReason.onlyAtHome => '$subjects only work at home',
   ServiceFailureReason.timeout =>
@@ -960,6 +973,9 @@ String? failureRemedy(
   ServiceFailureReason.serverError ||
   ServiceFailureReason.invalidResponse ||
   ServiceFailureReason.localNetworkBlocked ||
+  // The fix lives in the service's own settings, not in the connection's form
+  // a remedy opens: its sentence names the setting, and Retry follows it.
+  ServiceFailureReason.addressRefused ||
   ServiceFailureReason.unknown => null,
 };
 
@@ -981,6 +997,8 @@ bool failureRetryHelps(
   String credential = kRefusedCredential,
 }) => switch (reason) {
   ServiceFailureReason.unauthorized => credential == kRefusedSignIn,
+  // Once the service allows the address, the same request can succeed.
+  ServiceFailureReason.addressRefused => true,
   ServiceFailureReason.insecureTransport ||
   ServiceFailureReason.accessGateway ||
   ServiceFailureReason.secretUnread ||
@@ -1142,6 +1160,8 @@ String connectionFailureSentence(
           ? 'The server answered and refused the saved credentials.'
           : 'The server answered and refused the saved credentials. Check '
                 'them in Settings.',
+    ServiceFailureReason.addressRefused =>
+      'If the password is right, allow this address in its settings.',
     ServiceFailureReason.sessionEnded =>
       'Sign in again to keep asking for movies and series.',
     ServiceFailureReason.onlyAtHome =>

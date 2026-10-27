@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/widgets/service_offline_state.dart';
+import 'package:cupola/features/qbittorrent/data/qbittorrent_client.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/connection_unanswered.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -92,6 +93,25 @@ void main() {
         (_) => ServiceOfflineState.failure(
           service: ServiceKey.radarr,
           error: _status(401),
+          onRetry: () {},
+        ),
+        width: 320,
+      ),
+      CatalogScene(
+        'ServiceOfflineState.failure · qBittorrent refused the address (401): '
+        'amber, the remedy is conditional on the password and names the '
+        'server domains, and Retry is offered',
+        (_) => ServiceOfflineState.failure(
+          service: ServiceKey.qbittorrent,
+          // The client's own refusal, as it reads after a 401 at sign-in.
+          error: const QbittorrentException(
+            'qBittorrent refused this address (401).',
+            reason: ServiceFailureReason.addressRefused,
+            detail:
+                'If the password is right, add this address to Server domains '
+                'in qBittorrent\'s Web UI settings, or turn off Host header '
+                'validation there.',
+          ),
           onRetry: () {},
         ),
         width: 320,
