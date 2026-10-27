@@ -17,6 +17,7 @@ import 'package:cupola/core/network/unanswered_addresses.dart';
 import 'package:cupola/core/startup/startup_overrides.dart';
 import 'package:cupola/demo/world/fixtures.dart';
 import 'package:cupola/demo/world/profiles.dart';
+import 'package:cupola/features/npm/presentation/npm_provider.dart';
 import 'package:cupola/features/outside/data/outside_background.dart';
 import 'package:cupola/features/outside/data/outside_keeper.dart';
 import 'package:cupola/features/release_search/data/release_search_notifications.dart';
@@ -134,6 +135,10 @@ class DemoSession {
         lastKnown: LastKnownStore.memory(),
       ),
       hostReachProvider.overrideWithValue(network.reach),
+      npmUpstreamConnectorProvider.overrideWithValue(
+        (host, port, timeout) =>
+            network.reach(Uri(scheme: 'http', host: host, port: port)),
+      ),
       outsideKeeperProvider.overrideWith((ref) {}),
       outsideSchedulerProvider.overrideWithValue(null),
       releaseSearchNotificationsProvider.overrideWithValue(

@@ -8,6 +8,7 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/home/data/featured.dart';
 import 'package:cupola/features/activity/data/activity_live.dart';
 import 'package:cupola/features/home/data/home_live.dart';
+import 'package:cupola/features/npm/presentation/npm_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 
 import 'package:cupola/demo/world/config_profile.dart';
@@ -45,6 +46,11 @@ class ProfileHarness {
         hostReach: network.reach,
       ),
       initialActiveInstancesProvider.overrideWithValue(profile.lens),
+      // NPM's upstream probe opens raw sockets: here it asks the network.
+      npmUpstreamConnectorProvider.overrideWithValue(
+        (host, port, timeout) =>
+            network.reach(Uri(scheme: 'http', host: host, port: port)),
+      ),
       // The Home's thirty-second poll, off: a profile is read once, and the
       // poll's timer would outlive a container disposed at teardown. The
       // poll has its own test.

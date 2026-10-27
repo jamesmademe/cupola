@@ -126,5 +126,13 @@ final npmUpstreamReportProvider = FutureProvider<NpmUpstreamReport>((
   ref,
 ) async {
   final hosts = await ref.watch(npmProxyHostsProvider.future);
-  return const NpmUpstreamProbe().run(hosts);
+  return NpmUpstreamProbe(
+    connector: ref.watch(npmUpstreamConnectorProvider),
+  ).run(hosts);
 }, retry: noProviderRetry);
+
+/// How the upstream probe opens a connection: a real TCP handshake, or, where
+/// the servers are the demo's (and a test's), a question to their network.
+final npmUpstreamConnectorProvider = Provider<NpmUpstreamConnector>(
+  (ref) => NpmUpstreamProbe.connect,
+);

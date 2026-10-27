@@ -2132,7 +2132,7 @@ class BazarrFake extends ServiceFake {
     for (final (id, title, languages) in const [
       (3, WorldTitles.coffeeRun, [_english, _italian]),
       (4, WorldTitles.sintel, [_english, _italian, _german]),
-      (_tearsOfSteel, WorldTitles.tearsOfSteel, [_english]),
+      (_tearsOfSteel, WorldTitles.tearsOfSteel, []),
       (6, WorldTitles.elephantsDream, [_english, _italian]),
     ])
       {
