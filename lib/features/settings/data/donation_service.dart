@@ -1,6 +1,7 @@
 import 'dart:io';
 
-import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:in_app_purchase_platform_interface/in_app_purchase_platform_interface.dart';
+import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Centralised constants and helpers for the donation flow.
@@ -47,6 +48,22 @@ class DonationService {
 
   // ── IAP helpers ───────────────────────────────────────────────────────────
 
+  static InAppPurchasePlatform? _store;
+
+  /// The App Store, registered on first use. Only StoreKit is a dependency
+  /// (see `pubspec.yaml`), so this is reached on iOS alone, behind [usesIAP].
+  static InAppPurchasePlatform get _appStore {
+    if (_store == null) {
+      InAppPurchaseStoreKitPlatform.registerPlatform();
+      _store = InAppPurchasePlatform.instance;
+    }
+    return _store!;
+  }
+
+  /// Purchase updates from the App Store.
+  static Stream<List<PurchaseDetails>> get purchaseStream =>
+      _appStore.purchaseStream;
+
   /// How long the sheet waits for the store before it falls back to Ko-fi. A
   /// sideloaded build talks to a store that knows nothing of it, and a silent
   /// one must not leave the sheet spinning.
@@ -55,26 +72,22 @@ class DonationService {
   /// Queries the App Store for the configured products.
   /// Throws if the store is unavailable or does not answer in [storeTimeout].
   static Future<ProductDetailsResponse> fetchProducts() async {
-    final available = await InAppPurchase.instance.isAvailable().timeout(
-      storeTimeout,
-    );
+    final available = await _appStore.isAvailable().timeout(storeTimeout);
     if (!available) {
       throw Exception('App Store is not available on this device.');
     }
-    return InAppPurchase.instance
-        .queryProductDetails(productIds)
-        .timeout(storeTimeout);
+    return _appStore.queryProductDetails(productIds).timeout(storeTimeout);
   }
 
   /// Initiates a consumable purchase for the given [product].
   static Future<void> buy(ProductDetails product) async {
     final param = PurchaseParam(productDetails: product);
-    await InAppPurchase.instance.buyConsumable(purchaseParam: param);
+    await _appStore.buyConsumable(purchaseParam: param);
   }
 
   /// Marks a completed purchase as delivered so the App Store does not retry.
   static Future<void> complete(PurchaseDetails purchase) async {
-    await InAppPurchase.instance.completePurchase(purchase);
+    await _appStore.completePurchase(purchase);
   }
 }
 

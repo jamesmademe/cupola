@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:in_app_purchase_platform_interface/in_app_purchase_platform_interface.dart';
 
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/theme.dart';
@@ -48,7 +48,7 @@ class _DonationSheetState extends State<DonationSheet> {
   // ── IAP setup ─────────────────────────────────────────────────────────────
 
   void _subscribeToPurchaseStream() {
-    _purchaseSubscription = InAppPurchase.instance.purchaseStream.listen(
+    _purchaseSubscription = DonationService.purchaseStream.listen(
       _handlePurchaseUpdate,
       onError: (_) {
         if (mounted) {
