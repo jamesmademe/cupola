@@ -27,6 +27,7 @@ import 'package:cupola/features/requests/presentation/my_request_actions.dart';
 import 'package:cupola/features/requests/presentation/widgets/requester_request_row.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
+import 'package:cupola/core/widgets/screen_title.dart';
 
 /// The requester's third tab: every request she made, where each stands and
 /// when.
@@ -270,13 +271,7 @@ class _Header extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Semantics(
-            header: true,
-            child: Text(
-              'Requests',
-              style: AppType.screen.copyWith(color: room.ink),
-            ),
-          ),
+          const ScreenTitle('Requests'),
           ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 44),
             child: Align(

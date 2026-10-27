@@ -1,6 +1,6 @@
 /// Exports World A as `world.json` for the testlab seed.
 ///
-/// `test/test_helpers/profiles/world.dart` is the one source: the unit tests,
+/// `lib/demo/world/world.dart` is the one source: the unit tests,
 /// the design boards and the testlab all name the same titles, people, artists,
 /// books and downloads. This script only serialises it, in a stable order, so
 /// the seed never carries a hand-copied second world.
@@ -14,7 +14,7 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
-import '../../test/test_helpers/profiles/world.dart';
+import 'package:cupola/demo/world/world.dart';
 
 const String defaultOutputPath = '.ai/scratch/zz_testlab/world.json';
 

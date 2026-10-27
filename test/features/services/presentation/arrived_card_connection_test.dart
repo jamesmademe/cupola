@@ -15,9 +15,9 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/home/presentation/widgets/arrived_module.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 
-import '../../../test_helpers/profiles/fakes/arr_fakes.dart';
+import 'package:cupola/demo/world/fakes/arr_fakes.dart';
 import '../../../test_helpers/profiles/profiles.dart';
-import '../../../test_helpers/profiles/service_fakes.dart';
+import 'package:cupola/demo/world/service_fakes.dart';
 
 const _phone = Size(375, 1200);
 

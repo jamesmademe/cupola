@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The dev identity's own App Group (scripts/run_dev.sh). An agent build
+	     never shares a folder with the app Matt uses or with the testlab's. -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.matthwlabs.cupola.dev</string>
+	</array>
+	<!-- Simulator builds are ad hoc signed: the group is named literally so
+	     the dev keychain cannot fall back to the house's default one. -->
+	<key>keychain-access-groups</key>
+	<array>
+		<string>com.matthwlabs.cupola.dev</string>
+	</array>
+</dict>
+</plist>

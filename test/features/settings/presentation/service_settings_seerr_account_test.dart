@@ -24,8 +24,7 @@ import 'package:cupola/features/settings/presentation/service_settings_screen.da
 import 'package:cupola/features/settings/presentation/widgets/invite_sheet.dart';
 
 import '../../../test_helpers/fake_secure_settings_store.dart';
-import '../../../test_helpers/profiles/fakes/seerr_sessions.dart'
-    show seerrError;
+import 'package:cupola/demo/world/fakes/seerr_sessions.dart' show seerrError;
 import '../../../test_helpers/profiles/profiles.dart';
 
 const _surface = Size(430, 2600);

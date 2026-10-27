@@ -20,8 +20,8 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 
-import '../config_profile.dart';
-import '../profile_network.dart';
+import 'package:cupola/demo/world/config_profile.dart';
+import 'package:cupola/demo/world/profile_network.dart';
 
 /// The host this fake answers for.
 const plexTvHost = 'plex.tv';

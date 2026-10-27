@@ -38,7 +38,7 @@ import 'package:cupola/features/settings/presentation/settings_appearance_screen
 import 'package:cupola/features/settings/presentation/settings_home_screen.dart';
 import 'package:cupola/features/settings/presentation/settings_region_screen.dart';
 
-import '../../../test_helpers/profiles/fakes/media_fakes.dart';
+import 'package:cupola/demo/world/fakes/media_fakes.dart';
 import '../../../test_helpers/profiles/profiles.dart';
 
 /// Words the requester never reads (the brand book's requester section).

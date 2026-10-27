@@ -913,6 +913,33 @@ class WorldDownload {
   final int? peers;
 
   int get sizeLeft => (size * (1 - progress)).round();
+
+  /// A copy where what changed changed: the world's life
+  /// (`world_life.dart`) moves a download on, pauses it, hands it over.
+  /// [clearArr] lets go of the arr, for a row its queue no longer carries.
+  WorldDownload copyWith({
+    DownloadState? state,
+    double? progress,
+    int? speed,
+    Duration? eta,
+    bool clearEta = false,
+    bool clearArr = false,
+  }) => WorldDownload(
+    id: id,
+    release: release,
+    client: client,
+    state: state ?? this.state,
+    progress: progress ?? this.progress,
+    size: size,
+    arr: clearArr ? null : arr,
+    title: title,
+    season: season,
+    episode: episode,
+    speed: speed ?? this.speed,
+    eta: clearEta ? null : (eta ?? this.eta),
+    onlyWithClient: onlyWithClient,
+    peers: peers,
+  );
 }
 
 abstract final class WorldDownloads {

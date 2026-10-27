@@ -51,7 +51,8 @@ void main() {
     );
     final figures = await _figures(harness, ServiceKey.plex);
 
-    expect(figures['Streams']!.value, '0');
+    // Luca is watching Elephants Dream on his iPad.
+    expect(figures['Streams']!.value, '1');
     expect(figures['Transcodes']!.value, '0');
     expect(figures['Libraries']!.value, '4');
   });

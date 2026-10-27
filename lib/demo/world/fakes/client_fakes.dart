@@ -5,13 +5,13 @@
 /// Radarr or Sonarr queue share the download id the Dashboard joins on.
 library;
 
-import '../../fixtures.dart';
-import '../profile_network.dart';
-import '../service_fakes.dart';
-import '../world.dart';
+import 'package:cupola/demo/world/fixtures.dart';
+import 'package:cupola/demo/world/profile_network.dart';
+import 'package:cupola/demo/world/service_fakes.dart';
+import 'package:cupola/demo/world/world.dart';
 
 List<WorldDownload> _rowsOf(ServerContext c, String client) => [
-  for (final d in c.profile.downloads)
+  for (final d in c.downloads)
     if (d.client == client) d,
 ];
 
@@ -28,15 +28,16 @@ class QbittorrentFake extends ServiceFake {
   static const _login = '/api/v2/auth/login';
 
   @override
-  bool isWrite(NetworkRequest r) => r.method == 'POST' && r.path != _login;
+  bool isWrite(NetworkRequest request) =>
+      request.method == 'POST' && request.path != _login;
 
   @override
-  NetworkReply refuseKey(NetworkRequest r) => r.path == _login
+  NetworkReply refuseKey(NetworkRequest request) => request.path == _login
       ? NetworkReply.text('Fails.')
       : NetworkReply.text('Forbidden', status: 403);
 
   @override
-  NetworkReply refuseWrite(NetworkRequest r) =>
+  NetworkReply refuseWrite(NetworkRequest request) =>
       NetworkReply.text('Forbidden', status: 403);
 
   static String _state(WorldDownload d) => switch (d.state) {
@@ -167,9 +168,9 @@ class QbittorrentFake extends ServiceFake {
       case ('GET', '/api/v2/torrents/trackers'):
         return NetworkReply.json(const <Object?>[]);
       case ('GET', '/api/v2/rss/items'):
-        return NetworkReply.json(const <String, Object?>{});
+        return NetworkReply.json(_rssItems(c, withData: r.query['withData']));
       case ('GET', '/api/v2/rss/rules'):
-        return NetworkReply.json(const <String, Object?>{});
+        return NetworkReply.json(_rssRules(c));
       case ('GET', '/api/v2/torrents/categories'):
         return NetworkReply.json({
           'radarr': {'name': 'radarr', 'savePath': ''},
@@ -178,8 +179,112 @@ class QbittorrentFake extends ServiceFake {
       case ('GET', '/api/v2/torrents/tags'):
         return NetworkReply.json(const <Object?>[]);
     }
-    if (r.method == 'POST') return NetworkReply.text('Ok.');
+    if (r.method == 'POST') {
+      _write(r, c, rows);
+      return NetworkReply.text('Ok.');
+    }
     return null;
+  }
+
+  static const _rssFeedUrl = 'https://feeds.example.net/open-movies.xml';
+
+  /// The one feed the household follows, as `rss/items` sends it: the feed
+  /// is a leaf with its `url`, and with `withData=true` its articles, one
+  /// of them already read. Without `withData` a leaf is the bare URL, which
+  /// is what an older WebUI sends and what the app reads without a count.
+  static JsonMap _rssItems(ServerContext c, {String? withData}) {
+    if (withData != 'true') return {'Open Movies': _rssFeedUrl};
+    JsonMap article(
+      String id,
+      String title,
+      Duration age, {
+      bool read = false,
+    }) => {
+      'id': id,
+      'title': title,
+      'date': c.ago(age),
+      'description': '$title, released by the Open Movies feed.',
+      'torrentURL': 'https://feeds.example.net/torrent/$id.torrent',
+      'isRead': read,
+    };
+    return {
+      'Open Movies': {
+        'uid': '{6b1f3a52-0c7e-4d0b-9a55-2f0c4a7e91d3}',
+        'url': _rssFeedUrl,
+        'title': 'Open Movies',
+        'lastBuildDate': c.ago(const Duration(minutes: 40)),
+        'isLoading': false,
+        'hasError': false,
+        'articles': [
+          article(
+            'tears-of-steel-1080p',
+            'Tears.of.Steel.2012.1080p.BluRay',
+            const Duration(hours: 5),
+          ),
+          article(
+            'spring-1080p',
+            'Spring.2014.1080p.BluRay',
+            const Duration(days: 1, hours: 2),
+            read: true,
+          ),
+          article(
+            'charge-1080p',
+            'Charge.2022.1080p.WEB',
+            const Duration(days: 2, hours: 7),
+            read: true,
+          ),
+          article(
+            'coffee-run-720p',
+            'Coffee.Run.2020.720p.WEB',
+            const Duration(days: 3),
+          ),
+        ],
+      },
+    };
+  }
+
+  /// The rule that sends what the feed carries at 1080p to Radarr's
+  /// category, as `rss/rules` sends it.
+  static JsonMap _rssRules(ServerContext c) => {
+    'Open Movies 1080p': {
+      'enabled': true,
+      'mustContain': '1080p',
+      'mustNotContain': 'CAM|HDTS|TELESYNC',
+      'useRegex': true,
+      'episodeFilter': '',
+      'smartFilter': false,
+      'previouslyMatchedEpisodes': const <Object?>[],
+      'affectedFeeds': const [_rssFeedUrl],
+      'ignoreDays': 0,
+      'lastMatch': c.ago(const Duration(days: 1, hours: 2)),
+      'addPaused': null,
+      'assignedCategory': 'radarr',
+      'savePath': '',
+    },
+  };
+
+  /// What a write does to a living world: pause, resume, delete. The rest
+  /// (tags, limits, a recheck) is answered and changes nothing the world
+  /// draws.
+  static void _write(
+    NetworkRequest r,
+    ServerContext c,
+    List<WorldDownload> rows,
+  ) {
+    final life = c.life;
+    if (life == null) return;
+    final named = r.form['hashes'] ?? '';
+    final hashes = named == 'all'
+        ? [for (final d in rows) d.id]
+        : named.split('|').where((h) => h.isNotEmpty).toList();
+    final act = switch (r.path) {
+      '/api/v2/torrents/stop' || '/api/v2/torrents/pause' => life.pause,
+      '/api/v2/torrents/start' || '/api/v2/torrents/resume' => life.resume,
+      '/api/v2/torrents/delete' => life.remove,
+      _ => null,
+    };
+    if (act == null) return;
+    hashes.forEach(act);
   }
 }
 
@@ -224,17 +329,17 @@ class TransmissionFake extends ServiceFake {
       d.state == DownloadState.failed || d.state == DownloadState.missingFiles;
 
   @override
-  bool isWrite(NetworkRequest r) => !_reads.contains(_method(r));
+  bool isWrite(NetworkRequest request) => !_reads.contains(_method(request));
 
   @override
-  NetworkReply refuseKey(NetworkRequest r) =>
+  NetworkReply refuseKey(NetworkRequest request) =>
       NetworkReply.text('<h1>401: Unauthorized</h1>', status: 401);
 
   @override
-  NetworkReply? gate(NetworkRequest r, ServerContext c) {
-    final refused = super.gate(r, c);
+  NetworkReply? gate(NetworkRequest request, ServerContext context) {
+    final refused = super.gate(request, context);
     if (refused != null) return refused;
-    if (r.headers['x-transmission-session-id'] != sessionId) {
+    if (request.headers['x-transmission-session-id'] != sessionId) {
       return NetworkReply.text(
         '<h1>409: Conflict</h1>',
         status: 409,
@@ -320,7 +425,36 @@ class TransmissionFake extends ServiceFake {
           'size-bytes': 12400000000000,
         });
     }
+    _write(r, c, rows);
     return ok(const {});
+  }
+
+  /// What a write does to a living world: start, stop, remove, named by the
+  /// torrents' ids in `torrent-get` (their place in the list) or by hash.
+  void _write(NetworkRequest r, ServerContext c, List<WorldDownload> rows) {
+    final life = c.life;
+    final body = r.json;
+    if (life == null || body is! Map) return;
+    final arguments = body['arguments'];
+    final ids = arguments is Map ? arguments['ids'] : null;
+    final named = <String>[
+      if (ids is List)
+        for (final id in ids)
+          if (id is int && id >= 1 && id <= rows.length)
+            rows[id - 1].id
+          else if (id is String)
+            id,
+      if (ids == null)
+        for (final d in rows) d.id,
+    ];
+    final act = switch (_method(r)) {
+      'torrent-stop' => life.pause,
+      'torrent-start' || 'torrent-start-now' => life.resume,
+      'torrent-remove' => life.remove,
+      _ => null,
+    };
+    if (act == null) return;
+    named.forEach(act);
   }
 }
 
@@ -348,21 +482,21 @@ class SabnzbdFake extends ServiceFake {
   String _mode(NetworkRequest r) => r.query['mode'] ?? '';
 
   @override
-  bool isPublic(NetworkRequest r) => _mode(r) == 'version';
+  bool isPublic(NetworkRequest request) => _mode(request) == 'version';
 
   // `mode=queue&name=delete` and friends change things; a bare queue reads.
   @override
-  bool isWrite(NetworkRequest r) =>
-      !_reads.contains(_mode(r)) || r.query.containsKey('name');
+  bool isWrite(NetworkRequest request) =>
+      !_reads.contains(_mode(request)) || request.query.containsKey('name');
 
   @override
-  NetworkReply refuseKey(NetworkRequest r) =>
+  NetworkReply refuseKey(NetworkRequest request) =>
       NetworkReply.json({'status': false, 'error': 'API Key Incorrect'});
 
   // SABnzbd has no read-only full key; the NZB key it can hand out is refused
   // on every full-API call, reads included, in the same words.
   @override
-  NetworkReply refuseWrite(NetworkRequest r) => refuseKey(r);
+  NetworkReply refuseWrite(NetworkRequest request) => refuseKey(request);
 
   @override
   NetworkReply? answer(NetworkRequest r, ServerContext c) {
@@ -370,13 +504,14 @@ class SabnzbdFake extends ServiceFake {
     final mbLeft = rows.fold<double>(0, (s, d) => s + d.sizeLeft / 1048576);
     // A full disk stops the queue as a pause does, and nothing moves.
     final diskFull = c.profile.fullDisks.contains(c.server.id);
-    final paused = diskFull || c.profile.pausedQueues.contains(c.server.id);
+    final paused = diskFull || c.pausedQueues.contains(c.server.id);
     final speed = paused ? 0 : rows.fold<int>(0, (s, d) => s + d.speed);
     switch (_mode(r)) {
       case 'version':
         return NetworkReply.json({'version': '4.3.3'});
       case 'queue':
         if (r.query.containsKey('name')) {
+          _writeJob(r, c);
           return NetworkReply.json({'status': true});
         }
         return NetworkReply.json({
@@ -479,8 +614,25 @@ class SabnzbdFake extends ServiceFake {
         });
       case 'warnings':
         return NetworkReply.json({'warnings': const <Object?>[]});
+      case 'pause' || 'resume':
+        c.life?.setQueuePaused(c.server.id, paused: _mode(r) == 'pause');
     }
     return NetworkReply.json({'status': true});
+  }
+
+  /// What `mode=queue&name=…&value=<nzo_id>` does to a living world.
+  void _writeJob(NetworkRequest r, ServerContext c) {
+    final life = c.life;
+    final job = r.query['value'];
+    if (life == null || job == null) return;
+    switch (r.query['name']) {
+      case 'pause':
+        life.pause(job);
+      case 'resume':
+        life.resume(job);
+      case 'delete':
+        life.remove(job);
+    }
   }
 }
 
@@ -506,10 +658,10 @@ class NzbgetFake extends ServiceFake {
   }
 
   @override
-  bool isWrite(NetworkRequest r) => !_reads.contains(_method(r));
+  bool isWrite(NetworkRequest request) => !_reads.contains(_method(request));
 
   @override
-  NetworkReply refuseKey(NetworkRequest r) => const NetworkReply(401);
+  NetworkReply refuseKey(NetworkRequest request) => const NetworkReply(401);
 
   @override
   NetworkReply? answer(NetworkRequest r, ServerContext c) {
@@ -519,19 +671,206 @@ class NzbgetFake extends ServiceFake {
         NetworkReply.json({'version': '1.1', 'id': id, 'result': value});
     final rows = _rowsOf(c, 'nzbget');
     final diskFull = c.profile.fullDisks.contains(c.server.id);
-    final paused = diskFull || c.profile.pausedQueues.contains(c.server.id);
+    final paused = diskFull || c.pausedQueues.contains(c.server.id);
     return switch (_method(r)) {
       'version' => result(
         jsonFixture('nzbget/version.json')['result'] ?? '24.3',
       ),
-      'status' => result(status(rows, diskFull: diskFull, paused: paused)),
-      'listgroups' => result([
-        for (final (i, d) in rows.indexed)
-          group(d, nzbId: i + 1, paused: paused),
-      ]),
-      'history' => result(const <Object?>[]),
-      _ => result(true),
+      'status' => result(
+        rows.isEmpty
+            ? _ownStatus(diskFull: diskFull, paused: paused)
+            : status(rows, diskFull: diskFull, paused: paused),
+      ),
+      'listgroups' => result(
+        rows.isEmpty
+            ? _ownGroups(paused: paused)
+            : [
+                for (final (i, d) in rows.indexed)
+                  group(d, nzbId: i + 1, paused: paused),
+              ],
+      ),
+      'history' => result(_history(c)),
+      'config' => result(_config),
+      'log' => result(_log(c)),
+      _ => result(_write(r, c, rows)),
     };
+  }
+
+  // The world holds no download for NZBGet, so its own screens would be
+  // empty. What it moves lives here, not in `WorldDownloads`: a download
+  // there is counted across the Dashboard and the arr queues, and the
+  // household's Sonarr and Radarr never sent these. One is moving, one waits.
+  static const _ownJobs = [
+    (
+      id: 3,
+      name: 'Tears.of.Steel.2012.1080p.BluRay',
+      sizeMb: 4200,
+      leftMb: 1500,
+    ),
+    (id: 4, name: 'Coffee.Run.2020.1080p.WEB', sizeMb: 1400, leftMb: 1400),
+  ];
+
+  static List<JsonMap> _ownGroups({required bool paused}) => [
+    for (final (i, job) in _ownJobs.indexed)
+      {
+        'NZBID': job.id,
+        'NZBName': job.name,
+        // A paused queue holds the moving job as queued, as it does a row
+        // of the world's.
+        'Status': i == 0 && !paused ? 'DOWNLOADING' : 'QUEUED',
+        'Category': 'movies',
+        'FileSizeMB': job.sizeMb,
+        'RemainingSizeMB': job.leftMb,
+        'Health': 1000,
+        'CriticalHealth': 898,
+        'Parameters': const <Object?>[],
+      },
+  ];
+
+  /// `status` for the jobs above: the fixture's 2 MiB/s on the one moving,
+  /// and what is left of both.
+  static JsonMap _ownStatus({required bool diskFull, required bool paused}) {
+    final base = status(const [], diskFull: diskFull, paused: paused);
+    return {
+      ...base,
+      'RemainingSizeMB': _ownJobs.fold<int>(0, (sum, j) => sum + j.leftMb),
+      if (paused) 'DownloadRate': 0,
+    };
+  }
+
+  /// `history`: what arrived, and one release that lost more articles than
+  /// its pars could repair, which the queue's Coffee Run is the retry of.
+  static List<JsonMap> _history(ServerContext c) {
+    int at(Duration age) => c.now.subtract(age).millisecondsSinceEpoch ~/ 1000;
+    JsonMap entry(int id, String name, String status, Duration age) => {
+      'ID': id,
+      'NZBID': id,
+      'Name': name,
+      'NZBName': name,
+      'Status': status,
+      'Category': 'movies',
+      'HistoryTime': at(age),
+    };
+    return [
+      entry(
+        2,
+        'Coffee.Run.2020.720p.WEB',
+        'FAILURE/HEALTH',
+        const Duration(hours: 6),
+      ),
+      entry(
+        1,
+        'Spring.2014.1080p.BluRay',
+        'SUCCESS/ALL',
+        const Duration(days: 1, hours: 2),
+      ),
+      entry(
+        0,
+        'Charge.2022.1080p.WEB',
+        'SUCCESS/ALL',
+        const Duration(days: 2, hours: 7),
+      ),
+    ];
+  }
+
+  /// `config`, cut to what the screens read: the one RSS feed the household
+  /// follows. The real answer is every option; the client keeps `FeedN.*`.
+  static const _config = [
+    {'Name': 'MainDir', 'Value': '/downloads'},
+    {'Name': 'Feed1.Name', 'Value': 'Open Movies (usenet)'},
+    {'Name': 'Feed1.URL', 'Value': 'https://indexer.example.net/rss?t=2000'},
+    {'Name': 'Feed1.Filter', 'Value': 'Accept: 1080p'},
+    {'Name': 'Feed1.Interval', 'Value': '15'},
+    {'Name': 'Feed1.Backlog', 'Value': 'no'},
+    {'Name': 'Feed1.PauseNzb', 'Value': 'no'},
+    {'Name': 'Feed1.Category', 'Value': 'movies'},
+    {'Name': 'Feed1.Priority', 'Value': '0'},
+  ];
+
+  /// `log`: the screen log, oldest first, the way the daemon keeps it.
+  static List<JsonMap> _log(ServerContext c) {
+    int at(Duration age) => c.now.subtract(age).millisecondsSinceEpoch ~/ 1000;
+    JsonMap line(int id, String kind, Duration age, String text) => {
+      'ID': id,
+      'Kind': kind,
+      'Time': at(age),
+      'Text': text,
+    };
+    return [
+      line(1, 'INFO', const Duration(hours: 9), 'nzbget 24.3 server-mode'),
+      line(
+        2,
+        'INFO',
+        const Duration(hours: 9),
+        'Using config-file /config/nzbget.conf',
+      ),
+      line(
+        3,
+        'INFO',
+        const Duration(days: 2, hours: 7),
+        'Successfully downloaded Charge.2022.1080p.WEB',
+      ),
+      line(
+        4,
+        'INFO',
+        const Duration(days: 1, hours: 2),
+        'Successfully downloaded Spring.2014.1080p.BluRay',
+      ),
+      line(
+        5,
+        'WARNING',
+        const Duration(hours: 6, minutes: 14),
+        'Download health for Coffee.Run.2020.720p.WEB is 64.0%, below the '
+            'critical health 89.8%',
+      ),
+      line(
+        6,
+        'ERROR',
+        const Duration(hours: 6),
+        'Failed Coffee.Run.2020.720p.WEB: not enough articles',
+      ),
+      line(
+        7,
+        'INFO',
+        const Duration(minutes: 52),
+        'Fetched 1 new item from feed Open Movies (usenet)',
+      ),
+      line(
+        8,
+        'INFO',
+        const Duration(minutes: 31),
+        'Collection Tears.of.Steel.2012.1080p.BluRay added to queue',
+      ),
+    ];
+  }
+
+  /// What a write does to a living world: the whole queue paused or
+  /// resumed, a group paused, resumed or deleted by its `NZBID` (its place
+  /// in `listgroups`). Always `true`, as NZBGet answers.
+  bool _write(NetworkRequest r, ServerContext c, List<WorldDownload> rows) {
+    final life = c.life;
+    final body = r.json;
+    if (life == null || body is! Map) return true;
+    final params = body['params'];
+    switch (_method(r)) {
+      case 'pausedownload':
+        life.setQueuePaused(c.server.id, paused: true);
+      case 'resumedownload':
+        life.setQueuePaused(c.server.id, paused: false);
+      case 'editqueue' when params is List && params.length >= 4:
+        final act = switch (params[0]) {
+          'GroupPause' => life.pause,
+          'GroupResume' => life.resume,
+          'GroupDelete' || 'GroupFinalDelete' => life.remove,
+          _ => null,
+        };
+        final ids = params[3];
+        if (act == null || ids is! List) return true;
+        for (final id in ids) {
+          if (id is int && id >= 1 && id <= rows.length) act(rows[id - 1].id);
+        }
+    }
+    return true;
   }
 
   /// `status`, with the rate summed over the world's NZBGet jobs. With none,

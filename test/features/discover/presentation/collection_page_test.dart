@@ -13,7 +13,7 @@ import 'package:cupola/features/media/presentation/media_decision_card.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-import '../../../test_helpers/profiles/fakes/media_fakes.dart';
+import 'package:cupola/demo/world/fakes/media_fakes.dart';
 import '../../../test_helpers/profiles/profiles.dart';
 import '../../../test_helpers/settings_scope.dart';
 

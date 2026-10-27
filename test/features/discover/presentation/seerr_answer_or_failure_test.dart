@@ -17,7 +17,7 @@ import 'package:cupola/features/search/domain/global_search_result.dart';
 import 'package:cupola/features/search/presentation/global_search_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-import '../../../test_helpers/profiles/fakes/media_fakes.dart';
+import 'package:cupola/demo/world/fakes/media_fakes.dart';
 import '../../../test_helpers/profiles/profiles.dart';
 
 Future<ProviderContainer> _start(ConfigProfile profile) async {

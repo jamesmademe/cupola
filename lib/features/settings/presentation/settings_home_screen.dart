@@ -30,6 +30,7 @@ import 'package:cupola/features/settings/presentation/widgets/settings_signature
 import 'package:cupola/features/settings/presentation/widgets/settings_summary_cards.dart';
 import 'package:cupola/features/shell/domain/settings_return.dart';
 import 'package:cupola/features/shell/domain/shell_audience.dart';
+import 'package:cupola/demo/presentation/demo_settings_card.dart';
 
 export 'package:cupola/features/settings/presentation/widgets/settings_section_label.dart'
     show SettingsSectionLabel;
@@ -97,9 +98,14 @@ class SettingsHomeScreen extends ConsumerWidget {
             : ListView(
                 padding: padding,
                 children: requester
-                    ? [heading, ..._requesterIndex(context, settings)]
+                    ? [
+                        heading,
+                        const DemoSettingsCard(),
+                        ..._requesterIndex(context, settings),
+                      ]
                     : [
                         heading,
+                        const DemoSettingsCard(),
                         const ConnectionsSummaryCard(),
                         const SizedBox(height: AppSpacing.xl),
                         ..._buildGeneralSection(context, settings),

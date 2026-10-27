@@ -27,6 +27,9 @@ import 'package:cupola/core/theme.dart';
 import 'package:cupola/core/utils/a11y_announce.dart';
 import 'package:cupola/core/widgets/app_snapshot_cover.dart';
 import 'package:cupola/core/widgets/themed_system_bars.dart';
+import 'package:cupola/demo/demo_door.dart';
+import 'package:cupola/demo/demo_session.dart';
+import 'package:cupola/demo/world/artwork.dart';
 import 'package:cupola/features/discover/data/seerr_accounts.dart';
 import 'package:cupola/features/outside/data/outside_background.dart';
 import 'package:cupola/features/outside/data/outside_keeper.dart';
@@ -34,6 +37,7 @@ import 'package:cupola/features/release_search/data/release_search_bootstrap.dar
 import 'package:cupola/features/settings/data/route_probe.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/data/settings_service.dart';
+import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/features/shell/domain/startup_failure.dart';
 import 'package:cupola/features/shell/presentation/settings_back_claim.dart';
 import 'package:cupola/features/shell/presentation/startup_failure_page.dart';
@@ -54,6 +58,7 @@ void main() async {
   // rectangle on the screen. Inert on iOS and Android.
   await DesktopWindow.ensureReady();
   _registerBundledFontLicense();
+  WorldArtwork.registerLicense();
   await _start();
 }
 
@@ -103,7 +108,13 @@ Future<void> _start() async {
 
   switch (outcome) {
     case StartupReady(value: final overrides):
-      runApp(ProviderScope(overrides: overrides, child: const CupolaApp()));
+      runApp(
+        ProviderScope(
+          key: UniqueKey(),
+          overrides: [...overrides, demoDoorProvider.overrideWithValue(_door)],
+          child: const CupolaApp(),
+        ),
+      );
       LinkHandoff.routerReadyWhenDrawn();
     case StartupFailed(:final failure):
       runApp(
@@ -115,6 +126,39 @@ Future<void> _start() async {
       );
   }
   DesktopWindow.showWhenDrawn();
+}
+
+/// The way into the demo and out of it: see [DemoSession].
+///
+/// Each `runApp` hands over a `ProviderScope` with a key of its own. Without
+/// one Flutter keeps the scope already drawn and only updates its overrides,
+/// so the demo would run in the real app's container (Riverpod refuses that
+/// outright: the number of overrides changes).
+const _door = DemoDoor(enter: _enterDemo, leave: _leaveDemo);
+
+/// The demo running now, which leaving ends.
+DemoSession? _demo;
+
+Future<void> _enterDemo(SettingsModel leaving) async {
+  final session = _demo = await DemoSession.start(leaving: leaving);
+  runApp(
+    ProviderScope(
+      key: UniqueKey(),
+      overrides: [
+        ...session.overrides,
+        demoDoorProvider.overrideWithValue(_door),
+      ],
+      child: const CupolaApp(),
+    ),
+  );
+  LinkHandoff.routerReadyWhenDrawn();
+}
+
+Future<void> _leaveDemo() async {
+  final session = _demo;
+  _demo = null;
+  await session?.end();
+  await _start();
 }
 
 /// The Home's last drawings (`LastKnownStore`), from the system's cache

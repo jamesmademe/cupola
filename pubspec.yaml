@@ -42,6 +42,10 @@ dependencies:
   flutter_riverpod: ^3.0.3
   go_router: ^17.0.0
   shared_preferences: ^2.5.3
+  # Promoted from a transitive dependency of `shared_preferences` so the demo
+  # (`lib/demo/demo_session.dart`) can hold the app's preferences in memory
+  # for as long as it runs.
+  shared_preferences_platform_interface: ^2.4.2
   flutter_secure_storage: ^10.2.0
   cached_network_image: ^3.4.1
   # Promoted from a transitive dependency of `cached_network_image` so
@@ -196,6 +200,36 @@ flutter:
     - assets/fonts/BricolageGrotesque-OFL.txt
     - assets/fonts/Onest-OFL.txt
     - assets/fonts/GeistMono-OFL.txt
+    # The demo's posters and backdrops, the Blender Studio's own pictures of
+    # its open films (CC BY 4.0): `lib/demo/world/artwork.dart`.
+    - assets/demo/artwork/
+    # The recorded answers the demo world serves as they are
+    # (`lib/demo/world/fixtures.dart`). They keep their one home beside the
+    # model tests that read them; every file the world names is listed here,
+    # held by `test/demo/world_fixtures_guard_test.dart`.
+    - test/fixtures/jellyfin/system_info_public.json
+    - test/fixtures/npm/users_me_admin.json
+    - test/fixtures/npm/users_me_view_only.json
+    - test/fixtures/nzbget/status.json
+    - test/fixtures/nzbget/version.json
+    - test/fixtures/plex/capabilities.json
+    - test/fixtures/plex/identity.json
+    - test/fixtures/plex/library_sections.json
+    - test/fixtures/sabnzbd/server_stats.json
+    - test/fixtures/seerr/public_settings_jellyseerr_1.9.2.json
+    - test/fixtures/seerr/public_settings_jellyseerr_2.7.3.json
+    - test/fixtures/seerr/public_settings_overseerr_1.35.0.json
+    - test/fixtures/seerr/public_settings_seerr_3.5.0.json
+    - test/fixtures/truenas/auth_me_full_admin.json
+    - test/fixtures/truenas/auth_me_readonly_admin.json
+    - test/fixtures/truenas/rpc_error_eacces.json
+    - test/fixtures/unraid/array.json
+    - test/fixtures/unraid/docker.json
+    - test/fixtures/unraid/error_forbidden.json
+    - test/fixtures/unraid/error_unauthenticated.json
+    - test/fixtures/unraid/info.json
+    - test/fixtures/unraid/me_admin.json
+    - test/fixtures/unraid/me_viewer.json
 
   # To add assets to your application, add an assets section, like this:
   # assets:

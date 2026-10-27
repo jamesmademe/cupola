@@ -4,13 +4,14 @@ library;
 import 'package:cupola/features/discover/domain/seerr_permission.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-import '../../fixtures.dart';
-import '../config_profile.dart';
-import '../profile_network.dart';
-import '../service_fakes.dart';
-import '../world.dart';
-import 'arr_fakes.dart';
-import 'seerr_sessions.dart';
+import 'package:cupola/demo/world/artwork.dart';
+import 'package:cupola/demo/world/fixtures.dart';
+import 'package:cupola/demo/world/config_profile.dart';
+import 'package:cupola/demo/world/profile_network.dart';
+import 'package:cupola/demo/world/service_fakes.dart';
+import 'package:cupola/demo/world/world.dart';
+import 'package:cupola/demo/world/fakes/arr_fakes.dart';
+import 'package:cupola/demo/world/fakes/seerr_sessions.dart';
 
 // === Seerr =================================================================
 
@@ -46,10 +47,10 @@ class SeerrFake extends ServiceFake {
   // Seerr reads a key it does not know as nobody, and refuses nobody the way
   // `isAuthenticated` does.
   @override
-  NetworkReply refuseKey(NetworkRequest r) => seerrEndpointRefused();
+  NetworkReply refuseKey(NetworkRequest request) => seerrEndpointRefused();
 
   @override
-  NetworkReply refuseWrite(NetworkRequest r) => seerrEndpointRefused();
+  NetworkReply refuseWrite(NetworkRequest request) => seerrEndpointRefused();
 
   /// A web page still answers in front of everything; otherwise Seerr's own
   /// middleware decides: the CSRF guard, then the key or the session, then
@@ -63,8 +64,11 @@ class SeerrFake extends ServiceFake {
   }
 
   @override
-  NetworkReply finish(NetworkRequest r, ServerContext c, NetworkReply reply) =>
-      seerrFinish(r, reply);
+  NetworkReply finish(
+    NetworkRequest request,
+    ServerContext context,
+    NetworkReply reply,
+  ) => seerrFinish(request, reply);
 
   // Search and discovery are GETs; every write is a POST, PUT or DELETE.
 
@@ -116,6 +120,165 @@ class SeerrFake extends ServiceFake {
     _ => null,
   };
 
+  /// The requests as the world stands: as written, or, once it lives, as the
+  /// demo left them.
+  static List<(int, WorldTitle, int, int, Duration, bool)> _requestsOf(
+    ServerContext c,
+  ) {
+    final live = _live(c);
+    if (live == null) return _requests;
+    return [
+      for (final q in live)
+        (
+          q.id,
+          q.title,
+          q.requester,
+          q.status,
+          c.now.difference(q.created),
+          q.is4k,
+        ),
+    ];
+  }
+
+  /// The living world's requests, read from the written ones the first time.
+  static List<LiveSeerrRequest>? _live(ServerContext c) {
+    if (c.life == null) return null;
+    return seerrStateOf(c.network, c.server.id).liveRequests ??= [
+      for (final (id, title, by, status, age, is4k) in _requests)
+        LiveSeerrRequest(
+          id: id,
+          title: title,
+          requester: by,
+          status: status,
+          created: c.now.subtract(age),
+          is4k: is4k,
+          fromWorld: true,
+        ),
+    ];
+  }
+
+  /// What Seerr knows of [t]: as written, or, once the world lives, what its
+  /// arr holds and fetches and what the demo asked for.
+  static (int, int)? _mediaStatusOf(ServerContext c, WorldTitle t) {
+    final written = _mediaStatus(t);
+    if (c.life == null) return written;
+    final hd = _liveStatus(c, t, is4k: false) ?? written?.$1;
+    final uhd = _liveStatus(c, t, is4k: true) ?? written?.$2;
+    if (hd == null && uhd == null) return null;
+    return (hd ?? 1, uhd ?? 1);
+  }
+
+  /// One copy's status as the living world says it, or null to keep the
+  /// written one: on disk is available, a download under way is processing,
+  /// and a request the demo made or decided waits, is processing, or, once
+  /// declined, leaves the title unknown.
+  static int? _liveStatus(ServerContext c, WorldTitle t, {required bool is4k}) {
+    final life = c.life!;
+    final arr = _arrFor(c, t, is4k);
+    if (arr != null) {
+      if (t.isSeries) {
+        final held = life.arrs.seriesOf(arr, t);
+        if (held != null && !held.seeded && held.arrivedSeasons.isNotEmpty) {
+          return 5;
+        }
+      } else if (life.arrs.movieOf(arr, t)?.hasFile ?? false) {
+        return 5;
+      }
+      final fetching = life.downloads.any(
+        (d) =>
+            d.arr == arr &&
+            d.title == t &&
+            d.state != DownloadState.seeding &&
+            d.state != DownloadState.stopped,
+      );
+      if (fetching) return 3;
+    }
+    // Only what the demo asked for or decided speaks: the world's own
+    // requests are in the written status already.
+    final decided = [
+      for (final q in _live(c)!)
+        if (q.title == t && q.is4k == is4k && (!q.fromWorld || q.changed)) q,
+    ];
+    if (decided.isEmpty) return null;
+    final open = decided.where((q) => q.status != 3);
+    // Declined, and nothing else asked: Seerr knows nothing of it again.
+    if (open.isEmpty) return 1;
+    return open.any((q) => q.status == 2) ? 3 : 2;
+  }
+
+  /// The network's id of the arr Seerr sends a request for [t] to, or null
+  /// when Seerr knows none this device reaches.
+  static String? _arrFor(ServerContext c, WorldTitle t, bool is4k) {
+    final kind = t.isSeries ? ServiceKey.sonarr : ServiceKey.radarr;
+    final servers = _known(c, kind).where((s) => s.is4k == is4k).toList();
+    if (servers.isEmpty) return null;
+    final known =
+        servers.where((s) => s.isDefault).firstOrNull ?? servers.first;
+    return c.network.serverAt(Uri.parse(known.url))?.id;
+  }
+
+  /// A request approved in a living world goes to its arr, which adds the
+  /// title and searches for it.
+  static void _send(ServerContext c, LiveSeerrRequest q) {
+    final arr = _arrFor(c, q.title, q.is4k);
+    final arrs = c.life?.arrs;
+    if (arr == null || arrs == null) return;
+    if (q.title.isSeries) {
+      arrs.addSeries(arr, q.title, search: true);
+    } else {
+      arrs.addMovie(arr, q.title, search: true);
+    }
+  }
+
+  /// A request made in a living world: kept, and sent on at once when it is
+  /// approved as it is made.
+  static (int, WorldTitle, int, int, Duration, bool) _keep(
+    ServerContext c, {
+    required WorldTitle title,
+    required int requester,
+    required bool approved,
+    required bool is4k,
+  }) {
+    final live = _live(c)!;
+    final q = LiveSeerrRequest(
+      id: live.fold<int>(0, (top, q) => q.id > top ? q.id : top) + 1,
+      title: title,
+      requester: requester,
+      status: approved ? 2 : 1,
+      created: c.now,
+      is4k: is4k,
+    );
+    live.add(q);
+    if (approved) _send(c, q);
+    return (q.id, title, requester, q.status, Duration.zero, is4k);
+  }
+
+  /// How long ago [t] arrived on its arr in the demo, or null when it did
+  /// not: the player has held it since then.
+  static Duration? _arrivedInDemo(ServerContext c, WorldTitle t) {
+    final arrs = c.life?.arrs;
+    final arr = arrs == null ? null : _arrFor(c, t, false);
+    if (arrs == null || arr == null) return null;
+    final at = t.isSeries
+        ? arrs.seriesOf(arr, t)?.arrived
+        : arrs.movieOf(arr, t)?.arrivedLive;
+    return at == null ? null : c.now.difference(at);
+  }
+
+  /// The id [t] has on the arr Seerr sends it to: the world's, or the one a
+  /// living arr gave it.
+  static int? _externalId(ServerContext c, WorldTitle t, {required bool is4k}) {
+    final written = t.isSeries
+        ? (is4k ? null : SonarrFake.idOf(t))
+        : RadarrFake.idOf(t, is4k: is4k);
+    final arrs = c.life?.arrs;
+    final arr = arrs == null ? null : _arrFor(c, t, is4k);
+    if (arrs == null || arr == null) return written;
+    return t.isSeries
+        ? arrs.seriesOf(arr, t)?.id ?? written
+        : arrs.movieOf(arr, t)?.id ?? written;
+  }
+
   /// The collection every Blender film belongs to: 5 of 8 on the server,
   /// 2 on the way, 1 requested.
   static const collectionId = 90101;
@@ -156,13 +319,11 @@ class SeerrFake extends ServiceFake {
   }
 
   static JsonMap? _media(ServerContext c, WorldTitle t) {
-    final status = _mediaStatus(t);
+    final status = _mediaStatusOf(c, t);
     if (status == null) return null;
     final (hd, uhd) = status;
-    final hdId = t.isSeries
-        ? SonarrFake.idOf(t)
-        : RadarrFake.idOf(t, is4k: false);
-    final uhdId = t.isSeries ? null : RadarrFake.idOf(t, is4k: true);
+    final hdId = _externalId(c, t, is4k: false);
+    final uhdId = t.isSeries ? null : _externalId(c, t, is4k: true);
     return {
       'id': t.tmdbId,
       'tmdbId': t.tmdbId,
@@ -182,11 +343,14 @@ class SeerrFake extends ServiceFake {
       // When the player first held it: Coffee Run this afternoon, Sintel
       // two days ago, the rest of what is there long before.
       if (hd == 4 || hd == 5)
-        'mediaAddedAt': c.ago(switch (t.key) {
-          'coffeeRun' => const Duration(hours: 3),
-          'sintel' => const Duration(days: 2),
-          _ => const Duration(days: 25),
-        }),
+        'mediaAddedAt': c.ago(
+          _arrivedInDemo(c, t) ??
+              switch (t.key) {
+                'coffeeRun' => const Duration(hours: 3),
+                'sintel' => const Duration(days: 2),
+                _ => const Duration(days: 25),
+              },
+        ),
       // A series' seasons, each with its own status. Cosmos Laundromat: the
       // first on the server, the second in part. Night Shift: the first on
       // the server, the second asked for by nobody, the third waiting.
@@ -200,21 +364,21 @@ class SeerrFake extends ServiceFake {
           },
         ],
       'downloadStatus': [
-        for (final d in WorldDownloads.all)
+        for (final d in c.downloads)
           if (d.title == t &&
               (d.arr == WorldIds.radarr || d.arr == WorldIds.sonarr) &&
               d.state != DownloadState.importBlocked)
             _downloadStatus(c, d),
       ],
       'downloadStatus4k': [
-        for (final d in WorldDownloads.all)
+        for (final d in c.downloads)
           if (d.title == t && d.arr == WorldIds.radarr4k) _downloadStatus(c, d),
       ],
       'createdAt': c.ago(const Duration(days: 60)),
       'updatedAt': c.ago(const Duration(hours: 1)),
       // Seerr's own: every request for the title, as `/movie/:id` sends it.
       'requests': [
-        for (final row in _requests)
+        for (final row in _requestsOf(c))
           if (row.$2 == t) _requestRecord(c, row),
       ],
     };
@@ -307,6 +471,8 @@ class SeerrFake extends ServiceFake {
     return {
       'id': t.tmdbId,
       if (t.isSeries) 'name': t.title else 'title': t.title,
+      'posterPath': ?WorldArtwork.posterPath(t),
+      'backdropPath': ?WorldArtwork.backdropPath(t),
       if (t.isSeries)
         'firstAirDate': '${t.year}-05-01'
       else
@@ -395,10 +561,62 @@ class SeerrFake extends ServiceFake {
     };
   }
 
+  /// What the review sites say of the world's own films, `(critics,
+  /// audience, IMDb)`; any other film with an IMDb id gets scores worked out
+  /// from its TMDB id, so a title page always reads the same.
+  static const _filmScores = <String, (int, int, double)>{
+    'sintel': (92, 88, 7.5),
+    'metropolis': (98, 95, 8.3),
+    'tearsOfSteel': (74, 70, 6.8),
+    'spriteFright': (68, 72, 5.9),
+  };
+
+  static (int, int, double) _scoresOf(WorldTitle t) =>
+      _filmScores[t.key] ??
+      (
+        55 + t.tmdbId % 41,
+        60 + t.tmdbId * 7 % 36,
+        double.parse((5.5 + t.tmdbId % 30 / 10).toStringAsFixed(1)),
+      );
+
+  /// Seerr's `RTRating` for a film, null when Rotten Tomatoes has none: it
+  /// rates the films that have an IMDb id here, which leaves Coffee Run,
+  /// Spring and Charge without a score.
+  static JsonMap? _tomatoes(WorldTitle t) {
+    if (t.imdbId == null) return null;
+    final (critics, audience, _) = _scoresOf(t);
+    return {
+      'title': t.title,
+      'url': 'https://www.rottentomatoes.com/m/${t.slug.replaceAll('-', '_')}',
+      'criticsRating': critics >= 75
+          ? 'Certified Fresh'
+          : critics >= 60
+          ? 'Fresh'
+          : 'Rotten',
+      'criticsScore': critics,
+      'audienceRating': audience >= 60 ? 'Upright' : 'Spilled',
+      'audienceScore': audience,
+      'year': t.year,
+    };
+  }
+
+  /// Seerr's `IMDBRating` for a film, null when it has no IMDb id.
+  static JsonMap? _imdb(WorldTitle t) {
+    if (t.imdbId == null) return null;
+    return {
+      'title': t.title,
+      'url': 'https://www.imdb.com/title/${t.imdbId}',
+      'criticsScore': _scoresOf(t).$3,
+      'criticsScoreCount': 1000 + t.tmdbId % 9000,
+      'year': t.year,
+    };
+  }
+
   static JsonMap _credit(ServerContext c, WorldTitle t) => {
     'id': t.tmdbId,
     'mediaType': t.isSeries ? 'tv' : 'movie',
     if (t.isSeries) 'name': t.title else 'title': t.title,
+    'posterPath': ?WorldArtwork.posterPath(t),
     if (!t.isSeries) 'releaseDate': '${t.year}-04-10',
     'job': 'Director',
     'department': 'Directing',
@@ -446,6 +664,8 @@ class SeerrFake extends ServiceFake {
           if (t.isSeries) 'name': t.title else 'title': t.title,
           if (!t.isSeries) 'releaseDate': '${t.year}-04-10',
           'voteAverage': 7.4,
+          'posterPath': ?WorldArtwork.posterPath(t),
+          'backdropPath': ?WorldArtwork.backdropPath(t),
         },
     ],
   };
@@ -536,7 +756,7 @@ class SeerrFake extends ServiceFake {
           }
           final by = everyone ? requestedBy : caller?.user.id;
           final rows = [
-            for (final row in _requests)
+            for (final row in _requestsOf(c))
               if (by == null || row.$3 == by) _request(c, row),
           ];
           final filter = r.query['filter'];
@@ -568,20 +788,20 @@ class SeerrFake extends ServiceFake {
           };
           return NetworkReply.json(_page(r, filtered));
         case '/api/v1/request/count':
-          final pending = _requests.where((q) => q.$4 == 1).length;
+          final pending = _requestsOf(c).where((q) => q.$4 == 1).length;
           return NetworkReply.json({
-            'total': _requests.length,
-            'movie': _requests.where((q) => !q.$2.isSeries).length,
-            'tv': _requests.where((q) => q.$2.isSeries).length,
+            'total': _requestsOf(c).length,
+            'movie': _requestsOf(c).where((q) => !q.$2.isSeries).length,
+            'tv': _requestsOf(c).where((q) => q.$2.isSeries).length,
             'pending': pending,
-            'approved': _requests.length - pending,
-            'declined': 0,
-            'processing': _requests
-                .where((q) => _mediaStatus(q.$2)?.$1 == 3)
-                .length,
-            'available': _requests
-                .where((q) => _mediaStatus(q.$2)?.$1 == 5)
-                .length,
+            'approved': _requestsOf(c).where((q) => q.$4 == 2).length,
+            'declined': _requestsOf(c).where((q) => q.$4 == 3).length,
+            'processing': _requestsOf(
+              c,
+            ).where((q) => _mediaStatusOf(c, q.$2)?.$1 == 3).length,
+            'available': _requestsOf(
+              c,
+            ).where((q) => _mediaStatusOf(c, q.$2)?.$1 == 5).length,
           });
         case '/api/v1/user':
           // `user/index.ts:160-163`: the email only for MANAGE_USERS.
@@ -604,7 +824,11 @@ class SeerrFake extends ServiceFake {
                 'createdAt': c.ago(const Duration(days: 3)),
                 'updatedAt': c.ago(const Duration(days: 2)),
                 'createdBy': _user(c, 2),
-                'media': _media(c, WorldTitles.tearsOfSteel),
+                // The issue's media names its title, as the app reads it.
+                'media': {
+                  ..._media(c, WorldTitles.tearsOfSteel)!,
+                  'title': WorldTitles.tearsOfSteel.title,
+                },
                 'comments': [
                   {
                     'id': 1,
@@ -748,7 +972,7 @@ class SeerrFake extends ServiceFake {
       final one = RegExp(r'^/api/v1/request/(\d+)$').firstMatch(path);
       if (one != null) {
         final id = int.parse(one.group(1)!);
-        final row = _requests.where((q) => q.$1 == id).firstOrNull;
+        final row = _requestsOf(c).where((q) => q.$1 == id).firstOrNull;
         if (row == null) {
           return NetworkReply.json({
             'message': 'Request not found.',
@@ -817,10 +1041,35 @@ class SeerrFake extends ServiceFake {
           'criticsRating': 'Fresh',
         });
       }
+      // Rotten Tomatoes' and IMDb's word on a film, which TMDB's record
+      // lacks: `/ratings` is Rotten Tomatoes alone, `/ratingscombined` both.
+      final scores = RegExp(
+        r'^/api/v1/movie/(\d+)/(ratings|ratingscombined)$',
+      ).firstMatch(path);
+      if (scores != null) {
+        final id = int.parse(scores.group(1)!);
+        final film = (c.life == null ? WorldTitles.all : WorldTitles.catalogue)
+            .where((t) => t.tmdbId == id && !t.isSeries)
+            .firstOrNull;
+        if (film == null) {
+          return NetworkReply.json({'message': 'Not found'}, status: 404);
+        }
+        final rt = _tomatoes(film);
+        if (scores.group(2) == 'ratings') {
+          // Seerr answers 404 for a film Rotten Tomatoes does not rate.
+          return rt == null
+              ? NetworkReply.json({
+                  'message': 'Unable to retrieve movie ratings.',
+                }, status: 404)
+              : NetworkReply.json(rt);
+        }
+        return NetworkReply.json({'rt': rt, 'imdb': _imdb(film)});
+      }
       final detail = RegExp(r'^/api/v1/(movie|tv)/(\d+)$').firstMatch(path);
       if (detail != null) {
         final id = int.parse(detail.group(2)!);
-        final title = WorldTitles.all
+        // A living world opens every title its search finds.
+        final title = (c.life == null ? WorldTitles.all : WorldTitles.catalogue)
             .where(
               (t) => t.tmdbId == id && t.isSeries == (detail.group(1) == 'tv'),
             )
@@ -859,6 +1108,7 @@ class SeerrFake extends ServiceFake {
                 'title': t.title,
                 'releaseDate': '${t.year}-04-10',
                 'voteAverage': 7.4,
+                'posterPath': ?WorldArtwork.posterPath(t),
                 'mediaInfo': ?_media(c, t),
               },
           ],
@@ -892,7 +1142,7 @@ class SeerrFake extends ServiceFake {
     final edit = RegExp(r'^/api/v1/request/(\d+)$').firstMatch(path);
     if (r.method == 'PUT' && edit != null) {
       final id = int.parse(edit.group(1)!);
-      final row = _requests.where((q) => q.$1 == id).firstOrNull;
+      final row = _requestsOf(c).where((q) => q.$1 == id).firstOrNull;
       if (row == null) {
         return NetworkReply.json({
           'message': 'Request not found.',
@@ -941,9 +1191,21 @@ class SeerrFake extends ServiceFake {
     if (r.method == 'POST' &&
         RegExp(r'^/api/v1/request/\d+/(approve|decline)$').hasMatch(path)) {
       final id = int.parse(path.split('/')[4]);
-      final row = _requests.where((q) => q.$1 == id).firstOrNull;
+      final row = _requestsOf(c).where((q) => q.$1 == id).firstOrNull;
       if (row == null) {
         return NetworkReply.json({'message': 'Not found'}, status: 404);
+      }
+      // A living world keeps the decision, and an approval goes to the arr.
+      final live = _live(c)?.where((q) => q.id == id).firstOrNull;
+      if (live != null && live.status == 1) {
+        final approve = path.endsWith('/approve');
+        live
+          ..status = approve ? 2 : 3
+          ..changed = true;
+        if (approve) _send(c, live);
+        return NetworkReply.json(
+          _request(c, _requestsOf(c).firstWhere((q) => q.$1 == id)),
+        );
       }
       return NetworkReply.json(_request(c, row));
     }
@@ -960,14 +1222,36 @@ class SeerrFake extends ServiceFake {
       // The operator's answer is the world's first row, as it always was:
       // the request sheet's tests read it.
       if (caller == null || caller.byKey) {
-        return NetworkReply.json(_request(c, _requests.first), status: 201);
+        // A living world keeps what the operator asked for: an admin's
+        // request is approved as it is made, and goes to the arr.
+        final title = c.life == null ? null : _titleAsked(r);
+        if (title != null) {
+          final body = r.json as Map;
+          return NetworkReply.json(
+            _request(
+              c,
+              _keep(
+                c,
+                title: title,
+                requester: WorldSeerrUsers.admin.id,
+                approved: true,
+                is4k: body['is4k'] == true,
+              ),
+            ),
+            status: 201,
+          );
+        }
+        return NetworkReply.json(
+          _request(c, _requestsOf(c).first),
+          status: 201,
+        );
       }
       return _newRequest(r, c, caller, setup);
     }
     final cancel = RegExp(r'^/api/v1/request/(\d+)$').firstMatch(path);
     if (r.method == 'DELETE' && cancel != null && caller != null) {
       final id = int.parse(cancel.group(1)!);
-      final row = _requests.where((q) => q.$1 == id).firstOrNull;
+      final row = _requestsOf(c).where((q) => q.$1 == id).firstOrNull;
       if (row == null) return seerrError(404, 'Request not found.');
       // `request.ts:706-737`: a 401, not a 403, for a request that is not
       // one's own or no longer waits.
@@ -978,6 +1262,7 @@ class SeerrFake extends ServiceFake {
           'You do not have permission to delete this request.',
         );
       }
+      _live(c)?.removeWhere((q) => q.id == id);
       return const NetworkReply(204);
     }
     // `issue.ts:326-372`: past the route's MANAGE_ISSUES or CREATE_ISSUES
@@ -1008,6 +1293,17 @@ class SeerrFake extends ServiceFake {
     return null;
   }
 
+  /// The title `POST /api/v1/request` asks for, by its TMDB id and kind,
+  /// from everything the world's Seerr can find.
+  static WorldTitle? _titleAsked(NetworkRequest r) {
+    final body = r.json;
+    if (body is! Map) return null;
+    final series = body['mediaType'] == 'tv';
+    return WorldTitles.catalogue
+        .where((t) => t.tmdbId == body['mediaId'] && t.isSeries == series)
+        .firstOrNull;
+  }
+
   /// `POST /api/v1/request` by a household member's own account: the
   /// permission and quota checks of `MediaRequest.request`, then a request of
   /// theirs, waiting unless the account is auto-approved.
@@ -1036,6 +1332,21 @@ class SeerrFake extends ServiceFake {
             .firstOrNull ??
         WorldTitles.all.firstWhere((t) => t.isSeries == series);
     final approved = seerrAutoApproves(caller, movie: !series, is4k: is4k);
+    if (c.life != null) {
+      return NetworkReply.json(
+        _request(
+          c,
+          _keep(
+            c,
+            title: _titleAsked(r) ?? title,
+            requester: caller.user.id,
+            approved: approved,
+            is4k: is4k,
+          ),
+        ),
+        status: 201,
+      );
+    }
     return NetworkReply.json(
       _request(c, (
         100 + c.network.requestsTo(c.server.id).length,
@@ -1067,31 +1378,32 @@ class JellyfinFake extends ServiceFake {
   static const serverId = '9f2c1b7e4a3d4f0e8b6c5a1d2e3f4a5b';
 
   @override
-  bool isPublic(NetworkRequest r) =>
-      r.method == 'GET' &&
-      (r.path == '/System/Info/Public' || r.path == '/System/Ping');
+  bool isPublic(NetworkRequest request) =>
+      request.method == 'GET' &&
+      (request.path == '/System/Info/Public' || request.path == '/System/Ping');
 
   @override
-  NetworkReply refuseKey(NetworkRequest r) => const NetworkReply(401);
+  NetworkReply refuseKey(NetworkRequest request) => const NetworkReply(401);
 
   @override
-  bool isAdminRead(NetworkRequest r) =>
-      r.method == 'GET' &&
-      (r.path == '/System/Info' ||
-          r.path == '/Users' ||
-          r.path == '/Devices' ||
-          r.path == '/ScheduledTasks' ||
-          r.path == '/System/ActivityLog/Entries' ||
-          r.path == '/Library/VirtualFolders');
+  bool isAdminRead(NetworkRequest request) =>
+      request.method == 'GET' &&
+      (request.path == '/System/Info' ||
+          request.path == '/Users' ||
+          request.path == '/Devices' ||
+          request.path == '/ScheduledTasks' ||
+          request.path == '/System/ActivityLog/Entries' ||
+          request.path == '/Library/VirtualFolders');
 
   // Playback reporting and session commands are POSTs a non-admin may send
   // for its own sessions, so only the admin writes count here.
   @override
-  bool isWrite(NetworkRequest r) =>
-      r.method != 'GET' &&
-      (r.path.startsWith('/Library/') ||
-          r.path.startsWith('/ScheduledTasks/') ||
-          r.path.startsWith('/Items/') && r.path.endsWith('/Refresh'));
+  bool isWrite(NetworkRequest request) =>
+      request.method != 'GET' &&
+      (request.path.startsWith('/Library/') ||
+          request.path.startsWith('/ScheduledTasks/') ||
+          request.path.startsWith('/Items/') &&
+              request.path.endsWith('/Refresh'));
 
   static JsonMap _item(ServerContext c, WorldTitle t, {String? type}) {
     final unverified = c.profile.unverifiedMatches.contains(t.key);
@@ -1184,6 +1496,67 @@ class JellyfinFake extends ServiceFake {
     },
   };
 
+  /// The household's devices as `GET /Devices` lists them (`DeviceInfoDto`):
+  /// the living-room TV Anna is watching on, the operator's phone and
+  /// browser, and Luca's tablet.
+  static List<JsonMap> _devices(ServerContext c) {
+    JsonMap device(
+      String id,
+      String name,
+      String app,
+      String version,
+      String userId,
+      String user,
+      Duration lastSeen,
+    ) => {
+      'Id': id,
+      'Name': name,
+      'AppName': app,
+      'AppVersion': version,
+      'LastUserId': userId,
+      'LastUserName': user,
+      'DateLastActivity': c.ago(lastSeen),
+    };
+    return [
+      device(
+        'living-room-tv',
+        'Living room TV',
+        'Jellyfin Android TV',
+        '0.19.1',
+        annaId,
+        WorldPeople.anna,
+        const Duration(minutes: 1),
+      ),
+      device(
+        'operator-iphone',
+        'Operator iPhone',
+        'Jellyfin iOS',
+        '1.4.2',
+        operatorId,
+        'Operator',
+        const Duration(hours: 3),
+      ),
+      device(
+        'luca-ipad',
+        "Luca's iPad",
+        'Jellyfin iOS',
+        '1.4.2',
+        lucaId,
+        WorldPeople.luca,
+        const Duration(days: 2),
+      ),
+      device(
+        'operator-firefox',
+        'Firefox',
+        'Jellyfin Web',
+        '10.11.11',
+        operatorId,
+        'Operator',
+        const Duration(days: 6),
+      ),
+    ];
+  }
+
   @override
   NetworkReply? answer(NetworkRequest r, ServerContext c) {
     if (r.method != 'GET') return const NetworkReply(204);
@@ -1251,6 +1624,16 @@ class JellyfinFake extends ServiceFake {
             'Id': 'task-scan',
             'Category': 'Library',
             'Key': 'RefreshLibrary',
+            // The run before this one, twelve hours back: the task's default
+            // trigger is every twelve hours.
+            'LastExecutionResult': {
+              'Status': 'Completed',
+              'StartTimeUtc': c.ago(const Duration(hours: 12, minutes: 6)),
+              'EndTimeUtc': c.ago(const Duration(hours: 12, minutes: 2)),
+              'Name': 'Scan media library',
+              'Key': 'RefreshLibrary',
+              'Id': 'task-scan-last',
+            },
           },
         ]);
       case '/System/ActivityLog/Entries':
@@ -1275,8 +1658,8 @@ class JellyfinFake extends ServiceFake {
         });
       case '/Devices':
         return NetworkReply.json({
-          'Items': const <Object?>[],
-          'TotalRecordCount': 7,
+          'Items': _devices(c),
+          'TotalRecordCount': _devices(c).length,
         });
       case '/Items':
       case '/Search/Hints':
@@ -1400,23 +1783,25 @@ class PlexFake extends ServiceFake {
   const PlexFake();
 
   @override
-  bool isPublic(NetworkRequest r) => r.method == 'GET' && r.path == '/identity';
+  bool isPublic(NetworkRequest request) =>
+      request.method == 'GET' && request.path == '/identity';
 
   @override
-  NetworkReply refuseKey(NetworkRequest r) => NetworkReply.text(
+  NetworkReply refuseKey(NetworkRequest request) => NetworkReply.text(
     '<html><head><title>Unauthorized</title></head></html>',
     status: 401,
   );
 
   @override
-  bool isAdminRead(NetworkRequest r) =>
-      r.method == 'GET' &&
-      (r.path == '/status/sessions' || r.path == '/statistics/bandwidth');
+  bool isAdminRead(NetworkRequest request) =>
+      request.method == 'GET' &&
+      (request.path == '/status/sessions' ||
+          request.path == '/statistics/bandwidth');
 
   // A shared user's token is refused the owner's routes the way a bad token
   // is refused everything: 401, Plex's only word for it.
   @override
-  NetworkReply refuseWrite(NetworkRequest r) => refuseKey(r);
+  NetworkReply refuseWrite(NetworkRequest request) => refuseKey(request);
 
   static JsonMap _metadata(ServerContext c, WorldTitle t, int key) {
     final unverified = c.profile.unverifiedMatches.contains(t.key);
@@ -1452,6 +1837,194 @@ class PlexFake extends ServiceFake {
     WorldTitles.spring,
   ];
 
+  static const _machineId = '9c8b7a6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b';
+
+  /// Plex's timestamps: whole seconds since the epoch, [age] before now.
+  static int _epoch(ServerContext c, Duration age) =>
+      c.now.subtract(age).millisecondsSinceEpoch ~/ 1000;
+
+  /// The sections as recorded, scanned when a household's server scans: the
+  /// films this morning, the series a couple of hours ago, the music last
+  /// night. The photos were never scanned and say nothing.
+  static JsonMap _sections(ServerContext c) {
+    final json = jsonFixtureMap('plex/library_sections.json');
+    final scanned = <String, Duration>{
+      '1': const Duration(hours: 5),
+      '2': const Duration(hours: 2),
+      '3': const Duration(hours: 20),
+    };
+    final container = json['MediaContainer'] as Map<String, dynamic>;
+    for (final section in (container['Directory'] as List).cast<JsonMap>()) {
+      final age = scanned[section['key']];
+      if (age != null) section['scannedAt'] = _epoch(c, age);
+    }
+    return json;
+  }
+
+  /// The episode the owner stopped five minutes from the end of: Jellyfin's
+  /// Continue watching holds it too, at three quarters of twenty minutes.
+  static JsonMap _partWatched(ServerContext c) => {
+    'ratingKey': '203',
+    'key': '/library/metadata/203',
+    'guid': 'plex://episode/cosmosLaundromat-s02e03',
+    'type': 'episode',
+    'title': 'The Second Cycle',
+    'summary': 'Franck wakes up in the second life Tachyon sold him.',
+    'grandparentRatingKey': '200',
+    'grandparentKey': '/library/metadata/200',
+    'grandparentGuid': 'plex://show/cosmosLaundromat',
+    'grandparentTitle': WorldTitles.cosmosLaundromat.title,
+    'parentRatingKey': '202',
+    'parentKey': '/library/metadata/202',
+    'parentTitle': 'Season 2',
+    'parentIndex': 2,
+    'index': 3,
+    'year': WorldTitles.cosmosLaundromat.year,
+    'duration': 1200000,
+    'viewOffset': 900000,
+    'lastViewedAt': _epoch(c, const Duration(hours: 1)),
+    'addedAt': _epoch(c, const Duration(days: 25)),
+    'librarySectionID': 2,
+    'librarySectionKey': '/library/sections/2',
+    'librarySectionTitle': 'TV Shows',
+    'source': 'server://$_machineId/com.plexapp.plugins.library',
+    'Guid': [
+      {'id': 'tvdb://${WorldTitles.cosmosLaundromat.tvdbId}'},
+    ],
+  };
+
+  /// What is playing on the server: Luca's Elephants Dream on his iPad.
+  static JsonMap _session(ServerContext c) => {
+    ..._metadata(c, WorldTitles.elephantsDream, 103),
+    'sessionKey': '12',
+    'duration': 660000,
+    'viewOffset': 240000,
+    'librarySectionID': 1,
+    'librarySectionKey': '/library/sections/1',
+    'librarySectionTitle': 'Movies',
+    'User': {'id': '2', 'title': WorldPeople.luca},
+    'Player': {
+      'address': '192.168.1.58',
+      'device': 'iPad',
+      'machineIdentifier': 'luca-ipad',
+      'model': 'iPad13,4',
+      'platform': 'iOS',
+      'platformVersion': '18.6',
+      'product': 'Plex for iOS',
+      'profile': 'iOS',
+      'state': 'playing',
+      'title': "Luca's iPad",
+      'version': '9.35.0',
+      'local': true,
+      'relayed': false,
+      'secure': true,
+      'userID': 2,
+    },
+    'Session': {
+      'id': 'plex-session-luca',
+      'bandwidth': 8000,
+      'location': 'lan',
+    },
+  };
+
+  /// The devices that signed in to the server, as `/devices` lists them.
+  static List<JsonMap> _devices(ServerContext c) => [
+    for (final (id, name, product, platform, seen) in [
+      (
+        1,
+        'Living room TV',
+        'Plex for Android (TV)',
+        'Android',
+        const Duration(days: 1),
+      ),
+      (2, 'Operator iPhone', 'Plex for iOS', 'iOS', const Duration(hours: 4)),
+      (3, "Luca's iPad", 'Plex for iOS', 'iOS', const Duration(minutes: 3)),
+    ])
+      {
+        'id': id,
+        'name': name,
+        'product': product,
+        'platform': platform,
+        'clientIdentifier': 'plex-device-$id',
+        'provides': 'client,player,pubsub-player',
+        'createdAt': _epoch(c, Duration(days: 300 - id * 40)),
+        'lastSeenAt': _epoch(c, seen),
+      },
+  ];
+
+  /// The household's one playlist: three of the films, for a film night.
+  static List<JsonMap> _playlists(ServerContext c) => [
+    {
+      'ratingKey': '900',
+      'key': '/playlists/900/items',
+      'guid': 'com.plexapp.agents.none://film-night',
+      'type': 'playlist',
+      'title': 'Film night',
+      'playlistType': 'video',
+      'smart': false,
+      'leafCount': 3,
+      'duration': 2282000,
+      'addedAt': _epoch(c, const Duration(days: 12)),
+      'updatedAt': _epoch(c, const Duration(days: 4)),
+    },
+  ];
+
+  static JsonMap _continueWatching(ServerContext c) => {
+    'MediaContainer': {
+      'size': 1,
+      'Hub': [
+        {
+          'hubIdentifier': 'home.continue',
+          'hubKey': '/hubs/continueWatching/items',
+          'key': '/hubs/continueWatching/items',
+          'more': false,
+          'size': 1,
+          'style': 'hero',
+          'title': 'Continue Watching',
+          'type': 'mixed',
+          'Metadata': [_partWatched(c)],
+        },
+      ],
+    },
+  };
+
+  /// What Plex's matcher (the dialog of Fix Match) answers for an external
+  /// id, `tmdb-603`, asked through an item of a section whose agent is
+  /// `tv.plex.agents.movie` or `.series`: the title it knows, under Plex's
+  /// own guid, the one its items carry.
+  static JsonMap _matches(NetworkRequest r) {
+    final series = (r.query['agent'] ?? '').endsWith('.series');
+    final ask = RegExp(
+      r'^(tmdb|tvdb|imdb)-(.+)$',
+    ).firstMatch(r.query['title'] ?? '');
+    final found = ask == null
+        ? null
+        : WorldTitles.catalogue.where((t) {
+            if (t.isSeries != series) return false;
+            return switch (ask.group(1)) {
+              'tmdb' => '${t.tmdbId}' == ask.group(2),
+              'tvdb' => t.tvdbId != null && '${t.tvdbId}' == ask.group(2),
+              _ => t.imdbId == ask.group(2),
+            };
+          }).firstOrNull;
+    return {
+      'MediaContainer': {
+        'size': found == null ? 0 : 1,
+        'identifier': 'com.plexapp.plugins.library',
+        if (found != null)
+          'SearchResult': [
+            {
+              'guid': 'plex://${series ? 'show' : 'movie'}/${found.key}',
+              'name': found.title,
+              'year': found.year,
+              'score': 100,
+              'lifespanEnded': false,
+            },
+          ],
+      },
+    };
+  }
+
   @override
   NetworkReply? answer(NetworkRequest r, ServerContext c) {
     if (r.method != 'GET') return const NetworkReply(200);
@@ -1461,25 +2034,35 @@ class PlexFake extends ServiceFake {
       case '/':
         return NetworkReply.json(jsonFixtureMap('plex/capabilities.json'));
       case '/status/sessions':
-        return NetworkReply.json(jsonFixtureMap('plex/sessions_idle.json'));
+        return NetworkReply.json({
+          'MediaContainer': {
+            'size': 1,
+            'Metadata': [_session(c)],
+          },
+        });
       case '/library/sections':
-        return NetworkReply.json(jsonFixtureMap('plex/library_sections.json'));
-      // Nobody has authorized a device or made a playlist: the lists the
-      // Devices and Playlists tabs read answer empty.
+        return NetworkReply.json(_sections(c));
       case '/devices':
         return NetworkReply.json({
-          'MediaContainer': {'size': 0, 'Device': const <Object?>[]},
+          'MediaContainer': {'size': _devices(c).length, 'Device': _devices(c)},
         });
       case '/playlists':
         return NetworkReply.json({
-          'MediaContainer': {'size': 0, 'Metadata': const <Object?>[]},
+          'MediaContainer': {
+            'size': _playlists(c).length,
+            'Metadata': _playlists(c),
+          },
         });
       case '/hubs/continueWatching':
       case '/hubs/home/continueWatching':
-        return NetworkReply.json({
-          'MediaContainer': {'size': 0, 'Hub': const <Object?>[]},
-        });
+        return NetworkReply.json(_continueWatching(c));
       case '/library/onDeck':
+        return NetworkReply.json({
+          'MediaContainer': {
+            'size': 1,
+            'Metadata': [_partWatched(c)],
+          },
+        });
       case '/library/recentlyAdded':
         return NetworkReply.json({
           'MediaContainer': {'size': 0, 'Metadata': const <Object?>[]},
@@ -1496,6 +2079,29 @@ class PlexFake extends ServiceFake {
             ],
           },
         });
+    }
+    if (RegExp(r'^/library/metadata/[^/]+/matches$').hasMatch(r.path)) {
+      return NetworkReply.json(_matches(r));
+    }
+    // One item by its key: a film of the library, or the episode on deck.
+    final item = RegExp(r'^/library/metadata/(\d+)$').firstMatch(r.path);
+    if (item != null) {
+      final key = int.parse(item.group(1)!);
+      final metadata = key == 203
+          ? _partWatched(c)
+          : key >= 100 && key < 100 + _library.length
+          ? _metadata(c, _library[key - 100], key)
+          : null;
+      return metadata == null
+          ? NetworkReply.json({
+              'MediaContainer': {'size': 0},
+            }, status: 404)
+          : NetworkReply.json({
+              'MediaContainer': {
+                'size': 1,
+                'Metadata': [metadata],
+              },
+            });
     }
     if (RegExp(r'^/library/sections/\d+/all$').hasMatch(r.path)) {
       return NetworkReply.json({

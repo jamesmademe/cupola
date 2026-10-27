@@ -7,19 +7,21 @@
 // The application's name. By default this is also the title of the Flutter window.
 PRODUCT_NAME = Cupola
 
-// The application's bundle identifier. The testlab build passes
-// FLUTTER_XCODE_CUPOLA_BUNDLE_SUFFIX=.testlab, which gives it its own
-// preferences, its own sandbox container and its own keychain namespace.
+// The application's bundle identifier (AGENTS.md, App identities). Isolated
+// builds pass FLUTTER_XCODE_CUPOLA_BUNDLE_SUFFIX (.testlab from
+// test/e2e/testlab/app_config.py, .dev from scripts/run_dev.sh), which gives
+// them their own preferences and their own keychain namespace.
 CUPOLA_BUNDLE_SUFFIX =
 PRODUCT_BUNDLE_IDENTIFIER = com.matthwlabs.cupola$(CUPOLA_BUNDLE_SUFFIX)
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2026 matthw-labs. Licensed under the Apache License, Version 2.0.
 
-// The Runner target reads this. The testlab build overrides it through
-// FLUTTER_XCODE_CUPOLA_ENTITLEMENTS=Runner/Testlab.entitlements. Keeping the
-// choice in a variable scoped to the target stops Xcode from applying the
-// testlab's relative entitlements path to every Swift package as well.
+// The Runner target reads this. Isolated builds override it through
+// FLUTTER_XCODE_CUPOLA_ENTITLEMENTS (Runner/Testlab.entitlements,
+// Runner/Dev.entitlements). Keeping the choice in a variable scoped to the
+// target stops Xcode from applying their relative entitlements path to every
+// Swift package as well.
 CUPOLA_ENTITLEMENTS = Runner/DebugProfile.entitlements
 CUPOLA_ENTITLEMENTS[config=Release] = Runner/Release.entitlements
 CUPOLA_ENTITLEMENTS[config=Profile] = Runner/DebugProfile.entitlements

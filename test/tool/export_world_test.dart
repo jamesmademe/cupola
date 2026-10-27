@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../test/test_helpers/profiles/world.dart';
+import 'package:cupola/demo/world/world.dart';
 import '../../tool/testlab/export_world.dart';
 
 /// The exported world is the same world the tests and the boards name: one

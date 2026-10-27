@@ -100,7 +100,7 @@ class NpmUpstreamReport {
 ///    total, like a host outside the budget.
 class NpmUpstreamProbe {
   const NpmUpstreamProbe({
-    this.connector = _connect,
+    this.connector = connect,
     this.budget = defaultBudget,
     this.timeout = const Duration(seconds: 2),
     this.concurrency = 4,
@@ -193,7 +193,8 @@ class NpmUpstreamProbe {
     }
   }
 
-  static Future<bool> _connect(String host, int port, Duration timeout) async {
+  /// The real connector: a TCP handshake, closed at once.
+  static Future<bool> connect(String host, int port, Duration timeout) async {
     final socket = await Socket.connect(host, port, timeout: timeout);
     // Destroyed immediately: the handshake is the whole measurement, and a
     // socket left open to someone's media server is a resource this app has no

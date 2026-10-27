@@ -20,7 +20,7 @@ import 'package:cupola/features/home/presentation/widgets/needs_you_banner.dart'
 import 'package:cupola/features/services/presentation/services_provider.dart';
 
 import '../../../test_helpers/profiles/profiles.dart';
-import '../../../test_helpers/profiles/service_fakes.dart';
+import 'package:cupola/demo/world/service_fakes.dart';
 
 /// Twenty-five imports on the HD Radarr, newest first: more than one page.
 List<Map<String, Object?>> _busyEvening(DateTime now) => [

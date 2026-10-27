@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import '../../test_helpers/copy_scan.dart';
+import '../../test_helpers/app_sources.dart';
 
 /// The brand book's lexicon, held on the copy: **one word per state, the same
 /// on every screen**, none of the words its *Never* list bans, American
@@ -42,6 +43,7 @@ void main() {
       .whereType<File>()
       .where((f) => f.path.endsWith('.dart'))
       .where((f) => !f.path.startsWith('lib/core/generated/'))
+      .where((f) => !isServerStandIn(f.path))
       .toList(growable: false);
 
   test('lib/ has copy to scan', () {

@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/features/discover/data/seerr_service.dart';
 
-import '../../../test_helpers/profiles/fakes/arr_fakes.dart';
+import 'package:cupola/demo/world/fakes/arr_fakes.dart';
 import '../../../test_helpers/profiles/profiles.dart';
 
 /// Which copy a request is about, read through the app's own Seerr client

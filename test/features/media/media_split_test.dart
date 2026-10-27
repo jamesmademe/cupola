@@ -29,7 +29,7 @@ import 'package:cupola/features/media/presentation/media_page.dart';
 import 'package:cupola/features/media/presentation/media_split.dart';
 import 'package:cupola/features/media/presentation/open_media.dart';
 
-import '../../test_helpers/profiles/fakes/media_fakes.dart';
+import 'package:cupola/demo/world/fakes/media_fakes.dart';
 import '../../test_helpers/profiles/profiles.dart';
 
 const _tablet = Size(1180, 820);

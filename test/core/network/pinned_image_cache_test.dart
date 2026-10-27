@@ -217,4 +217,44 @@ void main() {
       expect(CertTrustRegistry.pinFor('https://nas.local/x.jpg'), isNull);
     });
   });
+
+  group('separateImageCaches', () {
+    // The demo's world lives at addresses a real household may use: its
+    // posters must never land in, or come from, the app's own stores.
+    test(
+      'a scope builds stores of its own and empties them at its end',
+      () async {
+        pinnedImageCacheFor('http://nas.home.arpa:7878/poster.jpg');
+        final app = built.single;
+
+        final end = separateImageCaches('demo');
+        await Future<void>.delayed(Duration.zero);
+        expect(app.manager.emptied, 0, reason: "the app's store is let go");
+        expect(app.manager.disposed, 1);
+
+        pinnedImageCacheFor('http://nas.home.arpa:7878/poster.jpg');
+        final scoped = built.last;
+        expect(scoped.cacheKey, 'demo_cupola_images_guarded');
+
+        await end();
+        expect(scoped.manager.emptied, 1);
+        expect(scoped.manager.disposed, 1);
+
+        pinnedImageCacheFor('http://nas.home.arpa:7878/poster.jpg');
+        expect(built.last.cacheKey, 'cupola_images_guarded');
+        expect(built.last, isNot(same(scoped)));
+      },
+    );
+
+    test('a pinned origin gets a scoped key as well', () async {
+      CertTrustRegistry.update({'https://nas.home.arpa:7879': 'AB:CD'});
+      final end = separateImageCaches('demo');
+      pinnedImageCacheFor('https://nas.home.arpa:7879/poster.jpg');
+      expect(
+        built.last.cacheKey,
+        'demo_${pinnedImageCacheKey('https://nas.home.arpa:7879', 'AB:CD')}',
+      );
+      await end();
+    });
+  });
 }

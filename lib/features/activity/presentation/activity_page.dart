@@ -54,6 +54,7 @@ import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/presentation/stream_activity_provider.dart';
+import 'package:cupola/core/widgets/screen_title.dart';
 
 /// The services Activity reads: the queues, the clients, the requests and
 /// the media servers. With none of them set up the page has nothing to say
@@ -252,7 +253,6 @@ class _ActivityHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final room = CupolaRoom.of(context);
     return Padding(
       padding: EdgeInsets.fromLTRB(
         AppSpacing.gutter,
@@ -266,12 +266,9 @@ class _ActivityHeader extends ConsumerWidget {
           Row(
             children: [
               Expanded(
-                child: Semantics(
-                  header: true,
-                  child: Text(
-                    'Activity',
-                    style: AppType.screen.copyWith(color: room.ink),
-                  ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: ScreenTitle('Activity'),
                 ),
               ),
               const _ActivityMenu(),

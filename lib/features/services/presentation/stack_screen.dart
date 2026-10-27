@@ -28,6 +28,7 @@ import 'package:cupola/features/shell/domain/stack_health.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/presentation/stream_activity_provider.dart';
+import 'package:cupola/core/widgets/screen_title.dart';
 
 /// The Stack tab: every service, its light, and the way into its room.
 ///
@@ -209,12 +210,9 @@ class _StackHeadlineState extends ConsumerState<_StackHeadline> {
           Row(
             children: [
               Expanded(
-                child: Semantics(
-                  header: true,
-                  child: Text(
-                    'Stack',
-                    style: AppType.screen.copyWith(color: room.ink),
-                  ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: ScreenTitle('Stack'),
                 ),
               ),
               Tooltip(

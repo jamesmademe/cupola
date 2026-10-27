@@ -9,10 +9,12 @@ library;
 
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-import '../profile_network.dart';
-import '../service_fakes.dart';
-import '../world.dart';
-import 'media_fakes.dart' show SeerrFake;
+import 'package:cupola/demo/world/arr_life.dart';
+import 'package:cupola/demo/world/artwork.dart';
+import 'package:cupola/demo/world/profile_network.dart';
+import 'package:cupola/demo/world/service_fakes.dart';
+import 'package:cupola/demo/world/world.dart';
+import 'package:cupola/demo/world/fakes/media_fakes.dart' show SeerrFake;
 
 /// The shared arr surface: status, health, queue, history, calendar, wanted,
 /// profiles, root folders, commands.
@@ -38,7 +40,7 @@ abstract class ArrFake extends ServiceFake {
   /// The world title [release] is a release of, read the way the fakes write
   /// release names (`Sprite.Fright.2021.1080p.WEB`), or null.
   static WorldTitle? titleOfRelease(String release) {
-    for (final title in WorldTitles.all) {
+    for (final title in WorldTitles.catalogue) {
       if (release.startsWith('${title.title.replaceAll(' ', '.')}.')) {
         return title;
       }
@@ -48,6 +50,100 @@ abstract class ArrFake extends ServiceFake {
 
   /// The service's own routes, tried after the shared ones.
   NetworkReply? own(NetworkRequest r, ServerContext c) => null;
+
+  /// What a command posted to `/command` does to a living world. Nothing by
+  /// default; Radarr and Sonarr search, and import by hand.
+  void command(ServerContext c, Map<Object?, Object?> body) {}
+
+  /// The world title with TMDB id [tmdbId], or null.
+  static WorldTitle? titleOfTmdb(Object? tmdbId) => WorldTitles.catalogue
+      .where((t) => '${t.tmdbId}' == '$tmdbId')
+      .firstOrNull;
+
+  /// The world series with TVDB id [tvdbId], or null.
+  static WorldTitle? titleOfTvdb(Object? tvdbId) => WorldTitles.catalogue
+      .where((t) => t.isSeries && '${t.tvdbId}' == '$tvdbId')
+      .firstOrNull;
+
+  /// What `/release` finds for [title] in a living world: three releases, the
+  /// first the arr would take. [target] names what was searched for
+  /// (`movie-4`, `series-2-season-1`) and comes back in the guid, so a grab
+  /// knows what it fetches.
+  List<JsonMap> releases(
+    ServerContext c,
+    String target,
+    WorldTitle title, {
+    required int? season,
+  }) {
+    final is4k = c.server.is4k;
+    final base = title.title.replaceAll(' ', '.');
+    final tail = season == null
+        ? '${title.year}'
+        : 'S${season.toString().padLeft(2, '0')}';
+    final names = [
+      if (is4k) '$base.$tail.2160p.UHD.BluRay.x265-WORLD',
+      '$base.$tail.1080p.WEB-DL.x264-WORLD',
+      '$base.$tail.1080p.BluRay.x264-NORTHWIND',
+      '$base.$tail.720p.WEB.h264-HARBOR',
+    ].take(3);
+    return [
+      for (final (i, name) in names.indexed)
+        {
+          'guid': 'world-release/$target/$i/$name',
+          'title': name,
+          'indexerId': 1,
+          'indexer': 'Nyaa',
+          'size': name.contains('2160p')
+              ? 8800000000
+              : name.contains('720p')
+              ? 900000000
+              : 2200000000,
+          'seeders': 40 - i * 12,
+          'leechers': 3,
+          'ageMinutes': 60 * (i + 2),
+          'protocol': is4k ? 'usenet' : 'torrent',
+          'approved': i < 2,
+          'rejections': i < 2
+              ? const <String>[]
+              : const ['720p is below the profile\'s cutoff'],
+          'quality': _quality(
+            name.contains('2160p')
+                ? 'Bluray-2160p'
+                : name.contains('720p')
+                ? 'WEBDL-720p'
+                : 'WEBDL-1080p',
+          ),
+          'customFormats': const <Object?>[],
+          'customFormatScore': 0,
+        },
+    ];
+  }
+
+  /// What `POST /release` grabs: the target and release name the guid of
+  /// [releases] carries, or null for a guid the world did not hand out.
+  static ({String target, String release})? grabbed(NetworkRequest r) {
+    final body = r.json;
+    final guid = body is Map ? '${body['guid']}' : '';
+    final parts = guid.split('/');
+    if (parts.length != 4 || parts.first != 'world-release') return null;
+    return (target: parts[1], release: parts[3]);
+  }
+
+  /// What a `ManualImport` command does to a living world: each file it
+  /// names arrives, by its download id or the release its path names.
+  void importFiles(ServerContext c, Map<Object?, Object?> body) {
+    final arrs = c.life?.arrs;
+    final files = body['files'];
+    if (arrs == null || files is! List) return;
+    for (final file in files.whereType<Map<Object?, Object?>>()) {
+      final id = file['downloadId'];
+      final path = '${file['path']}';
+      final download =
+          (id is String ? c.life!.byId(id) : null) ??
+          arrDownloads(c).where((d) => path.contains(d.release)).firstOrNull;
+      if (download != null) arrs.import(download.id);
+    }
+  }
 
   /// The indexers the arr searches with: three, two of which an automatic
   /// search asks. Null for Prowlarr, whose indexers are its own routes.
@@ -179,6 +275,7 @@ abstract class ArrFake extends ServiceFake {
     }
     if (r.method == 'POST' && path == '$_base/command') {
       final body = r.json;
+      if (body is Map) command(c, body);
       return NetworkReply.json({
         'id': 1,
         'name': body is Map ? body['name'] : 'Command',
@@ -187,12 +284,29 @@ abstract class ArrFake extends ServiceFake {
       }, status: 201);
     }
     if (r.method == 'DELETE' && path.startsWith('$_base/queue/')) {
+      _removeFromQueue(r, c);
       return NetworkReply.json(const <String, Object?>{});
     }
     return own(r, c);
   }
 
   String rootFolder(ServerContext c) => '/mnt/tank/media';
+
+  /// What `DELETE queue/{id}` does to a living world: the row's download
+  /// leaves the client too (`removeFromClient`, Radarr's default), or only
+  /// the queue. The row's id is its place in the queue.
+  void _removeFromQueue(NetworkRequest r, ServerContext c) {
+    final life = c.life;
+    final id = int.tryParse(r.path.split('/').last);
+    final rows = arrDownloads(c);
+    if (life == null || id == null || id < 1 || id > rows.length) return;
+    final download = rows[id - 1];
+    if (r.query['removeFromClient'] == 'false') {
+      life.leaveArr(download.id);
+    } else {
+      life.remove(download.id);
+    }
+  }
 
   /// What `GET manualimport` finds in a download's folder: one file per
   /// download of this server whose folder or id the request names. A
@@ -282,8 +396,24 @@ class RadarrFake extends ArrFake {
     return null;
   }
 
-  List<(int, WorldTitle, bool, Duration)> _library(ServerContext c) =>
-      c.server.is4k ? library4k : libraryHd;
+  List<(int, WorldTitle, bool, Duration)> _library(ServerContext c) {
+    final life = c.life;
+    if (life == null) return c.server.is4k ? library4k : libraryHd;
+    return [
+      for (final m in life.arrs.movies(c.server.id))
+        (m.id, m.title, m.hasFile, c.now.difference(m.added)),
+    ];
+  }
+
+  /// How long ago film [entry] arrived: in a living world, when it was
+  /// imported; as written, when it was added.
+  Duration _arrivedAgo(
+    ServerContext c,
+    (int, WorldTitle, bool, Duration) entry,
+  ) {
+    final arrived = c.life?.arrs.movie(c.server.id, entry.$1)?.arrived;
+    return arrived == null ? entry.$4 : c.now.difference(arrived);
+  }
 
   JsonMap _movie(ServerContext c, (int, WorldTitle, bool, Duration) entry) {
     final (id, title, hasFile, added) = entry;
@@ -297,7 +427,7 @@ class RadarrFake extends ArrFake {
       'tmdbId': title.tmdbId,
       if (title.imdbId != null) 'imdbId': title.imdbId,
       'status': 'released',
-      'monitored': true,
+      'monitored': c.life?.arrs.movie(c.server.id, id)?.monitored ?? true,
       'hasFile': hasFile,
       'isAvailable': true,
       'sizeOnDisk': hasFile ? (c.server.is4k ? 9800000000 : 1200000000) : 0,
@@ -309,7 +439,7 @@ class RadarrFake extends ArrFake {
       'added': c.ago(added),
       if (spriteFright) 'digitalRelease': c.ago(const Duration(hours: 6)),
       if (spriteFright) 'physicalRelease': c.ahead(const Duration(days: 13)),
-      'images': const <Object?>[],
+      'images': WorldArtwork.arrImages(title),
       'genres': const ['Animation'],
       'ratings': const <String, Object?>{},
     };
@@ -388,7 +518,7 @@ class RadarrFake extends ArrFake {
 
   @override
   List<JsonMap> history(ServerContext c) => [
-    for (final entry in _library(c))
+    for (final entry in _byArrival(c))
       if (entry.$3)
         {
           'id': entry.$1,
@@ -397,7 +527,7 @@ class RadarrFake extends ArrFake {
           'sourceTitle':
               '${entry.$2.title.replaceAll(' ', '.')}.${entry.$2.year}'
               '${c.server.is4k ? '.2160p' : '.1080p'}',
-          'date': c.ago(entry.$4),
+          'date': c.ago(_arrivedAgo(c, entry)),
           'quality': _quality(c.server.is4k ? 'Bluray-2160p' : 'Bluray-1080p'),
           'movie': _movie(c, entry),
           // An import names the file it dropped and the one it became.
@@ -411,6 +541,32 @@ class RadarrFake extends ArrFake {
           },
         },
   ];
+
+  /// The library, the latest arrival first once the world lives: what
+  /// arrived in the demo heads the history, as it would.
+  List<(int, WorldTitle, bool, Duration)> _byArrival(ServerContext c) {
+    final library = _library(c);
+    if (c.life == null) return library;
+    return [...library]
+      ..sort((a, b) => _arrivedAgo(c, a).compareTo(_arrivedAgo(c, b)));
+  }
+
+  @override
+  void command(ServerContext c, Map<Object?, Object?> body) {
+    final arrs = c.life?.arrs;
+    if (arrs == null) return;
+    switch (body['name']) {
+      case 'MoviesSearch':
+        final ids = body['movieIds'];
+        if (ids is List) {
+          for (final id in ids.whereType<int>()) {
+            arrs.searchMovie(c.server.id, id);
+          }
+        }
+      case 'ManualImport':
+        importFiles(c, body);
+    }
+  }
 
   @override
   List<JsonMap> calendar(ServerContext c) => [
@@ -488,7 +644,7 @@ class RadarrFake extends ArrFake {
                   'titleSlug': '${title.slug}-${title.tmdbId}',
                   'year': title.year,
                   'tmdbId': title.tmdbId,
-                  'images': const <Object?>[],
+                  'images': WorldArtwork.arrImages(title),
                   'minimumAvailability': 'released',
                 },
           );
@@ -496,9 +652,25 @@ class RadarrFake extends ArrFake {
       }
       return NetworkReply.json({'message': 'NotFound'}, status: 404);
     }
-    // An add: Radarr answers with the new record. The world does not keep it.
+    // An add: Radarr answers with the new record. A living world keeps it,
+    // and searches for it when asked to.
     if (r.method == 'POST' && r.path == '/api/v3/movie') {
       final body = r.json;
+      final arrs = c.life?.arrs;
+      final title = body is Map ? ArrFake.titleOfTmdb(body['tmdbId']) : null;
+      if (arrs != null && title != null && !title.isSeries) {
+        final options = body['addOptions'];
+        final movie = arrs.addMovie(
+          c.server.id,
+          title,
+          monitored: body['monitored'] != false,
+          search: options is Map && options['searchForMovie'] == true,
+        );
+        return NetworkReply.json(
+          _movie(c, (movie.id, title, false, Duration.zero)),
+          status: 201,
+        );
+      }
       return NetworkReply.json({
         if (body is Map) ...body.cast<String, Object?>(),
         'id': 100,
@@ -506,11 +678,38 @@ class RadarrFake extends ArrFake {
       }, status: 201);
     }
     if (r.method == 'DELETE' && one != null) {
+      c.life?.arrs.deleteMovie(c.server.id, int.parse(one.group(1)!));
       return NetworkReply.json(const <String, Object?>{});
     }
-    // An edit: Radarr answers with the record as it now stands.
+    // An edit: Radarr answers with the record as it now stands. A living
+    // world keeps the monitoring.
     if (r.method == 'PUT' && one != null) {
-      return NetworkReply.json(r.json);
+      final body = r.json;
+      final movie = c.life?.arrs.movie(c.server.id, int.parse(one.group(1)!));
+      if (movie != null && body is Map && body['monitored'] is bool) {
+        movie.monitored = body['monitored'] as bool;
+      }
+      return NetworkReply.json(body);
+    }
+    // Interactive search, in a living world: three releases of the film,
+    // each a grab away.
+    if (r.method == 'GET' && r.path == '/api/v3/release' && c.life != null) {
+      final id = int.tryParse(r.query['movieId'] ?? '');
+      final movie = id == null ? null : c.life!.arrs.movie(c.server.id, id);
+      if (movie == null) return NetworkReply.json(const <Object?>[]);
+      return NetworkReply.json(
+        releases(c, 'movie-${movie.id}', movie.title, season: null),
+      );
+    }
+    if (r.method == 'POST' && r.path == '/api/v3/release' && c.life != null) {
+      final grab = ArrFake.grabbed(r);
+      final id = grab == null
+          ? null
+          : int.tryParse(grab.target.replaceFirst('movie-', ''));
+      if (grab != null && id != null) {
+        c.life!.arrs.searchMovie(c.server.id, id, release: grab.release);
+      }
+      return NetworkReply.json(r.json, status: 201);
     }
     // One film's history, unpaged, as `/history/movie` answers it.
     if (r.method == 'GET' && r.path == '/api/v3/history/movie') {
@@ -547,7 +746,14 @@ class SonarrFake extends ArrFake {
       _anime(c) ? '/mnt/tank/media/anime' : '/mnt/tank/media/series';
 
   JsonMap _series(ServerContext c, int id, WorldTitle title) {
+    final live = _live(c, id);
+    if (live != null && !live.seeded) return _addedSeries(c, live);
     final cosmos = title == WorldTitles.cosmosLaundromat;
+    // What arrived in the demo of the second season, beyond its first three.
+    final more = live == null
+        ? 0
+        : live.arrivedEpisodes.where((e) => e.$1 == 2 && e.$2 > 3).length;
+    bool seasonOn(int number) => live?.seasonsMonitored[number] ?? true;
     return {
       'id': id,
       'title': title.title,
@@ -557,32 +763,42 @@ class SonarrFake extends ArrFake {
       'tvdbId': title.tvdbId,
       'tmdbId': title.tmdbId,
       'status': 'continuing',
-      'monitored': true,
+      'monitored': live?.monitored ?? true,
       'seriesType': _anime(c) ? 'anime' : 'standard',
       'path': '${rootFolder(c)}/${title.title}',
       'qualityProfileId': 1,
       'added': c.ago(const Duration(days: 300)),
-      'images': const <Object?>[],
+      'images': WorldArtwork.arrImages(title),
       'genres': const ['Animation'],
       if (cosmos) 'nextAiring': c.ahead(const Duration(days: 3, minutes: 7)),
       if (title == WorldTitles.nightShift)
         'nextAiring': c.ahead(const Duration(days: 1, hours: 1, minutes: 7)),
       'seasons': cosmos
           ? [
-              _season(1, 10, 10, 10, size: 6400000000),
-              _season(2, 3, 10, 10, size: 2480000000),
-              _season(3, 0, 0, 8),
+              _season(1, 10, 10, 10, size: 6400000000, on: seasonOn(1)),
+              _season(
+                2,
+                3 + more,
+                10,
+                10,
+                size: 2480000000 + more * 1200000000,
+                on: seasonOn(2),
+              ),
+              _season(3, 0, 0, 8, on: seasonOn(3)),
             ]
-          : [_season(1, 8, 8, 8), _season(2, 4, 5, 10)],
+          : [
+              _season(1, 8, 8, 8, on: seasonOn(1)),
+              _season(2, 4, 5, 10, on: seasonOn(2)),
+            ],
       'statistics': cosmos
           ? {
               'seasonCount': 3,
-              'episodeFileCount': 13,
+              'episodeFileCount': 13 + more,
               'episodeCount': 20,
               'totalEpisodeCount': 28,
               // Its files: twelve in 720p, one in 1080p.
-              'sizeOnDisk': 8880000000,
-              'percentOfEpisodes': 65.0,
+              'sizeOnDisk': 8880000000 + more * 1200000000,
+              'percentOfEpisodes': (13 + more) * 100.0 / 20,
             }
           : {
               'seasonCount': 2,
@@ -595,15 +811,51 @@ class SonarrFake extends ArrFake {
     };
   }
 
+  /// A series added in the demo: one season of eight, on disk once its pack
+  /// arrived.
+  JsonMap _addedSeries(ServerContext c, LiveSeries live) {
+    final title = live.title;
+    final files = live.arrivedSeasons.contains(1) ? 8 : 0;
+    return {
+      'id': live.id,
+      'title': title.title,
+      'sortTitle': title.title.toLowerCase(),
+      'titleSlug': title.slug,
+      'year': title.year,
+      'tvdbId': title.tvdbId,
+      'tmdbId': title.tmdbId,
+      'status': 'ended',
+      'monitored': live.monitored,
+      'seriesType': _anime(c) ? 'anime' : 'standard',
+      'path': '${rootFolder(c)}/${title.title}',
+      'qualityProfileId': 1,
+      'added': c.ago(c.now.difference(live.added)),
+      'images': WorldArtwork.arrImages(title),
+      'genres': const ['Animation'],
+      'seasons': [
+        _season(1, files, 8, 8, on: live.seasonsMonitored[1] ?? true),
+      ],
+      'statistics': {
+        'seasonCount': 1,
+        'episodeFileCount': files,
+        'episodeCount': 8,
+        'totalEpisodeCount': 8,
+        'sizeOnDisk': files * 800000000,
+        'percentOfEpisodes': files * 100.0 / 8,
+      },
+    };
+  }
+
   static JsonMap _season(
     int number,
     int files,
     int aired,
     int total, {
     int? size,
+    bool on = true,
   }) => {
     'seasonNumber': number,
-    'monitored': true,
+    'monitored': on,
     'statistics': {
       'episodeFileCount': files,
       'episodeCount': aired,
@@ -627,8 +879,14 @@ class SonarrFake extends ArrFake {
     return null;
   }
 
-  List<(int, WorldTitle)> _library(ServerContext c) =>
-      _anime(c) ? libraryAnime : libraryMain;
+  List<(int, WorldTitle)> _library(ServerContext c) {
+    final life = c.life;
+    if (life == null) return _anime(c) ? libraryAnime : libraryMain;
+    return [for (final s in life.arrs.series(c.server.id)) (s.id, s.title)];
+  }
+
+  LiveSeries? _live(ServerContext c, int id) =>
+      c.life?.arrs.oneSeries(c.server.id, id);
 
   /// A release of a series this Sonarr holds names the series; the episode is
   /// read off its `S02E04`.
@@ -660,6 +918,7 @@ class SonarrFake extends ArrFake {
   /// aired and missing (E4, E5 downloading), S3 announced.
   List<JsonMap> _episodes(ServerContext c, int seriesId) {
     if (_anime(c) || seriesId != 1) return const [];
+    final live = _live(c, seriesId);
     var id = 1000;
     JsonMap episode(
       int season,
@@ -677,9 +936,11 @@ class SonarrFake extends ArrFake {
         (2, 6) => 'The Seventh Cycle',
         _ => 'Episode $number',
       },
-      'hasFile': file,
-      if (file) 'episodeFileId': id + 5000,
-      'monitored': true,
+      'hasFile':
+          file || (live?.arrivedEpisodes.contains((season, number)) ?? false),
+      if (file || (live?.arrivedEpisodes.contains((season, number)) ?? false))
+        'episodeFileId': id + 5000,
+      'monitored': live?.episodesMonitored[id] ?? true,
       'airDateUtc': airsIn != null
           ? c.ahead(airsIn)
           : c.ago(airedAgo ?? const Duration(days: 400)),
@@ -722,6 +983,55 @@ class SonarrFake extends ArrFake {
       },
       'qualityCutoffNotMet': resolution < 1080,
     };
+  }
+
+  @override
+  void command(ServerContext c, Map<Object?, Object?> body) {
+    final arrs = c.life?.arrs;
+    if (arrs == null) return;
+    final server = c.server.id;
+    final seriesId = body['seriesId'];
+    switch (body['name']) {
+      case 'SeriesSearch' when seriesId is int:
+        final live = _live(c, seriesId);
+        if (live == null) return;
+        if (!live.seeded) {
+          arrs.searchSeason(server, seriesId, 1);
+          return;
+        }
+        // The world's own: every aired episode it does not hold.
+        for (final e in _episodes(c, seriesId)) {
+          if (e['hasFile'] != true && e['airDateUtc'] is String) {
+            final aired = DateTime.parse(e['airDateUtc'] as String);
+            if (aired.isBefore(c.now)) {
+              arrs.searchEpisode(
+                server,
+                seriesId,
+                e['seasonNumber'] as int,
+                e['episodeNumber'] as int,
+              );
+            }
+          }
+        }
+      case 'SeasonSearch' when seriesId is int:
+        final season = body['seasonNumber'];
+        arrs.searchSeason(server, seriesId, season is int ? season : 1);
+      case 'EpisodeSearch':
+        final ids = body['episodeIds'];
+        if (ids is! List) return;
+        for (final e in _episodes(c, 1)) {
+          if (ids.contains(e['id'])) {
+            arrs.searchEpisode(
+              server,
+              1,
+              e['seasonNumber'] as int,
+              e['episodeNumber'] as int,
+            );
+          }
+        }
+      case 'ManualImport':
+        importFiles(c, body);
+    }
   }
 
   /// Whether Cosmos Laundromat's library has a file of [season] [episode]:
@@ -873,12 +1183,73 @@ class SonarrFake extends ArrFake {
       }
       return NetworkReply.json({'message': 'NotFound'}, status: 404);
     }
-    // An edit: Sonarr answers with the record as it now stands.
+    // An edit: Sonarr answers with the record as it now stands. A living
+    // world keeps the monitoring, the series' and each season's.
     if (r.method == 'PUT' && one != null) {
-      return NetworkReply.json(r.json, status: 202);
+      final body = r.json;
+      final live = _live(c, int.parse(one.group(1)!));
+      if (live != null && body is Map) {
+        if (body['monitored'] is bool) {
+          live.monitored = body['monitored'] as bool;
+        }
+        final seasons = body['seasons'];
+        if (seasons is List) {
+          for (final s in seasons.whereType<Map<Object?, Object?>>()) {
+            final number = s['seasonNumber'];
+            if (number is int && s['monitored'] is bool) {
+              live.seasonsMonitored[number] = s['monitored'] as bool;
+            }
+          }
+        }
+      }
+      return NetworkReply.json(body, status: 202);
     }
     if (r.method == 'DELETE' && one != null) {
+      c.life?.arrs.deleteSeries(c.server.id, int.parse(one.group(1)!));
       return NetworkReply.json(const <String, Object?>{});
+    }
+    // Interactive search, in a living world: three releases of the season
+    // or the episode asked for.
+    if (r.method == 'GET' && r.path == '/api/v3/release' && c.life != null) {
+      final episodeId = int.tryParse(r.query['episodeId'] ?? '');
+      final seriesId =
+          int.tryParse(r.query['seriesId'] ?? '') ??
+          (episodeId == null ? null : 1);
+      final live = seriesId == null ? null : _live(c, seriesId);
+      if (live == null) return NetworkReply.json(const <Object?>[]);
+      final episode = episodeId == null
+          ? null
+          : _episodes(
+              c,
+              live.id,
+            ).where((e) => e['id'] == episodeId).firstOrNull;
+      final season =
+          int.tryParse(r.query['seasonNumber'] ?? '') ??
+          (episode?['seasonNumber'] as int?) ??
+          1;
+      final target = episode == null
+          ? 'series-${live.id}-season-$season'
+          : 'series-${live.id}-episode-$season-${episode['episodeNumber']}';
+      return NetworkReply.json(releases(c, target, live.title, season: season));
+    }
+    if (r.method == 'POST' && r.path == '/api/v3/release' && c.life != null) {
+      final grab = ArrFake.grabbed(r);
+      final parts = grab?.target.split('-') ?? const <String>[];
+      final arrs = c.life!.arrs;
+      if (parts.length >= 4 && parts[0] == 'series') {
+        final id = int.tryParse(parts[1]) ?? 0;
+        if (parts[2] == 'season') {
+          arrs.searchSeason(c.server.id, id, int.tryParse(parts[3]) ?? 1);
+        } else if (parts[2] == 'episode' && parts.length == 5) {
+          arrs.searchEpisode(
+            c.server.id,
+            id,
+            int.tryParse(parts[3]) ?? 1,
+            int.tryParse(parts[4]) ?? 1,
+          );
+        }
+      }
+      return NetworkReply.json(r.json, status: 201);
     }
     // One series' history, unpaged, as `/history/series` answers it.
     if (r.method == 'GET' && r.path == '/api/v3/history/series') {
@@ -901,7 +1272,7 @@ class SonarrFake extends ArrFake {
       ).firstMatch(r.query['term'] ?? '');
       if (byId == null) return NetworkReply.json(series(c));
       final id = int.parse(byId.group(2)!);
-      for (final title in WorldTitles.all) {
+      for (final title in WorldTitles.catalogue) {
         if (!title.isSeries) continue;
         if ((byId.group(1) == 'tvdb' ? title.tvdbId : title.tmdbId) != id) {
           continue;
@@ -917,7 +1288,7 @@ class SonarrFake extends ArrFake {
                 'tmdbId': title.tmdbId,
                 'status': 'continuing',
                 'seriesType': 'standard',
-                'images': const <Object?>[],
+                'images': WorldArtwork.arrImages(title),
                 'seasons': [
                   {'seasonNumber': 1, 'monitored': true},
                 ],
@@ -926,9 +1297,22 @@ class SonarrFake extends ArrFake {
       }
       return NetworkReply.json(const <Object?>[]);
     }
-    // An add: Sonarr answers with the new record. The world does not keep it.
+    // An add: Sonarr answers with the new record. A living world keeps it,
+    // and searches for it when asked to.
     if (r.method == 'POST' && r.path == '/api/v3/series') {
       final body = r.json;
+      final arrs = c.life?.arrs;
+      final title = body is Map ? ArrFake.titleOfTvdb(body['tvdbId']) : null;
+      if (arrs != null && title != null) {
+        final options = body['addOptions'];
+        final added = arrs.addSeries(
+          c.server.id,
+          title,
+          monitored: body['monitored'] != false,
+          search: options is Map && options['searchForMissingEpisodes'] == true,
+        );
+        return NetworkReply.json(_series(c, added.id, title), status: 201);
+      }
       return NetworkReply.json({
         if (body is Map) ...body.cast<String, Object?>(),
         'id': 100,
@@ -958,6 +1342,16 @@ class SonarrFake extends ArrFake {
       ]);
     }
     if (r.method == 'PUT' && r.path == '/api/v3/episode/monitor') {
+      final body = r.json;
+      final live = _live(c, 1);
+      if (live != null && body is Map && body['monitored'] is bool) {
+        final ids = body['episodeIds'];
+        if (ids is List) {
+          for (final id in ids.whereType<int>()) {
+            live.episodesMonitored[id] = body['monitored'] as bool;
+          }
+        }
+      }
       return const NetworkReply(202);
     }
     return null;
@@ -1041,7 +1435,7 @@ class LidarrFake extends ArrFake {
         'albumType': 'Album',
         'monitored': true,
         'releaseDate': id == 4
-            ? c.ahead(const Duration(days: 2, hours: 3))
+            ? c.ahead(const Duration(days: 1, hours: 6))
             : '$year-01-01T00:00:00Z',
         'images': const <Object?>[],
         'duration': id == 3 ? 1260000 : 0,
@@ -1061,6 +1455,125 @@ class LidarrFake extends ArrFake {
     for (final album in _albums(c))
       if (album['id'] == 4) album,
   ];
+
+  /// The wishlist: the albums Lidarr monitors and holds no file of, which
+  /// in this library is the anniversary edition alone.
+  @override
+  List<JsonMap> missing(ServerContext c) => [
+    for (final album in _albums(c))
+      if ((album['statistics'] as JsonMap)['trackFileCount'] == 0) album,
+  ];
+
+  /// What Lidarr's history holds, newest first: Sintel's tags rewritten
+  /// today, then the two older albums grabbed and filed weeks ago, a record
+  /// per track file as Lidarr writes them (the app folds them back into one
+  /// album). No import is from this week, so the Arrived band, which counts
+  /// the week's imports, stays the films' and episodes'. The queue is empty:
+  /// every download of the world is a film or an episode, and a Lidarr row
+  /// has to join one.
+  @override
+  List<JsonMap> history(ServerContext c) {
+    final albums = {for (final album in _albums(c)) album['id'] as int: album};
+    var id = 0;
+    final records = <JsonMap>[];
+
+    // The album as a record embeds it: without its own copy of the artist.
+    JsonMap embedded(int albumId) => {...albums[albumId]!}..remove('artist');
+
+    void grabbed(int albumId, String release, String date) {
+      records.add({
+        'id': ++id,
+        'albumId': albumId,
+        'artistId': 1,
+        'eventType': 'grabbed',
+        'sourceTitle': release,
+        'date': date,
+        'quality': _format('FLAC', 6),
+        'downloadId': _albumDownloadId(albumId),
+        'artist': _artist(c),
+        'album': embedded(albumId),
+        'data': {'indexer': 'Fjord Tracker', 'downloadClient': 'qBittorrent'},
+      });
+    }
+
+    // One record per track file, newest first: the last track on top.
+    void perTrack(
+      int albumId,
+      String eventType,
+      int tracks,
+      String Function(int track) date, {
+      required String release,
+      bool retag = false,
+    }) {
+      final album = albums[albumId]!;
+      final folder =
+          '${album['title']} (${(album['releaseDate'] as String).substring(0, 4)})';
+      for (var n = tracks; n >= 1; n--) {
+        final name =
+            '${n.toString().padLeft(2, '0')} ${_trackTitle(albumId, n)}.flac';
+        final path = '${rootFolder(c)}/Jan Morgenstern/$folder/$name';
+        records.add({
+          'id': ++id,
+          'albumId': albumId,
+          'artistId': 1,
+          'trackId': albumId * 100 + n,
+          'eventType': eventType,
+          'sourceTitle': retag ? path : release,
+          'date': date(n),
+          'quality': _format('FLAC', 6),
+          'downloadId': _albumDownloadId(albumId),
+          'artist': _artist(c),
+          'album': embedded(albumId),
+          'data': {
+            if (!retag)
+              'droppedPath': '/mnt/tank/downloads/complete/$release/$name',
+            if (!retag) 'importedPath': path,
+            if (retag) 'path': path,
+            'size': 60000000,
+          },
+        });
+      }
+    }
+
+    const sintel = 'Jan Morgenstern - Sintel (2010) FLAC';
+    const bunny = 'Jan Morgenstern - Big Buck Bunny (2008) FLAC';
+    const elephants = 'Jan Morgenstern - Elephants Dream (2006) FLAC';
+    perTrack(
+      3,
+      'trackFileRetagged',
+      5,
+      (n) => c.agoToday(Duration(hours: 1, minutes: 50 - n)),
+      release: sintel,
+      retag: true,
+    );
+    perTrack(
+      2,
+      'trackFileImported',
+      5,
+      (n) => c.ago(Duration(days: 9, hours: 4, minutes: 50 - n)),
+      release: bunny,
+    );
+    grabbed(2, bunny, c.ago(const Duration(days: 9, hours: 5)));
+    perTrack(
+      1,
+      'trackFileImported',
+      5,
+      (n) => c.ago(Duration(days: 31, hours: 7, minutes: 50 - n)),
+      release: elephants,
+    );
+    grabbed(1, elephants, c.ago(const Duration(days: 31, hours: 8)));
+    return records;
+  }
+
+  /// The id a torrent of album [albumId] carries in history: forty hex
+  /// digits, upper-cased as the arrs record a hash.
+  static String _albumDownloadId(int albumId) =>
+      'D0C1A2B3${albumId.toString().padLeft(32, '0')}';
+
+  /// Track [n] of album [albumId]: Sintel's own, a numbered one elsewhere.
+  static String _trackTitle(int albumId, int n) => albumId == 3
+      ? _sintelTracks[n - 1].$2
+      : 'Track ${n.toString().padLeft(2, '0')}';
 
   @override
   NetworkReply? own(NetworkRequest r, ServerContext c) {
@@ -1127,6 +1640,130 @@ class ReadarrFake extends ArrFake {
     (7, 'Michael Strogoff', 1876, true),
   ];
 
+  /// A book as a wanted, calendar or history record embeds it: the book
+  /// itself and, for the rows that name one, its author.
+  JsonMap _book(
+    ServerContext c,
+    (int, String, int, bool) entry, {
+    String? releaseDate,
+    bool withAuthor = true,
+  }) {
+    final (id, title, year, onDisk) = entry;
+    return {
+      'id': id,
+      'authorId': 1,
+      'title': title,
+      'monitored': true,
+      'releaseDate': releaseDate ?? '$year-01-01T00:00:00Z',
+      'images': const <Object?>[],
+      'statistics': {
+        'bookFileCount': onDisk ? 1 : 0,
+        'bookCount': 1,
+        'totalBookCount': 1,
+      },
+      if (withAuthor) 'author': _author(c),
+    };
+  }
+
+  /// The wishlist: the one book of his Readarr monitors and holds no file of.
+  @override
+  List<JsonMap> missing(ServerContext c) => [
+    for (final entry in _books)
+      if (!entry.$4) _book(c, entry),
+  ];
+
+  /// A posthumous manuscript of his, out in two days: the one dated thing
+  /// the calendar holds. Not in his book list, which is the seven he wrote.
+  @override
+  List<JsonMap> calendar(ServerContext c) => [
+    _book(c, (
+      8,
+      'Paris in the Twentieth Century',
+      1994,
+      false,
+    ), releaseDate: c.ahead(const Duration(days: 2))),
+  ];
+
+  /// What Readarr's history holds, newest first: Around the World in Eighty
+  /// Days retagged today, then two older books of his grabbed and filed
+  /// weeks ago. No import is from this week, so the Arrived band, which
+  /// counts the week's imports, stays the films' and episodes'. The queue is
+  /// empty: every download of the world is a film or an episode, and a
+  /// Readarr row has to join one.
+  @override
+  List<JsonMap> history(ServerContext c) {
+    var id = 0;
+    final records = <JsonMap>[];
+
+    void event(
+      int bookId,
+      String eventType,
+      String release,
+      String date, {
+      Map<String, Object?> data = const {},
+    }) {
+      final entry = _books.firstWhere((b) => b.$1 == bookId);
+      records.add({
+        'id': ++id,
+        'bookId': bookId,
+        'authorId': 1,
+        'eventType': eventType,
+        'sourceTitle': release,
+        'date': date,
+        'quality': _format('EPUB', 3),
+        'downloadId': 'E0B0C0D0${bookId.toString().padLeft(32, '0')}',
+        'book': _book(c, entry, withAuthor: false),
+        'author': _author(c),
+        'data': data,
+      });
+    }
+
+    void filed(int bookId, String release, String date) {
+      final entry = _books.firstWhere((b) => b.$1 == bookId);
+      final file = '${entry.$2}.epub';
+      event(
+        bookId,
+        'bookFileImported',
+        release,
+        date,
+        data: {
+          'droppedPath': '/mnt/user/downloads/complete/$release/$file',
+          'importedPath': '${rootFolder(c)}/Jules Verne/${entry.$2}/$file',
+          'size': 7000000,
+        },
+      );
+    }
+
+    const strogoff = 'Jules.Verne.Michael.Strogoff.EPUB-WORLD';
+    const island = 'Jules.Verne.The.Mysterious.Island.EPUB-WORLD';
+    // Today a retag, which Readarr writes when it rewrites a file's tags.
+    event(
+      5,
+      'bookFileRetagged',
+      '${rootFolder(c)}/Jules Verne/Around the World in Eighty Days/'
+          'Around the World in Eighty Days.epub',
+      c.agoToday(const Duration(hours: 1, minutes: 20)),
+      data: const {'size': 7000000},
+    );
+    filed(7, strogoff, c.ago(const Duration(days: 9, hours: 3)));
+    event(
+      7,
+      'grabbed',
+      strogoff,
+      c.ago(const Duration(days: 9, hours: 3, minutes: 20)),
+      data: const {'indexer': 'Archive', 'downloadClient': 'NZBGet'},
+    );
+    filed(6, island, c.ago(const Duration(days: 23, hours: 9)));
+    event(
+      6,
+      'grabbed',
+      island,
+      c.ago(const Duration(days: 23, hours: 9, minutes: 25)),
+      data: const {'indexer': 'Archive', 'downloadClient': 'NZBGet'},
+    );
+    return records;
+  }
+
   @override
   NetworkReply? answer(NetworkRequest r, ServerContext c) {
     // Readarr's own profile, for books.
@@ -1147,20 +1784,7 @@ class ReadarrFake extends ArrFake {
       '/api/v1/author/1' => NetworkReply.json(_author(c)),
       '/api/v1/book' => NetworkReply.json([
         if (r.query['authorId'] case null || '1')
-          for (final (id, title, year, onDisk) in _books)
-            {
-              'id': id,
-              'authorId': 1,
-              'title': title,
-              'monitored': true,
-              'releaseDate': '$year-01-01T00:00:00Z',
-              'images': const <Object?>[],
-              'statistics': {
-                'bookFileCount': onDisk ? 1 : 0,
-                'bookCount': 1,
-                'totalBookCount': 1,
-              },
-            },
+          for (final entry in _books) _book(c, entry, withAuthor: false),
       ]),
       _ => null,
     };
@@ -1429,36 +2053,15 @@ class BazarrFake extends ServiceFake {
       case '/api/movies/history':
       case '/api/episodes/history':
         return NetworkReply.json({'data': const <Object?>[], 'total': 0});
-      // By id, the one title each page of the world opens; the whole
-      // library is not modelled and reads empty.
+      // The library as a page, or, by id, the one title a page of the world
+      // opens.
       case '/api/movies':
-        final ids = _ids(r, 'radarrid[]');
-        return _rows([
-          if (ids != null && ids.contains(_tearsOfSteel))
-            {
-              'radarrId': _tearsOfSteel,
-              'title': WorldTitles.tearsOfSteel.title,
-              'year': WorldTitles.tearsOfSteel.year,
-              'monitored': true,
-              'missing_subtitles': _german,
-              'subtitles': const <Object?>[],
-            },
-        ]);
+        return _library(r, _movies(), 'radarrid[]', 'radarrId');
       case '/api/series':
-        final ids = _ids(r, 'seriesid[]');
-        return _rows([
-          if (ids != null &&
-              ids.contains(_cosmosLaundromat) &&
-              c.profile.bazarrFollows.contains(ServiceKey.sonarr))
-            {
-              'sonarrSeriesId': _cosmosLaundromat,
-              'title': WorldTitles.cosmosLaundromat.title,
-              'year': WorldTitles.cosmosLaundromat.year,
-              'monitored': true,
-              'episodeMissingCount': 3,
-              'episodeFileCount': 4,
-            },
-        ]);
+        if (!c.profile.bazarrFollows.contains(ServiceKey.sonarr)) {
+          return _rows(const []);
+        }
+        return _library(r, _series(), 'seriesid[]', 'sonarrSeriesId');
       case '/api/episodes':
         // Bazarr refuses this read without an id.
         final ids = _ids(r, 'seriesid[]');
@@ -1468,9 +2071,11 @@ class BazarrFake extends ServiceFake {
             status: 404,
           );
         }
+        if (!c.profile.bazarrFollows.contains(ServiceKey.sonarr)) {
+          return _rows(const []);
+        }
         return _rows([
-          if (ids.contains(_cosmosLaundromat) &&
-              c.profile.bazarrFollows.contains(ServiceKey.sonarr))
+          if (ids.contains(_cosmosLaundromat))
             for (var e = 1; e <= 4; e++)
               {
                 'sonarrSeriesId': _cosmosLaundromat,
@@ -1487,6 +2092,30 @@ class BazarrFake extends ServiceFake {
                 ],
                 'missing_subtitles': e < 4 ? _italian : const <Object?>[],
               },
+          // Night Shift has both languages on all of its four.
+          if (ids.contains(_nightShift))
+            for (var e = 1; e <= 4; e++)
+              {
+                'sonarrSeriesId': _nightShift,
+                'sonarrEpisodeId': 2010 + e,
+                'season': 2,
+                'episode': e,
+                'title': 'Episode $e',
+                'monitored': true,
+                'subtitles': [
+                  for (final (language, code) in const [
+                    (_english, 'en'),
+                    (_italian, 'it'),
+                  ])
+                    {
+                      ...language[0],
+                      'path':
+                          '/mnt/tank/media/series/Night Shift/Season 02/'
+                          'Night Shift S02E0$e.$code.srt',
+                    },
+                ],
+                'missing_subtitles': const <Object?>[],
+              },
         ]);
     }
     return null;
@@ -1495,6 +2124,87 @@ class BazarrFake extends ServiceFake {
   /// The Radarr and Sonarr ids Bazarr follows the world's titles under.
   static const _tearsOfSteel = 5;
   static const _cosmosLaundromat = 1;
+  static const _nightShift = 2;
+
+  /// The films Bazarr holds subtitles for: the ones the first Radarr has a
+  /// file of. Tears of Steel is the one still wanting a language, German, as
+  /// the Wanted tab says; the others have theirs.
+  List<JsonMap> _movies() => [
+    for (final (id, title, languages) in const [
+      (3, WorldTitles.coffeeRun, [_english, _italian]),
+      (4, WorldTitles.sintel, [_english, _italian, _german]),
+      (_tearsOfSteel, WorldTitles.tearsOfSteel, []),
+      (6, WorldTitles.elephantsDream, [_english, _italian]),
+    ])
+      {
+        'radarrId': id,
+        'title': title.title,
+        'sortTitle': title.title.toLowerCase(),
+        'year': title.year,
+        'path': '/mnt/tank/media/films/${title.title} (${title.year})',
+        'monitored': true,
+        'profileId': 1,
+        'tags': const <Object?>[],
+        'missing_subtitles': id == _tearsOfSteel ? _german : const <Object?>[],
+        'subtitles': [
+          for (final language in languages)
+            {
+              ...language[0],
+              'path':
+                  '/mnt/tank/media/films/${title.title} (${title.year})/'
+                  '${title.title} (${title.year}).${language[0]['code2']}.srt',
+            },
+        ],
+      },
+  ];
+
+  /// The series Bazarr follows through Sonarr: Cosmos Laundromat, three of
+  /// whose four episodes still want Italian, and Night Shift, complete.
+  List<JsonMap> _series() => [
+    for (final (id, title, missing, files) in const [
+      (_cosmosLaundromat, WorldTitles.cosmosLaundromat, 3, 4),
+      (_nightShift, WorldTitles.nightShift, 0, 4),
+    ])
+      {
+        'sonarrSeriesId': id,
+        'title': title.title,
+        'sortTitle': title.title.toLowerCase(),
+        'year': title.year,
+        'path': '/mnt/tank/media/series/${title.title}',
+        'monitored': true,
+        'profileId': 1,
+        'tags': const <Object?>[],
+        'episodeMissingCount': missing,
+        'episodeFileCount': files,
+      },
+  ];
+
+  /// [rows] as Bazarr lists a library: the titles whose [idKey] a `name[]`
+  /// filter asked for, or, with no filter, a page of `start` and `length`
+  /// and the size of the whole.
+  static NetworkReply _library(
+    NetworkRequest r,
+    List<JsonMap> rows,
+    String name,
+    String idKey,
+  ) {
+    final ids = _ids(r, name);
+    if (ids != null) {
+      return _rows([
+        for (final row in rows)
+          if (ids.contains(row[idKey])) row,
+      ]);
+    }
+    final start = (int.tryParse(r.query['start'] ?? '') ?? 0).clamp(
+      0,
+      rows.length,
+    );
+    final length = int.tryParse(r.query['length'] ?? '') ?? rows.length;
+    return NetworkReply.json({
+      'data': rows.skip(start).take(length < 0 ? rows.length : length).toList(),
+      'total': rows.length,
+    });
+  }
 
   static const _german = [
     {'name': 'German', 'code2': 'de', 'code3': 'deu'},
@@ -1521,7 +2231,7 @@ class BazarrFake extends ServiceFake {
 
 /// The world's downloads whose arr row lives on the server [c] reached.
 List<WorldDownload> arrDownloads(ServerContext c) => [
-  for (final d in c.profile.downloads)
+  for (final d in c.downloads)
     if (d.arr == c.server.id &&
         d.state != DownloadState.seeding &&
         d.state != DownloadState.stopped &&
@@ -1626,6 +2336,12 @@ Map<String, Object?> arrQueueRecord(
 }
 
 bool _usenet(WorldDownload d) => d.client == 'sabnzbd' || d.client == 'nzbget';
+
+/// The quality of a music or book file, which is its format: `FLAC`, `EPUB`.
+Map<String, Object?> _format(String name, int id) => {
+  'quality': {'id': id, 'name': name},
+  'revision': {'version': 1, 'real': 0, 'isRepack': false},
+};
 
 Map<String, Object?> _quality(String name) => {
   'quality': {
