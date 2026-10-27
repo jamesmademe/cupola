@@ -574,9 +574,9 @@ void main() {
   });
 
   test('a removed connection takes its own viewer, not the survivor\'s', () {
-    // copyWithoutServiceExtras clears the viewer on *every* instance of the
-    // service, so the removal path must not use it any more: dropping one
-    // Jellyfin would have reset which person the other one reads through.
+    // Clearing the viewer by service would reach *every* instance of it, so
+    // the removal path must drop only its own connection: dropping one Jellyfin
+    // would otherwise reset which person the other one reads through.
     const first = ServiceInstance(
       id: 'jellyfin',
       service: ServiceKey.jellyfin,

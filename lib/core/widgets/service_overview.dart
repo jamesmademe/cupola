@@ -1,8 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/misc.dart' show ProviderListenable;
+import 'package:flutter_riverpod/misc.dart'
+    show ProviderListenable, ProviderOrFamily;
 import 'package:go_router/go_router.dart';
 
+import 'package:cupola/core/api/base_arr_service.dart';
+import 'package:cupola/core/status/lexicon.dart';
+import 'package:cupola/core/text_scale.dart';
+import 'package:cupola/core/utils/arr_overview.dart';
+import 'package:cupola/core/utils/image_utils.dart';
+import 'package:cupola/core/widgets/async_value_widget.dart';
+import 'package:cupola/core/widgets/media_poster_card.dart';
+import 'package:cupola/core/widgets/pressable_scale.dart';
+import 'package:cupola/core/app_animation.dart';
+import 'package:cupola/core/models/service_kpi.dart';
+import 'package:cupola/core/widgets/ambient_scaffold.dart';
+import 'package:cupola/core/widgets/not_configured_placeholder.dart';
+import 'package:cupola/core/widgets/service_kpi_peek.dart';
+import 'package:cupola/core/widgets/service_tab_bar.dart';
+import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/network/connection_failure.dart';
@@ -1051,6 +1067,139 @@ List<Widget> sectionsOrOneLine(
   };
 }
 
+/// The Overview tab of a service, minus what is the service's own: the shell
+/// the fourteen screens that are not Stream's used to write out each.
+///
+/// Two widgets, and they stay two: [ServiceOverviewPage] settles whether the
+/// service is configured and draws [NotConfiguredPlaceholder.forService]
+/// otherwise; the body below it is the only thing that reaches a provider.
+/// **Checked before anything reaches a provider.** A service's client provider
+/// throws "not configured", and letting an `AsyncValueWidget` catch that throw
+/// would paint the same pixels while leaving failed providers behind it, each
+/// scheduling a retry with backoff for a condition no amount of waiting
+/// changes: a pending timer in tests and a wake-up every few seconds on device
+/// for a server nobody has entered yet. `.forService`, never the generic form:
+/// this is a service dashboard, so the door goes to the service's own
+/// connection form rather than to the settings index.
+///
+/// What the body does is the same for every service: the room's scroll view
+/// ([ServiceOverviewScroll], with [topPadding] reserved for the two glass bands
+/// above), the identity line, the readouts ([ServiceKpiPeek.room]) and the
+/// [sections], held together by [sectionsOrOneLine]; and a pull that re-reads
+/// the service's readout (`invalidateServiceReadout`: the probe as well as the
+/// wrapper over it, and the figures' sources) before [refresh] re-reads what
+/// the sections are folded from.
+///
+/// The page sits in an [AmbientScaffold] under a [SafeArea] that takes the
+/// status bar's inset, so [topPadding] (the band and the tab bar, without that
+/// inset) starts below it: `service_tab_inset_test.dart` measures it once, for
+/// every Overview.
+class ServiceOverviewPage extends ConsumerWidget {
+  const ServiceOverviewPage({
+    super.key,
+    required this.service,
+    required this.topPadding,
+    required this.sections,
+    required this.refresh,
+    this.kpis,
+    this.configured,
+    this.beforeRefresh,
+  });
+
+  /// The room the two glass bands above an Overview occupy: composed from the
+  /// same two constants the router composes its own from, so a screen built
+  /// outside the router (a test, a preview) reserves the right space instead
+  /// of tucking its first region under the tab bar.
+  static const double hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
+
+  final ServiceKey service;
+
+  /// Height of the chrome the host draws above the page.
+  final double topPadding;
+
+  /// The sections under the readouts, built inside the body: the page's own
+  /// `ref` is the one they watch with, and none of it runs for a service that
+  /// is not configured.
+  final List<Widget> Function(WidgetRef ref) sections;
+
+  /// What a pull re-reads besides the readout: the sources the sections are
+  /// folded from, then the folds. Invalidating only the folds would recompute
+  /// them over the cached payloads and leave the page showing the same
+  /// figures after a deliberate pull.
+  final void Function(WidgetRef ref) refresh;
+
+  /// The readouts, where they are not the service's own
+  /// (`serviceKpiProvider`): folded from a source the page already watches, so
+  /// the figures and the rows under them are one poll.
+  final AsyncValue<List<ServiceKpi>> Function(WidgetRef ref)? kpis;
+
+  /// Whether the page has a connection to read, where that is not the
+  /// settings' answer for [service]: Seerr's is the lens's account.
+  final bool Function(WidgetRef ref)? configured;
+
+  /// What a pull does before anything is invalidated (qBittorrent forgets a
+  /// refused login, so the re-read asks again).
+  final void Function(WidgetRef ref)? beforeRefresh;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final own = configured;
+    final bool ready = own != null
+        ? own(ref)
+        : ref.watch(
+            currentSettingsProvider.select(
+              (settings) => settings.isServiceConfigured(service),
+            ),
+          );
+
+    return AmbientScaffold(
+      accent: service.accent,
+      body: SafeArea(
+        bottom: false,
+        child: ready
+            ? _ServiceOverviewBody(page: this)
+            : NotConfiguredPlaceholder.forService(service),
+      ),
+    );
+  }
+}
+
+class _ServiceOverviewBody extends ConsumerWidget {
+  const _ServiceOverviewBody({required this.page});
+
+  final ServiceOverviewPage page;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final service = page.service;
+    return RefreshIndicator(
+      onRefresh: () async {
+        page.beforeRefresh?.call(ref);
+        invalidateServiceReadout(ref, service);
+        page.refresh(ref);
+        await Future<void>.delayed(AppAnimation.durationMd);
+      },
+      // One scroll view for the whole page: the regions are one column of
+      // reading, not independently scrolling panes.
+      child: ServiceOverviewScroll(
+        topPadding: page.topPadding,
+        children: [
+          ServiceOverviewIdentity(service: service),
+          ...sectionsOrOneLine(ref, service, [
+            ServiceKpiPeek.room(
+              kpis:
+                  page.kpis?.call(ref) ??
+                  ref.watch(serviceKpiProvider(service)),
+              service: service,
+            ),
+            ...page.sections(ref),
+          ]),
+        ],
+      ),
+    );
+  }
+}
+
 /// The one scroll view of an Overview: the band's room at its top, the
 /// sections in one column, and the bar's clearance at its foot.
 ///
@@ -1208,6 +1357,357 @@ class ServiceOverviewOnlyAtHome extends ConsumerWidget {
         // Never offered: the same request is refused again until the app is
         // home, or the connection has an address away.
         onRetry: () {},
+      ),
+    );
+  }
+}
+
+/// One row of Needs attention: the fault's glyph and words in its tone, the
+/// evidence under them, and where it leads.
+///
+/// **The tone is the fault's own**, through the tone rule and never a raw
+/// colour: amber is a fault, and a backlog row (movies below the cutoff,
+/// missing episodes) is neutral by construction. It is walked against the
+/// surface the row actually lands on, which on the light theme is a different
+/// hue from the one the dark artboards draw.
+class ServiceAttentionRow extends StatelessWidget {
+  const ServiceAttentionRow({
+    super.key,
+    required this.service,
+    required this.item,
+  });
+
+  final ServiceKey service;
+  final ArrAttentionItem<ArrAttentionKind> item;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final tone = statusToneColor(
+      colorScheme,
+      item.tone,
+      surface: colorScheme.surfaceContainerLow,
+    );
+    final door = item.door;
+
+    return ServiceOverviewRow(
+      spoken: item.spoken,
+      leading: Icon(item.icon, size: 18, color: tone),
+      title: item.headline,
+      titleColor: tone,
+      detail: item.detail,
+      onTap: door == null
+          ? null
+          : () => openAttentionDoor(context, service, door),
+      doorHint: door == null ? null : attentionDoorHint(service, door),
+    );
+  }
+}
+
+/// One row of History: an 8px dot in the event's tone, the subject and what
+/// happened to it, and the quality, size and age under them.
+class ServiceHistoryRow extends StatelessWidget {
+  const ServiceHistoryRow({super.key, required this.entry});
+
+  final OverviewHistoryEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final tone = statusToneColor(
+      colorScheme,
+      entry.tone,
+      surface: colorScheme.surfaceContainerLow,
+    );
+
+    return ServiceOverviewRow(
+      spoken: entry.spoken,
+      leading: Container(
+        width: 8,
+        height: 8,
+        margin: const EdgeInsets.only(top: 5),
+        decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
+      ),
+      title: '${entry.subject}\u00A0· ${entry.event.toLowerCase()}',
+      detail: entry.detail,
+    );
+  }
+}
+
+/// The Needs attention section of an \*arr's Overview: faults first, the
+/// backlog last, each row its own door.
+///
+/// **No link in the header**: every row here belongs to a different tab (a
+/// stalled download to Queue, a backlog to Wanted), and a single destination
+/// would have to lie about some of them.
+///
+/// **The count is read through `hasValue`, never `asData`.** `asData` is null
+/// on an `AsyncError` even when Riverpod retained the value it had, while
+/// [AsyncValueWidget] under this header draws exactly that retained list at
+/// full ink beneath the unreachable band: read through `asData`, the header
+/// printed `—` over rows it was still showing. A source that never answered has
+/// no retained value and still reads `—`, never a `0`: a count printed over an
+/// unanswered question is a claim nobody made, and it is the reassuring
+/// direction of wrong.
+///
+/// The count is the faults the rows stand for, not the rows (a folded row of
+/// three downloads is three), and a floor (`3+`) when [queueRecords] says the
+/// queue walk stopped on a full page.
+///
+/// [retry] is every source the section is folded from: the fold, the raw queue
+/// walk and whatever the backlog row is read off.
+class ArrNeedsAttentionSection<K extends ArrAttentionKind>
+    extends ConsumerWidget {
+  const ArrNeedsAttentionSection({
+    super.key,
+    required this.service,
+    required this.items,
+    required this.queueRecords,
+    required this.retry,
+  });
+
+  final ServiceKey service;
+
+  final ProviderListenable<AsyncValue<List<ArrAttentionItem<K>>>> items;
+
+  /// The raw queue walk the faults were read from, for its `cutShort`.
+  final ProviderListenable<AsyncValue<ArrRecordPage>> queueRecords;
+
+  final List<ProviderOrFamily> retry;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final value = ref.watch(items);
+    final count = value.hasValue
+        ? value.requireValue.fold(0, (sum, item) => sum + item.count)
+        : null;
+    final floor = ref.watch(queueRecords).value?.cutShort ?? false;
+
+    return ServiceOverviewSection(
+      service: service,
+      title: 'Needs attention',
+      subtitle: count == null ? '—' : (floor ? Lexicon.floor(count) : '$count'),
+      child: AsyncValueWidget<List<ArrAttentionItem<K>>>.section(
+        value: value,
+        service: service,
+        consequence: 'what needs attention is not shown',
+        loadingLabel: 'Loading what needs attention',
+        onRetry: () {
+          for (final source in retry) {
+            ref.invalidate(source);
+          }
+        },
+        skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
+        isEmpty: (data) => data.isEmpty,
+        // A resting state wears no alarm chrome: nothing is wrong, and saying
+        // so is not an error state.
+        emptyBuilder: const ServiceOverviewEmpty(
+          icon: Icons.check_circle_outline_rounded,
+          label: 'Nothing needs you',
+        ),
+        data: (data) => Column(
+          children: [
+            for (final item in data)
+              ServiceAttentionRow(service: service, item: item),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The History section of an \*arr's Overview: what happened today, with a
+/// link to the History tab. Headed `History` with the word `today` beside it,
+/// and "today" is the local calendar day: a heading is a promise.
+class ArrHistoryTodaySection<E extends OverviewHistoryEntry>
+    extends ConsumerWidget {
+  const ArrHistoryTodaySection({
+    super.key,
+    required this.service,
+    required this.entries,
+    required this.retry,
+  });
+
+  final ServiceKey service;
+  final ProviderListenable<AsyncValue<List<E>>> entries;
+  final List<ProviderOrFamily> retry;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ServiceOverviewSection(
+      service: service,
+      title: 'History',
+      subtitle: 'today',
+      destination: ServiceTab.history,
+      child: AsyncValueWidget<List<E>>.section(
+        value: ref.watch(entries),
+        service: service,
+        consequence: "today's history is not shown",
+        loadingLabel: "Loading today's history",
+        onRetry: () {
+          for (final source in retry) {
+            ref.invalidate(source);
+          }
+        },
+        skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
+        isEmpty: (items) => items.isEmpty,
+        emptyBuilder: const ServiceOverviewEmpty(
+          icon: Icons.history_rounded,
+          label: 'Nothing yet today',
+        ),
+        data: (items) => Column(
+          children: [
+            for (final entry in items) ServiceHistoryRow(entry: entry),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The poster rail of an \*arr's Overview (Radarr's Recently added, Sonarr's
+/// Recently downloaded, Lidarr's Recently added): tiles 96 wide, each one
+/// button that speaks the title with its caption as the value.
+///
+/// What the services differ in is data and one closure: [titleOf], [imagesOf]
+/// and [captionOf] (a year, an episode and its age, a count of albums; null or
+/// empty draws none, and says none), and [onTap], which opens the title's own
+/// page under this tab. **Never a flag.** The hero tag is its own namespace
+/// (`radarr_overview_recent_<id>`): the Library tab's grid is alive in a
+/// sibling branch and tags a poster of the same title, and two live Heroes
+/// sharing a tag is an assertion, not a flight.
+///
+/// The posters are read at the address the lens's connection is reached at
+/// now, and the box grows with the reading size by the *clamped* scale so the
+/// captions are not clipped at an accessibility text size; the text is laid out
+/// at the same clamp, or the rail is sized for 1.6x and painted at 3.0x, which
+/// is an overflow stripe.
+class ServicePosterRail<T> extends ConsumerWidget {
+  const ServicePosterRail({
+    super.key,
+    required this.service,
+    required this.items,
+    required this.idOf,
+    required this.titleOf,
+    required this.imagesOf,
+    required this.captionOf,
+    required this.onTap,
+  });
+
+  final ServiceKey service;
+  final List<T> items;
+  final int Function(T item) idOf;
+  final String Function(T item) titleOf;
+  final List<dynamic> Function(T item) imagesOf;
+  final String? Function(T item) captionOf;
+
+  /// Opens the title, handed the hero tag its poster carries.
+  final void Function(BuildContext context, T item, String heroTag) onTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final instance = ref.watch(activeInstanceProvider(service));
+    final reachedAt = instance == null
+        ? ''
+        : ref.watch(connectionReachProvider(instance.id))?.url ?? '';
+
+    return SizedBox(
+      // 138pt poster, the gap, and two label lines.
+      height: TextScaleMetrics.boxHeight(context, base: 176, textHeight: 34),
+      child: MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: TextScaleMetrics.clampedScalerOf(context)),
+        child: ListView.separated(
+          controller: RailArrows.controllerOf(context),
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          itemCount: items.length,
+          separatorBuilder: (_, _) =>
+              const SizedBox(width: AppSpacing.carouselGap),
+          itemBuilder: (context, index) {
+            final item = items[index];
+            final heroTag = '${service.name}_overview_recent_${idOf(item)}';
+            final caption = captionOf(item);
+            return _PosterTile(
+              title: titleOf(item),
+              caption: caption == null || caption.isEmpty ? null : caption,
+              heroTag: heroTag,
+              poster: ImageUtils.extractPosterUrl(
+                imagesOf(item),
+                baseUrl: reachedAt,
+                apiKey: instance?.credential ?? '',
+              ),
+              onTap: () => onTap(context, item, heroTag),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _PosterTile extends StatelessWidget {
+  const _PosterTile({
+    required this.title,
+    required this.caption,
+    required this.heroTag,
+    required this.poster,
+    required this.onTap,
+  });
+
+  final String title;
+  final String? caption;
+  final String heroTag;
+  final ImageSource poster;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final caption = this.caption;
+
+    return SizedBox(
+      width: 96,
+      child: PressableScale(
+        onTap: onTap,
+        // A poster is an image with no name of its own; the tile announces the
+        // title and its caption as one button.
+        semanticLabel: title,
+        semanticValue: caption == null ? null : spokenFromDotted(caption),
+        excludeChildSemantics: true,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 96,
+              height: 138,
+              child: MediaPosterCard(
+                heroTag: heroTag,
+                imageUrl: poster.url,
+                imageHeaders: poster.headers,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall
+                  ?.weight(FontWeight.w600)
+                  .copyWith(color: colorScheme.onSurface),
+            ),
+            if (caption != null)
+              Text(
+                caption,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

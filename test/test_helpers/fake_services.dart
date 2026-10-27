@@ -77,19 +77,17 @@ class FakeRadarrService extends RadarrService {
   @override
   Future<List<dynamic>> getAllHistory({
     Map<String, dynamic>? queryParameters,
+    void Function(List<dynamic> records)? onProgress,
   }) async => const [];
 
-  @override
   Future<List<dynamic>> getBlocklist() async => const [];
 
-  @override
   Future<List<dynamic>> getMissing({
     int page = 1,
     int pageSize = 20,
     Map<String, dynamic>? queryParameters,
   }) async => const [];
 
-  @override
   Future<List<dynamic>> getCutoff({
     int page = 1,
     int pageSize = 20,
@@ -221,19 +219,17 @@ class FakeSonarrService extends SonarrService {
   @override
   Future<List<dynamic>> getAllHistory({
     Map<String, dynamic>? queryParameters,
+    void Function(List<dynamic> records)? onProgress,
   }) async => const [];
 
-  @override
   Future<List<dynamic>> getBlocklist() async => const [];
 
-  @override
   Future<List<dynamic>> getMissing({
     int page = 1,
     int pageSize = 20,
     Map<String, dynamic>? queryParameters,
   }) async => const [];
 
-  @override
   Future<List<dynamic>> getCutoff({
     int page = 1,
     int pageSize = 20,
@@ -349,19 +345,17 @@ class FakeLidarrService extends LidarrService {
   @override
   Future<List<dynamic>> getAllHistory({
     Map<String, dynamic>? queryParameters,
+    void Function(List<dynamic> records)? onProgress,
   }) async => const [];
 
-  @override
   Future<List<dynamic>> getBlocklist() async => const [];
 
-  @override
   Future<List<dynamic>> getMissing({
     int page = 1,
     int pageSize = 20,
     Map<String, dynamic>? queryParameters,
   }) async => const [];
 
-  @override
   Future<List<dynamic>> getCutoff({
     int page = 1,
     int pageSize = 20,
@@ -476,18 +470,24 @@ class FakeSeerrService extends SeerrService {
   }) async => const SeerrSearchAnswer();
 
   @override
-  Future<List<SeerrRequest>> getRequests() async => const [];
+  Future<List<SeerrRequest>> getRequestRows() async => const [];
+
+  /// The rows a test hands over are the rows it means: no title page is read
+  /// for them, as none was when a fake answered `getRequests` whole.
+  @override
+  Future<List<SeerrRequest>> hydrate(List<SeerrRequest> requests) async =>
+      requests;
 
   @override
   Future<List<SeerrRequest>> getActiveRequests() async =>
-      seerrRequestsInMotion(await getRequests());
+      seerrRequestsInMotion(await getRequestRows());
 
   /// The `pending` filter's page, with its count, the way the server
   /// answers it.
   @override
   Future<List<SeerrRequest>> getPendingRequests() async {
     final pending = [
-      for (final request in await getRequests())
+      for (final request in await getRequestRows())
         if (request.status == RequestStatus.pendingApproval) request,
     ];
     return SeerrRequestList(pending, total: pending.length);

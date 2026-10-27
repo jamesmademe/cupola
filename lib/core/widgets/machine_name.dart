@@ -46,7 +46,7 @@ enum _MachineNameShape { row, title, inFull, lead }
 /// * [MachineName.fileTitle] is the same row, in the ink, for a row whose
 ///   title *is* the file: a file the service could not match, which has no
 ///   other name to lead with.
-/// * [MachineName.fileLead] and [MachineName.releaseLead] are the subject of
+/// * [MachineName.fileLead] is the subject of
 ///   a detail card, in the ink, as a card's title is: the File card of a movie,
 ///   whose page title already says *what* and whose card says *which copy*.
 ///   The whole name, wrapping after its dots, selectable, with a copy button.
@@ -68,7 +68,7 @@ enum _MachineNameShape { row, title, inFull, lead }
 /// the row's node. A host must therefore not wrap this widget in
 /// `ExcludeSemantics`, or the action goes with it. A row that has to silence
 /// its whole subtree (a card that speaks one composed sentence) passes
-/// [fileCopyActions] or [releaseCopyActions] to its own node instead
+/// [fileCopyActions] to its own node instead
 /// (`AppCard.customSemanticsActions`, or the `customSemanticsActions` of a
 /// bare `Semantics`), and the action lands on the node the row speaks from.
 /// In full, the name is its own
@@ -102,13 +102,6 @@ class MachineName extends StatefulWidget {
       _kind = _MachineNameKind.file,
       _shape = _MachineNameShape.lead;
 
-  /// A release name that is the subject of its detail card: in the ink,
-  /// whole, wrapping, selectable, with a copy button.
-  const MachineName.releaseLead(this.name, {super.key})
-    : caption = null,
-      _kind = _MachineNameKind.release,
-      _shape = _MachineNameShape.lead;
-
   /// A file name beside the subject of a detail card, in the tertiary ink:
   /// whole, wrapping, selectable, with a copy button.
   const MachineName.fileInFull(this.name, {super.key, this.caption})
@@ -129,13 +122,6 @@ class MachineName extends StatefulWidget {
     BuildContext context,
     String name,
   ) => _copyActions(context, name, _MachineNameKind.file);
-
-  /// The copy action of a release name: *Copy release name*. See
-  /// [fileCopyActions].
-  static Map<CustomSemanticsAction, VoidCallback> releaseCopyActions(
-    BuildContext context,
-    String name,
-  ) => _copyActions(context, name, _MachineNameKind.release);
 
   /// The string, exactly as the service returned it.
   final String name;

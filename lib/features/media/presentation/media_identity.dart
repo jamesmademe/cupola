@@ -37,7 +37,7 @@ class MediaIdentity {
 
   /// TMDB's record, as Seerr answered it.
   factory MediaIdentity.fromSeerr(MediaSeerrRecord record) {
-    final model = DiscoverDetailViewModel.fromResponse(record.details);
+    final model = DiscoverDetailViewModel.of(record.details);
     return MediaIdentity(
       title: model.title,
       year: model.year.isEmpty ? null : model.year,

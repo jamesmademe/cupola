@@ -6,6 +6,7 @@ import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/read_clock.dart';
 
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/connection_providers.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/transmission/data/transmission_client.dart';
@@ -22,59 +23,22 @@ import 'package:cupola/features/transmission/domain/models/transmission_models.d
 /// flag, which is what stops a polling screen from spending the daemon's
 /// hundred allowed login failures and locking the user out until they restart
 /// it. A fresh client per request would throw both away every tick.
-final transmissionClientProvider = Provider<TransmissionClient>((ref) {
-  // `watchTransport`, which is the same narrow select this used to spell out by
-  // hand plus the one thing the hand-written version could not do: follow the
-  // lens. Spelled out here, the four fields resolved to `transmissionUrl` and
-  // friends (the FIRST connection), so moving the lens to the seedbox changed
-  // the badge in the app bar and nothing else. The label said one daemon and
-  // every torrent on screen came from the other.
-  final transport = watchTransport(ref, ServiceKey.transmission);
-  transport.ensureConfigured(ServiceKey.transmission);
-  final client = TransmissionClient(
+final transmissionClientProvider = _transmission.lens;
+
+final transmissionClientForProvider = _transmission.forConnection;
+
+final _transmission = ConnectionProviders<TransmissionClient>.transport(
+  ServiceKey.transmission,
+  create: (ref, transport) => TransmissionClient(
     url: transport.url,
-    username: transport.username.isEmpty ? null : transport.username,
-    password: transport.apiKey.isEmpty ? null : transport.apiKey,
+    username: transport.usernameOrNull,
+    password: transport.secretOrNull,
     certFingerprint: transport.pin,
     accessHeaders: transport.access.headers(),
     onlyAtHome: transport.onlyAtHomeOf(ServiceKey.transmission),
-  );
-  ref.onDispose(() => client.close());
-  return client;
-});
-
-/// Transmission client for an explicitly named connection.
-///
-/// Empty and active ids reuse the lens-bound provider, preserving the existing
-/// session id and anti-bruteforce state. A different id gets one long-lived
-/// client, so those same pieces of state survive polling and are disposed only
-/// with the family entry.
-final transmissionClientForProvider =
-    Provider.family<TransmissionClient, String>((ref, instanceId) {
-      final activeId = ref
-          .read(activeInstanceProvider(ServiceKey.transmission))
-          ?.id;
-      if (instanceId.isEmpty || instanceId == activeId) {
-        return ref.watch(transmissionClientProvider);
-      }
-
-      final transport = watchTransport(
-        ref,
-        ServiceKey.transmission,
-        instanceId: instanceId,
-      );
-      transport.ensureConfigured(ServiceKey.transmission);
-      final client = TransmissionClient(
-        url: transport.url,
-        username: transport.username.isEmpty ? null : transport.username,
-        password: transport.apiKey.isEmpty ? null : transport.apiKey,
-        certFingerprint: transport.pin,
-        accessHeaders: transport.access.headers(),
-        onlyAtHome: transport.onlyAtHomeOf(ServiceKey.transmission),
-      );
-      ref.onDispose(client.close);
-      return client;
-    });
+  ),
+  close: (client) => client.close(),
+);
 
 /// Every torrent the daemon knows about.
 ///
@@ -86,7 +50,8 @@ final transmissionTorrentsProvider = FutureProvider<List<TransmissionTorrent>>((
 ) async {
   final client = ref.watch(transmissionClientProvider);
   final noteRead = ref.queueReadNoter(ServiceKey.transmission);
-  final torrents = await client.torrents();
+  // Only the queue's poll reads a delta; every other read is the whole list.
+  final torrents = await client.torrentsSynced();
   noteRead();
   return torrents;
 }, retry: noProviderRetry);
@@ -115,6 +80,9 @@ final transmissionPollingProvider = Provider.autoDispose<void>((ref) {
     id: 'transmission.queue',
     interval: const Duration(seconds: 3),
     onTick: () {
+      // This read may be a delta: the list's own three-second read, asked for
+      // with only what moved, and in full every half minute.
+      ref.read(transmissionClientProvider).allowDeltaRead();
       ref.readAgainUnlessInFlight([
         transmissionTorrentsProvider,
         transmissionStatsProvider,

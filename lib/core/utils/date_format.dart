@@ -305,19 +305,3 @@ String formatDayWords(DateTime at, {required DateTime now}) {
   }
   return past;
 }
-
-/// [formatMediumDate] for a nullable field, answering null rather than echoing
-/// something unparseable back.
-///
-/// A dense child row states its facts in a dot-separated line built from a
-/// `List<String>`: there is no cell to leave blank, so a date the service did
-/// not send (or sent in a shape no one can read) has to disappear from the
-/// line entirely rather than print raw JSON at the user. The prose form itself
-/// is [formatMediumDate]'s, so a row and the Details grid above it cannot
-/// disagree about what a date looks like.
-String? formatMediumDateOrNull(String? isoDate) {
-  final raw = isoDate?.trim();
-  if (raw == null || raw.isEmpty) return null;
-  if (DateTime.tryParse(raw) == null) return null;
-  return formatMediumDate(raw);
-}

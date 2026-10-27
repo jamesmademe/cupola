@@ -218,29 +218,6 @@ void main() {
       expect(items.last['id'], 249);
     });
 
-    test('getBlocklist returns every page', () async {
-      client.getResponseQueue.addAll([
-        {
-          'records': [
-            for (var id = 0; id < 200; id++) {'id': id, 'sourceTitle': 'X'},
-          ],
-          'totalRecords': 210,
-        },
-        {
-          'records': [
-            for (var id = 200; id < 210; id++) {'id': id, 'sourceTitle': 'X'},
-          ],
-          'totalRecords': 210,
-        },
-      ]);
-
-      final items = await service.getBlocklist();
-
-      expect(items, hasLength(210));
-      expect(client.lastGetPath, '/api/v3/blocklist');
-      expect(client.getCallCount, 2);
-    });
-
     group('a walk says how far it got', () {
       List<Map<String, dynamic>> rows(int count) => [
         for (var id = 0; id < count; id++) {'id': id},
@@ -291,6 +268,37 @@ void main() {
         expect(page.records, hasLength(10000));
         expect(page.total, 12000);
         expect(page.cutShort, isTrue);
+      });
+
+      test('a history walk says what it has after each run of pages', () async {
+        client.getResponseQueue.addAll([
+          {'records': rows(250), 'totalRecords': 1000},
+          {'records': rows(250), 'totalRecords': 1000},
+          {'records': rows(250), 'totalRecords': 1000},
+          {'records': rows(250), 'totalRecords': 1000},
+        ]);
+        final heard = <int>[];
+
+        final all = await service.getAllHistory(
+          onProgress: (records) => heard.add(records.length),
+        );
+
+        // The first page alone, then the run growing; never the whole, which
+        // is the answer, and never a count that goes down.
+        expect(heard.first, 250);
+        expect(heard, isNot(contains(1000)));
+        expect(heard, orderedEquals([...heard]..sort()));
+        expect(all, hasLength(1000));
+      });
+
+      test('a history of one page says nothing before its answer', () async {
+        client.getResponseData = {'records': rows(12), 'totalRecords': 12};
+        var heard = 0;
+
+        final all = await service.getAllHistory(onProgress: (_) => heard++);
+
+        expect(heard, 0);
+        expect(all, hasLength(12));
       });
 
       test('the record-only getters still answer with the rows', () async {
@@ -374,9 +382,6 @@ void main() {
 
       expect(page.records, hasLength(20));
       expect(page.total, 340);
-      // And the records-only getter is unchanged, because two \*arr services
-      // override it and a dozen callers still read it.
-      expect(await service.getMissing(), hasLength(20));
     });
 
     // The wanted primitives take a caller's parameters for the same reason the

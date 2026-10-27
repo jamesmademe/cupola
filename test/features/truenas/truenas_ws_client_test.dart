@@ -299,6 +299,58 @@ void main() {
     expect(server.upgrades, 1);
   });
 
+  test('after a network change a live socket is pinged, not replaced, '
+      'however many notices arrive', () async {
+    final client = _LoopbackClient(baseUrl: server.url);
+    addTearDown(client.close);
+    expect(await client.call('pool.query'), 'ok');
+
+    client
+      ..markSuspect()
+      ..markSuspect();
+    expect(await client.call('pool.query'), 'ok');
+    expect(await client.call('pool.query'), 'ok');
+
+    expect(server.upgrades, 1, reason: 'the socket answered, so it stays');
+    final pings = server.frames.where((f) => f.contains('"core.ping"'));
+    expect(pings, hasLength(1), reason: 'one check for the change');
+  });
+
+  test('a suspect socket that does not answer the ping is replaced by the '
+      'next call, well inside the call timeout', () async {
+    final client = _LoopbackClient(
+      baseUrl: server.url,
+      callTimeout: const Duration(seconds: 30),
+    );
+    addTearDown(client.close);
+    expect(await client.call('pool.query'), 'ok');
+    expect(server.upgrades, 1);
+
+    server.silentMethods.add('core.ping');
+    client.markSuspect();
+    final started = DateTime.now();
+    expect(await client.call('pool.query'), 'ok');
+
+    expect(server.upgrades, 2, reason: 'the silent socket was replaced');
+    expect(
+      DateTime.now().difference(started),
+      lessThan(const Duration(seconds: 10)),
+      reason: 'the ping timeout, not the 30 s call timeout',
+    );
+  });
+
+  test('markSuspect with no socket open does nothing, and the first call '
+      'connects normally', () async {
+    final client = _LoopbackClient(baseUrl: server.url);
+    addTearDown(client.close);
+
+    client.markSuspect();
+
+    expect(await client.call('pool.query'), 'ok');
+    expect(server.upgrades, 1);
+    expect(server.frames.where((f) => f.contains('"core.ping"')), isEmpty);
+  });
+
   group('the RPC error envelope', () {
     Future<Object> refusal(String method, String fixture) async {
       server.errorMethods[method] = jsonFixtureMap(

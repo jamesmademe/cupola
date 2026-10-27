@@ -88,12 +88,7 @@ void main() {
                 label: const Text('Request'),
               ),
               OutlinedButton.icon(
-                style: HeaderActionRow.tonalExpandedButtonStyle(
-                  context,
-                  foregroundColor: Colors.white,
-                  backgroundColor: Colors.black,
-                  borderColor: Colors.grey,
-                ),
+                style: HeaderActionRow.expandedButtonStyle(context),
                 onPressed: () {},
                 icon: const Icon(Icons.search_rounded),
                 label: const Text('Search'),

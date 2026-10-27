@@ -114,7 +114,7 @@ void invalidateActivity(WidgetRef ref, ActivityTab tab) {
         for (final source in homeSessionsSources) {
           ref.invalidate(source);
         }
-        ref.invalidate(requestsProvider);
+        invalidateSeerrRequestsOf(ref.container, '');
         ref.invalidate(dashboardDecisionSourceProvider);
         for (final service in ServiceKey.values) {
           for (final source in dashboardSourcesOf(service)) {
@@ -124,7 +124,7 @@ void invalidateActivity(WidgetRef ref, ActivityTab tab) {
       }
     case ActivityTab.requests:
       ref.read(answeredRequestsProvider.notifier).clear();
-      ref.invalidate(requestsProvider);
+      invalidateSeerrRequestsOf(ref.container, '');
       for (final source in dashboardSourcesOf(ServiceKey.seerr)) {
         ref.invalidate(source);
       }

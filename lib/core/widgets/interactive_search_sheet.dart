@@ -1,23 +1,17 @@
 import 'dart:async';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
-import 'package:cupola/core/theme.dart';
-import 'package:cupola/core/utils/duration_format.dart';
 import 'package:cupola/core/utils/grab_error_utils.dart';
 import 'package:cupola/core/utils/release_utils.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/app_bottom_sheet.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/core/widgets/app_empty_state.dart';
-import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/release_list_widgets.dart';
-import 'package:cupola/core/widgets/shimmer_placeholder.dart';
-import 'package:cupola/features/settings/domain/service_key.dart';
 
 // Re-export ReleaseSortType for backwards compatibility
 export 'package:cupola/core/utils/release_utils.dart' show ReleaseSortType;
@@ -65,71 +59,6 @@ class InteractiveSearchSheet extends StatefulWidget {
     required this.onGrabRelease,
     required this.scrollController,
   });
-
-  /// Shows the interactive search sheet as a modal bottom sheet.
-  static Future<void> show({
-    required BuildContext context,
-    required List<dynamic> releases,
-    required String title,
-    required Future<void> Function(String guid, int indexerId) onGrabRelease,
-    Color? accent,
-  }) {
-    return AppBottomSheet.showScrollable(
-      context: context,
-      title: 'Releases',
-      subtitle: title,
-      icon: Icons.travel_explore_rounded,
-      accent: accent,
-      showClose: true,
-      initialSize: 0.75,
-      minSize: 0.5,
-      maxSize: 0.95,
-      builder: (context, scrollController) => InteractiveSearchSheet(
-        releases: releases,
-        title: title,
-        onGrabRelease: onGrabRelease,
-        scrollController: scrollController,
-      ),
-    );
-  }
-
-  /// Shows interactive search sheet with loading state, fetching releases asynchronously.
-  /// Fetch failures render inline with a retry action instead of closing the sheet.
-  ///
-  /// [service] is whose search it is, and [instanceId] the connection when the
-  /// caller knows it. A failure names them and offers the remedy its cause
-  /// names (the key to paste again, the address to check) rather than Retry
-  /// alone, so a caller that knows its service passes it. Left out, the sheet
-  /// cannot say whose form to open and keeps Retry.
-  static Future<void> showAsync({
-    required BuildContext context,
-    required String title,
-    required Future<List<dynamic>> Function(CancelToken token) fetchReleases,
-    required Future<void> Function(String guid, int indexerId) onGrabRelease,
-    Color? accent,
-    ServiceKey? service,
-    String? instanceId,
-  }) {
-    return AppBottomSheet.showScrollable(
-      context: context,
-      title: 'Releases',
-      subtitle: title,
-      icon: Icons.travel_explore_rounded,
-      accent: accent,
-      showClose: true,
-      initialSize: 0.75,
-      minSize: 0.5,
-      maxSize: 0.95,
-      builder: (context, scrollController) => _AsyncInteractiveSearchSheet(
-        title: title,
-        fetchReleases: fetchReleases,
-        onGrabRelease: onGrabRelease,
-        scrollController: scrollController,
-        service: service,
-        instanceId: instanceId,
-      ),
-    );
-  }
 
   @override
   State<InteractiveSearchSheet> createState() => _InteractiveSearchSheetState();
@@ -365,6 +294,7 @@ class _InteractiveSearchSheetState extends State<InteractiveSearchSheet> {
                 '${rejections.map((r) => '• $r').join('\n')}\n\n'
                 'Download "$releaseTitle" anyway?',
       confirmLabel: 'Download release',
+      enterConfirms: true,
       cancelLabel: 'Cancel',
     );
 
@@ -885,236 +815,6 @@ class _EmptyReleases extends StatelessWidget {
                     'again later, or check your indexer settings.',
               ),
       ],
-    );
-  }
-}
-
-/// Skeleton list shown while indexers are queried.
-///
-/// A release search is the one arr call that legitimately runs for minutes, so
-/// this is an instrument rather than a spinner. The elapsed readout appears only
-/// once the search crosses [readoutAfter]: a clock on a search that answers in
-/// two seconds is noise, and Cancel makes the exit explicit rather than leaving
-/// it to be discovered by dismissing the sheet.
-///
-/// There is deliberately no percentage: the server reports no per-indexer
-/// progress, so any bar would be invented. Elapsed is the only honest readout.
-class _ReleaseSearchLoading extends StatelessWidget {
-  const _ReleaseSearchLoading({required this.elapsed, required this.onCancel});
-
-  final Duration elapsed;
-  final VoidCallback onCancel;
-
-  /// Below this the search is about to answer anyway; a clock only adds noise.
-  static const readoutAfter = Duration(seconds: 3);
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final showElapsed = elapsed >= readoutAfter;
-    const label = 'Searching for releases…';
-
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.sm,
-          ),
-          child: Row(
-            children: [
-              // The status summary is one node; Cancel stays a sibling so it
-              // keeps its own, rather than being swallowed by the summary's.
-              Expanded(
-                child: Semantics(
-                  container: true,
-                  // Not a live region: announcing a clock every second is
-                  // hostile, so this is read on focus, not pushed at the user.
-                  label: showElapsed
-                      ? '$label ${formatElapsedForSpeech(elapsed)} elapsed.'
-                      : label,
-                  child: ExcludeSemantics(
-                    child: Row(
-                      children: [
-                        const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: Text(
-                            label,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ),
-                        if (showElapsed)
-                          Padding(
-                            padding: const EdgeInsets.only(left: AppSpacing.sm),
-                            child: Text(
-                              formatElapsed(elapsed),
-                              style: theme.textTheme.bodySmall?.tabular
-                                  .copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              TextButton(onPressed: onCancel, child: const Text('Cancel')),
-            ],
-          ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            physics: const NeverScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            itemCount: 6,
-            itemBuilder: (context, index) => Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: ShimmerPlaceholder(
-                height: 104,
-                borderRadius: AppRadius.borderRadiusMd,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Wrapper widget that fetches releases asynchronously and displays InteractiveSearchSheet.
-/// Shows a skeleton while loading, renders failures inline with a retry action,
-/// and cancels the fetch on dispose.
-class _AsyncInteractiveSearchSheet extends StatefulWidget {
-  final String title;
-  final Future<List<dynamic>> Function(CancelToken token) fetchReleases;
-  final Future<void> Function(String guid, int indexerId) onGrabRelease;
-  final ScrollController scrollController;
-  final ServiceKey? service;
-  final String? instanceId;
-
-  const _AsyncInteractiveSearchSheet({
-    required this.title,
-    required this.fetchReleases,
-    required this.onGrabRelease,
-    required this.scrollController,
-    required this.service,
-    required this.instanceId,
-  });
-
-  @override
-  State<_AsyncInteractiveSearchSheet> createState() =>
-      _AsyncInteractiveSearchSheetState();
-}
-
-class _AsyncInteractiveSearchSheetState
-    extends State<_AsyncInteractiveSearchSheet> {
-  late CancelToken _cancelToken;
-  List<dynamic>? _releases;
-  Object? _error;
-
-  /// Drives the elapsed readout. A release search can run for minutes, so how
-  /// long it has been waiting is the only progress the server lets us report.
-  Timer? _ticker;
-  Duration _elapsed = Duration.zero;
-
-  @override
-  void initState() {
-    super.initState();
-    _cancelToken = CancelToken();
-    _startSearch();
-  }
-
-  @override
-  void dispose() {
-    _ticker?.cancel();
-    _cancelToken.cancel();
-    super.dispose();
-  }
-
-  void _startSearch() {
-    _elapsed = Duration.zero;
-    _ticker?.cancel();
-    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(() => _elapsed += const Duration(seconds: 1));
-    });
-    _loadReleases();
-  }
-
-  /// Stops the clock as soon as the search resolves, so a settled sheet is not
-  /// rebuilding once a second behind the release list.
-  void _stopTicker() {
-    _ticker?.cancel();
-    _ticker = null;
-  }
-
-  Future<void> _loadReleases() async {
-    try {
-      final releases = await widget.fetchReleases(_cancelToken);
-      if (mounted && !_cancelToken.isCancelled) {
-        _stopTicker();
-        setState(() {
-          _releases = releases;
-          _error = null;
-        });
-      }
-    } catch (e) {
-      if (_cancelToken.isCancelled || !mounted) return;
-      _stopTicker();
-      setState(() => _error = e);
-    }
-  }
-
-  void _retry() {
-    _cancelToken = CancelToken();
-    setState(() {
-      _error = null;
-      _releases = null;
-    });
-    _startSearch();
-  }
-
-  /// Dismissing the sheet already cancels the fetch in [dispose]; this only
-  /// makes that exit visible, because a search that may run for minutes needs a
-  /// way out the user can see.
-  void _cancel() {
-    HapticFeedback.selectionClick();
-    Navigator.of(context).maybePop();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          child: AppErrorState.compact(
-            error: _error!,
-            onRetry: _retry,
-            service: widget.service,
-            instanceId: widget.instanceId,
-          ),
-        ),
-      );
-    }
-
-    if (_releases == null) {
-      return _ReleaseSearchLoading(elapsed: _elapsed, onCancel: _cancel);
-    }
-
-    return InteractiveSearchSheet(
-      releases: _releases!,
-      title: widget.title,
-      onGrabRelease: widget.onGrabRelease,
-      scrollController: widget.scrollController,
     );
   }
 }

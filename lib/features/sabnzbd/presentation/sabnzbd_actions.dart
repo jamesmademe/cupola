@@ -2,6 +2,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
+import 'package:cupola/core/utils/service_action.dart';
+
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/features/sabnzbd/data/sabnzbd_client.dart';
 import 'package:cupola/features/sabnzbd/presentation/sabnzbd_provider.dart';
@@ -20,24 +22,15 @@ Future<bool> runSabnzbdAction(
   String? successMessage,
   required String failureMessage,
   List<ProviderOrFamily> invalidate = const [],
-}) async {
+}) {
   final client = ref.read(sabnzbdClientProvider);
-  // Not [ref] after the `await`: it dies with the page that asked, and the
-  // write may outlast that page.
-  final container = ProviderScope.containerOf(context, listen: false);
-  try {
-    await action(client);
-    for (final provider in invalidate) {
-      container.invalidate(provider);
-    }
-    if (successMessage != null && context.mounted) {
-      SnackBarHelper.success(context, successMessage);
-    }
-    return true;
-  } catch (e) {
-    if (context.mounted) {
-      SnackBarHelper.error(context, failureMessage, detail: e);
-    }
-    return false;
-  }
+  return runServiceAction(
+    context,
+    ref,
+    action: () => action(client),
+    successMessage: successMessage,
+    failureMessage: failureMessage,
+    invalidate: invalidate,
+    refreshOnFailure: true,
+  );
 }

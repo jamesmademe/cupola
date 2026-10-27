@@ -33,6 +33,7 @@ class TrueNasPoolDetailScreen extends ConsumerWidget {
           'A scrub verifies all data in "$poolName". It can take hours and '
           'adds disk load, but is safe to run.',
       confirmLabel: 'Start scrub',
+      enterConfirms: true,
       icon: Icons.cleaning_services_rounded,
     );
     if (!result.confirmed || !context.mounted) return;

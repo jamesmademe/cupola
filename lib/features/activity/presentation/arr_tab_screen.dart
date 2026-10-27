@@ -8,20 +8,34 @@ import 'package:cupola/core/widgets/app_empty_state.dart';
 import 'package:cupola/core/widgets/app_error_state.dart';
 import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/core/widgets/floating_bottom_nav_bar.dart';
+import 'package:cupola/core/widgets/inline_error_retry.dart';
 import 'package:cupola/core/widgets/not_configured_placeholder.dart';
 import 'package:cupola/core/widgets/selection_pills.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_item_tiles.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_tab_helpers.dart';
-import 'package:cupola/features/activity/presentation/widgets/segment_selector.dart';
 import 'package:cupola/features/activity/presentation/widgets/sonarr_wanted_hierarchy.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 enum ArrTabMode { queue, wanted, history }
+
+enum WantedSegment {
+  missing('Missing'),
+  // Sentence case. The same state is spelled in three places: this pill, the
+  // global screen's pill and `resolveWantedStatus`'s label, and Title Case
+  // here was the odd one out of an app that capitalises a state like a
+  // sentence.
+  cutoffUnmet('Cutoff unmet');
+
+  final String label;
+
+  const WantedSegment(this.label);
+}
 
 /// A tab-sized view over the shared *arr activity contract.
 ///
@@ -54,6 +68,15 @@ class _ArrTabScreenState extends ConsumerState<ArrTabScreen> {
   WantedSegment _wantedSegment = WantedSegment.missing;
   Future<List<dynamic>>? _future;
 
+  /// The history read so far, while the rest of it is still coming: the first
+  /// page is drawn when it arrives, and the pages after it are added below.
+  /// Null until a first page has come, and again when a read starts.
+  List<dynamic>? _partial;
+
+  /// Which read [_partial] belongs to, so a page of a read that was replaced
+  /// (a pull, another instance) is not drawn under the new one.
+  int _read = 0;
+
   /// Radarr's quality profiles, resolved once per load.
   ///
   /// Only the cutoff view needs them, and only Radarr: Sonarr's rows carry
@@ -81,9 +104,16 @@ class _ArrTabScreenState extends ConsumerState<ArrTabScreen> {
 
   Future<List<dynamic>> _load() {
     final service = ref.read(resolvedArrServiceProvider(widget.serviceType));
+    final read = ++_read;
+    _partial = null;
     return switch (widget.mode) {
       ArrTabMode.queue => service.getQueue(),
-      ArrTabMode.history => service.getAllHistory(),
+      ArrTabMode.history => service.getAllHistory(
+        onProgress: (records) {
+          if (!mounted || read != _read) return;
+          setState(() => _partial = records);
+        },
+      ),
       ArrTabMode.wanted => switch (_wantedSegment) {
         WantedSegment.missing => service.getAllMissing(),
         WantedSegment.cutoffUnmet => service.getAllCutoff(),
@@ -173,9 +203,42 @@ class _ArrTabScreenState extends ConsumerState<ArrTabScreen> {
 
   Widget _content(BuildContext context, AsyncSnapshot<List<dynamic>> snapshot) {
     if (snapshot.connectionState == ConnectionState.waiting) {
+      final partial = _partial;
+      // The newest page is on screen while the older ones are read, with the
+      // same skeleton rows under it that stood in for the whole list.
+      if (widget.mode == ArrTabMode.history && partial != null) {
+        return _rows(
+          context,
+          partial,
+          ref.read(resolvedArrServiceProvider(widget.serviceType)),
+          tail: AppSkeleton.listRows(count: 2),
+        );
+      }
       return _single(context, AppSkeleton.listRows(count: 6));
     }
     if (snapshot.hasError) {
+      final partial = _partial;
+      // The pages that did arrive stay: what the person was reading is not
+      // taken from them for a page that failed. The loading rows give way to
+      // a notice saying so, and its Retry reads the history again.
+      if (widget.mode == ArrTabMode.history && partial != null) {
+        return _rows(
+          context,
+          partial,
+          ref.read(resolvedArrServiceProvider(widget.serviceType)),
+          tail: InlineErrorRetry.flush(
+            message: sectionFailureMessage(
+              _service,
+              snapshot.error,
+              consequence: 'the rest of the history did not arrive',
+            ),
+            error: snapshot.error,
+            service: _service,
+            instanceId: ref.read(activeInstanceProvider(_service))?.id,
+            onRetry: _reload,
+          ),
+        );
+      }
       return _single(
         context,
         AppErrorState(
@@ -252,6 +315,7 @@ class _ArrTabScreenState extends ConsumerState<ArrTabScreen> {
     List<dynamic> items,
     ArrActivityMixin service, {
     Map<int, String> qualityProfiles = const {},
+    Widget? tail,
   }) {
     // Lazy, deliberately. `_load` goes through `_fetchAllPages`, which will
     // hand back up to 12,500 history records (250 a page, 50 pages), and a
@@ -265,9 +329,10 @@ class _ArrTabScreenState extends ConsumerState<ArrTabScreen> {
     return ListView.builder(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: _padding(context),
-      itemCount: items.length + leading,
+      itemCount: items.length + leading + (tail == null ? 0 : 1),
       itemBuilder: (context, index) {
         if (hasPills && index == 0) return _pills();
+        if (tail != null && index == items.length + leading) return tail;
         return _row(
           context,
           items[index - leading],

@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 
 import 'package:cupola/core/network/answer_guard.dart';
 import 'package:cupola/core/network/connection_failure.dart';
+import 'package:cupola/core/network/list_mapping.dart';
 import 'package:cupola/core/network/observed_transport.dart';
 import 'package:cupola/core/network/unanswered_addresses.dart';
 import 'package:cupola/core/network/unreached_origins.dart';
@@ -349,6 +350,9 @@ Dio guardedDio({
     pinnedFingerprint: certFingerprint,
   );
   dio.httpClientAdapter = adapter;
+  // Wraps Dio's own transformer: a list read that asks for it is decoded and
+  // mapped in one isolate; every other answer takes the inner path unchanged.
+  dio.transformer = ListMappingTransformer(dio.transformer);
   return dio;
 }
 

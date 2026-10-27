@@ -7,6 +7,7 @@ import 'package:cupola/core/status/read_clock.dart';
 import 'package:cupola/features/nzbget/data/nzbget_client.dart';
 import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
+import 'package:cupola/features/settings/data/connection_providers.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -14,57 +15,22 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// Throws if NZBGet is not configured; widgets must check
 /// `settings.isServiceConfigured(ServiceKey.nzbget)` before reading.
-final nzbgetClientProvider = Provider<NzbgetClient>((ref) {
-  // Selected rather than watching the whole model: this provider closes a live
-  // Dio on dispose, so an unrelated settings write must not rebuild it.
-  return _nzbgetClient(ref, instanceId: null);
-});
+final nzbgetClientProvider = _nzbget.lens;
 
-/// NZBGet client for an explicitly named connection.
-///
-/// Empty and active ids collapse to the ordinary lens-bound provider. Other
-/// ids create one client that remains alive, including its request counter
-/// and Dio transport, until Riverpod disposes this family entry.
-final nzbgetClientForProvider = Provider.family<NzbgetClient, String>((
-  ref,
-  instanceId,
-) {
-  final activeId = ref.read(activeInstanceProvider(ServiceKey.nzbget))?.id;
-  if (instanceId.isEmpty || instanceId == activeId) {
-    return ref.watch(nzbgetClientProvider);
-  }
+final nzbgetClientForProvider = _nzbget.forConnection;
 
-  return _nzbgetClient(ref, instanceId: instanceId);
-});
-
-/// Builds one client against a named connection.
-///
-/// One builder rather than two copies, matching NPM, Plex, Jellyfin and Unraid
-/// which landed beside this. The construction carries `certFingerprint`, which
-/// ADR-6 makes load-bearing: two copies of it is two places to forget the pin,
-/// and a client built without one silently stops trusting the certificate the
-/// user accepted for that origin.
-NzbgetClient _nzbgetClient(Ref ref, {required String? instanceId}) {
-  // `watchTransport`, selected rather than watching the whole model: this
-  // builder registers a dispose that closes a live Dio, so an unrelated
-  // settings write must not rebuild it.
-  final transport = watchTransport(
-    ref,
-    ServiceKey.nzbget,
-    instanceId: instanceId,
-  );
-  transport.ensureConfigured(ServiceKey.nzbget);
-  final client = NzbgetClient(
+final _nzbget = ConnectionProviders<NzbgetClient>.transport(
+  ServiceKey.nzbget,
+  create: (ref, transport) => NzbgetClient(
     url: transport.url,
-    username: transport.username.isEmpty ? null : transport.username,
-    password: transport.apiKey.isEmpty ? null : transport.apiKey,
+    username: transport.usernameOrNull,
+    password: transport.secretOrNull,
     certFingerprint: transport.pin,
     accessHeaders: transport.access.headers(),
     onlyAtHome: transport.onlyAtHomeOf(ServiceKey.nzbget),
-  );
-  ref.onDispose(client.close);
-  return client;
-}
+  ),
+  close: (client) => client.close(),
+);
 
 /// Global download status.
 ///

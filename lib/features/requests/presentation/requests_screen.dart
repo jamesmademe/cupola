@@ -56,7 +56,7 @@ class RequestsScreen extends ConsumerWidget {
     );
     ref.listen<int>(
       navigationRefreshProvider(NavigationSection.requests),
-      (_, _) => ref.invalidate(requestsProvider),
+      (_, _) => invalidateSeerrRequestsOf(ref.container, ''),
     );
     final configured = ref.watch(
       currentSettingsProvider.select(
@@ -73,7 +73,7 @@ class RequestsScreen extends ConsumerWidget {
           children: [
             RefreshIndicator(
               onRefresh: () async {
-                ref.invalidate(requestsProvider);
+                invalidateSeerrRequestsOf(ref.container, '');
                 try {
                   await ref.read(requestsProvider.future);
                 } catch (_) {}
@@ -139,7 +139,7 @@ class _RequestsBody extends ConsumerWidget {
             child: BriefFailureLine.line(
               error: error,
               service: ServiceKey.seerr,
-              onRetry: () => ref.invalidate(requestsProvider),
+              onRetry: () => invalidateSeerrRequestsOf(ref.container, ''),
             ),
           );
 

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/providers/provider_retry.dart';
+import 'package:cupola/features/settings/data/connection_providers.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/unraid/data/unraid_client.dart';
@@ -10,55 +11,21 @@ import 'package:cupola/features/unraid/domain/models/unraid_models.dart';
 ///
 /// Throws if Unraid is not configured; widgets must check
 /// `settings.isServiceConfigured(ServiceKey.unraid)` before reading.
-final unraidClientProvider = Provider<UnraidClient>((ref) {
-  // Selected rather than watching the whole model: this provider closes a live
-  // Dio on dispose, so an unrelated settings write must not rebuild it.
-  final transport = watchTransport(ref, ServiceKey.unraid);
-  transport.ensureConfigured(ServiceKey.unraid);
-  final client = UnraidClient(
+final unraidClientProvider = _unraid.lens;
+
+final unraidClientForProvider = _unraid.forConnection;
+
+final _unraid = ConnectionProviders<UnraidClient>.transport(
+  ServiceKey.unraid,
+  create: (ref, transport) => UnraidClient(
     url: transport.url,
     apiKey: transport.apiKey,
     certFingerprint: transport.pin,
     accessHeaders: transport.access.headers(),
     onlyAtHome: transport.onlyAtHomeOf(ServiceKey.unraid),
-  );
-  ref.onDispose(() => client.close());
-  return client;
-});
-
-/// Unraid client bound to one configured connection id.
-///
-/// Empty and active ids collapse to the lens client. Explicit non-active ids
-/// resolve their own transport and own their Dio lifecycle independently.
-final unraidClientForProvider = Provider.family<UnraidClient, String>((
-  ref,
-  instanceId,
-) {
-  final activeId =
-      ref.read(activeInstanceProvider(ServiceKey.unraid))?.id ?? '';
-  if (instanceId.isEmpty || instanceId == activeId) {
-    return ref.watch(unraidClientProvider);
-  }
-  return _unraidClient(ref, instanceId: instanceId);
-});
-
-UnraidClient _unraidClient(Ref ref, {required String? instanceId}) {
-  final transport = watchTransport(
-    ref,
-    ServiceKey.unraid,
-    instanceId: instanceId,
-  );
-  transport.ensureConfigured(ServiceKey.unraid);
-  final client = UnraidClient(
-    url: transport.url,
-    apiKey: transport.apiKey,
-    certFingerprint: transport.pin,
-    accessHeaders: transport.access.headers(),
-    onlyAtHome: transport.onlyAtHomeOf(ServiceKey.unraid),
-  );
-  ref.onDispose(client.close);
-  return client;
-}
+  ),
+  close: (client) => client.close(),
+);
 
 /// Storage array status.
 ///

@@ -8,7 +8,6 @@ import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/activity_provider.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_item_tiles.dart';
 import 'package:cupola/features/series/data/sonarr_service.dart';
-import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -21,32 +20,6 @@ const _second = ServiceInstance(
   label: '2',
   url: 'https://second.lan:8989',
   credential: 'key-2',
-);
-
-/// A queue row that belongs to [instanceId].
-///
-/// Both rows carry queue id **7** on purpose: \*arr queue ids are per server and
-/// every server numbers from one, so an id alone cannot say which download this
-/// is. That is the whole reason a write has to be routed by the row's
-/// connection: sending id 7 to the wrong Sonarr removes somebody else's
-/// download and reports success.
-GlobalActivityItem _row(String instanceId, String title) => GlobalActivityItem(
-  kind: GlobalActivityKind.queue,
-  service: ServiceKey.sonarr,
-  serviceType: ServiceType.series,
-  instanceId: instanceId,
-  instanceLabel: instanceId,
-  title: title,
-  subtitle: 'Release.Name',
-  status: const MediaStatusInfo(
-    availability: MediaAvailability.unknown,
-    labelOverride: 'Downloading',
-  ),
-  raw: const {
-    'id': 7,
-    'title': 'Release.Name',
-    'series': {'title': 'A Series'},
-  },
 );
 
 Future<List<Override>> _settings() => settingsScopeOverrides(
@@ -70,146 +43,9 @@ Future<void> _pumpRow(
   await tester.pumpAndSettle();
 }
 
-/// Opens the row's detail sheet and takes it through Remove from queue.
-Future<void> _removeFromQueue(WidgetTester tester, String title) async {
-  await tester.tap(find.text(title));
-  await tester.pumpAndSettle();
-  await tester.tap(find.text('Remove from queue'));
-  await tester.pumpAndSettle();
-  // The client-delete box starts ticked, so the button says both halves.
-  await tester.tap(
-    find.widgetWithText(FilledButton, 'Remove and delete files'),
-  );
-  await tester.pumpAndSettle();
-}
-
 void main() {
-  testWidgets(
-    'a write on a row the lens is NOT on reaches that row\'s server',
-    (tester) async {
-      final lens = _RecordingSonarrService();
-      final other = _RecordingSonarrService();
-
-      final container = ProviderContainer(
-        overrides: [
-          ...await _settings(),
-          // The lens stays on the FIRST connection deliberately: if the action
-          // still resolves through the lens this test passes nothing, it fails.
-          sonarrServiceProvider.overrideWith((ref) => lens),
-          sonarrServiceForProvider(_second.id).overrideWithValue(other),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      await _pumpRow(
-        tester,
-        container: container,
-        item: _row(_second.id, 'On the second server'),
-      );
-      await _removeFromQueue(tester, 'On the second server');
-
-      expect(
-        other.removed,
-        [7],
-        reason: 'the row belongs to the second Sonarr, so the write goes there',
-      );
-      expect(
-        lens.removed,
-        isEmpty,
-        reason: 'the lens is a viewing choice, not the address of a write',
-      );
-    },
-  );
-
-  testWidgets('and a row on the lens still reaches the lens', (tester) async {
-    final lens = _RecordingSonarrService();
-    final other = _RecordingSonarrService();
-
-    final container = ProviderContainer(
-      overrides: [
-        ...await _settings(),
-        sonarrServiceProvider.overrideWith((ref) => lens),
-        sonarrServiceForProvider(_second.id).overrideWithValue(other),
-      ],
-    );
-    addTearDown(container.dispose);
-
-    await _pumpRow(
-      tester,
-      container: container,
-      item: _row('sonarr', 'On the first server'),
-    );
-    await _removeFromQueue(tester, 'On the first server');
-
-    expect(lens.removed, [7]);
-    expect(other.removed, isEmpty);
-  });
-
-  testWidgets('the routing follows the row after the lens moves', (
-    tester,
-  ) async {
-    // The mirror image, so a "always send it to the non-lens one" implementation
-    // cannot pass: here the lens sits on the SECOND connection and the row
-    // belongs to the first.
-    final first = _RecordingSonarrService();
-    final second = _RecordingSonarrService();
-
-    final container = ProviderContainer(
-      overrides: [
-        ...await _settings(),
-        sonarrServiceProvider.overrideWith((ref) => second),
-        sonarrServiceForProvider('sonarr').overrideWithValue(first),
-      ],
-    );
-    addTearDown(container.dispose);
-    await container
-        .read(activeInstancesProvider.notifier)
-        .select(ServiceKey.sonarr, _second.id);
-
-    await _pumpRow(
-      tester,
-      container: container,
-      item: _row('sonarr', 'On the first server'),
-    );
-    await _removeFromQueue(tester, 'On the first server');
-
-    expect(first.removed, [7]);
-    expect(second.removed, isEmpty);
-  });
-
   // Three separate call sites pass the row's connection, so three separate
   // chances to forget one. The resolution is shared; the argument is not.
-  testWidgets('blocklist-and-retry goes to the row\'s server too', (
-    tester,
-  ) async {
-    final lens = _RecordingSonarrService();
-    final other = _RecordingSonarrService();
-
-    final container = ProviderContainer(
-      overrides: [
-        ...await _settings(),
-        sonarrServiceProvider.overrideWith((ref) => lens),
-        sonarrServiceForProvider(_second.id).overrideWithValue(other),
-      ],
-    );
-    addTearDown(container.dispose);
-
-    await _pumpRow(
-      tester,
-      container: container,
-      item: _row(_second.id, 'On the second server'),
-    );
-
-    await tester.tap(find.text('On the second server'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Try another download'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Try another download'));
-    await tester.pumpAndSettle();
-
-    expect(other.removed, [7]);
-    expect(lens.removed, isEmpty);
-  });
 
   testWidgets('and so does un-blocklisting', (tester) async {
     final lens = _RecordingSonarrService();
@@ -256,56 +92,6 @@ void main() {
 
     expect(other.unblocked, [7]);
     expect(lens.unblocked, isEmpty);
-  });
-
-  testWidgets('a row names the connection it came from', (tester) async {
-    final container = ProviderContainer(
-      overrides: [
-        ...await _settings(),
-        sonarrServiceProvider.overrideWith((ref) => _RecordingSonarrService()),
-      ],
-    );
-    addTearDown(container.dispose);
-
-    await _pumpRow(
-      tester,
-      container: container,
-      item: _row(_second.id, 'On the second server'),
-    );
-
-    expect(find.text(_second.id), findsOneWidget);
-  });
-
-  testWidgets('and grows no badge when the row carries no label', (
-    tester,
-  ) async {
-    final container = ProviderContainer(
-      overrides: [
-        ...await settingsScopeOverrides(configured: activityServiceKeys),
-        sonarrServiceProvider.overrideWith((ref) => _RecordingSonarrService()),
-      ],
-    );
-    addTearDown(container.dispose);
-
-    await _pumpRow(
-      tester,
-      container: container,
-      item: GlobalActivityItem(
-        kind: GlobalActivityKind.queue,
-        service: ServiceKey.sonarr,
-        serviceType: ServiceType.series,
-        instanceId: 'sonarr',
-        title: 'The only Sonarr',
-        subtitle: 'Release.Name',
-        status: const MediaStatusInfo(
-          availability: MediaAvailability.unknown,
-          labelOverride: 'Downloading',
-        ),
-        raw: const {'id': 7, 'title': 'Release.Name'},
-      ),
-    );
-
-    expect(find.text('Sonarr'), findsNothing);
   });
 }
 

@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/widgets/app_dialog.dart';
@@ -40,6 +41,7 @@ CatalogScene _scene(
   double width = 390,
   CatalogPlatform platform = CatalogPlatform.phone,
   double textScale = 1,
+  Future<void> Function(WidgetTester tester, Finder scene)? act,
 }) => CatalogScene(
   caption,
   (_) => ClipRect(
@@ -52,7 +54,21 @@ CatalogScene _scene(
   height: height,
   platform: platform,
   textScale: textScale,
+  act: act,
 );
+
+/// Enter confirms here, so the scene tabs past Cancel to the confirm: the
+/// focus ring sits on the primary action, where Enter lands.
+Future<AppConfirmResult> _approveByEnter(BuildContext context) =>
+    showAppConfirmDialog(
+      context: context,
+      useRootNavigator: false,
+      title: 'Approve this request?',
+      message: 'Sherlock Jr. goes to Radarr · 4K and starts downloading.',
+      icon: Icons.check_circle_outline_rounded,
+      confirmLabel: 'Approve request',
+      enterConfirms: true,
+    );
 
 Future<AppConfirmResult> _grab(BuildContext context) => showAppConfirmDialog(
   context: context,
@@ -161,6 +177,17 @@ void main() {
         'Standard with an icon · Approve this request? · the icon in onSurface',
         _approve,
         height: 320,
+      ),
+      _scene(
+        'Enter confirms · the focus ring is on the confirm, the one '
+        'non-destructive primary action that takes Enter',
+        _approveByEnter,
+        height: 320,
+        act: (tester, scene) async {
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+          await tester.pumpAndSettle();
+        },
       ),
       _scene(
         'A delete, the files option ticked · the same neutral dialog; the '

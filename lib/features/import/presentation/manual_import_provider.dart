@@ -79,6 +79,83 @@ final manualImportFlowProvider =
       ManualImportFlowNotifier.new,
     );
 
+/// One scan's `items` split for the service and the blocked paths it was split
+/// under. See `ManualImportFlowState._split`.
+final class _ScanSplit {
+  _ScanSplit(this.service, this.blocked, List<ManualImportItem> items)
+    : inFlight = blocked.isEmpty
+          ? const []
+          : items
+                .where((item) => blocked.contains(item.path))
+                .toList(growable: false),
+      ready = _readyOf(service, blocked, items),
+      attention = _attentionOf(service, blocked, items),
+      other = _otherOf(service, blocked, items),
+      imported = items
+          .where(
+            (item) => item.isAlreadyImported && !blocked.contains(item.path),
+          )
+          .toList(growable: false);
+
+  final ServiceKey? service;
+  final Set<String> blocked;
+  final List<ManualImportItem> inFlight;
+  final List<ManualImportItem> ready;
+  final List<ManualImportItem> attention;
+  final List<ManualImportItem> other;
+  final List<ManualImportItem> imported;
+
+  static List<ManualImportItem> _readyOf(
+    ServiceKey? service,
+    Set<String> blocked,
+    List<ManualImportItem> items,
+  ) {
+    if (service == null) return const [];
+    return items
+        .where(
+          (item) =>
+              item.isReadyForImportFor(service) && !blocked.contains(item.path),
+        )
+        .toList(growable: false);
+  }
+
+  static List<ManualImportItem> _attentionOf(
+    ServiceKey? service,
+    Set<String> blocked,
+    List<ManualImportItem> items,
+  ) {
+    if (service == null) return const [];
+    return items
+        .where(
+          (item) =>
+              item.isSelectable &&
+              !item.isReadyForImportFor(service) &&
+              !blocked.contains(item.path) &&
+              manualImportIsSupportedFile(service, item),
+        )
+        .toList(growable: false);
+  }
+
+  static List<ManualImportItem> _otherOf(
+    ServiceKey? service,
+    Set<String> blocked,
+    List<ManualImportItem> items,
+  ) {
+    if (service == null) return const [];
+    return items
+        .where(
+          (item) =>
+              item.isSelectable &&
+              !item.isReadyForImportFor(service) &&
+              !blocked.contains(item.path) &&
+              !manualImportIsSupportedFile(service, item),
+        )
+        .toList(growable: false);
+  }
+}
+
+final _splitByItems = Expando<_ScanSplit>('manualImportScanSplit');
+
 class ManualImportFlowState {
   final ServiceKey? service;
 
@@ -181,26 +258,26 @@ class ManualImportFlowState {
 
   /// Files handed to the current command, still shown so the list stays honest
   /// about where they went.
-  List<ManualImportItem> get inFlightItems {
+  List<ManualImportItem> get inFlightItems => _split.inFlight;
+
+  /// The scan split by what the service does with each file, computed once per
+  /// `items` list. A selection change copies the state but keeps that list, so
+  /// ticking a file does not classify every item again.
+  _ScanSplit get _split {
     final blocked = blockedPaths;
-    if (blocked.isEmpty) return const [];
-    return items
-        .where((item) => blocked.contains(item.path))
-        .toList(growable: false);
+    final cached = _splitByItems[items];
+    if (cached != null &&
+        identical(cached.service, service) &&
+        identical(cached.blocked, blocked)) {
+      return cached;
+    }
+    final split = _ScanSplit(service, blocked, items);
+    _splitByItems[items] = split;
+    return split;
   }
 
   /// Fully matched files, the only ones the import checkbox can include.
-  List<ManualImportItem> get readyItems {
-    final service = this.service;
-    if (service == null) return const [];
-    final blocked = blockedPaths;
-    return items
-        .where(
-          (item) =>
-              item.isReadyForImportFor(service) && !blocked.contains(item.path),
-        )
-        .toList(growable: false);
-  }
+  List<ManualImportItem> get readyItems => _split.ready;
 
   /// Files that need an identity before they can be imported.
   ///
@@ -208,37 +285,11 @@ class ManualImportFlowState {
   /// downloads folder also returns playlists, artwork and music, and counting
   /// those as "needs attention" makes the number unactionable: 26 items to fix
   /// when only a handful are episodes. Those land in [otherItems] instead.
-  List<ManualImportItem> get attentionItems {
-    final service = this.service;
-    if (service == null) return const [];
-    final blocked = blockedPaths;
-    return items
-        .where(
-          (item) =>
-              item.isSelectable &&
-              !item.isReadyForImportFor(service) &&
-              !blocked.contains(item.path) &&
-              manualImportIsSupportedFile(service, item),
-        )
-        .toList(growable: false);
-  }
+  List<ManualImportItem> get attentionItems => _split.attention;
 
   /// Files of a kind this service does not import: kept visible, and still
   /// fixable, but out of the way.
-  List<ManualImportItem> get otherItems {
-    final service = this.service;
-    if (service == null) return const [];
-    final blocked = blockedPaths;
-    return items
-        .where(
-          (item) =>
-              item.isSelectable &&
-              !item.isReadyForImportFor(service) &&
-              !blocked.contains(item.path) &&
-              !manualImportIsSupportedFile(service, item),
-        )
-        .toList(growable: false);
-  }
+  List<ManualImportItem> get otherItems => _split.other;
 
   /// The unmatched files ticked for a shared assignment.
   List<ManualImportItem> get fixSelectionItems => items
@@ -252,12 +303,7 @@ class ManualImportFlowState {
   /// absent, and "did I already take this one?" then has no answer anywhere in
   /// the app. They are listed inline with everything else, and a user who wants
   /// one taken again can tick it; see [ManualImportItem.isReimportableFor].
-  List<ManualImportItem> get importedItems {
-    final blocked = blockedPaths;
-    return items
-        .where((item) => item.isAlreadyImported && !blocked.contains(item.path))
-        .toList(growable: false);
-  }
+  List<ManualImportItem> get importedItems => _split.imported;
 
   /// Everything in the scan this service could actually take: matched files,
   /// files still waiting for an identity, and files it already holds.

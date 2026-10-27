@@ -29,7 +29,7 @@ void main() {
             (ref, stack) => Stream.value('container started\n'),
           ),
         ],
-        child: const MaterialApp(home: DockgeTerminalScreen(showAppBar: false)),
+        child: const MaterialApp(home: DockgeTerminalScreen()),
       ),
     );
     await tester.pumpAndSettle();
@@ -50,7 +50,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: await settingsScopeOverrides(),
-        child: const MaterialApp(home: DockgeTerminalScreen(showAppBar: false)),
+        child: const MaterialApp(home: DockgeTerminalScreen()),
       ),
     );
     await tester.pumpAndSettle();

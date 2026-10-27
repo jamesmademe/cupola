@@ -49,23 +49,6 @@ void main() {
     });
   });
 
-  group('countAwaitingApproval', () {
-    test('counts the whole set, not the visible slice', () {
-      // The header must stay honest when there are more pending than fit.
-      final requests = [
-        for (var index = 0; index < 8; index++)
-          _request(id: index, status: RequestStatus.pendingApproval),
-        _request(id: 99),
-      ];
-
-      expect(countAwaitingApproval(requests), 8);
-    });
-
-    test('is zero on an auto-approving stack', () {
-      expect(countAwaitingApproval([_request(id: 1), _request(id: 2)]), 0);
-    });
-  });
-
   group('sortRequestsPendingFirst', () {
     test('pending comes first even when it is the oldest request', () {
       // A single sort on recency would bury a three-day-old approval under
@@ -123,9 +106,9 @@ void main() {
     test('caps at the limit', () {
       final sorted = sortRequestsPendingFirst([
         for (var index = 0; index < 20; index++) _request(id: index),
-      ], limit: servicesRequestsPreviewLimit);
+      ], limit: 2);
 
-      expect(sorted, hasLength(servicesRequestsPreviewLimit));
+      expect(sorted, hasLength(2));
     });
 
     test('leaves the caller\'s list untouched', () {
@@ -137,22 +120,6 @@ void main() {
       sortRequestsPendingFirst(input, limit: 10);
 
       expect(input.first.id, 1);
-    });
-  });
-
-  group('servicesRequestsHeaderLabel', () {
-    test('folds the badge into the spoken header', () {
-      expect(
-        servicesRequestsHeaderLabel(pending: 3),
-        'Requests, 3 requests awaiting approval',
-      );
-    });
-
-    test('singularizes one', () {
-      expect(
-        servicesRequestsHeaderLabel(pending: 1),
-        'Requests, 1 request awaiting approval',
-      );
     });
   });
 }

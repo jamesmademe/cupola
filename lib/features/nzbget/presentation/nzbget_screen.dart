@@ -7,7 +7,6 @@ import 'package:cupola/core/lifecycle/page_activity.dart';
 import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/app_spacing.dart';
 import 'package:cupola/core/status/read_age.dart';
-import 'package:cupola/core/status/silence_age.dart';
 import 'package:cupola/core/utils/dot_separator.dart';
 import 'package:cupola/core/utils/string_utils.dart';
 import 'package:cupola/core/widgets/widgets.dart';
@@ -15,10 +14,9 @@ import 'package:cupola/features/nzbget/domain/models/nzbget_models.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_actions.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_overview_provider.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
+import 'package:cupola/features/services/presentation/client_queue_frame.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
-import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
-import 'package:cupola/features/settings/domain/connection_presentation.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// NZBGet's Queue tab: every group in the download queue, with the controls
@@ -63,49 +61,24 @@ class _NzbgetDashboard extends ConsumerWidget {
     // Live while this page is the page on screen.
     ref.watchWhileLive(context, nzbgetPollingProvider);
     final watched = ref.watch(nzbgetQueueProvider);
-    final summaryAsync = ref.watch(serviceSummaryProvider(ServiceKey.nzbget));
-    // A failed probe, in its own words: "did not answer" only when nothing did,
-    // the refusal and its remedy when the sign-in was refused.
-    // The list's own failure bands too, until the probe says it.
-    final failed = clientPageFailure(
-      ServiceKey.nzbget,
-      summary: summaryAsync,
-      list: watched,
-    );
-    // How long the connection has not answered, said only when that is what
-    // the probe found: a fault is an answer, and carries no span.
-    final silentFor = ref.watchSilence(
+    final frame = watchClientQueueFrame(
       context,
+      ref,
       ServiceKey.nzbget,
-      silent: failed?.didNotAnswer ?? false,
+      watched,
     );
+    final (:failed, :silentFor, :staleAge, :sampleAge, :list, :offline) = frame;
 
     // With nothing to keep the failure is the page. Over a queue already read
     // it is a band, and the queue stays under it as it was last said.
-    if (failed != null && !watched.hasValue) {
+    if (offline) {
       return ServiceOfflineState.fromSummary(
-        summary: failed,
+        summary: failed!,
         since: silentFor,
         onRetry: () => _invalidateAll(ref),
       );
     }
-    final queueAsync = lastReadUnderBand(watched, banded: failed != null);
-    // With no fault band, a read that stopped coming back says so
-    // (`FaultBand.stale`); a fault band, which says why, wins.
-    final staleAge = ref.watchQueueStaleAge(
-      context,
-      ServiceKey.nzbget,
-      underBand: failed != null,
-      hasQueue: watched.hasValue,
-    );
-    // How old the rows are, only while they are the last read under a band:
-    // their figures stopped moving when NZBGet stopped answering, or when
-    // its read stopped coming back.
-    final sampleAge = ref.watchQueueReadAge(
-      context,
-      ServiceKey.nzbget,
-      underBand: failed != null || staleAge != null,
-    );
+    final queueAsync = list;
 
     // Through the same `when` the rows draw with, so the header never counts
     // a queue its section is not showing.
@@ -156,7 +129,16 @@ class _NzbgetDashboard extends ConsumerWidget {
               const SizedBox(height: 2),
             ],
           ),
-          _queueRows(ref, queueAsync, sampleAge),
+          clientRowsSliver<List<NzbgetGroup>, NzbgetGroup>(
+            service: ServiceKey.nzbget,
+            value: queueAsync,
+            rowsOf: (groups) => groups,
+            emptyTitle: 'Queue is empty',
+            rowBuilder: (context, group) =>
+                _QueueTile(group: group, sampleAge: sampleAge),
+            consequence: 'the queue is not shown',
+            onRetry: () => ref.invalidate(nzbgetQueueProvider),
+          ),
           SliverToBoxAdapter(
             child: SizedBox(
               height: FloatingNavBarMetrics.getScrollViewBottomPadding(context),
@@ -175,47 +157,6 @@ class _NzbgetDashboard extends ConsumerWidget {
 String? nzbgetQueueCountLabel(int? count) {
   if (count == null) return null;
   return count == 1 ? '1 job' : '$count jobs';
-}
-
-/// The queue's rows, as a sliver: every group, lazily built.
-Widget _queueRows(
-  WidgetRef ref,
-  AsyncValue<List<NzbgetGroup>> queueAsync,
-  Duration? sampleAge,
-) {
-  return queueAsync.when(
-    data: (groups) {
-      if (groups.isEmpty) {
-        return const SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            child: AppEmptyState.inline(
-              icon: Icons.download_done_rounded,
-              title: 'Queue is empty',
-            ),
-          ),
-        );
-      }
-      return SliverList.builder(
-        itemCount: groups.length,
-        itemBuilder: (context, index) =>
-            _QueueTile(group: groups[index], sampleAge: sampleAge),
-      );
-    },
-    loading: () => const SliverToBoxAdapter(child: ListRowsShimmer()),
-    error: (error, _) => SliverToBoxAdapter(
-      child: InlineErrorRetry(
-        message: sectionFailureMessage(
-          ServiceKey.nzbget,
-          error,
-          consequence: 'the queue is not shown',
-        ),
-        error: error,
-        service: ServiceKey.nzbget,
-        onRetry: () => ref.invalidate(nzbgetQueueProvider),
-      ),
-    ),
-  );
 }
 
 /// Providers refreshed after any NZBGet mutation.

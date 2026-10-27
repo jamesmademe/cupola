@@ -249,13 +249,6 @@ final capabilityGrantForProvider = Provider.family<CapabilityGrant, String>((
   );
 });
 
-/// The scope half of [capabilityGrantForProvider], for the callers that only
-/// ask "may this write".
-final capabilityScopeForProvider = Provider.family<CapabilityScope, String>(
-  (ref, connectionId) =>
-      ref.watch(capabilityGrantForProvider(connectionId)).scope,
-);
-
 class CapabilityScopeNotifier extends Notifier<Map<String, CapabilityGrant>> {
   @override
   Map<String, CapabilityGrant> build() {

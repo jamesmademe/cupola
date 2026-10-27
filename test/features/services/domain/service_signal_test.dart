@@ -5,17 +5,22 @@ import 'package:cupola/core/models/service_kpi.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/features/services/domain/service_signal.dart';
 
+/// The one figure a card shows: the primary of the pair. The rules these tests
+/// pin live on [resolveServiceSignalPair]; this is the reading they name.
+ServiceSignal? _single(List<ServiceKpi> kpis) =>
+    resolveServiceSignalPair(kpis)?.primary;
+
 ServiceKpi _kpi(String label, String value, {StatusTone? tone}) =>
     ServiceKpi(label: label, value: value, icon: Icons.circle, tone: tone);
 
 void main() {
-  group('resolveServiceSignal', () {
+  group('the single figure, the pair\'s primary', () {
     test('returns null when a service reports no KPIs', () {
-      expect(resolveServiceSignal(const []), isNull);
+      expect(_single(const []), isNull);
     });
 
     test('falls back to the headline metric when nothing is flagged', () {
-      final signal = resolveServiceSignal([
+      final signal = _single([
         _kpi('Movies', '312'),
         _kpi('Monitored', '300'),
         _kpi('Missing', '0'),
@@ -44,7 +49,7 @@ void main() {
     });
 
     test('takes the earliest flag when several are raised', () {
-      final signal = resolveServiceSignal([
+      final signal = _single([
         _kpi('Pools', '2'),
         _kpi('Used', '91%', tone: StatusTone.warning),
         _kpi('Alerts', '3', tone: StatusTone.warning),
@@ -58,7 +63,7 @@ void main() {
       // that computed the number says which kind of fact it is, and this reads
       // it. These three tests are what stops the derivation coming back.
       test('an active transfer reads as activity, not as a fault', () {
-        final signal = resolveServiceSignal([
+        final signal = _single([
           _kpi('Download', '2.4 MB/\u2060s', tone: StatusTone.info),
           _kpi('Queue', '3'),
         ]);
@@ -72,7 +77,7 @@ void main() {
         // are not. Red is not available to them: on a service cell red is
         // reachability, and a figure only exists because the service answered.
         for (final label in ['Exited', 'Fails']) {
-          final signal = resolveServiceSignal([
+          final signal = _single([
             _kpi('Stacks', '9'),
             _kpi(label, '2', tone: StatusTone.warning),
           ]);
@@ -85,7 +90,7 @@ void main() {
         // The case the old code got backwards. A Bazarr with 14 wanted
         // subtitles is still the headline (it is why you would open Bazarr),
         // but it is work to do, not a fault, so it carries no tone.
-        final signal = resolveServiceSignal([
+        final signal = _single([
           _kpi('Wanted', '14', tone: StatusTone.neutral),
         ]);
 
@@ -98,7 +103,7 @@ void main() {
     test('spoken form puts the label before the figure', () {
       // The cell paints "2.4 MB/s incoming" because the eye scans a column of
       // figures. Read back in that order it is nonsense.
-      final signal = resolveServiceSignal([
+      final signal = _single([
         _kpi('Download', '2.4 MB/\u2060s', tone: StatusTone.info),
       ]);
 
@@ -110,7 +115,7 @@ void main() {
         // The one word this screen cannot borrow: the cell's other possible live
         // line is literally "Offline", so "2.4 MB/s down" reads as a service that
         // is down rather than as bytes arriving.
-        final signal = resolveServiceSignal([
+        final signal = _single([
           _kpi('Download', '2.4 MB/\u2060s', tone: StatusTone.info),
         ]);
 
@@ -123,7 +128,7 @@ void main() {
         // SABnzbd and NZBGet report their paused queue as `Status: Paused`, and
         // the cell paints value-then-label, so keeping the label printed
         // "Paused status".
-        final signal = resolveServiceSignal([
+        final signal = _single([
           _kpi('Status', 'Paused', tone: StatusTone.neutral),
         ]);
 
@@ -132,24 +137,18 @@ void main() {
       });
 
       test("Prowlarr's truncation becomes a noun", () {
-        final signal = resolveServiceSignal([
-          _kpi('Fails', '3', tone: StatusTone.warning),
-        ]);
+        final signal = _single([_kpi('Fails', '3', tone: StatusTone.warning)]);
 
         expect(signal!.label, 'failures');
       });
 
       test('a label agrees in number with its own figure', () {
         expect(
-          resolveServiceSignal([
-            _kpi('Alerts', '1', tone: StatusTone.warning),
-          ])!.label,
+          _single([_kpi('Alerts', '1', tone: StatusTone.warning)])!.label,
           'alert',
         );
         expect(
-          resolveServiceSignal([
-            _kpi('Alerts', '4', tone: StatusTone.warning),
-          ])!.label,
+          _single([_kpi('Alerts', '4', tone: StatusTone.warning)])!.label,
           'alerts',
         );
       });
@@ -159,9 +158,7 @@ void main() {
         // labels are not counts and must not be singularized by a stray "1".
         for (final value in ['85%', '4/6', '1.0 MB/\u2060s']) {
           expect(
-            resolveServiceSignal([
-              _kpi('Pools', value, tone: StatusTone.neutral),
-            ])!.label,
+            _single([_kpi('Pools', value, tone: StatusTone.neutral)])!.label,
             'pools',
             reason: value,
           );
@@ -169,8 +166,8 @@ void main() {
       });
 
       test('"series" reads the same for one and for many', () {
-        expect(resolveServiceSignal([_kpi('Series', '1')])!.label, 'series');
-        expect(resolveServiceSignal([_kpi('Series', '9')])!.label, 'series');
+        expect(_single([_kpi('Series', '1')])!.label, 'series');
+        expect(_single([_kpi('Series', '9')])!.label, 'series');
       });
     });
   });
@@ -198,7 +195,7 @@ void _twoFigures() {
       // One ranking for the card and for the deck's and the status bar's one
       // figure, so they cannot disagree about which metric leads.
       expect(resolveServiceSignalPair(kpis)!.primary.value, '2038');
-      expect(resolveServiceSignal(kpis)!.value, '2038');
+      expect(_single(kpis)!.value, '2038');
     });
 
     test('each figure keeps its own tone', () {

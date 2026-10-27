@@ -18,7 +18,9 @@ import urllib.request
 from .base import Scenario, ScenarioError, credentials, request, require_ok
 
 RADARR = "http://127.0.0.1:7878/api/v3"
-QBITTORRENT = "http://127.0.0.1:8080"
+# qBittorrent checks the Host against its WebUI port (8080): see seed_lab.
+QBITTORRENT = "http://127.0.0.1:18080"
+QBIT_HOST = {"Host": "127.0.0.1:8080"}
 HEADERS = {"X-Api-Key": "test-key", "Accept": "application/json"}
 FOLDER = "The.Great.Bunny.2008.1080p.WEB-DL.DDP5.1.H.264-CUPOLA"
 TMDB_ID = 10378
@@ -66,7 +68,7 @@ def _qbittorrent_opener():
         f"{QBITTORRENT}/api/v2/auth/login",
         method="POST",
         payload=form,
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        headers={"Content-Type": "application/x-www-form-urlencoded", **QBIT_HOST},
         opener=opener,
     )
     require_ok(status, body, "qBittorrent login")
@@ -74,7 +76,9 @@ def _qbittorrent_opener():
 
 
 def _torrents(opener) -> list[dict]:
-    status, body = request(f"{QBITTORRENT}/api/v2/torrents/info", opener=opener)
+    status, body = request(
+        f"{QBITTORRENT}/api/v2/torrents/info", headers=QBIT_HOST, opener=opener
+    )
     require_ok(status, body, "qBittorrent torrents")
     return [item for item in body or [] if isinstance(item, dict)]
 
@@ -95,7 +99,7 @@ def _ensure_torrent(opener) -> dict:
         f"{QBITTORRENT}/api/v2/torrents/add",
         method="POST",
         payload=form,
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        headers={"Content-Type": "application/x-www-form-urlencoded", **QBIT_HOST},
         opener=opener,
     )
     require_ok(status, body, "qBittorrent add")
@@ -139,7 +143,7 @@ class ManualImportRadarrAmbiguous(Scenario):
                 f"{QBITTORRENT}/api/v2/torrents/delete",
                 method="POST",
                 payload=form,
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                headers={"Content-Type": "application/x-www-form-urlencoded", **QBIT_HOST},
                 opener=opener,
             )
             require_ok(status, body, "qBittorrent delete")

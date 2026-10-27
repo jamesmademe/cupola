@@ -2,15 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/api/base_arr_service.dart';
-import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/utils/string_utils.dart';
-import 'package:cupola/core/widgets/app_empty_state.dart';
-import 'package:cupola/core/widgets/app_error_state.dart';
-import 'package:cupola/core/widgets/app_skeleton.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/widgets/activity_formatters.dart';
-import 'package:cupola/features/activity/presentation/widgets/segment_selector.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/release_search/domain/release_search_target.dart';
@@ -156,117 +151,4 @@ String _scopeLabel(ServiceType serviceType) {
     ServiceType.music => 'this album',
     ServiceType.discover => 'this title',
   };
-}
-
-/// Mixin providing shared async sliver builders for activity tabs.
-mixin ActivityTabHelpers {
-  /// Whose reads the tab makes: the failure state names it in its headline
-  /// and opens its connection form for the remedy.
-  ServiceKey get failureService;
-
-  /// Reads the tab again, the way a pull does.
-  void readAgain();
-
-  Widget buildRefreshableSegmentedView<T extends Enum>({
-    required Key refreshKey,
-    required VoidCallback onRefreshRequested,
-    required List<T> segments,
-    required T selected,
-    required ValueChanged<T> onSegmentChanged,
-    required String Function(T) labelBuilder,
-    required Widget contentSliver,
-  }) {
-    return RefreshIndicator(
-      onRefresh: () async => onRefreshRequested(),
-      child: CustomScrollView(
-        key: refreshKey,
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          ActivitySegmentSelector<T>(
-            segments: segments,
-            selected: selected,
-            onChanged: onSegmentChanged,
-            labelBuilder: labelBuilder,
-          ),
-          contentSliver,
-        ],
-      ),
-    );
-  }
-
-  Widget buildAsyncContentSliver(
-    Future<List<dynamic>> future,
-    Widget Function(dynamic item) itemBuilder,
-  ) {
-    return _buildAsyncSliver(future, (items) {
-      return SliverList.separated(
-        itemCount: items.length,
-        itemBuilder: (context, index) => itemBuilder(items[index]),
-        // No divider: these rows are outlined cards with a gap already.
-        separatorBuilder: (context, index) => const SizedBox.shrink(),
-      );
-    });
-  }
-
-  Widget _buildAsyncSliver(
-    Future<List<dynamic>> future,
-    Widget Function(List<dynamic> items) contentBuilder,
-  ) {
-    return FutureBuilder<List<dynamic>>(
-      future: future,
-      builder: (context, snapshot) {
-        final stateSliver = _buildAsyncStateSliver(context, snapshot);
-        if (stateSliver != null) return stateSliver;
-
-        return contentBuilder(snapshot.data ?? const []);
-      },
-    );
-  }
-
-  Widget buildAsyncGroupedContentSliver(
-    Future<List<dynamic>> future,
-    Widget Function(List<dynamic> items) groupBuilder,
-  ) {
-    return _buildAsyncSliver(
-      future,
-      (items) => SliverToBoxAdapter(child: groupBuilder(items)),
-    );
-  }
-
-  Widget? _buildAsyncStateSliver(
-    BuildContext context,
-    AsyncSnapshot<List<dynamic>> snapshot,
-  ) {
-    if (snapshot.connectionState == ConnectionState.waiting) {
-      return SliverToBoxAdapter(child: AppSkeleton.listRows(count: 6));
-    }
-
-    if (snapshot.hasError) {
-      return SliverFillRemaining(
-        hasScrollBody: false,
-        child: AppErrorState(
-          error: snapshot.error!,
-          service: failureService,
-          // These tabs are read again by pulling. A read whose client was
-          // closed under it by a settings change is read again by itself,
-          // on the rebuilt client, and never reads as a failure.
-          onRetry: isClosedClientFailure(snapshot.error) ? readAgain : null,
-        ),
-      );
-    }
-
-    final items = snapshot.data ?? const [];
-    if (items.isEmpty) {
-      return const SliverFillRemaining(
-        hasScrollBody: false,
-        child: AppEmptyState(
-          icon: Icons.inbox_rounded,
-          title: 'Nothing to show',
-          message: 'Anything this service reports will appear here.',
-        ),
-      );
-    }
-
-    return null;
-  }
 }

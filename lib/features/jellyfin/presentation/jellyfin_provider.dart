@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/features/jellyfin/data/jellyfin_client.dart';
 import 'package:cupola/features/jellyfin/domain/models/jellyfin_models.dart';
+import 'package:cupola/features/settings/data/connection_providers.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
@@ -35,64 +36,34 @@ import 'package:cupola/core/providers/provider_retry.dart';
 /// live `Dio` in `onDispose`, so rebuilding it cancels every in-flight Stream
 /// request and invalidates every surface downstream. Watching the whole object
 /// made a theme-mode toggle do exactly that.
-final jellyfinClientProvider = Provider<JellyfinClient>((ref) {
-  return _jellyfinClient(ref, instanceId: null);
-});
+final jellyfinClientProvider = _jellyfin.lens;
 
-/// Jellyfin bound to one named connection, whatever the lens is pointing at.
-///
-/// The same shape as `radarrServiceForProvider`: read its comment before
-/// touching this one. What it buys here is the settings form: the viewer picker
-/// lists `/Users` of the connection being edited, which is not necessarily the
-/// one the rest of the app is reading through, and a user id only means anything
-/// against the server that issued it.
-///
-/// The lens's own id collapses onto [jellyfinClientProvider] rather than opening
-/// a second socket to the same server, and so an override of the plain provider
-/// is not quietly bypassed on the path that names a connection. `read` of the
-/// lens for the same reason the \*arr families give: watching it would rebuild
-/// every entry whenever the lens moved, and a rebuild closes the outgoing `Dio`
-/// under whatever it was carrying.
-final jellyfinClientForProvider = Provider.family<JellyfinClient, String>((
-  ref,
-  instanceId,
-) {
-  final lens = ref.read(activeInstanceProvider(ServiceKey.jellyfin))?.id ?? '';
-  if (instanceId.isEmpty || instanceId == lens) {
-    return ref.watch(jellyfinClientProvider);
-  }
-  return _jellyfinClient(ref, instanceId: instanceId);
-});
+final jellyfinClientForProvider = _jellyfin.forConnection;
 
-/// Builds a client for one connection: the lens's when [instanceId] is null.
-///
-/// The viewer is read from the **instance**, not from `settings.jellyfinUserId`.
-/// That projection is the first connection's, so following the lens without this
-/// would have every user-scoped query on the second server carry a user id from
-/// the first server's user table: an id that does not exist there.
-JellyfinClient _jellyfinClient(Ref ref, {required String? instanceId}) {
-  final transport = watchTransport(
-    ref,
-    ServiceKey.jellyfin,
-    instanceId: instanceId,
-  );
-  transport.ensureConfigured(ServiceKey.jellyfin);
-  final viewerId = ref.watch(
-    currentSettingsProvider.select(
-      (s) => s.instanceById(transport.instanceId)?.viewerId ?? '',
-    ),
-  );
-  final client = JellyfinClient(
-    baseUrl: transport.url,
-    apiKey: transport.apiKey,
-    userId: viewerId,
-    pinnedCertFingerprint: transport.pin,
-    accessHeaders: transport.access.headers(),
-    onlyAtHome: transport.onlyAtHomeOf(ServiceKey.jellyfin),
-  );
-  ref.onDispose(client.close);
-  return client;
-}
+final _jellyfin = ConnectionProviders<JellyfinClient>.transport(
+  ServiceKey.jellyfin,
+  create: (ref, transport) {
+    // The viewer is read from the **instance**, not from
+    // `settings.jellyfinUserId`: that projection is the first connection's, so
+    // following the lens without this would have every user-scoped query on the
+    // second server carry a user id from the first server's user table, an id
+    // that does not exist there.
+    final viewerId = ref.watch(
+      currentSettingsProvider.select(
+        (s) => s.instanceById(transport.instanceId)?.viewerId ?? '',
+      ),
+    );
+    return JellyfinClient(
+      baseUrl: transport.url,
+      apiKey: transport.apiKey,
+      userId: viewerId,
+      pinnedCertFingerprint: transport.pin,
+      accessHeaders: transport.access.headers(),
+      onlyAtHome: transport.onlyAtHomeOf(ServiceKey.jellyfin),
+    );
+  },
+  close: (client) => client.close(),
+);
 
 /// The same client, seen through the interface the Stream surfaces are written
 /// against.
@@ -137,15 +108,6 @@ final jellyfinLibrariesProvider = FutureProvider<List<StreamLibrary>>((
   ref,
 ) async {
   return ref.watch(jellyfinServerProvider).getLibraries();
-}, retry: noProviderRetry);
-
-/// Household members whose watch state a library can be read through.
-///
-/// Sourced from `/Users`, which is the only place a user id exists: the API key
-/// authenticates as an administrator with no user attached, so this list is what
-/// the settings picker fills `jellyfinUserId` from.
-final jellyfinViewersProvider = FutureProvider<List<StreamViewer>>((ref) async {
-  return ref.watch(jellyfinServerProvider).getViewers();
 }, retry: noProviderRetry);
 
 /// The server's own id, per connection: what a Jellyfin app needs to open an

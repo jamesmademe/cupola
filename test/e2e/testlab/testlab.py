@@ -75,7 +75,7 @@ PROXIES: dict[str, tuple[str, int, int]] = {
     "readarr": ("readarr", 8787, 28787),
     "prowlarr": ("prowlarr", 9696, 29696),
     "bazarr": ("bazarr", 6767, 26767),
-    "qbittorrent": ("qbittorrent", 8080, 28080),
+    "qbittorrent": ("qbittorrent", 8080, 8080),
     "transmission": ("transmission", 9091, 29091),
     "sabnzbd": ("sabnzbd", 8080, 28082),
     "nzbget": ("nzbget", 6789, 26789),
@@ -705,6 +705,16 @@ def reset(name: str = "golden") -> dict[str, Any]:
             wipe_state_except_dind()
             copy_tree(staging, STATE_ROOT, keep_dind=True, merge=True)
             verify_restored(source)
+            # A snapshot carries the world it was taken with. The world is the
+            # code's (world.dart), so the copy is re-exported from this
+            # checkout: a stale one would seed the wrong library.
+            try:
+                export_world()
+            except LabError as error:
+                raise LabError(
+                    f"snapshot {name!r} restored, but its world could not be "
+                    f"exported from this checkout, so the reset is undone: {error}"
+                ) from error
         except Exception as error:
             # Put the lab back the way it was before trying the snapshot.
             try:
@@ -726,6 +736,10 @@ def reset(name: str = "golden") -> dict[str, Any]:
 
     shutil.rmtree(backup, ignore_errors=True)
     compose_up()
+    # Toxiproxy comes back with its own original config, which predates the
+    # proxies this checkout names: put them back, or the app's connections land
+    # on ports nothing listens on. Toxiproxy is up now, so this can answer.
+    ensure_proxies()
     return {
         "snapshot": name,
         "files": len(hash_tree(source)),

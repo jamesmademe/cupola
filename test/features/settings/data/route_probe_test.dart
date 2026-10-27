@@ -247,7 +247,9 @@ void main() {
       expect(settled, isFalse, reason: 'the knocks are still out');
 
       knocks.gate!.complete();
-      await waiting;
+      // Bounded well under settleCap: the wait ends with the knocks, not with
+      // the cap that would otherwise end it.
+      await waiting.timeout(const Duration(seconds: 3));
       expect(routeOf(c, 'radarr'), ConnectionRoute.away);
     });
 

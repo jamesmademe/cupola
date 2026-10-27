@@ -190,7 +190,6 @@ void main() {
 
     expect(needYouKindOf(ServiceKey.sonarr, pack), NeedYouKind.episode);
     expect(needYouKindOf(ServiceKey.sonarr, unknown), NeedYouKind.identity);
-    expect(pack.isMatchedFor(ServiceKey.sonarr), isFalse);
     // The season stays: the row asks for the episode from there.
     expect(pack.episodes, isEmpty);
     expect(pack.seasonNumber, 1);

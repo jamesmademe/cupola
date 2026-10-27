@@ -29,6 +29,13 @@ from typing import Any
 
 
 ROOT = "http://127.0.0.1"
+
+# qBittorrent checks the Host it is sent against its own WebUI port (8080),
+# so a direct reading goes to the port the lab publishes for it (18080) with
+# the Host the WebUI expects. The app reaches it on 8080, through the fault
+# layer, with the Host it expects. See docker-compose.testlab.yml.
+QBIT_DIRECT = f"{ROOT}:18080"
+QBIT_HOST = {"Host": "127.0.0.1:8080"}
 QBIT_MAGNET = (
     "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567"
     "&dn=Cupola%20Test%20Torrent"
@@ -507,7 +514,7 @@ def seed_seeder(env: dict[str, str], state_dir: Path) -> None:
 
 
 def seed_radarr_library(world: dict[str, Any]) -> None:
-    """The 40 films of the world, without a TMDB lookup per film.
+    """The 41 films of the world, without a TMDB lookup per film.
 
     The lookup was the slow part (TMDB rate limits made forty films take
     minutes). The world already carries the ids, so the record is created
@@ -1241,14 +1248,18 @@ def seed_qbittorrent(env: dict[str, str]) -> None:
             }
         ).encode()
         request(
-            f"{ROOT}:8080/api/v2/auth/login",
+            f"{QBIT_DIRECT}/api/v2/auth/login",
             method="POST",
             payload=login,
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                **QBIT_HOST,
+            },
             opener=opener,
         )
         torrents = json_request(
-            f"{ROOT}:8080/api/v2/torrents/info",
+            f"{QBIT_DIRECT}/api/v2/torrents/info",
+            headers=QBIT_HOST,
             opener=opener,
         )
         if not any(
@@ -1259,10 +1270,13 @@ def seed_qbittorrent(env: dict[str, str]) -> None:
                 {"urls": QBIT_MAGNET, "paused": "true"}
             ).encode()
             request(
-                f"{ROOT}:8080/api/v2/torrents/add",
+                f"{QBIT_DIRECT}/api/v2/torrents/add",
                 method="POST",
                 payload=form,
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                headers={
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    **QBIT_HOST,
+                },
                 opener=opener,
             )
             print("[testlab-seed] qBittorrent: paused torrent")

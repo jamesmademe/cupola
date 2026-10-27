@@ -81,25 +81,6 @@ void main() {
       expect(radarrItem.isSelectable, isFalse);
     });
 
-    test('includes episode code in sonarr media subtitle', () {
-      final item = ManualImportItem.fromJson({
-        'path': '/downloads/Frieren.S02E05.mkv',
-        'name': 'Frieren.S02E05.mkv',
-        'series': {'id': 10, 'title': 'Frieren', 'year': 2023},
-        'seasonNumber': 2,
-        'episodes': [
-          {
-            'id': 50,
-            'seasonNumber': 2,
-            'episodeNumber': 5,
-            'title': 'Episode 5',
-          },
-        ],
-      });
-
-      expect(item.mediaSubtitle, contains('S2 E5'));
-    });
-
     test('preserves original size when resolved with assignment', () {
       final original = ManualImportItem.fromJson({
         'path': '/downloads/Frieren.S02E05.mkv',
@@ -154,7 +135,6 @@ void main() {
       );
 
       expect(resolved.size, 1300000000);
-      expect(resolved.mediaSubtitle, contains('S2 E5'));
       expect(resolved.hasMatchFor(ServiceKey.sonarr), isTrue);
     });
 
@@ -349,5 +329,86 @@ void main() {
         expect(file.containsKey('artist'), isFalse);
       },
     );
+
+    group('a lidarr album chosen by hand sends its monitored release', () {
+      // Lidarr's album and track carry no `albumReleaseId`; the release is in
+      // the album's `releases`. Sending 0 makes Lidarr fail the import with
+      // "AlbumRelease with ID 0 does not exist".
+      ManualImportItem unmatched() => ManualImportItem.fromJson({
+        'path': '/downloads/Air/Moon Safari/02.flac',
+        'name': '02.flac',
+        'albumReleaseId': 0,
+      });
+
+      ManualImportFixAssignment pick(Map<String, dynamic> album) =>
+          ManualImportFixAssignment(
+            match: ManualImportLookupResult(
+              id: 7,
+              title: 'Air',
+              raw: {'id': 7, 'artistName': 'Air'},
+            ),
+            album: ManualImportAlbum(id: 9, title: 'Moon Safari', raw: album),
+            track: ManualImportTrack(
+              id: 42,
+              title: 'Sexy Boy',
+              raw: {'id': 42, 'albumId': 9, 'title': 'Sexy Boy'},
+            ),
+          );
+
+      test('the monitored one among several', () {
+        final resolved = unmatched().resolvedWithAssignment(
+          ServiceKey.lidarr,
+          pick({
+            'id': 9,
+            'title': 'Moon Safari',
+            'releases': [
+              {'id': 378, 'monitored': false},
+              {'id': 385, 'monitored': true},
+            ],
+          }),
+        );
+
+        final file = resolved.toCommandFileJson(ServiceKey.lidarr);
+        expect(file['albumId'], 9);
+        expect(file['albumReleaseId'], 385);
+        expect(file['trackIds'], [42]);
+      });
+
+      test('the only one when none is marked monitored', () {
+        final resolved = unmatched().resolvedWithAssignment(
+          ServiceKey.lidarr,
+          pick({
+            'id': 9,
+            'releases': [
+              {'id': 378, 'monitored': false},
+            ],
+          }),
+        );
+
+        expect(resolved.albumReleaseId, 378);
+      });
+
+      test('never the scan\'s release of another album', () {
+        final scanned = ManualImportItem.fromJson({
+          'path': '/downloads/Air/Moon Safari/02.flac',
+          'name': '02.flac',
+          'album': {'id': 1, 'title': 'Talkie Walkie'},
+          'albumReleaseId': 11,
+        });
+
+        final resolved = scanned.resolvedWithAssignment(
+          ServiceKey.lidarr,
+          pick({'id': 9, 'releases': const []}),
+        );
+
+        expect(resolved.albumReleaseId, isNull);
+        expect(
+          resolved
+              .toCommandFileJson(ServiceKey.lidarr)
+              .containsKey('albumReleaseId'),
+          isFalse,
+        );
+      });
+    });
   });
 }

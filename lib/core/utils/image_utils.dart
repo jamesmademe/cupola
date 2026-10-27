@@ -100,13 +100,4 @@ class ImageUtils {
     if (posterPath == null || posterPath.isEmpty) return '';
     return 'https://image.tmdb.org/t/p/$size$posterPath';
   }
-
-  /// Returns a usable backdrop URL, or `null` when the source is empty or
-  /// uses authenticated headers (which most backdrop consumers can't handle).
-  static String? safeBackdropUrl(ImageSource imageSource) {
-    if (imageSource.url.isEmpty || imageSource.headers != null) {
-      return null;
-    }
-    return imageSource.url;
-  }
 }

@@ -100,8 +100,10 @@ Future<_Last?> _lastLine(WidgetTester tester, ProfileHarness harness) async {
         moved = true;
       }
     }
-    await harness.settle(tester);
+    // Nothing moved: the frames the last jump drew are already settled, so
+    // no second settle is due.
     if (!moved) break;
+    await harness.settle(tester);
   }
 
   final lists = _lists();

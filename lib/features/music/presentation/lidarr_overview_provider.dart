@@ -28,11 +28,13 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/utils/parallel_reads.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/arr_overview.dart';
 import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/utils/date_format.dart' show formatRelativeDateTime;
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
@@ -107,33 +109,6 @@ String lidarrRecordSpokenTitle(Map<String, dynamic> record) {
   return album ?? artist ?? arrReleaseTitle(record) ?? 'Unknown release';
 }
 
-/// Parses an \*arr ISO timestamp into local time, or null when it is absent or
-/// unreadable.
-///
-/// Local, always: every window on this screen is a run of local calendar days,
-/// and Lidarr answers in UTC.
-DateTime? _parseLocal(String? raw) {
-  final value = raw?.trim();
-  if (value == null || value.isEmpty) return null;
-  final parsed = DateTime.tryParse(value);
-  return parsed?.toLocal();
-}
-
-String? _qualityName(dynamic value) {
-  final quality = mapOrNull(value);
-  if (quality == null) return stringOrNull(value);
-  return stringOrNull(mapOrNull(quality['quality'])?['name']) ??
-      stringOrNull(quality['name']);
-}
-
-int? _sizeBytes(Map<String, dynamic> record) {
-  final bytes =
-      intOrNull(record['size']) ??
-      intOrNull(mapOrNull(record['data'])?['size']);
-  if (bytes == null || bytes <= 0) return null;
-  return bytes;
-}
-
 // ─── Recently added ─────────────────────────────────────────────────────────
 
 /// The newest [limit] artists added, newest first.
@@ -156,7 +131,7 @@ List<LidarrArtist> lidarrRecentlyAdded(
 }) {
   final dated = <(DateTime, LidarrArtist)>[];
   for (final artist in artists) {
-    final added = _parseLocal(artist.added);
+    final added = parseLocalInstant(artist.added);
     if (added != null) dated.add((added, artist));
   }
   dated.sort((a, b) => b.$1.compareTo(a.$1));
@@ -188,7 +163,7 @@ final lidarrRecentlyAddedProvider =
 /// paints **neutral**. Collapsing them into one "attention" colour is how a
 /// library with a normal wishlist ends up wearing the same amber as a broken
 /// import.
-enum LidarrAttentionKind {
+enum LidarrAttentionKind implements ArrAttentionKind {
   /// Lidarr grabbed the release and could not move it into the library.
   importFailed(StatusTone.warning, Icons.file_download_off_rounded),
 
@@ -202,64 +177,15 @@ enum LidarrAttentionKind {
 
   const LidarrAttentionKind(this.tone, this.icon);
 
+  @override
   final StatusTone tone;
+
+  @override
   final IconData icon;
 }
 
-/// One row of Needs attention: what happened, to what, and when.
-///
-/// Every row leads somewhere: a download's own page for one stuck or failed
-/// download, the Queue tab for the several a folded row stands for, the
-/// Wanted tab for the backlog. What Lidarr can do about a download it cannot
-/// import ("Fix", "Search all") needs a write this client does not make, so no
-/// row carries a verb: the page it opens does.
-@immutable
-class LidarrAttentionItem {
-  const LidarrAttentionItem({
-    required this.kind,
-    required this.headline,
-    required this.detail,
-    this.door,
-    this.subject,
-    this.count = 1,
-    String? spokenHeadline,
-  }) : _spokenHeadline = spokenHeadline;
-
-  final LidarrAttentionKind kind;
-
-  /// The fault and its subject: `Import failed · Alvvays: Blue Rev`.
-  final String headline;
-
-  /// The evidence: the service's own message, the client, the timestamp.
-  /// Empty when the record carried none.
-  final String detail;
-
-  /// Where the row leads, or null where the app has no place that shows it.
-  final AttentionDoor? door;
-
-  /// Whose fault it is, bare (`Alvvays`), for a folded row to name: the
-  /// artist, so the names of several albums of one artist are said once.
-  final String? subject;
-
-  /// How many faults the row stands for: one, or the downloads a folded row
-  /// folds. The section's own count adds these, so folding never changes how
-  /// many things need attention.
-  final int count;
-
-  /// [headline] with its em dash resolved into a clause, when the two differ.
-  final String? _spokenHeadline;
-
-  StatusTone get tone => kind.tone;
-  IconData get icon => kind.icon;
-
-  /// The row as a sentence, with the dots the layout uses turned back into
-  /// commas. `·` is decoration, and a screen reader either names it or drops
-  /// it depending on the user's punctuation setting.
-  String get spoken => joinSpokenParts([
-    spokenFromDotted(_spokenHeadline ?? headline),
-    spokenFromDotted(detail),
-  ]);
-}
+/// One row of Needs attention (`ArrAttentionItem`).
+typedef LidarrAttentionItem = ArrAttentionItem<LidarrAttentionKind>;
 
 /// Reads the faults out of a page of **raw** `/queue` records.
 ///
@@ -294,13 +220,13 @@ List<LidarrAttentionItem> lidarrQueueFaults(
     final title = lidarrRecordTitle(record);
     final spokenTitle = lidarrRecordSpokenTitle(record);
     final subject = arrArtistName(record) ?? title;
-    final when = _parseLocal(stringOrNull(record['added']));
+    final when = parseLocalInstant(stringOrNull(record['added']));
     final age = when == null ? null : formatRelativeDateTime(when, now: now);
     final message =
         stringOrNull(record['errorMessage']) ?? arrQueueWarningMessage(record);
     final door = arrQueueRecordDoor(record, instanceId: instanceId);
 
-    if (_isStalled(record)) {
+    if (isStalledRecord(record)) {
       items.add(
         LidarrAttentionItem(
           kind: LidarrAttentionKind.stalled,
@@ -318,7 +244,7 @@ List<LidarrAttentionItem> lidarrQueueFaults(
       continue;
     }
 
-    if (_isImportFault(record)) {
+    if (isImportFaultRecord(record)) {
       items.add(
         LidarrAttentionItem(
           kind: LidarrAttentionKind.importFailed,
@@ -351,30 +277,6 @@ List<LidarrAttentionItem> lidarrQueueFaults(
       );
     },
   );
-}
-
-bool _isStalled(Map<String, dynamic> record) {
-  final haystack = [
-    stringOrNull(record['errorMessage']),
-    stringOrNull(record['status']),
-    ...extractArrStatusMessages(record['statusMessages']),
-  ].whereType<String>().join(' ').toLowerCase();
-  return haystack.contains('stall');
-}
-
-bool _isImportFault(Map<String, dynamic> record) {
-  final state = stringOrNull(record['trackedDownloadState'])?.toLowerCase();
-  if (state == 'failed' ||
-      state == 'failedpending' ||
-      state == 'importfailed' ||
-      state == 'importblocked') {
-    return true;
-  }
-  // The canonical "One or more tracks expected in this release were not
-  // imported" arrives as a pending import carrying a status message, which is
-  // how the service says a human has to look at it. See `arrQueueSeverity`.
-  return state == 'importpending' &&
-      arrQueueSeverity(record) != ArrQueueSeverity.ok;
 }
 
 /// The backlog row, built from one page of `wanted/missing`.
@@ -438,7 +340,7 @@ final lidarrQueueRecordsProvider = FutureProvider.autoDispose<ArrRecordPage>((
 
 /// One page of the wishlist, kept as a page so its envelope survives.
 ///
-/// `getMissingPage` and not `getMissing`: the record-only getter throws the
+/// `getMissingPage` and not the records-only read: that one throws the
 /// `totalRecords` away, and the total is the entire reason this is fetched.
 final lidarrMissingPageProvider = FutureProvider.autoDispose<ArrRecordPage>((
   ref,
@@ -454,8 +356,11 @@ final lidarrMissingPageProvider = FutureProvider.autoDispose<ArrRecordPage>((
 /// outstanding.
 final lidarrNeedsAttentionProvider =
     FutureProvider.autoDispose<List<LidarrAttentionItem>>((ref) async {
-      final page = await ref.watch(lidarrQueueRecordsProvider.future);
-      final missing = await ref.watch(lidarrMissingPageProvider.future);
+      // Both reads start together (see radarrNeedsAttentionProvider).
+      final (page, missing) = await readTogether(
+        ref.watch(lidarrQueueRecordsProvider.future),
+        ref.watch(lidarrMissingPageProvider.future),
+      );
       final backlog = lidarrMissingAlbumsItem(missing);
       return [
         ...lidarrQueueFaults(
@@ -476,43 +381,21 @@ final lidarrNeedsAttentionProvider =
 /// One album's worth of today's history, resolved into the two lines the row
 /// draws.
 @immutable
-class LidarrHistoryEntry {
+class LidarrHistoryEntry extends OverviewHistoryEntry {
   const LidarrHistoryEntry({
-    required this.title,
-    required this.spokenTitle,
-    required this.event,
-    required this.tone,
-    required this.detail,
-    required this.date,
+    required super.subject,
+    required String spokenTitle,
+    required super.event,
+    required super.tone,
+    required super.detail,
+    required super.date,
     required this.trackCount,
-  });
-
-  /// `Cindy Lee: Diamond Jubilee`.
-  final String title;
-
-  /// The same, with the em dash spoken as a pause.
-  final String spokenTitle;
-
-  /// What happened to it, in the shared history vocabulary: `Imported`,
-  /// `Grabbed`, `Failed`.
-  final String event;
-
-  final StatusTone tone;
-
-  /// Quality, size or track count, and how long ago, as far as the records
-  /// carried them.
-  final String detail;
-
-  /// The newest record in the group; what the row sorts and dates by.
-  final DateTime date;
+  }) : super(spokenSubject: spokenTitle);
 
   /// How many records were folded into this row, or null when the page could
   /// not prove it held them all. **Never printed when null**: see
   /// [lidarrHistoryToday].
   final int? trackCount;
-
-  String get spoken =>
-      joinSpokenParts([spokenTitle, event, spokenFromDotted(detail)]);
 }
 
 /// Whether [page] holds every history record the server has.
@@ -566,19 +449,14 @@ List<LidarrHistoryEntry> lidarrHistoryToday(
   required bool complete,
   int limit = lidarrHistoryTodayLimit,
 }) {
-  final local = now.toLocal();
   final groups = <String, _HistoryGroup>{};
 
   for (final raw in records) {
     final record = mapOrNull(raw);
     if (record == null) continue;
-    final date = _parseLocal(stringOrNull(record['date']));
+    final date = parseLocalInstant(stringOrNull(record['date']));
     if (date == null) continue;
-    if (date.year != local.year ||
-        date.month != local.month ||
-        date.day != local.day) {
-      continue;
-    }
+    if (!isLocalToday(date, now)) continue;
 
     final eventType = stringOrNull(record['eventType']) ?? 'unknown';
     // The album id keys the fold where the record carries one; the visible
@@ -594,7 +472,7 @@ List<LidarrHistoryEntry> lidarrHistoryToday(
         eventType: eventType,
         date: date,
         count: 1,
-        bytes: _sizeBytes(record),
+        bytes: historyRecordBytes(record),
       );
       continue;
     }
@@ -607,7 +485,7 @@ List<LidarrHistoryEntry> lidarrHistoryToday(
       eventType: eventType,
       date: newest ? date : existing.date,
       count: existing.count + 1,
-      bytes: _addBytes(existing.bytes, _sizeBytes(record)),
+      bytes: _addBytes(existing.bytes, historyRecordBytes(record)),
     );
   }
 
@@ -623,12 +501,12 @@ List<LidarrHistoryEntry> lidarrHistoryToday(
     final sizeBytes = group.count == 1 || countable ? group.bytes : null;
 
     return LidarrHistoryEntry(
-      title: lidarrRecordTitle(group.record),
+      subject: lidarrRecordTitle(group.record),
       spokenTitle: lidarrRecordSpokenTitle(group.record),
       event: event,
       tone: tone,
       detail: joinDisplayParts([
-        _qualityName(group.record['quality']),
+        historyQualityName(group.record['quality']),
         countable ? '${group.count} tracks' : null,
         sizeBytes == null ? null : formatReleaseSize(sizeBytes),
         formatRelativeDateTime(group.date, now: now),

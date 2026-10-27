@@ -99,6 +99,13 @@ extension AskableTransport on ServiceTransport {
   /// `test/core/network/route_reach_guard_test.dart` holds that every client
   /// built off a transport is handed this.
   ServiceKey? onlyAtHomeOf(ServiceKey service) => onlyAtHome ? service : null;
+
+  /// The username, or null for the services that authenticate on a key alone:
+  /// what a client takes where it treats an empty one as none.
+  String? get usernameOrNull => username.isEmpty ? null : username;
+
+  /// The secret (password, token), or null when there is none.
+  String? get secretOrNull => apiKey.isEmpty ? null : apiKey;
 }
 
 /// The lens: which instance of each service the app is currently looking
@@ -377,24 +384,58 @@ ApiClient watchApiClient(Ref ref, ServiceKey service, {String? instanceId}) {
 }
 
 class SettingsNotifier extends Notifier<SettingsModel> {
-  late final SettingsService _service;
+  /// The model last written to disk successfully: what a save is measured
+  /// against, so only the difference is written. [state] is assigned only
+  /// once a write has finished, so a write that fails changes neither, and the
+  /// next one writes the same difference again.
+  SettingsModel _persisted = const SettingsModel();
+
+  /// Saves run one after the other: a change that reads [state] starts from
+  /// the result of the one before it.
+  Future<void> _queue = Future<void>.value();
 
   @override
   SettingsModel build() {
-    _service = ref.watch(settingsServiceProvider);
-    return ref.watch(initialSettingsProvider);
+    final initial = ref.watch(initialSettingsProvider);
+    _persisted = initial;
+    return initial;
   }
 
-  Future<void> updateSettings(SettingsModel newSettings) async {
-    await _service.saveSettings(newSettings);
-    state = newSettings;
-  }
+  /// Applies [change] to the settings as they are *when its turn comes* and
+  /// saves the result; state follows the write, so a failure leaves it as it
+  /// was and throws. Two changes made at once both land, where two
+  /// `updateSettings` built from the same snapshot would have kept one.
+  ///
+  /// [change] returning the model it was given writes nothing.
+  Future<void> update(SettingsModel Function(SettingsModel current) change) =>
+      _inTurn(() async {
+        final next = change(state);
+        if (identical(next, state)) return;
+        await ref
+            .read(settingsServiceProvider)
+            .saveSettings(next, previous: _persisted);
+        _persisted = next;
+        state = next;
+      });
 
-  Future<void> resetSettings() async {
-    await _service.clearAll();
+  /// [update] with a model built beforehand; prefer [update] wherever the
+  /// change is a function of the current settings.
+  Future<void> updateSettings(SettingsModel newSettings) =>
+      update((_) => newSettings);
+
+  Future<void> resetSettings() => _inTurn(() async {
+    await ref.read(settingsServiceProvider).clearAll();
     // The Home's last drawings go with the connections they were read from,
     // on disk too: a reset leaves nothing of what the app showed.
     await ref.read(lastKnownStoreProvider).clear();
+    _persisted = const SettingsModel();
     state = const SettingsModel();
+  });
+
+  Future<void> _inTurn(Future<void> Function() work) {
+    final run = _queue.then((_) => work());
+    // A failed turn is its caller's to hear about and the next one's to skip.
+    _queue = run.then((_) {}, onError: (Object _) {});
+    return run;
   }
 }

@@ -31,20 +31,8 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 ///
 /// Public since the tab model: Proxy hosts and Certificates are two entries on
 /// NPM's own bar now, so the choice is made by the router rather than by
-/// scrolling past one section to reach the other. [everything] is the page as
-/// it was, for a caller that wants the whole service in one scroll.
-enum NpmSection {
-  everything('Nginx Proxy Manager'),
-  proxyHosts('Proxy hosts'),
-  certificates('Certificates'),
-  accessLists('Access lists'),
-  auditLog('Audit log');
-
-  const NpmSection(this.label);
-
-  /// The word the app bar prints when this page draws one of its own.
-  final String label;
-}
+/// scrolling past one section to reach the other.
+enum NpmSection { proxyHosts, certificates, accessLists, auditLog }
 
 /// Nginx Proxy Manager: what the box is fronting, what is broken, and which
 /// certificates are about to lapse.
@@ -63,10 +51,7 @@ enum NpmSection {
 ///    than getting one of their own. NPM's own menu files all four kinds under
 ///    Hosts, the bar has exactly one Hosts entry and this is it, and the list
 ///    is already fetched; under Certificates it would be nonsense, and dropped
-///    it would delete a list the client answers for. On
-///    [NpmSection.everything] that keeps the two host lists adjacent, which
-///    moves them above Certificates: one grouping, drawn the same way whether
-///    it is a tab or a stretch of one page.
+///    it would delete a list the client answers for.
 ///  * The **permission band and the default-admin warning are shared chrome**,
 ///    drawn on every variant. The band is not decoration: it is the sentence
 ///    that explains why a control is attenuated, and *both* tabs carry gated
@@ -80,52 +65,27 @@ enum NpmSection {
 ///    because the single page was the service; under the tab model the Overview
 ///    is the tab that carries the identity block and the readouts, and
 ///    repeating them on a section tab would be the same figures twice in one
-///    scroll. [NpmSection.everything] keeps them, because there it still *is*
-///    the whole service.
-///  * A section tab **lists everything it names**. The single page capped
-///    certificates at eight and the other hosts at ten, which is right for a
-///    peek and wrong for a tab called Certificates: eight of twenty, with
-///    nothing saying so, is a count the reader has no way to doubt. The caps
-///    stay on [NpmSection.everything] and nowhere else.
+///    scroll.
+///  * A section tab **lists everything it names**: a count drawn short of its
+///    total, with nothing saying so, is a figure the reader has no way to doubt.
 class NpmScreen extends ConsumerWidget {
-  /// The whole service in one scroll, as it read before the bar.
-  const NpmScreen({super.key, this.showAppBar = true, this.topPadding = 0})
-    : section = NpmSection.everything;
-
   /// The hosts half: NPM's Proxy hosts tab.
-  const NpmScreen.proxyHosts({
-    super.key,
-    this.showAppBar = true,
-    this.topPadding = 0,
-  }) : section = NpmSection.proxyHosts;
+  const NpmScreen.proxyHosts({super.key, this.topPadding = 0})
+    : section = NpmSection.proxyHosts;
 
   /// The certificates half: NPM's Certificates tab.
-  const NpmScreen.certificates({
-    super.key,
-    this.showAppBar = true,
-    this.topPadding = 0,
-  }) : section = NpmSection.certificates;
+  const NpmScreen.certificates({super.key, this.topPadding = 0})
+    : section = NpmSection.certificates;
 
-  const NpmScreen.accessLists({
-    super.key,
-    this.showAppBar = true,
-    this.topPadding = 0,
-  }) : section = NpmSection.accessLists;
+  const NpmScreen.accessLists({super.key, this.topPadding = 0})
+    : section = NpmSection.accessLists;
 
-  const NpmScreen.auditLog({
-    super.key,
-    this.showAppBar = true,
-    this.topPadding = 0,
-  }) : section = NpmSection.auditLog;
+  const NpmScreen.auditLog({super.key, this.topPadding = 0})
+    : section = NpmSection.auditLog;
 
+  /// The tab shell draws the service band and the tab bar above this page, so
+  /// it never draws a bar of its own.
   final NpmSection section;
-
-  /// Whether to draw this screen's own app bar.
-  ///
-  /// False inside the tab shell, where `ServiceHomeScreen` draws the service
-  /// band and `ServiceTabScaffold` the tab bar above it: a third bar of its own
-  /// would put two titles and two back chevrons in one corner.
-  final bool showAppBar;
 
   /// Room those two glass bands take above this page, since they float over it
   /// rather than pushing it down.
@@ -144,11 +104,8 @@ class NpmScreen extends ConsumerWidget {
 
     return AmbientScaffold(
       accent: ServiceKey.nginxProxyManager.accent,
-      appBar: showAppBar ? GlassAppBar(title: Text(section.label)) : null,
-      // The inset is consumed here with or without an app bar: with one the
-      // `Scaffold` has already taken it off the body, and without one (the tab
-      // shell) the band above consumes it and the tab bar sits an inset lower
-      // than `topPadding` says.
+      // The tab shell's band above consumes the top inset, so the tab bar sits
+      // an inset lower than `topPadding` says.
       body: SafeArea(
         bottom: false,
         child: isConfigured
@@ -181,10 +138,6 @@ final _invalidateAfterAction = <ProviderOrFamily>[
 /// because all three qualify whatever is on screen.
 void _invalidate(WidgetRef ref, NpmSection section) {
   switch (section) {
-    case NpmSection.everything:
-      ref.invalidate(npmProxyHostsProvider);
-      ref.invalidate(npmOtherHostsProvider);
-      ref.invalidate(npmCertificatesProvider);
     case NpmSection.proxyHosts:
       ref.invalidate(npmProxyHostsProvider);
       ref.invalidate(npmOtherHostsProvider);
@@ -248,7 +201,6 @@ class _NpmSection extends ConsumerWidget {
     // the failure is the page; over a read it is a band, and the read stays
     // under it as it was last said.
     final AsyncValue<Object?> read = switch (section) {
-      NpmSection.everything ||
       NpmSection.proxyHosts => ref.watch(npmProxyHostsProvider),
       NpmSection.certificates => ref.watch(npmCertificatesProvider),
       NpmSection.accessLists => ref.watch(npmAccessListsProvider),
@@ -281,18 +233,9 @@ class _NpmSection extends ConsumerWidget {
               since: silentFor,
               onRetry: () => _invalidate(ref, section),
             ),
-          if (section == NpmSection.everything)
-            ServiceKpiPeek(
-              kpis: ref.watch(serviceKpiProvider(ServiceKey.nginxProxyManager)),
-              service: ServiceKey.nginxProxyManager,
-            ),
           const NpmDefaultAdminWarning(),
           NpmCapabilityBannerSlot(
             resources: switch (section) {
-              NpmSection.everything => const {
-                NpmResource.proxyHosts,
-                NpmResource.certificates,
-              },
               NpmSection.proxyHosts => const {NpmResource.proxyHosts},
               NpmSection.certificates => const {NpmResource.certificates},
               // No writes on these two: the banner speaks only when the
@@ -302,10 +245,6 @@ class _NpmSection extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           ...switch (section) {
-            NpmSection.everything => [
-              ..._hostChildren(ref, banded: banded),
-              ..._certificateChildren(ref, banded: banded),
-            ],
             NpmSection.proxyHosts => _hostChildren(ref, banded: banded),
             NpmSection.certificates => _certificateChildren(
               ref,
@@ -350,7 +289,6 @@ class _NpmSection extends ConsumerWidget {
           ref.watch(npmOtherHostsProvider),
           banded: banded,
         ),
-        limit: section == NpmSection.everything ? 10 : null,
       ),
     ];
   }
@@ -363,7 +301,6 @@ class _NpmSection extends ConsumerWidget {
         ref.watch(npmCertificatesProvider),
         banded: banded,
       ),
-      limit: section == NpmSection.everything ? 8 : null,
     ),
   ];
 
@@ -882,16 +819,9 @@ Future<void> _confirmDisable(
 }
 
 class _CertificateList extends ConsumerWidget {
-  const _CertificateList({required this.certsAsync, required this.limit});
+  const _CertificateList({required this.certsAsync});
 
   final AsyncValue<List<NpmCertificate>> certsAsync;
-
-  /// How many rows to draw, or null for all of them.
-  ///
-  /// A peek on the whole-service page, everything on the tab that is named
-  /// after them: a list capped at eight with nothing saying so reads as a
-  /// complete answer.
-  final int? limit;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -913,9 +843,8 @@ class _CertificateList extends ConsumerWidget {
             final bDays = b.daysUntilExpiry(now) ?? 1 << 30;
             return aDays.compareTo(bDays);
           });
-        final shown = limit == null ? ordered : ordered.take(limit!);
         return Column(
-          children: shown
+          children: ordered
               .map((cert) => _CertificateTile(cert: cert, now: now))
               .toList(growable: false),
         );
@@ -1059,13 +988,9 @@ class _CertificateTile extends ConsumerWidget {
 }
 
 class _SimpleHostList extends ConsumerWidget {
-  const _SimpleHostList({required this.hostsAsync, required this.limit});
+  const _SimpleHostList({required this.hostsAsync});
 
   final AsyncValue<List<NpmSimpleHost>> hostsAsync;
-
-  /// How many rows to draw, or null for all of them. [_CertificateList.limit]
-  /// carries the reasoning.
-  final int? limit;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1080,9 +1005,8 @@ class _SimpleHostList extends ConsumerWidget {
             child: Text('Nothing else configured.'),
           );
         }
-        final shown = limit == null ? hosts : hosts.take(limit!);
         return Column(
-          children: shown
+          children: hosts
               .map((host) => _SimpleHostTile(host: host))
               .toList(growable: false),
         );

@@ -344,7 +344,7 @@ class _ScriptedSeerr extends FakeSeerrService {
   final List<MediaPreview> trending;
 
   @override
-  Future<List<SeerrRequest>> getRequests() async => requests;
+  Future<List<SeerrRequest>> getRequestRows() async => requests;
 
   @override
   Future<List<MediaPreview>> getDiscoverTrending({int page = 1}) async =>
@@ -353,7 +353,7 @@ class _ScriptedSeerr extends FakeSeerrService {
 
 class _FailingRequestsSeerr extends _ScriptedSeerr {
   @override
-  Future<List<SeerrRequest>> getRequests() async =>
+  Future<List<SeerrRequest>> getRequestRows() async =>
       throw Exception('requests failed');
 }
 

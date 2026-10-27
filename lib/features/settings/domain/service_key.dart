@@ -278,12 +278,6 @@ extension ServiceKeyExtension on ServiceKey {
   /// `ServiceKey` inline.
   bool get needsViewerSelection => this == ServiceKey.jellyfin;
 
-  /// Whether a connection of this service names a person in
-  /// `ServiceInstance.viewerId`: Jellyfin's viewer ([needsViewerSelection]),
-  /// and the Seerr user an API key acts as (`ServiceInstance.seerrActsAs`).
-  /// Either one belongs to the server it was chosen on.
-  bool get namesAPerson => needsViewerSelection || this == ServiceKey.seerr;
-
   /// The port this service listens on out of the box.
   ///
   /// Offered as a one-tap suggestion next to the address field, alongside the
@@ -488,23 +482,6 @@ extension ServiceKeyExtension on ServiceKey {
 
   /// Whether this service may hold more than one instance.
   ///
-  /// True for every service, and stated as a named capability rather than left
-  /// implicit because the question gets asked at a dozen call sites and the
-  /// answer deserves one home. Two NAS in two houses, two Jellyfin for two
-  /// households, a seedbox qBittorrent beside the one at home: none of these
-  /// are stranger than 4K-and-1080p Radarr, and carving out a "singleton"
-  /// class would mean defending an arbitrary line at every one of them.
-  ///
-  /// True means **reachable**, not merely storable. There was briefly a second
-  /// flag here, `readsThroughLens`, that said no for Jellyfin, Plex and
-  /// TrueNAS, whose clients were still built from the flat first-instance
-  /// projections; it hid their lens badge and folded their picker cells, so a
-  /// second connection of those three could be configured, probed and counted
-  /// and then never opened. Their three client providers now go through
-  /// `watchTransport` like everyone else, which is all that was ever missing,
-  /// and the flag is gone rather than left standing at a permanent `true`.
-  bool get supportsMultipleInstances => true;
-
   /// Whether the global search runs a **leg per connection** for this service.
   ///
   /// Narrower than [supportsMultipleInstances], and the difference is the tap

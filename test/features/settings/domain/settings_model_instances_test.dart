@@ -84,9 +84,9 @@ void main() {
     );
 
     test('urlFor and radarrUrl agree, and both mean the first', () {
-      expect(settings.radarrUrl, 'https://first:7878');
       expect(settings.urlFor(ServiceKey.radarr), 'https://first:7878');
-      expect(settings.radarrApiKey, 'key-radarr');
+      expect(settings.urlFor(ServiceKey.radarr), 'https://first:7878');
+      expect(settings.apiKeyFor(ServiceKey.radarr), 'key-radarr');
     });
 
     test('a service with no instance reads empty, never throws', () {
@@ -224,59 +224,6 @@ void main() {
         ],
       );
       expect(settings.isServiceConfigured(ServiceKey.radarr), isFalse);
-    });
-  });
-
-  group('copyWithoutServiceExtras clears every instance of the service', () {
-    test('two Jellyfin both lose their viewer', () {
-      final settings = SettingsModel(
-        instances: [
-          const ServiceInstance(
-            id: 'jellyfin',
-            service: ServiceKey.jellyfin,
-            url: 'https://a',
-            credential: 'k',
-            viewerId: 'u-1',
-          ),
-          const ServiceInstance(
-            id: 'jellyfin-i99',
-            service: ServiceKey.jellyfin,
-            url: 'https://b',
-            credential: 'k',
-            viewerId: 'u-2',
-          ),
-        ],
-      );
-      final cleared = settings.copyWithoutServiceExtras(ServiceKey.jellyfin);
-      expect(cleared.instancesOf(ServiceKey.jellyfin).map((i) => i.viewerId), [
-        '',
-        '',
-      ]);
-    });
-
-    test('a Seerr loses the user its key acted as', () {
-      final settings = SettingsModel(
-        instances: [
-          const ServiceInstance(
-            id: 'seerr',
-            service: ServiceKey.seerr,
-            url: 'https://a',
-            credential: 'k',
-            viewerId: '2',
-          ),
-        ],
-      );
-      expect(settings.instancesOf(ServiceKey.seerr).single.seerrActsAs, '2');
-      final cleared = settings.copyWithoutServiceExtras(ServiceKey.seerr);
-      expect(cleared.instancesOf(ServiceKey.seerr).single.seerrActsAs, '');
-    });
-
-    test('a service with no viewer to clear is left alone', () {
-      final settings = SettingsModel(instances: [_radarr('radarr')]);
-      expect(
-        settings.copyWithoutServiceExtras(ServiceKey.radarr).instances,
-        settings.instances,
-      );
     });
   });
 

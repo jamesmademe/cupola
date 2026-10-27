@@ -38,33 +38,6 @@ class AppGradients {
     );
   }
 
-  /// Ambient background wash: a soft radial of the room's light over the base
-  /// surface, used behind headers and the onboarding canvas to add depth.
-  ///
-  /// Without an [accent] the room is lit by the neutral lamp, the light of a
-  /// room with no artwork. (The primary ink is not a light: it is white in the
-  /// dark room, and a white wash would read as fog.)
-  static RadialGradient ambientBackground(
-    ColorScheme scheme, {
-    Color? accent,
-    Alignment center = const Alignment(-0.7, -0.9),
-  }) {
-    final glow = (accent ?? DesignTokens.colorTitleLightFallback);
-    return RadialGradient(
-      center: center,
-      radius: 1.4,
-      colors: [
-        glow.withValues(
-          alpha: scheme.brightness == Brightness.dark
-              ? DesignTokensDark.opacityAmbientGlow
-              : DesignTokensLight.opacityAmbientGlow,
-        ),
-        scheme.surface.withValues(alpha: 0.0),
-      ],
-      stops: const [0.0, 1.0],
-    );
-  }
-
   /// A radial glow of [accent], for a card or a hero lit from one corner.
   ///
   /// [accent] is a light: the lamp (`ServiceKey.accent` is the lamp for every

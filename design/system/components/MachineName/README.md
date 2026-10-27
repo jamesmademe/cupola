@@ -18,7 +18,7 @@ Only in a row about a **copy**, under its title: a download (In flight, the Acti
 
 - `MachineName.file(name)` and `MachineName.release(name)`: the row line.
 - `MachineName.fileTitle(name)`: the row line in the ink, for a row whose title *is* the file (a file the service could not match, and so has no other name to lead with).
-- `MachineName.fileLead(name)` and `MachineName.releaseLead(name)`: in full, as the subject of its card, in the ink. The File card's file name.
+- `MachineName.fileLead(name)`: in full, as the subject of its card, in the ink. The File card's file name.
 - `MachineName.fileInFull(name, {caption})` and `MachineName.releaseInFull(name, {caption})`: in full, beside that subject, in the tertiary ink. The File card's *Released as* line.
 
 File or release decides only the words of the copy action: *Copy file name*, *Copy release name*.

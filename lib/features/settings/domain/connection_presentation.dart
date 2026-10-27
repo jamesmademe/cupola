@@ -344,6 +344,8 @@ IconData failureIcon(ServiceFailureReason reason) => switch (reason) {
   ServiceFailureReason.unauthorized ||
   ServiceFailureReason.secretUnread => Icons.key_off_rounded,
   // The account's own door, not a broken key: blue, the person's step.
+  // The address, not the key: the service's host check is the thing to open.
+  ServiceFailureReason.addressRefused => Icons.dns_rounded,
   ServiceFailureReason.sessionEnded => Icons.logout_rounded,
   // Where it lives, not what broke: nothing did.
   ServiceFailureReason.onlyAtHome => Icons.home_rounded,

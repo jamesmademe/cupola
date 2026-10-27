@@ -132,6 +132,7 @@ mixin ArrDetailActionsMixin<T extends ConsumerStatefulWidget>
           '$serviceName may start searching for $consequence as soon as this '
           'lands, and a search cannot be called back from here.',
       confirmLabel: 'Change profile',
+      enterConfirms: true,
     );
 
     if (!result.confirmed || !mounted) return;

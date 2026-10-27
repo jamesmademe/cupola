@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:dio/dio.dart';
 
 import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/network/list_mapping.dart';
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
 
 /// Configuration for *arr service activity endpoints.
@@ -93,8 +94,30 @@ Future<List<T>> _mapArrItems<T>(
   );
 }
 
+/// The mapper a list read hands to [ApiClient.getMappedList]: the same mapping
+/// as [_mapArrItems], run where the body is decoded. Captures only [fromJson],
+/// which is a top-level or static function at every call site.
+DecodedListMapper _listMapperOf<T>(T Function(Map<String, dynamic>) fromJson) {
+  return (decoded) => (decoded as List<dynamic>)
+      .map((item) => fromJson(item as Map<String, dynamic>))
+      .toList();
+}
+
+/// The records of a list read through [ApiClient.getMappedList]: the list the
+/// transformer already mapped, or the raw JSON a fake or an injected Dio
+/// answered with, mapped here.
+Future<List<T>> _recordsOf<T>(
+  Object? data,
+  T Function(Map<String, dynamic>) fromJson,
+) {
+  if (data is MappedList) return Future.value(data.value as List<T>);
+  return _mapArrItems(data as List<dynamic>, fromJson);
+}
+
 /// Pages [from] to [to], at most [_pageWalkLanes] requests in flight, answered
-/// in page order whichever finished first.
+/// in page order whichever finished first. [onPrefix] hears the pages in hand
+/// from [from] on, in order, each time that run grows and the range is not yet
+/// whole.
 ///
 /// A page that fails fails the read, as it does in the sequential walk: the
 /// error surfaces at once, no lane starts another request after it, and the
@@ -103,12 +126,14 @@ Future<List<T>> _mapArrItems<T>(
 Future<List<ArrRecordPage>> _fetchPageRange(
   Future<ArrRecordPage> Function(int page) fetchPage,
   int from,
-  int to,
-) async {
+  int to, {
+  void Function(List<ArrRecordPage> inOrder)? onPrefix,
+}) async {
   if (to < from) return const [];
   final pages = List<ArrRecordPage?>.filled(to - from + 1, null);
   var nextPage = from;
   var failed = false;
+  var prefix = 0;
 
   Future<void> lane() async {
     while (!failed && nextPage <= to) {
@@ -118,6 +143,17 @@ Future<List<ArrRecordPage>> _fetchPageRange(
       } catch (_) {
         failed = true;
         rethrow;
+      }
+      // Told when the pages from the first one on are all in hand, never of a
+      // page that finished ahead of one before it: a list that grows downward.
+      if (onPrefix != null) {
+        final before = prefix;
+        while (prefix < pages.length && pages[prefix] != null) {
+          prefix++;
+        }
+        if (prefix > before && prefix < pages.length) {
+          onPrefix([for (var i = 0; i < prefix; i++) pages[i]!]);
+        }
       }
     }
   }
@@ -132,8 +168,8 @@ Future<List<ArrRecordPage>> _fetchPageRange(
 ///
 /// Every paged \*arr endpoint answers with the same envelope:
 /// `{page, pageSize, totalRecords, records}`, and for a long time this app
-/// threw away three quarters of it. `getHistory`, `getMissing` and `getCutoff`
-/// each returned `response.data['records']` and nothing else, so **every count
+/// threw away three quarters of it. `getHistory` and the wanted and cutoff
+/// readers each returned `response.data['records']` and nothing else, so **every count
 /// derived from them was the size of the page, not the size of the set**: a
 /// library with 340 missing episodes read "20 missing" on the Activity pill,
 /// because 20 is the default page size. The number was not approximate, it was
@@ -384,11 +420,17 @@ mixin ArrActivityMixin {
   /// and a small NAS answers three together sooner than fifty in a heap.
   /// Whatever the batch did not settle (a count that grew under the walk) goes
   /// on one page at a time, as before.
+  ///
+  /// [onProgress], when given, hears the records in hand (a fresh list each
+  /// time, in page order) after the first page and each time the pages after it
+  /// extend the run, until the walk is whole; it is not told of the whole,
+  /// which is the answer. A screen draws from it before the walk ends.
   Future<ArrRecordPage> _fetchAllPages(
     String endpoint, {
     Map<String, dynamic> extraParams = const {},
     int pageSize = 250,
     int maxPages = 50,
+    void Function(List<dynamic> records)? onProgress,
   }) async {
     Future<ArrRecordPage> fetchPage(int page) async {
       final response = await client.get(
@@ -447,7 +489,18 @@ mixin ArrActivityMixin {
           maxPages,
           (total / envelope.records.length).ceil(),
         );
-        batch = await _fetchPageRange(fetchPage, 2, last);
+        if (onProgress != null) onProgress(List.of(records));
+        batch = await _fetchPageRange(
+          fetchPage,
+          2,
+          last,
+          onPrefix: onProgress == null
+              ? null
+              : (pages) => onProgress([
+                  ...records,
+                  for (final page in pages) ...page.records,
+                ]),
+        );
       }
     }
 
@@ -456,13 +509,16 @@ mixin ArrActivityMixin {
     return ArrRecordPage(records: records, total: total, cutShort: true);
   }
 
-  /// Fetches all history records across all pages.
+  /// Fetches all history records across all pages. [onProgress] hears the
+  /// records in hand before the walk is whole (see `_fetchAllPages`).
   Future<List<dynamic>> getAllHistory({
     Map<String, dynamic>? queryParameters,
+    void Function(List<dynamic> records)? onProgress,
   }) async {
     final result = await _fetchAllPages(
       'history',
       extraParams: {..._historySort, ...?queryParameters},
+      onProgress: onProgress,
     );
     return result.records;
   }
@@ -485,23 +541,17 @@ mixin ArrActivityMixin {
     return _fetchAllPages('blocklist', pageSize: 200);
   }
 
-  /// The blocklist, records only.
-  Future<List<dynamic>> getBlocklist() async {
-    final result = await getBlocklistPage();
-    return result.records;
-  }
-
   /// Fetches one page of missing items (wanted), **with the envelope's total**.
   ///
   /// This is the one the "34 missing" figure has to come from. `wanted/missing`
-  /// defaults to 20 rows, so a count taken from [getMissing] said 20 for every
+  /// defaults to 20 rows, so a count taken from the records alone said 20 for every
   /// library with more than twenty gaps in it: a number that is wrong in the
   /// one direction that matters, since it makes a large backlog look small.
   /// [queryParameters] is where a service's own wanted embeds ride, and it has
   /// to be **here**, on the primitive, for the reason [getHistoryPage] gives:
-  /// [getMissing] delegates to this, so an override of this one reaches both
-  /// spellings, while an override of [getMissing] leaves every caller that
-  /// needs the envelope's total, which is every caller that prints a figure:
+  /// the records-only spelling delegates to this, so an override of this one
+  /// reaches both, while an override of the records-only one leaves every caller
+  /// that needs the envelope's total, which is every caller that prints a figure:
   /// holding records the embed would have filled. Lidarr's `includeArtist` is
   /// the live case: the Overview's backlog clause counts distinct artists over
   /// this page, and without the embed that set is empty on every real server.
@@ -520,20 +570,6 @@ mixin ArrActivityMixin {
       },
     );
     return ArrRecordPage.fromEnvelope(response.data);
-  }
-
-  /// Fetches missing items (wanted), records only.
-  Future<List<dynamic>> getMissing({
-    int page = 1,
-    int pageSize = 20,
-    Map<String, dynamic>? queryParameters,
-  }) async {
-    final result = await getMissingPage(
-      page: page,
-      pageSize: pageSize,
-      queryParameters: queryParameters,
-    );
-    return result.records;
   }
 
   /// Fetches all missing items across all pages.
@@ -581,20 +617,6 @@ mixin ArrActivityMixin {
     }
   }
 
-  /// Fetches items with cutoff unmet, records only.
-  Future<List<dynamic>> getCutoff({
-    int page = 1,
-    int pageSize = 20,
-    Map<String, dynamic>? queryParameters,
-  }) async {
-    final result = await getCutoffPage(
-      page: page,
-      pageSize: pageSize,
-      queryParameters: queryParameters,
-    );
-    return result.records;
-  }
-
   /// Fetches all cutoff unmet items across all pages.
   ///
   /// Takes its own [queryParameters] for the reason [getAllMissing] does.
@@ -630,9 +652,11 @@ mixin ArrActivityMixin {
     T Function(Map<String, dynamic>) fromJson,
   ) async {
     try {
-      final response = await client.get('/api/${config.apiVersion}/$endpoint');
-      final data = response.data as List<dynamic>;
-      return await _mapArrItems(data, fromJson);
+      final response = await client.getMappedList(
+        '/api/${config.apiVersion}/$endpoint',
+        mapList: _listMapperOf(fromJson),
+      );
+      return await _recordsOf(response.data, fromJson);
     } catch (_) {
       return [];
     }
@@ -658,9 +682,11 @@ mixin ArrActivityMixin {
     String endpoint,
     T Function(Map<String, dynamic>) fromJson,
   ) async {
-    final response = await client.get('/api/${config.apiVersion}/$endpoint');
-    final data = response.data as List<dynamic>;
-    return _mapArrItems(data, fromJson);
+    final response = await client.getMappedList(
+      '/api/${config.apiVersion}/$endpoint',
+      mapList: _listMapperOf(fromJson),
+    );
+    return _recordsOf(response.data, fromJson);
   }
 
   /// Fetches a single item by id, or null if it cannot be read.
@@ -749,13 +775,13 @@ mixin ArrActivityMixin {
       // As typed: Dio encodes query values itself. Encoding it here too sent
       // `tvdb%253A121361`, which Sonarr matches to nothing, and turned
       // `Game of Thrones` into a search for `Game%20of%20Thrones`.
-      final response = await client.get(
+      final response = await client.getMappedList(
         '/api/${config.apiVersion}/$endpoint',
         queryParameters: {'term': term},
         cancelToken: cancelToken,
+        mapList: _listMapperOf(fromJson),
       );
-      final data = response.data as List<dynamic>;
-      return await _mapArrItems(data, fromJson);
+      return await _recordsOf(response.data, fromJson);
     } catch (_) {
       if (reportFailure) rethrow;
       return [];

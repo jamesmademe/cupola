@@ -43,10 +43,16 @@ def away_name(service: str = SERVICE) -> str:
     return f"{service}-away"
 
 
+#: Away addresses that do not sit on the next port after the proxy's. The
+#: qBittorrent proxy moved onto the WebUI's port (8080), and the next one is the
+#: seeder's published port, so its away address keeps the port it had.
+AWAY_PORTS = {"qbittorrent": 28081}
+
+
 def away_port(service: str = SERVICE) -> int:
     """The host port of the away address: the next one after the proxy's."""
 
-    return proxy_port(service) + 1
+    return AWAY_PORTS.get(service, proxy_port(service) + 1)
 
 
 def ensure_away(service: str = SERVICE) -> dict[str, Any]:

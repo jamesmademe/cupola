@@ -107,21 +107,21 @@ ProviderContainer _container({
       ),
       qbittorrentServiceProvider.overrideWith((ref) {
         final s = ref.watch(currentSettingsProvider);
-        if (s.qbittorrentUrl.isEmpty) {
+        if (s.urlFor(ServiceKey.qbittorrent).isEmpty) {
           throw const ServiceNotConfigured(ServiceKey.qbittorrent);
         }
-        final dio = Dio(BaseOptions(baseUrl: s.qbittorrentUrl));
+        final dio = Dio(BaseOptions(baseUrl: s.urlFor(ServiceKey.qbittorrent)));
         final stub = adapter ?? _StubAdapter();
         if (responses != null) stub.responses.addAll(responses);
         dio.httpClientAdapter = stub;
         final client = QbittorrentClient(
-          url: s.qbittorrentUrl,
-          username: s.qbittorrentUsername.isEmpty
+          url: s.urlFor(ServiceKey.qbittorrent),
+          username: s.usernameFor(ServiceKey.qbittorrent).isEmpty
               ? null
-              : s.qbittorrentUsername,
-          password: s.qbittorrentPassword.isEmpty
+              : s.usernameFor(ServiceKey.qbittorrent),
+          password: s.apiKeyFor(ServiceKey.qbittorrent).isEmpty
               ? null
-              : s.qbittorrentPassword,
+              : s.apiKeyFor(ServiceKey.qbittorrent),
           dio: dio,
         );
         return QbittorrentService(client);
@@ -438,18 +438,20 @@ void main() {
           ),
           qbittorrentServiceProvider.overrideWith((ref) {
             final s = ref.watch(currentSettingsProvider);
-            final dio = Dio(BaseOptions(baseUrl: s.qbittorrentUrl));
+            final dio = Dio(
+              BaseOptions(baseUrl: s.urlFor(ServiceKey.qbittorrent)),
+            );
             final adapter = _StubAdapter()
               ..responses['/api/v2/torrents/properties'] = <String>[];
             dio.httpClientAdapter = adapter;
             final client = QbittorrentClient(
-              url: s.qbittorrentUrl,
-              username: s.qbittorrentUsername.isEmpty
+              url: s.urlFor(ServiceKey.qbittorrent),
+              username: s.usernameFor(ServiceKey.qbittorrent).isEmpty
                   ? null
-                  : s.qbittorrentUsername,
-              password: s.qbittorrentPassword.isEmpty
+                  : s.usernameFor(ServiceKey.qbittorrent),
+              password: s.apiKeyFor(ServiceKey.qbittorrent).isEmpty
                   ? null
-                  : s.qbittorrentPassword,
+                  : s.apiKeyFor(ServiceKey.qbittorrent),
               dio: dio,
             );
             return QbittorrentService(client);

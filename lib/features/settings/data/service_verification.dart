@@ -874,6 +874,7 @@ Future<ServiceDiagnosis> diagnoseSavedInstance(
 /// That is exactly how a permission the user has not granted looks from the socket.
 bool localNetworkCouldExplain(ServiceFailureReason? reason) => switch (reason) {
   ServiceFailureReason.unauthorized ||
+  ServiceFailureReason.addressRefused ||
   // Nothing was sent: the secret never left the device's storage.
   ServiceFailureReason.secretUnread ||
   ServiceFailureReason.sessionEnded ||
@@ -950,6 +951,7 @@ Future<ServiceDiagnosis> diagnoseThroughLocalNetworkGate(
 /// trip to learn nothing.
 bool certProbeWorthwhile(ServiceFailureReason? reason) => switch (reason) {
   ServiceFailureReason.unauthorized ||
+  ServiceFailureReason.addressRefused ||
   // Nothing was sent: the secret never left the device's storage.
   ServiceFailureReason.secretUnread ||
   ServiceFailureReason.sessionEnded ||
@@ -1066,6 +1068,9 @@ String connectionFailureMessage(
     case ServiceFailureReason.noSecureConnection:
       return 'The secure connection broke off before a certificate arrived. '
           'Check that this port serves https.';
+    case ServiceFailureReason.addressRefused:
+      return '${service.title} refused this address. Allow it in its settings, '
+          'then check the connection.';
     case ServiceFailureReason.unauthorized:
       // The why, not the what again: the title above it already says the key
       // was refused, so this says where the right one comes from.
@@ -1208,9 +1213,10 @@ final serviceDiagnosisProvider =
       // Asked again when the phone's network changes, as above.
       ref.watch(networkChangesProvider);
       // Which connections, joined into a string because a fresh list never
-      // compares equal; then each one's own inputs.
+      // compares equal. Each one's own inputs are watched by its own diagnosis
+      // below, which this one reads rather than asks again.
       // A Seerr account that signed out is among them: it reads signed out.
-      final ids = ref.watch(
+      ref.watch(
         currentSettingsProvider.select(
           (s) => s
               .instancesOf(service)
@@ -1219,12 +1225,6 @@ final serviceDiagnosisProvider =
               .join(','),
         ),
       );
-      for (final id in ids.split(',')) {
-        if (id.isEmpty) continue;
-        ref.watch(
-          currentSettingsProvider.select((s) => _diagnosisInputs(s, id)),
-        );
-      }
       final settings = ref.read(currentSettingsProvider);
       // Deliberately *not* through `diagnoseThroughLocalNetworkGate`. This runs
       // unattended, on launch, and for every configured service at once, and
@@ -1236,9 +1236,15 @@ final serviceDiagnosisProvider =
       // in the list rather than naming the permission. It is named the moment the
       // user does the obvious thing (open the service and test it), which is
       // where the fix lives anyway.
+      //
+      // One probe per connection, shared with the form that edits it: this
+      // folds the answers [instanceDiagnosisProvider] already holds instead of
+      // asking each server a second time, and signing in a second time where a
+      // service counts failed sign-ins.
       return diagnoseService(
         service,
         settings,
-        diagnose: (instance) => diagnoseSavedInstance(ref, instance, settings),
+        diagnose: (instance) =>
+            ref.watch(instanceDiagnosisProvider(instance.id).future),
       );
     });

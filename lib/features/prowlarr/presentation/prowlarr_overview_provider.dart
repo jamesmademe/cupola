@@ -19,6 +19,7 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/utils/parallel_reads.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
@@ -368,9 +369,13 @@ DateTime? _parseLocal(String? raw) {
 /// The Overview's first region: what is broken.
 final prowlarrOverviewAttentionProvider =
     FutureProvider.autoDispose<ProwlarrOverviewSection>((ref) async {
-      final statuses = await ref.watch(prowlarrIndexerStatusProvider.future);
-      final indexers = await ref.watch(prowlarrIndexersProvider.future);
-      final health = await ref.watch(prowlarrHealthProvider.future);
+      // The three reads start together; `.wait` surfaces a failure through
+      // `unwrapFailure`, as the other Overview providers do.
+      final (statuses, indexers, health) = await readTogether3(
+        ref.watch(prowlarrIndexerStatusProvider.future),
+        ref.watch(prowlarrIndexersProvider.future),
+        ref.watch(prowlarrHealthProvider.future),
+      );
       return prowlarrNeedsAttention(
         statuses,
         indexers,
@@ -383,9 +388,11 @@ final prowlarrOverviewAttentionProvider =
 /// [prowlarrStatsWindow].
 final prowlarrOverviewIndexersProvider =
     FutureProvider.autoDispose<ProwlarrOverviewSection>((ref) async {
-      final indexers = await ref.watch(prowlarrIndexersProvider.future);
-      final stats = await ref.watch(prowlarrIndexerStatsProvider.future);
-      final statuses = await ref.watch(prowlarrIndexerStatusProvider.future);
+      final (indexers, stats, statuses) = await readTogether3(
+        ref.watch(prowlarrIndexersProvider.future),
+        ref.watch(prowlarrIndexerStatsProvider.future),
+        ref.watch(prowlarrIndexerStatusProvider.future),
+      );
       return prowlarrIndexerRows(indexers, stats, statuses);
     }, retry: noProviderRetry);
 

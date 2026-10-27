@@ -179,7 +179,7 @@ void main() {
     // Redirections, 404s and streams ride this tab rather than getting one of
     // their own: NPM files all four kinds under Hosts and the bar has exactly
     // one Hosts entry.
-    await _pump(tester, screen: const NpmScreen.proxyHosts(showAppBar: false));
+    await _pump(tester, screen: const NpmScreen.proxyHosts());
 
     expect(find.text('Proxy hosts'), findsOneWidget);
     expect(find.text('Redirections, 404s and streams'), findsOneWidget);
@@ -191,10 +191,7 @@ void main() {
   testWidgets('the Certificates tab draws certificates and no hosts', (
     tester,
   ) async {
-    await _pump(
-      tester,
-      screen: const NpmScreen.certificates(showAppBar: false),
-    );
+    await _pump(tester, screen: const NpmScreen.certificates());
 
     expect(find.text('Certificates'), findsOneWidget);
     expect(find.text('cert-1.lan'), findsOneWidget);
@@ -206,19 +203,11 @@ void main() {
   testWidgets('Access lists and Audit log draw their real documents', (
     tester,
   ) async {
-    await _pump(
-      tester,
-      screen: const NpmScreen.accessLists(showAppBar: false),
-      account: _admin,
-    );
+    await _pump(tester, screen: const NpmScreen.accessLists(), account: _admin);
     expect(find.text('LAN only'), findsOneWidget);
     expect(find.textContaining('2 hosts'), findsOneWidget);
 
-    await _pump(
-      tester,
-      screen: const NpmScreen.auditLog(showAppBar: false),
-      account: _admin,
-    );
+    await _pump(tester, screen: const NpmScreen.auditLog(), account: _admin);
     // NPM's API words, said as a sentence: `updated` and `proxy-host`.
     expect(find.text('Updated\u00A0· photos.example.net'), findsOneWidget);
     expect(find.textContaining('Proxy host'), findsOneWidget);
@@ -227,11 +216,7 @@ void main() {
   testWidgets('Audit log explains the server-side admin capability', (
     tester,
   ) async {
-    await _pump(
-      tester,
-      screen: const NpmScreen.auditLog(showAppBar: false),
-      account: _viewOnly,
-    );
+    await _pump(tester, screen: const NpmScreen.auditLog(), account: _viewOnly);
     expect(find.textContaining('administrators only'), findsOneWidget);
     expect(find.textContaining('photos.example.net'), findsNothing);
   });
@@ -241,7 +226,7 @@ void main() {
   ) async {
     await _pump(
       tester,
-      screen: const NpmScreen.accessLists(showAppBar: false),
+      screen: const NpmScreen.accessLists(),
       failingSection: NpmSection.accessLists,
     );
     expect(
@@ -254,7 +239,7 @@ void main() {
 
     await _pump(
       tester,
-      screen: const NpmScreen.auditLog(showAppBar: false),
+      screen: const NpmScreen.auditLog(),
       account: _admin,
       failingSection: NpmSection.auditLog,
     );
@@ -272,38 +257,13 @@ void main() {
     // which is right for a peek and wrong for a tab called Certificates: eight
     // of nine, with nothing saying so, is a count the reader has no way to
     // doubt.
-    await _pump(
-      tester,
-      screen: const NpmScreen.certificates(showAppBar: false),
-    );
+    await _pump(tester, screen: const NpmScreen.certificates());
 
     expect(find.text('cert-9.lan'), findsOneWidget);
   });
 
-  testWidgets('the whole-service page keeps its peek caps', (tester) async {
-    // The other half of the same decision: on [NpmSection.everything] the lists
-    // are a dashboard peek under one another, and the ninth certificate is
-    // below the cut.
-    await _pump(tester, screen: const NpmScreen(showAppBar: false));
-
-    expect(find.text('cert-8.lan'), findsOneWidget);
-    expect(find.text('cert-9.lan'), findsNothing);
-  });
-
-  testWidgets('the whole-service page still draws all three sections and the '
-      'readouts', (tester) async {
-    await _pump(tester, screen: const NpmScreen(showAppBar: false));
-
-    expect(find.text('Proxy hosts'), findsOneWidget);
-    expect(find.text('Certificates'), findsOneWidget);
-    expect(find.text('Redirections, 404s and streams'), findsOneWidget);
-    // The readouts belong to the Overview under the tab model, so they are on
-    // this variant and nowhere else.
-    expect(find.byType(ServiceKpiPeek), findsOneWidget);
-  });
-
   testWidgets('the readouts are not repeated on a section tab', (tester) async {
-    await _pump(tester, screen: const NpmScreen.proxyHosts(showAppBar: false));
+    await _pump(tester, screen: const NpmScreen.proxyHosts());
 
     expect(find.byType(ServiceKpiPeek), findsNothing);
   });
@@ -315,10 +275,10 @@ void main() {
     // explains the attenuation on one tab would be the failure
     // `npm_write_gate.dart` exists to prevent.
     for (final screen in const [
-      NpmScreen.proxyHosts(showAppBar: false),
-      NpmScreen.certificates(showAppBar: false),
-      NpmScreen.accessLists(showAppBar: false),
-      NpmScreen.auditLog(showAppBar: false),
+      NpmScreen.proxyHosts(),
+      NpmScreen.certificates(),
+      NpmScreen.accessLists(),
+      NpmScreen.auditLog(),
     ]) {
       await _pump(tester, screen: screen, account: _viewOnly);
       expect(
@@ -339,11 +299,10 @@ void main() {
     // still ships `admin@example.com` it outranks everything else on either
     // tab, and the fixture above is 2.11, inside that window.
     for (final screen in const [
-      NpmScreen(showAppBar: false),
-      NpmScreen.proxyHosts(showAppBar: false),
-      NpmScreen.certificates(showAppBar: false),
-      NpmScreen.accessLists(showAppBar: false),
-      NpmScreen.auditLog(showAppBar: false),
+      NpmScreen.proxyHosts(),
+      NpmScreen.certificates(),
+      NpmScreen.accessLists(),
+      NpmScreen.auditLog(),
     ]) {
       await _pump(tester, screen: screen);
       expect(
@@ -362,9 +321,8 @@ void main() {
     // provider that throws schedules a retry for a condition no waiting
     // changes, which this test would report as a pending timer.
     for (final screen in const [
-      NpmScreen(showAppBar: false),
-      NpmScreen.proxyHosts(showAppBar: false),
-      NpmScreen.certificates(showAppBar: false),
+      NpmScreen.proxyHosts(),
+      NpmScreen.certificates(),
     ]) {
       await tester.pumpWidget(
         ProviderScope(
@@ -384,7 +342,7 @@ void main() {
     ) async {
       await _pump(
         tester,
-        screen: const NpmScreen.proxyHosts(showAppBar: false),
+        screen: const NpmScreen.proxyHosts(),
         account: _viewOnly,
       );
       await tester.tap(
@@ -425,7 +383,7 @@ void main() {
     testWidgets('Renew is dimmed but tappable, and toasts', (tester) async {
       await _pump(
         tester,
-        screen: const NpmScreen.certificates(showAppBar: false),
+        screen: const NpmScreen.certificates(),
         account: _viewOnly,
       );
       final renew = find.widgetWithText(TextButton, 'Renew').first;
@@ -468,7 +426,7 @@ void main() {
     ) async {
       await _pump(
         tester,
-        screen: const NpmScreen.certificates(showAppBar: false),
+        screen: const NpmScreen.certificates(),
         account: hostsOnly,
       );
       expect(find.byType(CapabilityBanner), findsOneWidget);
@@ -487,7 +445,7 @@ void main() {
     ) async {
       await _pump(
         tester,
-        screen: const NpmScreen.proxyHosts(showAppBar: false),
+        screen: const NpmScreen.proxyHosts(),
         account: hostsOnly,
       );
       expect(find.byType(CapabilityBanner), findsNothing);
@@ -506,9 +464,8 @@ void main() {
 
   testWidgets('an admin gets no band anywhere', (tester) async {
     for (final screen in const [
-      NpmScreen(showAppBar: false),
-      NpmScreen.proxyHosts(showAppBar: false),
-      NpmScreen.certificates(showAppBar: false),
+      NpmScreen.proxyHosts(),
+      NpmScreen.certificates(),
     ]) {
       await _pump(tester, screen: screen, account: _admin);
       expect(find.byType(CapabilityBanner), findsNothing, reason: '$screen');

@@ -22,10 +22,7 @@ library;
 
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
 import 'package:cupola/core/status/lexicon.dart';
-import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/utils/dot_separator.dart';
-import 'package:cupola/core/utils/duration_format.dart';
-import 'package:cupola/core/utils/percent_format.dart';
 import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/services/domain/source_coverage.dart';
 
@@ -125,93 +122,6 @@ bool arrQueueIsQueued(Map<String, dynamic> record) {
 String countedNoun(int count, String singular, String plural) =>
     '$count ${count == 1 ? singular : plural}';
 
-/// The em dash every absent figure in this region prints.
-///
-/// One constant so a second call site cannot invent a hyphen, an empty string or
-/// a zero. See the library doc for why it is not `0`.
-const String kAbsentFigure = '—';
-
-/// `14.0 of 15.2 GB` (two sizes on one unit, or `—` when either is unknown).
-///
-/// Rendered on the **total's** unit deliberately: formatted independently, a
-/// transfer 900 MB into a 15.2 GB file reads `900 MB of 15.2 GB`, which asks the
-/// reader to convert before they can see it is nowhere near done. One unit
-/// makes the pair comparable at a glance, which is the only reason both numbers
-/// are on the row.
-///
-/// The digits are the shared size rule's, through [formatBytesOfTotal]: one
-/// decimal on both halves (`1.0 of 4.0 GB`, `0.4 of 4.0 GB`, never
-/// `1.0 of 4.00 GB`), whole from 100 up (`120 of 152 GB`), bytes whole.
-String formatDoneOfTotal({int? doneBytes, int? totalBytes}) {
-  if (totalBytes == null || totalBytes <= 0) return kAbsentFigure;
-  if (doneBytes == null || doneBytes < 0) return kAbsentFigure;
-  return formatBytesOfTotal(doneBytes, totalBytes);
-}
-
-/// `3 min left`, `2 h 10 min left`, `3 d 4 h left`, `48 s left`, or `—` when
-/// nobody knows. The span is `formatTimeSpan`'s.
-///
-/// Never seconds above a minute, and never a bare number: "3" in a row of
-/// figures is not a duration. qBittorrent reports 8 640 000 for "no estimate",
-/// which is filtered by the caller rather than printed as a hundred days.
-String formatTimeLeft(int? seconds) {
-  if (seconds == null || seconds < 0) return kAbsentFigure;
-  return '${formatTimeSpan(Duration(seconds: seconds))} left';
-}
-
-/// The whole row line: `2160p · 14.0 of 15.2 GB · 3 min left · qBittorrent`.
-///
-/// The client is last and always present: it is the answer to "where do I go to
-/// touch this", and it is the one part of the line a merged region cannot leave
-/// to a glyph. [connection] leads when the row's service has two connections
-/// to tell apart (`Radarr 4K · 2160p · …`): the glyph says Radarr, and only
-/// the words can say which.
-String formatInFlightLine({
-  String? connection,
-  String? quality,
-  int? doneBytes,
-  int? totalBytes,
-  int? etaSeconds,
-  required String client,
-}) {
-  final parts = <String>[
-    if (connection != null && connection.trim().isNotEmpty) connection.trim(),
-    if (quality != null && quality.trim().isNotEmpty) quality.trim(),
-    formatDoneOfTotal(doneBytes: doneBytes, totalBytes: totalBytes),
-    formatTimeLeft(etaSeconds),
-    client,
-  ];
-  return parts.join(dotSeparator);
-}
-
-/// The region's eyebrow: `2 downloading · 15.5 MB/s across 2 clients`.
-///
-/// The rate is summed **per client and only per client**: a byte rate is a
-/// countable unit, so it adds up, but only over sources that actually reported
-/// one. An \*arr does not report a rate for its own queue (the bytes are moving
-/// through a download client, which is reporting them already), so counting it
-/// as zero would drag the average down and counting it as missing would make the
-/// aggregate partial. Neither: it is not a rate source, and [clients] counts the
-/// ones that are.
-///
-/// The count is over the sources [coverage] says answered. With none of them
-/// answering it is `— downloading` and carries no rate: a queue nobody could
-/// read is not an empty one. With some of them dark the count stands, and the
-/// region names what it leaves out underneath (`coverageNote`).
-String inFlightEyebrow({
-  required int active,
-  required int? rateBytesPerSecond,
-  required int clients,
-  SourceCoverage coverage = SourceCoverage.none,
-}) {
-  final counted = '${coveredFigure(active, coverage)} downloading';
-  if (coverage.everySourceFailed) return counted;
-  if (rateBytesPerSecond == null || clients <= 0) return counted;
-  final noun = clients == 1 ? 'client' : 'clients';
-  return '$counted\u00A0· ${formatBytesPerSecond(rateBytesPerSecond)} '
-      'across $clients $noun';
-}
-
 /// The footnote under Downloads when faults were moved out of it:
 /// `18 need a manual import · 2 stalled · in Needs you`.
 ///
@@ -252,28 +162,3 @@ String spokenFaultFootnote(String footnote) => footnote
     .split('·')
     .map((clause) => spokenCountPhrase(clause.trim()))
     .join(', ');
-
-/// What the region says when nothing is moving.
-///
-/// "The queue is empty" only when it is. With eighteen blocked imports and
-/// nothing downloading, the queue holds eighteen records, and the region used to
-/// say it held none directly above a footnote counting them. Nor over
-/// downloads somebody paused ([held]): a paused queue is not an empty one. And
-/// not when a source is missing from the read ([whole] false): SABnzbd's queue
-/// is not empty because SABnzbd did not answer.
-String inFlightEmptyLabel({
-  required int faults,
-  int held = 0,
-  bool whole = true,
-}) =>
-    faults > 0 || held > 0 || !whole ? 'Nothing moving' : 'The queue is empty';
-
-/// What one in-flight row announces after its title.
-///
-/// The visible line is `·`-joined for the eye; `·` is decoration a screen reader
-/// reads as "middle dot" or drops, so the ear gets the same facts with the comma
-/// both readers treat as a short pause.
-String inFlightRowValue({required String line, required int? percent}) => [
-  if (percent != null) '${spokenPercent(percent)} done',
-  ...line.split('·').map((part) => part.trim()).where((p) => p.isNotEmpty),
-].join(', ');

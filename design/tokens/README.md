@@ -3,7 +3,7 @@
 This folder is the single source of Cupola's design tokens: colour, spacing,
 radius, component sizes, breakpoints, motion, type and elevation. The app never
 states these values anywhere else. Its token classes (`AppColors`,
-`CupolaRoom`, `AppSpacing`, `AppRadius`, `AppSize`, `AppElevation`,
+`CupolaRoom`, `AppSpacing`, `AppRadius`, `AppElevation`,
 `AppAnimation`, `AppBreakpoints`, `AppType`, the colour schemes and the type
 ramp in `lib/core/theme.dart`) read them from a Dart file generated from this
 folder.

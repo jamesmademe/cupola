@@ -1,3 +1,27 @@
+/// The parsed air time of each episode, keyed by the episode. Weak, so an
+/// episode that leaves the cache takes its entry with it.
+final _airsAt = Expando<_Airs>('sonarrEpisodeAirsAt');
+
+/// A cached air time; a box, because a null air time is an answer too.
+class _Airs {
+  const _Airs(this.value);
+
+  final DateTime? value;
+}
+
+DateTime? _parseAirs(String? airDateUtc, String? airDate) {
+  final utc = airDateUtc?.trim();
+  if (utc != null && utc.isNotEmpty) {
+    final parsed = DateTime.tryParse(utc);
+    if (parsed != null) return parsed;
+  }
+
+  final local = airDate?.trim();
+  if (local != null && local.isNotEmpty) return DateTime.tryParse(local);
+
+  return null;
+}
+
 class SonarrEpisode {
   final int id;
   final int seasonNumber;
@@ -42,17 +66,15 @@ class SonarrEpisode {
   });
 
   /// When this episode airs, preferring the UTC instant over the local date.
+  ///
+  /// Parsed once per episode: a season's build asks for it several times for
+  /// every episode, and a constant constructor leaves nowhere to keep it.
   DateTime? get airsAt {
-    final utc = airDateUtc?.trim();
-    if (utc != null && utc.isNotEmpty) {
-      final parsed = DateTime.tryParse(utc);
-      if (parsed != null) return parsed;
-    }
-
-    final local = airDate?.trim();
-    if (local != null && local.isNotEmpty) return DateTime.tryParse(local);
-
-    return null;
+    final cached = _airsAt[this];
+    if (cached != null) return cached.value;
+    final parsed = _parseAirs(airDateUtc, airDate);
+    _airsAt[this] = _Airs(parsed);
+    return parsed;
   }
 
   /// True when the broadcast is in the future.

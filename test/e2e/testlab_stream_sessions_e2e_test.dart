@@ -419,7 +419,6 @@ void _refresh(ProviderContainer container) {
   container.invalidate(streamActivityProvider);
   container.invalidate(streamActivityOfflineProvider);
   container.invalidate(serviceKpiProvider);
-  container.invalidate(serviceSignalProvider);
   container.invalidate(serviceSignalPairProvider);
 }
 

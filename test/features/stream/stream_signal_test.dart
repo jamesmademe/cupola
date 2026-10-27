@@ -8,6 +8,11 @@ import 'package:cupola/features/stream/domain/models/stream_session.dart';
 import 'package:cupola/features/stream/domain/stream_semantics.dart';
 import 'package:cupola/features/stream/presentation/widgets/stream_session_card.dart';
 
+/// The one figure a card shows: the primary of the pair. The rules these tests
+/// pin live on [resolveServiceSignalPair]; this is the reading they name.
+ServiceSignal? _single(List<ServiceKpi> kpis) =>
+    resolveServiceSignalPair(kpis)?.primary;
+
 /// Rebuilds the KPI list `_streamKpis` produces, without the providers.
 ///
 /// The real builder is private to `service_kpi_provider.dart` and needs a `Ref`;
@@ -39,9 +44,7 @@ List<ServiceKpi> streamKpis({required int streams, required int transcodes}) =>
 void main() {
   group('the Stream matrix cell has exactly three readings', () {
     test('idle is neutral and still live: "0 streams", not a library total', () {
-      final signal = resolveServiceSignal(
-        streamKpis(streams: 0, transcodes: 0),
-      );
+      final signal = _single(streamKpis(streams: 0, transcodes: 0));
 
       expect(signal, isNotNull);
       expect(signal!.value, '0');
@@ -54,9 +57,7 @@ void main() {
     });
 
     test('someone watching reads as activity, not as a fault', () {
-      final signal = resolveServiceSignal(
-        streamKpis(streams: 2, transcodes: 0),
-      )!;
+      final signal = _single(streamKpis(streams: 2, transcodes: 0))!;
 
       expect(signal.value, '2');
       // This is the assertion `_activityLabels` exists for. Without 'Streams' in
@@ -68,11 +69,9 @@ void main() {
     });
 
     test('a transcode outranks the stream count and turns amber', () {
-      final signal = resolveServiceSignal(
-        streamKpis(streams: 2, transcodes: 1),
-      )!;
+      final signal = _single(streamKpis(streams: 2, transcodes: 1))!;
 
-      // `resolveServiceSignal` takes the FIRST flagged KPI, and `Streams` comes
+      // the pair's primary takes the FIRST flagged KPI, and `Streams` comes
       // first in the list, so this only works because the builder stops flagging
       // `Streams` while anything is transcoding. Precedence lives in the flag, not
       // in the shared resolver.
@@ -84,12 +83,12 @@ void main() {
 
     test('the label agrees in number with its own figure', () {
       expect(
-        resolveServiceSignal(streamKpis(streams: 1, transcodes: 0))!.label,
+        _single(streamKpis(streams: 1, transcodes: 0))!.label,
         // 'streaming' is a gerund precisely so it needs no depluralisation at one.
         'streaming',
       );
       expect(
-        resolveServiceSignal(streamKpis(streams: 0, transcodes: 3))!.label,
+        _single(streamKpis(streams: 0, transcodes: 3))!.label,
         'transcodes',
       );
     });

@@ -425,7 +425,7 @@ void _invalidateHome(WidgetRef ref) {
   for (final service in ServiceKey.values) {
     ref.invalidate(serviceSummaryProvider(service));
   }
-  ref.invalidate(servicesRequestsProvider);
+  invalidateSeerrRequestsOf(ref.container, '');
   ref.invalidate(servicesQueueProvider);
   // The history page the failed-import decisions and Downloads' last finish
   // read, and Arrived's week.

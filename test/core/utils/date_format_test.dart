@@ -94,31 +94,6 @@ void main() {
     });
   });
 
-  group('formatMediumDateOrNull', () {
-    test('speaks the same prose as formatMediumDate', () {
-      // The whole point of the nullable variant is that a child row and the
-      // Details grid above it cannot disagree about what a date looks like.
-      expect(formatMediumDateOrNull('2026-07-17'), 'Jul 17, 2026');
-      expect(
-        formatMediumDateOrNull('2026-07-17T20:00:00Z'),
-        formatMediumDate('2026-07-17T20:00:00Z'),
-      );
-    });
-
-    test('drops a fact it cannot read instead of echoing raw JSON', () {
-      // A dot-separated facts line has no cell to leave blank, so an unreadable
-      // date has to leave the line entirely.
-      expect(formatMediumDateOrNull('not a date'), isNull);
-      expect(formatMediumDateOrNull('2019-05'), isNull);
-    });
-
-    test('treats absent and blank alike', () {
-      expect(formatMediumDateOrNull(null), isNull);
-      expect(formatMediumDateOrNull(''), isNull);
-      expect(formatMediumDateOrNull('   '), isNull);
-    });
-  });
-
   group('formatIsoDate', () {
     test('is the sortable form, padded to a fixed width', () {
       expect(formatIsoDate('2026-09-02'), '2026-09-02');

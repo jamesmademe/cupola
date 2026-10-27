@@ -5,9 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cupola/core/status/arr_queue_snapshot.dart';
-import 'package:cupola/features/activity/domain/service_type.dart';
-import 'package:cupola/features/activity/presentation/activity_provider.dart';
-import 'package:cupola/features/activity/presentation/widgets/activity_item_tiles.dart';
 import 'package:cupola/features/import/presentation/manual_import_routes.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/media/domain/media_copies.dart';
@@ -178,66 +175,6 @@ void main() {
       expect(_opened?.queryParameters['service'], 'lidarr');
       expect(_opened?.queryParameters['targetId'], '9');
       expect(_opened?.queryParameters['i'], 'lidarr-vinyl');
-    });
-  });
-
-  group('an Activity row hands the wizard the connection it came off', () {
-    GlobalActivityItem queueRow({String instanceId = ''}) => GlobalActivityItem(
-      kind: GlobalActivityKind.queue,
-      service: ServiceKey.radarr,
-      serviceType: ServiceType.movies,
-      title: 'Elephants Dream',
-      subtitle: '',
-      status: const MediaStatusInfo(labelOverride: 'Import blocked'),
-      instanceId: instanceId,
-      raw: const {'id': 3, 'outputPath': '/downloads/complete/Elephants Dream'},
-    );
-
-    test('a row off the other server still offers the import', () {
-      // Withheld until the wizard could be told which server to open on.
-      expect(canManualImportFrom(queueRow(instanceId: 'radarr-4k')), isTrue);
-    });
-
-    testWidgets('and the wizard opens on that server', (tester) async {
-      final row = queueRow(instanceId: 'radarr-4k');
-      await _pump(
-        tester,
-        Builder(
-          builder: (context) => TextButton(
-            onPressed: () => openManualImportFrom(context, row),
-            child: const Text('Manual import'),
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('Manual import'));
-      await tester.pumpAndSettle();
-
-      expect(_opened?.queryParameters, {
-        'service': 'radarr',
-        'path': '/downloads/complete/Elephants Dream',
-        'i': 'radarr-4k',
-      });
-    });
-
-    testWidgets('a row that names no connection stays on the lens', (
-      tester,
-    ) async {
-      final row = queueRow();
-      await _pump(
-        tester,
-        Builder(
-          builder: (context) => TextButton(
-            onPressed: () => openManualImportFrom(context, row),
-            child: const Text('Manual import'),
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('Manual import'));
-      await tester.pumpAndSettle();
-
-      expect(_opened?.queryParameters.containsKey('i'), isFalse);
     });
   });
 }

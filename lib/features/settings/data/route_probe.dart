@@ -140,7 +140,9 @@ class RouteProbe {
   /// Knocks on connection [id]'s two addresses and moves it to the one that
   /// answers; one probe per connection at a time.
   Future<void> probe(String id) =>
-      _inFlight[id] ??= _probe(id).whenComplete(() => _inFlight.remove(id));
+      _inFlight[id] ??= _probe(id).whenComplete(() {
+        _inFlight.remove(id);
+      });
 
   Future<void> _probe(String id) async {
     final settings = _ref.read(currentSettingsProvider);

@@ -6,10 +6,13 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
 import 'package:cupola/features/discover/data/seerr_service.dart';
+import 'package:cupola/features/dockge/presentation/dockge_provider.dart';
+import 'package:cupola/features/jellyfin/presentation/jellyfin_provider.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/music/data/lidarr_service.dart';
 import 'package:cupola/features/npm/presentation/npm_provider.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
+import 'package:cupola/features/plex/presentation/plex_provider.dart';
 import 'package:cupola/features/prowlarr/presentation/prowlarr_provider.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
@@ -18,6 +21,7 @@ import 'package:cupola/features/series/data/sonarr_service.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/transmission/presentation/transmission_provider.dart';
+import 'package:cupola/features/truenas/presentation/truenas_provider.dart';
 import 'package:cupola/features/unraid/presentation/unraid_provider.dart';
 
 import '../../../test_helpers/settings_scope.dart';
@@ -105,6 +109,19 @@ void main() {
         'unraid': (
           key: ServiceKey.unraid,
           read: (c) => c.read(unraidClientProvider),
+        ),
+        'dockge': (
+          key: ServiceKey.dockge,
+          read: (c) => c.read(dockgeClientProvider),
+        ),
+        'plex': (key: ServiceKey.plex, read: (c) => c.read(plexClientProvider)),
+        'jellyfin': (
+          key: ServiceKey.jellyfin,
+          read: (c) => c.read(jellyfinClientProvider),
+        ),
+        'truenas': (
+          key: ServiceKey.truenas,
+          read: (c) => c.read(truenasClientProvider),
         ),
       };
 

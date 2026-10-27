@@ -386,7 +386,7 @@ const _apiClientSites = <String, String>{
   'lib/features/settings/data/service_verification.dart':
       'The connection test of the X-Api-Key services, which asserts it is '
       'never Seerr: Seerr has its own branch with seerrClientFor.',
-  'lib/features/services/presentation/services_provider.dart':
+  'lib/features/services/presentation/services_probe.dart':
       'The probe client of the X-Api-Key services; the Seerr branch builds '
       'its own through seerrClientFactoryProvider first.',
   'lib/features/jellyfin/data/jellyfin_client.dart': 'Jellyfin.',

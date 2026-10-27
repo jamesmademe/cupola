@@ -36,11 +36,11 @@ void main() {
       notifier.record('truenas-friend', CapabilityScope.readOnly);
 
       expect(
-        container.read(capabilityScopeForProvider('truenas-home')),
+        container.read(capabilityGrantForProvider('truenas-home')).scope,
         CapabilityScope.readWrite,
       );
       expect(
-        container.read(capabilityScopeForProvider('truenas-friend')),
+        container.read(capabilityGrantForProvider('truenas-friend')).scope,
         CapabilityScope.readOnly,
       );
     });
@@ -49,7 +49,7 @@ void main() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
       expect(
-        container.read(capabilityScopeForProvider('never-probed')),
+        container.read(capabilityGrantForProvider('never-probed')).scope,
         CapabilityScope.unknown,
       );
     });
@@ -69,7 +69,7 @@ void main() {
       notifier.markReadOnly('npm-1');
 
       expect(
-        container.read(capabilityScopeForProvider('npm-1')).canWrite,
+        container.read(capabilityGrantForProvider('npm-1')).scope.canWrite,
         isFalse,
       );
     });
@@ -102,7 +102,7 @@ void main() {
         notifier.forget('unraid-1');
 
         expect(
-          container.read(capabilityScopeForProvider('unraid-1')),
+          container.read(capabilityGrantForProvider('unraid-1')).scope,
           CapabilityScope.unknown,
         );
       },

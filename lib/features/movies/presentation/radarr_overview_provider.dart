@@ -14,22 +14,21 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/utils/parallel_reads.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/arr_overview.dart';
 import 'package:cupola/core/utils/arr_model_helpers.dart';
 import 'package:cupola/core/utils/date_format.dart' show formatRelativeDateTime;
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
-import 'package:cupola/core/utils/release_utils.dart';
-import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
 import 'package:cupola/features/movies/domain/models/radarr_movie.dart';
 import 'package:cupola/features/movies/presentation/movies_provider.dart';
 import 'package:cupola/features/services/domain/attention_door.dart';
 import 'package:cupola/features/services/domain/service_tab.dart';
-import 'package:cupola/features/services/domain/services_semantics.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -171,7 +170,7 @@ List<RadarrMovie> radarrRecentlyAdded(
 }) {
   final dated = <(DateTime, RadarrMovie)>[];
   for (final movie in movies) {
-    final added = _parseLocal(movie.added);
+    final added = parseLocalInstant(movie.added);
     if (added != null) dated.add((added, movie));
   }
   dated.sort((a, b) => b.$1.compareTo(a.$1));
@@ -192,7 +191,7 @@ final radarrRecentlyAddedProvider =
 /// these are faults and the third is backlog, which the five-arm tone rule
 /// paints neutral. Collapsing them into one "attention" colour is how a pile of
 /// upgrades ends up wearing the same amber as a broken import.
-enum RadarrAttentionKind {
+enum RadarrAttentionKind implements ArrAttentionKind {
   /// Radarr grabbed the release and could not move it into the library.
   importFailed(StatusTone.warning, Icons.file_download_off_rounded),
 
@@ -205,64 +204,15 @@ enum RadarrAttentionKind {
 
   const RadarrAttentionKind(this.tone, this.icon);
 
+  @override
   final StatusTone tone;
+
+  @override
   final IconData icon;
 }
 
-/// One row of Needs attention: what happened, to what, and when.
-///
-/// Every row leads somewhere: a download's own page for one stuck or failed
-/// download, the Queue tab for the several a folded row stands for, the
-/// Wanted tab for the backlog. What the \*arr can do about a download it
-/// cannot import (a retry) is not a call this client makes, so no row carries
-/// a verb: the page it opens does.
-@immutable
-class RadarrAttentionItem {
-  const RadarrAttentionItem({
-    required this.kind,
-    required this.headline,
-    required this.detail,
-    this.door,
-    this.subject,
-    this.count = 1,
-    String? spokenHeadline,
-  }) : _spokenHeadline = spokenHeadline;
-
-  final RadarrAttentionKind kind;
-
-  /// The fault and its subject: `Import failed · Nickel Boys`.
-  final String headline;
-
-  /// The evidence: the service's own message, the client, the timestamp.
-  /// Empty when the record carried none.
-  final String detail;
-
-  /// Where the row leads, or null where the app has no place that shows it.
-  final AttentionDoor? door;
-
-  /// What the fault is about, bare (`Nickel Boys`), for a folded row to name.
-  final String? subject;
-
-  /// How many faults the row stands for: one, or the downloads a folded row
-  /// folds. The section's own count adds these, so folding never changes how
-  /// many things need attention.
-  final int count;
-
-  /// [headline] as the ear should hear it, where it differs (`at least 3`
-  /// for a floor).
-  final String? _spokenHeadline;
-
-  StatusTone get tone => kind.tone;
-  IconData get icon => kind.icon;
-
-  /// The row as a sentence, with the dots the layout uses turned back into
-  /// commas. `·` is decoration, and a screen reader either names it or drops
-  /// it depending on the user's punctuation setting.
-  String get spoken => joinSpokenParts([
-    spokenFromDotted(_spokenHeadline ?? headline),
-    spokenFromDotted(detail),
-  ]);
-}
+/// One row of Needs attention (`ArrAttentionItem`).
+typedef RadarrAttentionItem = ArrAttentionItem<RadarrAttentionKind>;
 
 /// Reads the faults out of a page of **raw** `/queue` records.
 ///
@@ -293,13 +243,13 @@ List<RadarrAttentionItem> radarrQueueFaults(
         arrPrimaryMediaTitle(record) ??
         arrReleaseTitle(record) ??
         'Unknown release';
-    final when = _parseLocal(stringOrNull(record['added']));
+    final when = parseLocalInstant(stringOrNull(record['added']));
     final age = when == null ? null : formatRelativeDateTime(when, now: now);
     final message =
         stringOrNull(record['errorMessage']) ?? arrQueueWarningMessage(record);
     final door = arrQueueRecordDoor(record, instanceId: instanceId);
 
-    if (_isStalled(record)) {
+    if (isStalledRecord(record)) {
       items.add(
         RadarrAttentionItem(
           kind: RadarrAttentionKind.stalled,
@@ -316,7 +266,7 @@ List<RadarrAttentionItem> radarrQueueFaults(
       continue;
     }
 
-    if (_isImportFault(record)) {
+    if (isImportFaultRecord(record)) {
       items.add(
         RadarrAttentionItem(
           kind: RadarrAttentionKind.importFailed,
@@ -369,30 +319,6 @@ RadarrAttentionItem? radarrBelowCutoffItem(int? count) {
   );
 }
 
-bool _isStalled(Map<String, dynamic> record) {
-  final haystack = [
-    stringOrNull(record['errorMessage']),
-    stringOrNull(record['status']),
-    ...extractArrStatusMessages(record['statusMessages']),
-  ].whereType<String>().join(' ').toLowerCase();
-  return haystack.contains('stall');
-}
-
-bool _isImportFault(Map<String, dynamic> record) {
-  final state = stringOrNull(record['trackedDownloadState'])?.toLowerCase();
-  if (state == 'failed' ||
-      state == 'failedpending' ||
-      state == 'importfailed' ||
-      state == 'importblocked') {
-    return true;
-  }
-  // Radarr's canonical "Unable to Import Automatically" arrives as a pending
-  // import carrying a status message, which is how the service says a human has
-  // to look at it. See `arrQueueSeverity`.
-  return state == 'importpending' &&
-      arrQueueSeverity(record) != ArrQueueSeverity.ok;
-}
-
 /// The raw `/queue` walk, with its envelope.
 ///
 /// The equivalent of the private `_loadServiceQueueItems` in
@@ -442,8 +368,12 @@ final radarrCutoffUnmetCountProvider = FutureProvider.autoDispose<int?>((
 /// `radarrQueueRecordsProvider`'s `cutShort` beside this.
 final radarrNeedsAttentionProvider =
     FutureProvider.autoDispose<List<RadarrAttentionItem>>((ref) async {
-      final page = await ref.watch(radarrQueueRecordsProvider.future);
-      final cutoff = await ref.watch(radarrCutoffUnmetCountProvider.future);
+      // Both reads start together: the cutoff count does not wait for the
+      // queue. `.wait` surfaces a failure through `unwrapFailure`.
+      final (page, cutoff) = await readTogether(
+        ref.watch(radarrQueueRecordsProvider.future),
+        ref.watch(radarrCutoffUnmetCountProvider.future),
+      );
       final backlog = radarrBelowCutoffItem(cutoff);
       return [
         ...radarrQueueFaults(
@@ -462,33 +392,7 @@ final radarrNeedsAttentionProvider =
 // ─── History today ──────────────────────────────────────────────────────────
 
 /// One history record, resolved into the two lines the row draws.
-@immutable
-class RadarrHistoryEntry {
-  const RadarrHistoryEntry({
-    required this.title,
-    required this.event,
-    required this.tone,
-    required this.detail,
-    required this.date,
-  });
-
-  /// The film.
-  final String title;
-
-  /// What happened to it, in the shared history vocabulary: `Imported`,
-  /// `Grabbed`, `Failed`.
-  final String event;
-
-  final StatusTone tone;
-
-  /// Quality, size and how long ago, as far as the record carried them.
-  final String detail;
-
-  final DateTime date;
-
-  String get spoken =>
-      joinSpokenParts([title, event, spokenFromDotted(detail)]);
-}
+typedef RadarrHistoryEntry = OverviewHistoryEntry;
 
 /// The records from today, newest first, capped at [limit].
 ///
@@ -499,44 +403,15 @@ List<RadarrHistoryEntry> radarrHistoryToday(
   List<dynamic> records, {
   required DateTime now,
   int limit = radarrHistoryTodayLimit,
-}) {
-  final local = now.toLocal();
-  final entries = <RadarrHistoryEntry>[];
-
-  for (final raw in records) {
-    final record = mapOrNull(raw);
-    if (record == null) continue;
-    final date = _parseLocal(stringOrNull(record['date']));
-    if (date == null) continue;
-    if (date.year != local.year ||
-        date.month != local.month ||
-        date.day != local.day) {
-      continue;
-    }
-
-    final eventType = stringOrNull(record['eventType']) ?? 'unknown';
-    final (event, tone) = historyEventDisplay(eventType);
-    entries.add(
-      RadarrHistoryEntry(
-        title:
-            arrPrimaryMediaTitle(record) ??
-            arrReleaseTitle(record) ??
-            'Unknown release',
-        event: event,
-        tone: tone,
-        detail: joinDisplayParts([
-          _qualityName(record['quality']),
-          _size(record),
-          formatRelativeDateTime(date, now: now),
-        ]),
-        date: date,
-      ),
-    );
-  }
-
-  entries.sort((a, b) => b.date.compareTo(a.date));
-  return List.unmodifiable(entries.take(limit));
-}
+}) => overviewHistoryToday(
+  records,
+  now: now,
+  limit: limit,
+  subjectOf: (record) =>
+      arrPrimaryMediaTitle(record) ??
+      arrReleaseTitle(record) ??
+      'Unknown release',
+);
 
 /// Today's history, from one page of twenty.
 final radarrHistoryTodayProvider =
@@ -548,31 +423,3 @@ final radarrHistoryTodayProvider =
     });
 
 // ─── Shared parsing ─────────────────────────────────────────────────────────
-
-/// Parses an \*arr ISO timestamp into local time, or null when it is absent or
-/// unreadable.
-///
-/// Local, always: every window on this screen is a run of local calendar days,
-/// and Radarr answers in UTC. For a real instant only (`added`, a history
-/// `date`): a release date is a day, and reads through [arrCalendarDate].
-DateTime? _parseLocal(String? raw) {
-  final value = raw?.trim();
-  if (value == null || value.isEmpty) return null;
-  final parsed = DateTime.tryParse(value);
-  return parsed?.toLocal();
-}
-
-String? _qualityName(dynamic value) {
-  final quality = mapOrNull(value);
-  if (quality == null) return stringOrNull(value);
-  return stringOrNull(mapOrNull(quality['quality'])?['name']) ??
-      stringOrNull(quality['name']);
-}
-
-String? _size(Map<String, dynamic> record) {
-  final bytes =
-      intOrNull(record['size']) ??
-      intOrNull(mapOrNull(record['data'])?['size']);
-  if (bytes == null || bytes <= 0) return null;
-  return formatReleaseSize(bytes);
-}

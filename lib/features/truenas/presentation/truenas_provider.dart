@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/network/network_change.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
+import 'package:cupola/features/settings/data/connection_providers.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/truenas/data/apps_api.dart';
@@ -45,54 +47,30 @@ import 'package:cupola/features/truenas/domain/truenas_version.dart';
 ///
 /// The client throws "not configured" from this build, and would be retried
 /// for it like any other `Exception`: a condition no waiting changes.
-final truenasClientProvider = Provider<TrueNasWsClient>((ref) {
-  final transport = watchTransport(ref, ServiceKey.truenas);
-  transport.ensureConfigured(ServiceKey.truenas);
-  final client = TrueNasWsClient(
-    baseUrl: transport.url,
-    apiKey: transport.apiKey,
-    certFingerprint: transport.pin,
-    accessHeaders: transport.access.headers(),
-    onlyAtHome: transport.onlyAtHomeOf(ServiceKey.truenas),
-  );
-  ref.onDispose(client.close);
-  return client;
-}, retry: noProviderRetry);
+final truenasClientProvider = _truenas.lens;
 
-/// TrueNAS client bound to one configured connection id.
-///
-/// Empty and active ids collapse to the lens client so callers do not open a
-/// second WebSocket for the same NAS. A non-active id bypasses the lens and is
-/// disposed with its own WebSocket when the family entry is released.
-final truenasClientForProvider = Provider.family<TrueNasWsClient, String>((
-  ref,
-  instanceId,
-) {
-  final activeId =
-      ref.read(activeInstanceProvider(ServiceKey.truenas))?.id ?? '';
-  if (instanceId.isEmpty || instanceId == activeId) {
-    return ref.watch(truenasClientProvider);
-  }
-  return _truenasClient(ref, instanceId: instanceId);
-}, retry: noProviderRetry);
+final truenasClientForProvider = _truenas.forConnection;
 
-TrueNasWsClient _truenasClient(Ref ref, {required String? instanceId}) {
-  final transport = watchTransport(
-    ref,
-    ServiceKey.truenas,
-    instanceId: instanceId,
-  );
-  transport.ensureConfigured(ServiceKey.truenas);
-  final client = TrueNasWsClient(
-    baseUrl: transport.url,
-    apiKey: transport.apiKey,
-    certFingerprint: transport.pin,
-    accessHeaders: transport.access.headers(),
-    onlyAtHome: transport.onlyAtHomeOf(ServiceKey.truenas),
-  );
-  ref.onDispose(client.close);
-  return client;
-}
+final _truenas = ConnectionProviders<TrueNasWsClient>.transport(
+  ServiceKey.truenas,
+  retry: noProviderRetry,
+  create: (ref, transport) {
+    // A network change may have left the open socket half-open: the next call
+    // pings it rather than waiting out the call timeout. Listened to, never
+    // watched, so the client is not rebuilt (and its socket closed) by it.
+    // Every client of the pair, the named connection's included.
+    final client = TrueNasWsClient(
+      baseUrl: transport.url,
+      apiKey: transport.apiKey,
+      certFingerprint: transport.pin,
+      accessHeaders: transport.access.headers(),
+      onlyAtHome: transport.onlyAtHomeOf(ServiceKey.truenas),
+    );
+    ref.listen(networkChangesProvider, (_, _) => client.markSuspect());
+    return client;
+  },
+  close: (client) => client.close(),
+);
 
 final truenasServiceProvider = Provider<TrueNasService>((ref) {
   return TrueNasService(ref.watch(truenasClientProvider));

@@ -2,6 +2,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
+import 'package:cupola/core/utils/service_action.dart';
+
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/features/nzbget/data/nzbget_client.dart';
 import 'package:cupola/features/nzbget/presentation/nzbget_provider.dart';
@@ -25,6 +27,15 @@ bool _isRejection(Object? result) {
   return false;
 }
 
+/// NZBGet answered and refused: a failure with words and no transport fault
+/// behind it, so the toast says what NZBGet did and not that it did not answer.
+class _Rejected implements Exception {
+  const _Rejected();
+
+  @override
+  String toString() => 'NZBGet rejected the request.';
+}
+
 /// Runs a [NzbgetClient] mutation with the shared plumbing: resolve the client,
 /// await [action], invalidate [invalidate] providers and report the outcome via
 /// [SnackBarHelper]. Returns whether the mutation actually took effect.
@@ -46,36 +57,21 @@ Future<bool> runNzbgetAction(
   String? successMessage,
   required String failureMessage,
   List<ProviderOrFamily> invalidate = const [],
-}) async {
+}) {
   final client = ref.read(nzbgetClientProvider);
-  // Not [ref] after the `await`: it dies with the page that asked, and the
-  // write may outlast that page.
-  final container = ProviderScope.containerOf(context, listen: false);
-  try {
-    final result = await action(client);
-    // Refreshed either way: when NZBGet refuses a command it is usually because
-    // the queue moved under us, and re-reading is what shows the user what is
-    // actually there now.
-    for (final provider in invalidate) {
-      container.invalidate(provider);
-    }
-    if (_isRejection(result)) {
-      if (context.mounted) {
-        SnackBarHelper.error(
-          context,
-          '$failureMessage. NZBGet rejected the request.',
-        );
+  return runServiceAction(
+    context,
+    ref,
+    action: () async {
+      // A refused command is a failure like any other: the same words, a
+      // re-read of what the queue now holds, and a Retry.
+      if (_isRejection(await action(client))) {
+        throw const _Rejected();
       }
-      return false;
-    }
-    if (successMessage != null && context.mounted) {
-      SnackBarHelper.success(context, successMessage);
-    }
-    return true;
-  } catch (e) {
-    if (context.mounted) {
-      SnackBarHelper.error(context, failureMessage, detail: e);
-    }
-    return false;
-  }
+    },
+    successMessage: successMessage,
+    failureMessage: failureMessage,
+    invalidate: invalidate,
+    refreshOnFailure: true,
+  );
 }

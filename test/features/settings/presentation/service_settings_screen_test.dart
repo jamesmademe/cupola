@@ -301,8 +301,8 @@ void main() {
       await tester.pumpAndSettle();
 
       final updated = harness.container.read(settingsProvider);
-      expect(updated.jellyfinUrl, isEmpty);
-      expect(updated.jellyfinApiKey, isEmpty);
+      expect(updated.urlFor(ServiceKey.jellyfin), isEmpty);
+      expect(updated.apiKeyFor(ServiceKey.jellyfin), isEmpty);
       expect(updated.jellyfinUserId, isEmpty);
     });
 
@@ -331,7 +331,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final updated = harness.container.read(settingsProvider);
-      expect(updated.sonarrUrl, 'https://new-nas.local:8989');
+      expect(updated.urlFor(ServiceKey.sonarr), 'https://new-nas.local:8989');
       expect(updated.pinForUrl('https://old-nas.local:8989'), isNull);
     });
 
@@ -386,10 +386,10 @@ void main() {
       await tester.pumpAndSettle();
 
       final updated = harness.container.read(settingsProvider);
-      expect(updated.radarrUrl, 'https://radarr.local');
-      expect(updated.radarrApiKey, 'radarr-key');
-      expect(updated.sonarrUrl, 'https://sonarr.local');
-      expect(updated.sonarrApiKey, 'sonarr-key');
+      expect(updated.urlFor(ServiceKey.radarr), 'https://radarr.local');
+      expect(updated.apiKeyFor(ServiceKey.radarr), 'radarr-key');
+      expect(updated.urlFor(ServiceKey.sonarr), 'https://sonarr.local');
+      expect(updated.apiKeyFor(ServiceKey.sonarr), 'sonarr-key');
 
       expect(find.text('LauncherPage'), findsOneWidget);
       expect(find.text('Sonarr settings saved'), findsOneWidget);
@@ -474,7 +474,10 @@ void main() {
 
       await tester.pumpAndSettle();
       expect(tester.testTextInput.isVisible, isFalse);
-      expect(harness.container.read(settingsProvider).radarrApiKey, 'old-key');
+      expect(
+        harness.container.read(settingsProvider).apiKeyFor(ServiceKey.radarr),
+        'old-key',
+      );
       expect(find.text('LauncherPage'), findsNothing);
     });
 

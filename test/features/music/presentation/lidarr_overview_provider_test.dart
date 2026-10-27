@@ -348,7 +348,7 @@ void main() {
         complete: true,
       );
 
-      expect(entries.map((e) => e.title), ['Alvvays, Today']);
+      expect(entries.map((e) => e.subject), ['Alvvays, Today']);
     });
 
     test('an album imported track by track is one row, not fourteen', () {
@@ -511,7 +511,7 @@ void main() {
         limit: 3,
       );
 
-      expect(entries.map((e) => e.title), [
+      expect(entries.map((e) => e.subject), [
         'Alvvays, Album 5',
         'Alvvays, Album 4',
         'Alvvays, Album 3',

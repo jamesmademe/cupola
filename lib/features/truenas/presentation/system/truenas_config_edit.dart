@@ -71,6 +71,7 @@ Future<void> editTrueNasConfig({
     title: 'Apply these changes?',
     message: diffLines.join('\n'),
     confirmLabel: 'Save changes',
+    enterConfirms: true,
   );
   if (!result.confirmed || !context.mounted) return;
 

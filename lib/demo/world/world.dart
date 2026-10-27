@@ -349,6 +349,13 @@ abstract final class WorldTitles {
       imdbId: 'tt0054215',
     ),
     WorldTitle(
+      key: 'psycho1998',
+      title: 'Psycho',
+      year: 1998,
+      tmdbId: 11252,
+      imdbId: 'tt0155975',
+    ),
+    WorldTitle(
       key: 'breakfastAtTiffanys',
       title: "Breakfast at Tiffany's",
       year: 1961,

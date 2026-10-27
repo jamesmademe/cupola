@@ -93,6 +93,8 @@ void main() {
         [for (final a in flow.bulk.values) a.episode?.episodeNumber],
         [4, 5, 6],
       );
+      // One episode per file: no file is ever given a list of them (M-05).
+      expect([for (final a in flow.bulk.values) a.episodes.length], [1, 1, 1]);
     });
   });
 

@@ -53,14 +53,11 @@ typedef _Wrapper = ({
   List<Override> overrides,
   _Run run,
 
-  /// Whether the wrapper says how it went once the page is gone. The two that
-  /// run for minutes (a Dockge update, an NPM renewal) do; the four that are
-  /// over in a poll interval stay silent, as they always have.
+  /// Whether the wrapper says how it went once the page is gone: all six do.
   bool says,
 
-  /// Whether a command that threw still has its providers read again: the
-  /// wrappers differ on purpose (a refused write usually means the list moved
-  /// under the person, and two of them read it again to show what is there).
+  /// Whether a command that threw still has its providers read again: all six
+  /// do (a refused write usually means the list moved under the person).
   bool rereadsOnFailure,
 });
 
@@ -78,7 +75,7 @@ final _wrappers = <String, _Wrapper>{
       invalidate: [stale],
     ),
     says: true,
-    rereadsOnFailure: false,
+    rereadsOnFailure: true,
   ),
   'NPM': (
     overrides: [npmClientProvider.overrideWith((ref) => _FakeNpm())],
@@ -106,8 +103,8 @@ final _wrappers = <String, _Wrapper>{
       failureMessage: 'Could not finish',
       invalidate: [stale],
     ),
-    says: false,
-    rereadsOnFailure: false,
+    says: true,
+    rereadsOnFailure: true,
   ),
   'SABnzbd': (
     overrides: [sabnzbdClientProvider.overrideWith((ref) => _FakeSabnzbd())],
@@ -119,8 +116,8 @@ final _wrappers = <String, _Wrapper>{
       failureMessage: 'Could not finish',
       invalidate: [stale],
     ),
-    says: false,
-    rereadsOnFailure: false,
+    says: true,
+    rereadsOnFailure: true,
   ),
   'NZBGet': (
     overrides: [nzbgetClientProvider.overrideWith((ref) => _FakeNzbget())],
@@ -135,8 +132,8 @@ final _wrappers = <String, _Wrapper>{
       failureMessage: 'Could not finish',
       invalidate: [stale],
     ),
-    says: false,
-    rereadsOnFailure: false,
+    says: true,
+    rereadsOnFailure: true,
   ),
   'Transmission': (
     overrides: [
@@ -150,7 +147,7 @@ final _wrappers = <String, _Wrapper>{
       failureMessage: 'Could not finish',
       invalidate: [stale],
     ),
-    says: false,
+    says: true,
     rereadsOnFailure: true,
   ),
 };

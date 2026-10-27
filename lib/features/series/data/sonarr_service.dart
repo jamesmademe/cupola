@@ -1,59 +1,25 @@
 import 'dart:isolate';
 
 import 'package:dio/dio.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cupola/core/api/api_client.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
+import 'package:cupola/core/network/list_mapping.dart';
 import 'package:cupola/features/series/domain/models/sonarr_episode.dart';
 import 'package:cupola/features/series/domain/models/sonarr_episode_file.dart';
 import 'package:cupola/features/series/domain/models/sonarr_series.dart';
 import 'package:cupola/features/series/domain/sonarr_monitor.dart';
-import 'package:cupola/features/settings/data/settings_provider.dart';
+import 'package:cupola/features/settings/data/connection_providers.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
-final sonarrServiceProvider = Provider<SonarrService>((ref) {
-  return SonarrService(watchApiClient(ref, ServiceKey.sonarr));
-});
+final sonarrServiceProvider = _sonarr.lens;
 
-/// Sonarr bound to one named connection, whatever the lens is pointing at.
-///
-/// For the work that belongs to a *connection* rather than to a screen: a
-/// release search runs on the server it was started against, and the lens can
-/// move while it is queued. Empty id means the lens, which is what the plain
-/// [sonarrServiceProvider] answers; an id naming nothing throws "not configured"
-/// rather than quietly answering about some other server.
-///
-/// Not `autoDispose`: a caller reads this, awaits a request on it, and a
-/// disposal scheduled at the end of the read would close the `Dio` under the
-/// request. One live client per configured connection is the same bound the
-/// per-service providers already carry.
-final sonarrServiceForProvider = Provider.family<SonarrService, String>((
-  ref,
-  instanceId,
-) {
-  // The lens's own connection resolves to [sonarrServiceProvider] rather than to
-  // a second client for the same server. Without this the app kept two live
-  // `Dio`s pointed at one address whenever anything asked by id, and any
-  // override of the plain provider, which is how every test supplies a fake,
-  // was quietly bypassed on the path that names a connection.
-  //
-  // `read`, deliberately, and this is the load-bearing part. Watching the lens
-  // would rebuild EVERY entry of this family whenever the lens moved, entries
-  // for connections that did not change, and `watchApiClient` closes the
-  // outgoing client on dispose. A release search running against the seedbox
-  // would have its `Dio` shut under it because the user tapped a badge on
-  // another screen. The cost of reading is that an entry minted before the lens
-  // landed on its id keeps a client of its own until it is disposed: one extra
-  // connection, rather than a request that fails.
-  final lens = ref.read(activeInstanceProvider(ServiceKey.sonarr))?.id ?? '';
-  if (instanceId.isEmpty || instanceId == lens) {
-    return ref.watch(sonarrServiceProvider);
-  }
-  return SonarrService(
-    watchApiClient(ref, ServiceKey.sonarr, instanceId: instanceId),
-  );
-});
+final sonarrServiceForProvider = _sonarr.forConnection;
+
+final _sonarr = ConnectionProviders<SonarrService>.apiClient(
+  ServiceKey.sonarr,
+  create: SonarrService.new,
+);
 
 /// Service for interacting with Sonarr API.
 ///
@@ -109,10 +75,17 @@ class SonarrService with ArrActivityMixin {
   /// library arrives in one response, so this is the list where that threshold
   /// is regularly crossed.
   Future<List<SonarrSeries>> getSeriesOrThrow() async {
-    final response = await client.get('/api/${config.apiVersion}/series');
-    final data = response.data as List<dynamic>;
-    if (data.length <= _seriesIsolateMapThreshold) return _mapSeries(data);
-    return Isolate.run(() => _mapSeries(data));
+    final response = await client.getMappedList(
+      '/api/${config.apiVersion}/series',
+      mapList: _mapSeriesDecoded,
+    );
+    final data = response.data;
+    // Mapped in the transformer's isolate for a large body; the raw list is
+    // mapped here only when the answer did not go through it.
+    if (data is MappedList) return data.value as List<SonarrSeries>;
+    final raw = data as List<dynamic>;
+    if (raw.length <= _seriesIsolateMapThreshold) return _mapSeries(raw);
+    return Isolate.run(() => _mapSeries(raw));
   }
 
   /// Fetches a single series by its Sonarr ID, with a failed fetch allowed to
@@ -160,13 +133,17 @@ class SonarrService with ArrActivityMixin {
   }
 
   @override
-  Future<List<dynamic>> getAllHistory({Map<String, dynamic>? queryParameters}) {
+  Future<List<dynamic>> getAllHistory({
+    Map<String, dynamic>? queryParameters,
+    void Function(List<dynamic> records)? onProgress,
+  }) {
     return super.getAllHistory(
       queryParameters: {
         'includeSeries': true,
         'includeEpisode': true,
         ...?queryParameters,
       },
+      onProgress: onProgress,
     );
   }
 
@@ -448,6 +425,11 @@ class SonarrService with ArrActivityMixin {
 const int _seriesIsolateMapThreshold = 200;
 
 /// Top-level and pure, so it can cross an isolate port.
+/// The series list's mapper for [ApiClient.getMappedList]. Top-level, so it can
+/// run in the transformer's isolate.
+Object? _mapSeriesDecoded(Object? decoded) =>
+    _mapSeries(decoded as List<dynamic>);
+
 List<SonarrSeries> _mapSeries(List<dynamic> data) {
   return data
       .map((item) => SonarrSeries.fromJson(item as Map<String, dynamic>))

@@ -27,16 +27,16 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cupola/core/utils/parallel_reads.dart';
 import 'package:cupola/core/api/base_arr_service.dart';
 import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/core/status/media_status.dart';
 import 'package:cupola/core/utils/arr_activity_display.dart';
+import 'package:cupola/core/utils/arr_overview.dart';
 import 'package:cupola/core/utils/byte_format.dart';
 import 'package:cupola/core/utils/date_format.dart' show formatRelativeDateTime;
 import 'package:cupola/core/utils/dynamic_map_utils.dart';
-import 'package:cupola/core/utils/release_utils.dart';
-import 'package:cupola/features/activity/domain/global_activity_status.dart';
 import 'package:cupola/features/readarr/domain/models/readarr_models.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
 import 'package:cupola/features/services/domain/attention_door.dart';
@@ -93,7 +93,7 @@ String readarrRecordTitle(Map<String, dynamic> record) {
 /// backlog, and the five-arm rule paints the pairs differently: collapsing them
 /// into a single "attention" colour is how a pile of missing books ends up
 /// wearing the same amber as a broken import.
-enum ReadarrAttentionKind {
+enum ReadarrAttentionKind implements ArrAttentionKind {
   /// Readarr grabbed the release and could not move it into the library.
   importFailed(StatusTone.warning, Icons.file_download_off_rounded),
 
@@ -111,64 +111,15 @@ enum ReadarrAttentionKind {
 
   const ReadarrAttentionKind(this.tone, this.icon);
 
+  @override
   final StatusTone tone;
+
+  @override
   final IconData icon;
 }
 
-/// One row of Needs attention: what happened, to what, and when.
-///
-/// Every row leads somewhere: a download's own page for one stuck or failed
-/// download, the Queue tab for the several a folded row stands for, the
-/// Wanted tab for the backlog. What Readarr can do about a download it cannot
-/// import ("Manual import", "Search all") is a `POST /api/v1/command` write
-/// the client does not make, so no row carries a verb: the page it opens does.
-@immutable
-class ReadarrAttentionItem {
-  const ReadarrAttentionItem({
-    required this.kind,
-    required this.headline,
-    required this.detail,
-    this.door,
-    this.subject,
-    this.count = 1,
-    String? spokenHeadline,
-  }) : _spokenHeadline = spokenHeadline;
-
-  final ReadarrAttentionKind kind;
-
-  /// The fault and its subject: `Import failed · Orbital`.
-  final String headline;
-
-  /// The evidence: the service's own message, the client, the timestamp.
-  /// Empty when the record carried none.
-  final String detail;
-
-  /// Where the row leads, or null where the app has no place that shows it.
-  final AttentionDoor? door;
-
-  /// What the fault is about, bare (`Orbital`), for a folded row to name.
-  final String? subject;
-
-  /// How many faults the row stands for: one, or the downloads a folded row
-  /// folds. The section's own count adds these, so folding never changes how
-  /// many things need attention.
-  final int count;
-
-  /// [headline] as the ear should hear it, where it differs (`at least 3`
-  /// for a floor).
-  final String? _spokenHeadline;
-
-  StatusTone get tone => kind.tone;
-  IconData get icon => kind.icon;
-
-  /// The row as a sentence, with the dots the layout uses turned back into
-  /// commas: `·` is decoration, and a screen reader either names it or drops
-  /// it depending on the user's punctuation setting.
-  String get spoken => joinSpokenParts([
-    spokenFromDotted(_spokenHeadline ?? headline),
-    spokenFromDotted(detail),
-  ]);
-}
+/// One row of Needs attention (`ArrAttentionItem`).
+typedef ReadarrAttentionItem = ArrAttentionItem<ReadarrAttentionKind>;
 
 // There is no standing "upstream is archived" row here, and its absence is
 // deliberate. It was a constant: derived from nothing, confirmed by no request
@@ -207,13 +158,13 @@ List<ReadarrAttentionItem> readarrQueueFaults(
   final items = <ReadarrAttentionItem>[];
   for (final record in records) {
     final title = readarrRecordTitle(record);
-    final when = _parseLocal(stringOrNull(record['added']));
+    final when = parseLocalInstant(stringOrNull(record['added']));
     final age = when == null ? null : formatRelativeDateTime(when, now: now);
     final message =
         stringOrNull(record['errorMessage']) ?? arrQueueWarningMessage(record);
     final door = arrQueueRecordDoor(record, instanceId: instanceId);
 
-    if (_isStalled(record)) {
+    if (isStalledRecord(record)) {
       items.add(
         ReadarrAttentionItem(
           kind: ReadarrAttentionKind.stalled,
@@ -230,7 +181,7 @@ List<ReadarrAttentionItem> readarrQueueFaults(
       continue;
     }
 
-    if (_isImportFault(record)) {
+    if (isImportFaultRecord(record)) {
       items.add(
         ReadarrAttentionItem(
           kind: ReadarrAttentionKind.importFailed,
@@ -334,30 +285,6 @@ ReadarrAttentionItem? readarrBelowCutoffItem(int? total) {
   );
 }
 
-bool _isStalled(Map<String, dynamic> record) {
-  final haystack = [
-    stringOrNull(record['errorMessage']),
-    stringOrNull(record['status']),
-    ...extractArrStatusMessages(record['statusMessages']),
-  ].whereType<String>().join(' ').toLowerCase();
-  return haystack.contains('stall');
-}
-
-bool _isImportFault(Map<String, dynamic> record) {
-  final state = stringOrNull(record['trackedDownloadState'])?.toLowerCase();
-  if (state == 'failed' ||
-      state == 'failedpending' ||
-      state == 'importfailed' ||
-      state == 'importblocked') {
-    return true;
-  }
-  // The canonical "Unable to Import Automatically" arrives as a pending import
-  // carrying a status message, which is how an \*arr says a human has to look
-  // at it: see `arrQueueSeverity`.
-  return state == 'importpending' &&
-      arrQueueSeverity(record) != ArrQueueSeverity.ok;
-}
-
 /// The raw `/queue` walk, with its envelope.
 ///
 /// Its own rather than `readarrQueueProvider`, which the KPI rail awaits
@@ -403,9 +330,12 @@ final readarrBelowCutoffProvider =
 /// backoff that its source had declined.
 final readarrNeedsAttentionProvider =
     FutureProvider.autoDispose<List<ReadarrAttentionItem>>((ref) async {
-      final page = await ref.watch(readarrQueueRecordsProvider.future);
-      final authors = await ref.watch(readarrAuthorsProvider.future);
-      final cutoff = await ref.watch(readarrBelowCutoffProvider.future);
+      // The three reads start together (see radarrNeedsAttentionProvider).
+      final (page, authors, cutoff) = await readTogether3(
+        ref.watch(readarrQueueRecordsProvider.future),
+        ref.watch(readarrAuthorsProvider.future),
+        ref.watch(readarrBelowCutoffProvider.future),
+      );
       final backlog = readarrMissingBooksItem(authors);
       return [
         ...readarrQueueFaults(
@@ -482,33 +412,7 @@ final readarrRootFoldersProvider =
 // ─── History today ──────────────────────────────────────────────────────────
 
 /// One history record, resolved into the two lines the row draws.
-@immutable
-class ReadarrHistoryEntry {
-  const ReadarrHistoryEntry({
-    required this.title,
-    required this.event,
-    required this.tone,
-    required this.detail,
-    required this.date,
-  });
-
-  /// The book.
-  final String title;
-
-  /// What happened to it, in the shared history vocabulary: `Imported`,
-  /// `Grabbed`, `Failed`.
-  final String event;
-
-  final StatusTone tone;
-
-  /// Format, size and how long ago, as far as the record carried them.
-  final String detail;
-
-  final DateTime date;
-
-  String get spoken =>
-      joinSpokenParts([title, event, spokenFromDotted(detail)]);
-}
+typedef ReadarrHistoryEntry = OverviewHistoryEntry;
 
 /// The records from today, newest first, capped at [limit].
 ///
@@ -524,48 +428,12 @@ List<ReadarrHistoryEntry> readarrHistoryToday(
   List<dynamic> records, {
   required DateTime now,
   int limit = readarrHistoryTodayLimit,
-}) {
-  final local = now.toLocal();
-  final entries = <ReadarrHistoryEntry>[];
-
-  for (final raw in records) {
-    final record = mapOrNull(raw);
-    if (record == null) continue;
-    final date = _parseLocal(stringOrNull(record['date']));
-    if (date == null) continue;
-    if (date.year != local.year ||
-        date.month != local.month ||
-        date.day != local.day) {
-      continue;
-    }
-
-    final eventType = stringOrNull(record['eventType']) ?? 'unknown';
-    // The shared \*arr table, not a local override of it. Readarr writes one
-    // record per **book file**, under names no other fork uses
-    // (`bookFileImported`, `bookImportIncomplete`, `bookFileRetagged`), and
-    // those spellings now live in `global_activity_status.dart` beside
-    // Radarr's and Sonarr's. A private switch here would have kept the rows
-    // honest on this one screen while the Activity feed, reading the same
-    // records through the same table: still drew a completed import grey.
-    final (event, tone) = historyEventDisplay(eventType);
-    entries.add(
-      ReadarrHistoryEntry(
-        title: readarrRecordTitle(record),
-        event: event,
-        tone: tone,
-        detail: joinDisplayParts([
-          _qualityName(record['quality']),
-          _size(record),
-          formatRelativeDateTime(date, now: now),
-        ]),
-        date: date,
-      ),
-    );
-  }
-
-  entries.sort((a, b) => b.date.compareTo(a.date));
-  return List.unmodifiable(entries.take(limit));
-}
+}) => overviewHistoryToday(
+  records,
+  now: now,
+  limit: limit,
+  subjectOf: (record) => readarrRecordTitle(record),
+);
 
 /// Today's history, from one page of twenty.
 final readarrHistoryTodayProvider =
@@ -577,32 +445,3 @@ final readarrHistoryTodayProvider =
     });
 
 // ─── Shared parsing ─────────────────────────────────────────────────────────
-
-/// Parses an \*arr ISO timestamp into local time, or null when it is absent or
-/// unreadable.
-///
-/// Local, always: every window on this screen is a run of local calendar days,
-/// and Readarr answers in UTC.
-DateTime? _parseLocal(String? raw) {
-  final value = raw?.trim();
-  if (value == null || value.isEmpty) return null;
-  final parsed = DateTime.tryParse(value);
-  return parsed?.toLocal();
-}
-
-/// `epub`, `mobi`: Readarr's quality names are formats, which is why the row
-/// reads `epub · 2.1 MB` where Radarr's reads `Bluray-1080p · 8.4 GB`.
-String? _qualityName(dynamic value) {
-  final quality = mapOrNull(value);
-  if (quality == null) return stringOrNull(value);
-  return stringOrNull(mapOrNull(quality['quality'])?['name']) ??
-      stringOrNull(quality['name']);
-}
-
-String? _size(Map<String, dynamic> record) {
-  final bytes =
-      intOrNull(record['size']) ??
-      intOrNull(mapOrNull(record['data'])?['size']);
-  if (bytes == null || bytes <= 0) return null;
-  return formatReleaseSize(bytes);
-}

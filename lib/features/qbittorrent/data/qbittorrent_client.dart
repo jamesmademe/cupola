@@ -14,14 +14,22 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// Error thrown by [QbittorrentClient], carrying the [reason] so a caller
 /// verifying the connection can tell rejected credentials from an unreachable
 /// host, matching the contract the other service clients use.
-class QbittorrentException implements Exception, HasFailureReason {
+class QbittorrentException
+    implements Exception, HasFailureReason, HasFailureDetail {
   const QbittorrentException(
     this.message, {
     this.reason = ServiceFailureReason.unknown,
+    this.detail,
   });
   final String message;
   @override
   final ServiceFailureReason reason;
+
+  /// The sentence the UI shows verbatim, when the refusal knows a specific one.
+  final String? detail;
+
+  @override
+  String get failureDetail => detail ?? '';
   @override
   String toString() => 'QbittorrentException: $message';
 }
@@ -29,8 +37,16 @@ class QbittorrentException implements Exception, HasFailureReason {
 /// Why the WebUI refused to sign this client in, once it has said so in a way
 /// no retry can change. See [QbittorrentClient]'s `_refusal`.
 enum _LoginRefusal {
-  /// `200 Fails.` (qB ≤ 5.0) or `401` (5.1+): wrong username or password.
+  /// `200 Fails.`: wrong username or password. Measured on qBittorrent 5.1.2
+  /// (lab) with a wrong password; 5.0 and older answer `200 Fails.` too, per
+  /// qBittorrent's own history, not re-measured here.
   credentials,
+
+  /// `401` at the login route: the WebUI refused the address Cupola connects
+  /// through (its host header check, or a reverse proxy's), before the password
+  /// was looked at. Measured on qBittorrent 5.1.2 (lab) with the host header
+  /// check on, the password right, and a different port in the Host header.
+  address,
 
   /// `403` on the login route, with qBittorrent's "banned" body: the WebUI has
   /// banned this address after too many failed sign-ins.
@@ -305,8 +321,9 @@ class QbittorrentClient {
   }
 
   /// qBittorrent <= 5.0 answers `200 Ok.` on success and `200 Fails.` on bad
-  /// credentials; 5.1+ answers `204` with an empty body on success and `401`
-  /// on bad credentials. Accept any 2xx that is not an explicit failure.
+  /// credentials; 5.1+ answers `204` with an empty body on success. A refused
+  /// address (host check) is a `401`, not a bad password. Accept any 2xx that
+  /// is not an explicit failure.
   static bool _isLoginSuccess(Response response) {
     final status = response.statusCode ?? 0;
     if (status < 200 || status >= 300) return false;
@@ -316,7 +333,9 @@ class QbittorrentClient {
 
   /// Which refusal, if any, a login answer states unambiguously.
   ///
-  /// * `401`, and `200 Fails.`: wrong credentials (qB 5.1+ and ≤ 5.0).
+  /// * `200 Fails.`: wrong credentials (qB 5.1+ and ≤ 5.0).
+  /// * `401`: the address was refused before the password was checked (the
+  ///   host header check, or a proxy); see [_LoginRefusal.address].
   /// * `403`: qBittorrent's login route answers 403 for one reason only: the
   ///   address is banned (`isBanned()` runs before the credentials are even
   ///   read). The body is its translated "Your IP address has been banned…"
@@ -327,7 +346,7 @@ class QbittorrentClient {
   /// Anything else (a 2xx, a 5xx, no response at all) is not a refusal.
   static _LoginRefusal? _refusalFrom(int? status, dynamic body) {
     final text = body?.toString().trim().toLowerCase() ?? '';
-    if (status == 401) return _LoginRefusal.credentials;
+    if (status == 401) return _LoginRefusal.address;
     if (status == 200 && text == 'fails.') return _LoginRefusal.credentials;
     if (status == 403) {
       return text.contains('banned')
@@ -344,6 +363,14 @@ class QbittorrentClient {
       _LoginRefusal.credentials => const QbittorrentException(
         'qBittorrent rejected the username or password',
         reason: ServiceFailureReason.unauthorized,
+      ),
+      _LoginRefusal.address => const QbittorrentException(
+        'qBittorrent refused this address (401).',
+        reason: ServiceFailureReason.addressRefused,
+        detail:
+            'If the password is right, add this address to Server domains in '
+            'qBittorrent\'s Web UI settings, or turn off Host header validation '
+            'there.',
       ),
       _LoginRefusal.banned => const QbittorrentException(
         'qBittorrent has blocked this address after too many failed sign-ins. '

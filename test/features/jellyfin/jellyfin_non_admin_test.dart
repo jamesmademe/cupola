@@ -25,7 +25,6 @@ import 'package:cupola/features/settings/data/service_verification.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/stream/presentation/stream_overview_screen.dart';
 import 'package:cupola/features/stream/presentation/widgets/jellyfin_viewer_picker.dart';
-import 'package:cupola/features/stream/presentation/widgets/stream_activity_section.dart';
 
 import '../../test_helpers/profiles/profiles.dart';
 
@@ -170,13 +169,15 @@ void main() {
       await harness.unmount(tester);
     });
 
-    testWidgets('Activity says the one Jellyfin shows only her playback', (
+    testWidgets('the Overview says the one Jellyfin shows only her playback', (
       tester,
     ) async {
       final harness = await _pump(
         tester,
         Profiles.p2WithJellyfin,
-        const Scaffold(body: StreamActivitySection(bottomPadding: 0)),
+        const Scaffold(
+          body: StreamOverviewScreen(service: ServiceKey.jellyfin),
+        ),
       );
 
       expect(find.text(_ownPlayback), findsOneWidget);
@@ -186,24 +187,5 @@ void main() {
       );
       await harness.unmount(tester);
     });
-  });
-
-  testWidgets('Activity across two Jellyfin: the note for the cabin\'s, '
-      'named, and none for the API key at home', (tester) async {
-    final harness = await _pump(
-      tester,
-      _memberAtTheCabin,
-      const Scaffold(body: StreamActivitySection(bottomPadding: 0)),
-    );
-
-    expect(find.text(_ownPlayback), findsOneWidget);
-    expect(
-      find.text(
-        'Other people\'s sessions on Jellyfin Cabin need an administrator '
-        'to see.',
-      ),
-      findsOneWidget,
-    );
-    await harness.unmount(tester);
   });
 }

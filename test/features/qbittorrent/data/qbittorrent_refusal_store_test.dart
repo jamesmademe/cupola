@@ -46,7 +46,8 @@ class _WebUi implements HttpClientAdapter {
     final isLogin = options.path == _loginPath;
     if (isLogin) logins++;
     return ResponseBody.fromBytes(
-      utf8.encode(isLogin ? '' : 'v5.1.0'),
+      // 200 Fails. is a wrong password; a 401 is the address (host check).
+      utf8.encode(isLogin ? (loginStatus == 200 ? 'Fails.' : '') : 'v5.1.0'),
       isLogin ? loginStatus : 200,
       headers: {
         Headers.contentTypeHeader: ['text/plain; charset=utf-8'],
@@ -104,7 +105,7 @@ void main() {
   group('a refused sign-in is held for the connection', () {
     test('a new client of the connection does not send it again', () async {
       final store = MemoryQbittorrentRefusalStore();
-      final webUi = _WebUi(401);
+      final webUi = _WebUi(200);
 
       await expectLater(_client(webUi, store).getVersion(), _refused);
       expect(webUi.logins, 1);
@@ -121,7 +122,7 @@ void main() {
       'new credentials are asked, and a sign-in that works lifts the hold',
       () async {
         final store = MemoryQbittorrentRefusalStore();
-        final webUi = _WebUi(401);
+        final webUi = _WebUi(200);
         await expectLater(_client(webUi, store).getVersion(), _refused);
 
         webUi.loginStatus = 204;
@@ -134,7 +135,7 @@ void main() {
 
     test('a refusal on one connection holds nothing on another', () async {
       final store = MemoryQbittorrentRefusalStore();
-      final webUi = _WebUi(401);
+      final webUi = _WebUi(200);
       await expectLater(_client(webUi, store).getVersion(), _refused);
 
       webUi.loginStatus = 204;
@@ -148,7 +149,7 @@ void main() {
       'a person asking again lifts it for every client of the connection',
       () async {
         final store = MemoryQbittorrentRefusalStore();
-        final webUi = _WebUi(401);
+        final webUi = _WebUi(200);
         final first = _client(webUi, store);
         await expectLater(first.getVersion(), _refused);
 
@@ -165,7 +166,7 @@ void main() {
 
     test('a client of no connection keeps the old, per-client hold', () async {
       final store = MemoryQbittorrentRefusalStore();
-      final webUi = _WebUi(401);
+      final webUi = _WebUi(200);
       final dio = Dio(BaseOptions(baseUrl: _url))..httpClientAdapter = webUi;
       final typed = QbittorrentClient(
         url: _url,
@@ -186,7 +187,7 @@ void main() {
   group('the secure store', () {
     test('keeps a mark of the credentials, never the credentials', () async {
       final secure = FakeSecureSettingsStore();
-      final webUi = _WebUi(401);
+      final webUi = _WebUi(200);
       await expectLater(
         _client(webUi, SecureQbittorrentRefusalStore(secure)).getVersion(),
         _refused,
@@ -203,7 +204,7 @@ void main() {
     test(
       'a store that cannot be read holds nothing and breaks nothing',
       () async {
-        final webUi = _WebUi(401);
+        final webUi = _WebUi(200);
         final store = SecureQbittorrentRefusalStore(_BrokenSecureStore());
         final client = _client(webUi, store);
 

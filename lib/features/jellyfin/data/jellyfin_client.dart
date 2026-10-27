@@ -60,10 +60,8 @@ import 'package:cupola/features/stream/domain/stream_server_client.dart';
 /// may use, on every version, so Jellyfin carries no write gate, no banner and
 /// no dimmed session control (`ServiceKey.hasScopedCredential` is false).
 ///
-/// The one administrator-only write in this client, [refreshLibrary]
-/// (`RequiresElevation`), has no caller in the UI. What a non-administrator
-/// token *does* lose is reads: `/Users`, `/Devices`, `/ScheduledTasks` and
-/// `/Library/VirtualFolders` are elevated. That is a read scope, answered by
+/// What a non-administrator token *does* lose is reads: `/Users`, `/Devices`,
+/// `/ScheduledTasks` and `/Library/VirtualFolders` are elevated. That is a read scope, answered by
 /// [getCredentialKind] from `GET /Users/Me`, and drawn as an "administrator
 /// only" placeholder rather than an error.
 ///
@@ -388,26 +386,6 @@ class JellyfinClient implements StreamServerClient {
   }
 
   @override
-  Future<void> refreshLibrary(String libraryId) async {
-    // `metadataRefreshMode` and `imageRefreshMode` both default to `None`, so
-    // omitting them queues a task that does *nothing* and still answers 204:
-    // the single most misleading default in this API.
-    //
-    // `Default` scans for new and changed files; `FullRefresh` re-downloads
-    // metadata for everything, which is not what "rescan this library" means and
-    // would hammer the metadata providers.
-    await _api.post(
-      '/Items/$libraryId/Refresh',
-      queryParameters: {
-        'metadataRefreshMode': 'Default',
-        'imageRefreshMode': 'Default',
-        'replaceAllMetadata': false,
-        'replaceAllImages': false,
-      },
-    );
-  }
-
-  @override
   Future<StreamLibraryPage> getLibraryPage({
     required String libraryId,
     required StreamLibraryLens lens,
@@ -728,31 +706,6 @@ class JellyfinClient implements StreamServerClient {
       b.replaceAll('-', '').toLowerCase();
 
   @override
-  Future<StreamItem?> findByExternalId({
-    String? tmdbId,
-    String? tvdbId,
-    String? imdbId,
-    StreamItemKind? kind,
-    String? title,
-    int? year,
-    CancelToken? cancelToken,
-  }) async {
-    try {
-      return (await lookupByExternalId(
-        tmdbId: tmdbId,
-        tvdbId: tvdbId,
-        imdbId: imdbId,
-        kind: kind,
-        title: title,
-        year: year,
-        cancelToken: cancelToken,
-      )).item;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  @override
   Future<StreamExternalLookup> lookupByExternalId({
     String? tmdbId,
     String? tvdbId,
@@ -820,7 +773,7 @@ class JellyfinClient implements StreamServerClient {
     return StreamExternalLookup.of(items, query);
   }
 
-  /// How many rows [findByExternalId] asks for. A real answer is one to three
+  /// How many rows the checked lookup asks for. A real answer is one to three
   /// (the title, the same title in a second library, a film sharing a TMDB
   /// number); more only arrive when the filter was ignored, and then none of
   /// them is verified anyway.

@@ -80,7 +80,5 @@ Future<void> cancelMyRequest(
       );
     }
   }
-  ref.invalidate(requestsProvider);
-  ref.invalidate(requestsForProvider);
-  ref.invalidate(activeRequestsForProvider);
+  invalidateSeerrRequests(ref.container);
 }

@@ -9,6 +9,7 @@ import 'package:cupola/core/capability/capability_scope.dart';
 import 'package:cupola/core/capability/permission_refusal.dart';
 import 'package:cupola/core/utils/service_routes.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
+import 'package:cupola/features/home/data/home_live.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// Runs a mutating service call with the shared plumbing every write action in
@@ -28,6 +29,10 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// from there. That is why the follow-up goes through the provider container
 /// [context] reads rather than through [ref], which dies with its widget.
 ///
+/// With [refreshOnFailure], [invalidate] runs on a failure too: for a client
+/// whose write answers nothing about what it did (Transmission's, NPM's), or
+/// whose failure usually means the list moved under the tap.
+///
 /// With a [capability], a permission refusal is not reported as a failure: it
 /// marks that connection read-only and raises the refusal toast instead; see
 /// [reportCapabilityRefusal].
@@ -38,6 +43,7 @@ Future<bool> runServiceAction(
   String? successMessage,
   required String failureMessage,
   List<ProviderOrFamily> invalidate = const [],
+  bool refreshOnFailure = false,
   CapabilityTarget? capability,
 }) => _run(
   context,
@@ -46,6 +52,7 @@ Future<bool> runServiceAction(
   successMessage: successMessage,
   failureMessage: failureMessage,
   invalidate: invalidate,
+  refreshOnFailure: refreshOnFailure,
   capability: capability,
 );
 
@@ -56,6 +63,7 @@ Future<bool> _run(
   required String? successMessage,
   required String failureMessage,
   required List<ProviderOrFamily> invalidate,
+  required bool refreshOnFailure,
   required CapabilityTarget? capability,
 }) async {
   // The app's own navigator outlives every page: where the outcome is said
@@ -68,11 +76,19 @@ Future<bool> _run(
     for (final provider in invalidate) {
       container.invalidate(provider);
     }
+    readDownloadsAfterWrite(container, invalidate);
     if (successMessage != null) {
       say((at) => SnackBarHelper.success(at, successMessage));
     }
     return true;
   } catch (e) {
+    // A write that failed may still have moved what the page shows (a queue
+    // that changed under the tap): [refreshOnFailure] re-reads it either way.
+    if (refreshOnFailure) {
+      for (final provider in invalidate) {
+        container.invalidate(provider);
+      }
+    }
     if (capability != null && isPermissionRefusal(e)) {
       container
           .read(capabilityScopeProvider.notifier)
@@ -94,6 +110,7 @@ Future<bool> _run(
                 successMessage: successMessage,
                 failureMessage: failureMessage,
                 invalidate: invalidate,
+                refreshOnFailure: refreshOnFailure,
                 capability: capability,
               ),
       ),

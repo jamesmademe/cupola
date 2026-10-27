@@ -11,7 +11,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/theme.dart';
 import 'package:cupola/features/home/presentation/widgets/requests_module.dart';
-import 'package:cupola/features/activity/presentation/activity_provider.dart';
 import 'package:cupola/features/activity/presentation/widgets/requests_board.dart';
 import 'package:cupola/features/discover/domain/seerr_permission.dart';
 import 'package:cupola/features/discover/presentation/seerr_overview_provider.dart';
@@ -129,34 +128,6 @@ void main() {
         await harness.unmount(tester);
       },
     );
-  });
-
-  group('Activity', () {
-    Future<List<GlobalActivityItem>> requestRows(ConfigProfile profile) async {
-      final harness = await ProfileHarness.start(profile);
-      final container = harness.container(retry: (_, _) => null);
-      final feed = await container.read(globalNowItemsProvider.future);
-      return [
-        for (final row in feed.items)
-          if (row.kind == GlobalActivityKind.request) row,
-      ];
-    }
-
-    test('P2: a request row names nobody', () async {
-      final rows = await requestRows(Profiles.p2);
-
-      expect(rows, isNotEmpty);
-      for (final row in rows) {
-        expect(row.subtitle, isNot(contains(WorldPeople.anna)));
-      }
-    });
-
-    test('P1: the key still names who asked', () async {
-      final rows = await requestRows(Profiles.p1);
-      final charge = rows.firstWhere((row) => row.title == 'Charge');
-
-      expect(charge.subtitle, contains(WorldPeople.anna));
-    });
   });
 
   group('the requests list', () {

@@ -831,7 +831,7 @@ class ConfigProfile {
   final Set<ConfigCase> cases;
 
   /// Every connection, in the user's own order: the first of a service is its
-  /// primary, which is what `settings.radarrUrl` and a bare `/stack/radarr`
+  /// primary, which is what `settings.urlFor(ServiceKey.radarr)` and a bare `/stack/radarr`
   /// resolve to.
   final List<ProfileConnection> connections;
 

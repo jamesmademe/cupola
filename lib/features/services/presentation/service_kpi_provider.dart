@@ -46,7 +46,6 @@ import 'package:cupola/features/qbittorrent/domain/torrent_list_order.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 import 'package:cupola/features/services/domain/download_client_faults.dart';
 import 'package:cupola/features/services/domain/kpi_aggregate.dart';
-import 'package:cupola/features/services/domain/service_signal.dart';
 import 'package:cupola/features/services/presentation/services_provider.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
@@ -182,7 +181,7 @@ List<ProviderOrFamily> serviceKpiSources(ServiceKey service) =>
         readarrQueueProvider,
       ],
       ServiceKey.qbittorrent => [allTorrentsProvider],
-      ServiceKey.seerr => [requestsProvider],
+      ServiceKey.seerr => [requestRowsProvider],
       // Both halves of [_bazarrKpis]: the provider statuses live as long as
       // the app, so a failure left in them outlasts every pull that skips them.
       ServiceKey.bazarr => [
@@ -452,20 +451,6 @@ Future<bool> _connectionAnswers(Ref ref, InstanceRef key) async {
 /// The single live figure a service contributes to the stack matrix on
 /// `/services`.
 ///
-/// Reads [serviceKpiProvider] and reduces it through [resolveServiceSignal], so
-/// the matrix costs nothing beyond what the KPI rails already fetch and the
-/// hub's cell agrees with the service page's peek by construction.
-///
-/// Note the deliberate lack of error handling: an unreachable service leaves
-/// this in `AsyncError`, and the cell renders its reachability instead of a
-/// signal. Swallowing the error into a null signal here would make "no metric to
-/// report" and "this service is down" the same value.
-final serviceSignalProvider = FutureProvider.autoDispose
-    .family<ServiceSignal?, ServiceKey>((ref, service) async {
-      final kpis = await ref.watch(serviceKpiProvider(service).future);
-      return resolveServiceSignal(kpis);
-    }, retry: noProviderRetry);
-
 int _statInt(Map<String, dynamic>? stats, String key) =>
     (stats?[key] as num?)?.toInt() ?? 0;
 
@@ -532,7 +517,7 @@ String _notAnswering(ServiceKey service, Object? error) =>
 /// The shared KPI set for a media server, identical for Jellyfin and Plex.
 ///
 /// Three metrics, and the order is load-bearing in two ways that
-/// `resolveServiceSignal` depends on.
+/// `resolveServiceSignalPair` depends on.
 ///
 /// **`Streams` is first, so it is the resting fallback.** With nothing flagged
 /// the matrix cell shows `kpis.first`, and `0 streams` is both true and live:
@@ -572,7 +557,7 @@ Future<List<ServiceKpi>> _streamKpis(
   // endpoint before asking the other. `Future.wait` is important here rather
   // than two sequential awaits: when an unreachable server rejects both
   // requests, it observes both failures while still propagating the first one
-  // to `serviceKpiProvider` and `serviceSignalProvider`.
+  // to `serviceKpiProvider`.
   final results = await Future.wait<Object?>([
     sessionsFuture ?? Future<Object?>.value(),
     librariesFuture ?? Future<Object?>.value(),
@@ -767,6 +752,9 @@ final lidarrKpiLibraryProvider = musicProvider;
 final readarrKpiLibraryProvider = readarrAuthorsProvider;
 
 Future<List<ServiceKpi>> _radarrKpis(Ref ref) async {
+  // The queue starts with the library, not after it: the snapshot never throws,
+  // so a library that fails leaves nothing unhandled.
+  final queue = ref.watch(radarrQueueSnapshotProvider.future);
   final List<RadarrMovie> movies;
   try {
     movies = await ref.watch(radarrKpiLibraryProvider.future);
@@ -780,10 +768,7 @@ Future<List<ServiceKpi>> _radarrKpis(Ref ref) async {
       note: _notAnswering(ServiceKey.radarr, error),
     );
   }
-  return _radarrKpisFrom(
-    movies,
-    await ref.watch(radarrQueueSnapshotProvider.future),
-  );
+  return _radarrKpisFrom(movies, await queue);
 }
 
 /// The same four figures for one **named** connection, whatever the lens is on.
@@ -792,6 +777,8 @@ Future<List<ServiceKpi>> _radarrKpis(Ref ref) async {
 /// [serviceKpiForProvider], which collapses the lens back onto the plain
 /// builder so the card and the library screen keep reading one cache.
 Future<List<ServiceKpi>> _radarrKpisFor(Ref ref, String instanceId) async {
+  // The queue starts with the library (see [_radarrKpis]).
+  final queue = ref.watch(radarrQueueSnapshotForProvider(instanceId).future);
   final List<RadarrMovie> movies;
   try {
     // The connection's one library read, cached for the session like the
@@ -805,10 +792,7 @@ Future<List<ServiceKpi>> _radarrKpisFor(Ref ref, String instanceId) async {
       note: _notAnswering(ServiceKey.radarr, error),
     );
   }
-  return _radarrKpisFrom(
-    movies,
-    await ref.watch(radarrQueueSnapshotForProvider(instanceId).future),
-  );
+  return _radarrKpisFrom(movies, await queue);
 }
 
 /// Null means the server did not answer: see [_figure]. Never `[]`, which is
@@ -1088,12 +1072,12 @@ List<ServiceKpi> _qbittorrentKpisFrom(
 }
 
 Future<List<ServiceKpi>> _seerrKpis(Ref ref) async =>
-    _seerrKpisFrom(await ref.watch(requestsProvider.future));
+    _seerrKpisFrom(await ref.watch(requestRowsProvider.future));
 
 /// See [_radarrKpisFor]. Seerr already owned its per-connection read, because a
 /// request id is per instance and a merged list cannot be acted on by id alone.
 Future<List<ServiceKpi>> _seerrKpisFor(Ref ref, String instanceId) async =>
-    _seerrKpisFrom(await ref.watch(requestsForProvider(instanceId).future));
+    _seerrKpisFrom(await ref.watch(requestRowsForProvider(instanceId).future));
 
 List<ServiceKpi> _seerrKpisFrom(List<SeerrRequest> requests) {
   var pending = 0;
@@ -1388,22 +1372,29 @@ Future<List<ServiceKpi>> _readarrKpis(Ref ref) async {
   // [_radarrKpis]. The two fetches fail independently: a library that answers
   // over a queue endpoint that does not is the ordinary case on a Readarr
   // mid-upgrade, so each figure says for itself whether it was answered.
-  List<ReadarrAuthor>? authors;
+  // Both reads start before either is awaited, as in [_readarrKpisFor].
   Object? authorsError;
-  try {
-    authors = await ref.watch(readarrKpiLibraryProvider.future);
-  } catch (error) {
-    authors = null;
-    authorsError = error;
-  }
-  ArrRecordPage? queued;
+  final authorsFuture = ref
+      .watch(readarrKpiLibraryProvider.future)
+      .then<List<ReadarrAuthor>?>(
+        (value) => value,
+        onError: (Object error) {
+          authorsError = error;
+          return null;
+        },
+      );
   Object? queueError;
-  try {
-    queued = await ref.watch(readarrQueueProvider.future);
-  } catch (error) {
-    queued = null;
-    queueError = error;
-  }
+  final queueFuture = ref
+      .watch(readarrQueueProvider.future)
+      .then<ArrRecordPage?>(
+        (value) => value,
+        onError: (Object error) {
+          queueError = error;
+          return null;
+        },
+      );
+  final authors = await authorsFuture;
+  final queued = await queueFuture;
 
   return _readarrKpisFrom(
     authors,
@@ -1514,15 +1505,13 @@ String queueFigure(ArrRecordPage page) {
 }
 
 Future<List<ServiceKpi>> _sabnzbdKpis(Ref ref) async {
-  final queue = await ref.watch(sabnzbdQueueProvider.future);
-  SabnzbdServerStats? stats;
-  try {
-    stats = await ref.watch(sabnzbdServerStatsProvider.future);
-  } catch (_) {
-    // Ignore: the queue KPIs are still useful when the optional stats call
-    // fails.
-  }
-  return _sabnzbdKpisFrom(queue, stats);
+  // Started together (see [_sabnzbdKpisFor]). The stats call is optional: its
+  // failure is ignored, so the queue KPIs still show when it fails.
+  final queueFuture = ref.watch(sabnzbdQueueProvider.future);
+  final statsFuture = ref
+      .watch(sabnzbdServerStatsProvider.future)
+      .then<SabnzbdServerStats?>((value) => value, onError: (_) => null);
+  return _sabnzbdKpisFrom(await queueFuture, await statsFuture);
 }
 
 Future<List<ServiceKpi>> _sabnzbdKpisFor(Ref ref, String instanceId) async {

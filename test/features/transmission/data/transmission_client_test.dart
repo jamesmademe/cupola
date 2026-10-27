@@ -186,6 +186,117 @@ void main() {
       expect(torrents.last.name, 'Torrent 249');
     });
 
+    group('the poll\'s list reads what moved', () {
+      Map<String, dynamic> torrent(int id, {double done = 0.5}) => {
+        'id': id,
+        'name': 'Torrent $id',
+        'hashString': 'h$id',
+        'percentDone': done,
+      };
+
+      Object? argumentsOf(ScriptedRequest request) =>
+          (request.body as Map)['arguments'];
+
+      TransmissionClient clientOver(ScriptedHttpAdapter adapter) =>
+          TransmissionClient(url: 'https://nas.local:9091', dio: _dio(adapter));
+
+      test('the first read is whole, the poll\'s next one a delta', () async {
+        final adapter = ScriptedHttpAdapter([
+          _ok({
+            'torrents': [torrent(1), torrent(2), torrent(3)],
+          }),
+          _ok({
+            'torrents': [torrent(2, done: 0.9), torrent(4)],
+            'removed': [3],
+          }),
+        ]);
+        final client = clientOver(adapter);
+
+        final first = await client.torrentsSynced();
+        expect(first.map((t) => t.id), [1, 2, 3]);
+        expect(argumentsOf(adapter.requests.first), isNot(contains('ids')));
+
+        client.allowDeltaRead();
+        final second = await client.torrentsSynced();
+
+        expect(
+          argumentsOf(adapter.requests.last),
+          containsPair('ids', 'recently-active'),
+        );
+        // 3 is gone, 2 moved on, 4 is new and goes last; 1 is as it was.
+        expect(second.map((t) => t.id), [1, 2, 4]);
+        expect(second.firstWhere((t) => t.id == 2).percentDone, 0.9);
+        expect(second.firstWhere((t) => t.id == 1).percentDone, 0.5);
+      });
+
+      test('a read the poll did not ask for is the whole list', () async {
+        final adapter = ScriptedHttpAdapter([
+          _ok({
+            'torrents': [torrent(1)],
+          }),
+          _ok({
+            'torrents': [torrent(1), torrent(2)],
+          }),
+        ]);
+        final client = clientOver(adapter);
+
+        await client.torrentsSynced();
+        // A pull, a Retry, a read after a write: no `allowDeltaRead`.
+        final again = await client.torrentsSynced();
+
+        expect(argumentsOf(adapter.requests.last), isNot(contains('ids')));
+        expect(again.map((t) => t.id), [1, 2]);
+      });
+
+      test('after half a minute the poll reads the whole list again', () async {
+        final origin = DateTime(2026, 10, 26, 12);
+        var elapsed = Duration.zero;
+        final adapter = ScriptedHttpAdapter([
+          _ok({
+            'torrents': [torrent(1)],
+          }),
+          _ok({
+            'torrents': [torrent(1), torrent(7)],
+          }),
+        ]);
+        final client = clientOver(adapter)..clock = () => origin.add(elapsed);
+
+        await client.torrentsSynced();
+        elapsed = TransmissionClient.fullEvery + const Duration(seconds: 1);
+        client.allowDeltaRead();
+        final late = await client.torrentsSynced();
+
+        expect(argumentsOf(adapter.requests.last), isNot(contains('ids')));
+        // What a delta would have missed (another client's change to a torrent
+        // that did not move) is in the whole list.
+        expect(late.map((t) => t.id), [1, 7]);
+      });
+
+      test(
+        'a delta that fails leaves what is held for the next read',
+        () async {
+          final adapter = ScriptedHttpAdapter([
+            _ok({
+              'torrents': [torrent(1)],
+            }),
+            const ScriptedReply(statusCode: 500),
+            _ok({
+              'torrents': [torrent(1, done: 0.7)],
+            }),
+          ]);
+          final client = clientOver(adapter);
+
+          await client.torrentsSynced();
+          client.allowDeltaRead();
+          await expectLater(client.torrentsSynced(), throwsA(anything));
+          client.allowDeltaRead();
+          final after = await client.torrentsSynced();
+
+          expect(after.single.percentDone, 0.7);
+        },
+      );
+    });
+
     test('the 409 replay goes to the same single-path endpoint', () async {
       final client = TransmissionClient(url: 'https://nas.local/tr/');
       addTearDown(client.close);

@@ -38,7 +38,7 @@ class _Qb implements HttpClientAdapter {
   /// Every request fails as a refused connection.
   bool down = false;
 
-  /// The login answers 401, qBittorrent 5.1's wrong-password reply.
+  /// The login answers `200 Fails.`, qBittorrent's wrong-password reply.
   bool rejectLogin = false;
 
   /// While non-null, the list's read waits on it: a host that drops packets.
@@ -65,7 +65,7 @@ class _Qb implements HttpClientAdapter {
       );
     }
     if (options.path == _loginPath) {
-      return _reply(rejectLogin ? '' : 'Ok.', rejectLogin ? 401 : 200);
+      return _reply(rejectLogin ? 'Fails.' : 'Ok.', 200);
     }
     final body = options.path == _listPath
         ? jsonEncode({

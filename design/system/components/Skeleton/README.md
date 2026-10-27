@@ -8,7 +8,7 @@ Rendered from `lib/core/widgets/shimmer_placeholder.dart` (`ShimmerPlaceholder`,
 
 - Fill: base `CupolaRoom.fillSkeleton` (`fill.skeleton`: white 8% in the dark room, ink 8% in the day room), highlight `fillSkeletonGlint` (`fill.skeleton-glint`: white 14% · white 55%), alphas so a block reads on the ground, a slab and a lit header alike and the band always passes as light. A linear gradient base / highlight / base from `Alignment(v − 1, 0)` to `Alignment(v, 0)` as `v` runs −1 → 2 on a 1600ms (`AppAnimation.shimmerDuration`) `easeInOutSine` cycle, one `AnimationController` per block.
 - **Reduce Motion** (`MediaQuery.disableAnimationsOf`): the controller stops and the block paints the flat base colour, no gradient.
-- Shapes: `.card` → `AppRadius.borderRadiusMd`; `.text` → `AppRadius.borderRadiusXs`, 14 tall by default; `.circle`; the bare constructor takes whatever `borderRadius` it is given (none by default, so square).
+- Shapes: `.card` → `AppRadius.borderRadiusMd`; `.text` → `AppRadius.borderRadiusXs`, 14 tall by default; the bare constructor takes whatever `borderRadius` it is given (none by default, so square).
 
 ## Presets
 

@@ -277,12 +277,10 @@ class _RequestsBoardState extends ConsumerState<RequestsBoard> {
               // The lens's entry is a passthrough of the plain provider,
               // which holds the error: both are dropped, or Retry reads the
               // same failure again.
-              onRetry: () {
-                if (source.isLens) ref.invalidate(requestsProvider);
-                ref.invalidate(
-                  requestsForProvider(source.isLens ? '' : source.instanceId),
-                );
-              },
+              onRetry: () => invalidateSeerrRequestsOf(
+                ref.container,
+                source.isLens ? '' : source.instanceId,
+              ),
             ),
           ),
         if (decisions.isNotEmpty)
@@ -409,9 +407,7 @@ class _RequestsBoardState extends ConsumerState<RequestsBoard> {
     }
     // The whole family: the lens's own id collapses onto the plain provider,
     // and dropping one and not the other leaves a stale copy behind.
-    ref.invalidate(requestsProvider);
-    ref.invalidate(requestsForProvider);
-    ref.invalidate(activeRequestsForProvider);
+    invalidateSeerrRequests(ref.container);
   }
 }
 

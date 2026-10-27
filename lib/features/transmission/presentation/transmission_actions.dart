@@ -4,6 +4,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
+import 'package:cupola/core/utils/service_action.dart';
+
 import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/features/transmission/data/transmission_client.dart';
@@ -40,31 +42,19 @@ Future<bool> runTransmissionAction(
   String? successMessage,
   required String failureMessage,
   List<ProviderOrFamily> invalidate = const [],
-}) async {
+}) {
   final client = ref.read(transmissionClientProvider);
-  // Not [ref] after the `await`: it dies with the page that asked, and the
-  // write may outlast that page.
-  final container = ProviderScope.containerOf(context, listen: false);
-  try {
-    await action(client);
-    for (final provider in invalidate) {
-      container.invalidate(provider);
-    }
-    if (successMessage != null && context.mounted) {
-      SnackBarHelper.success(context, successMessage);
-    }
-    return true;
-  } catch (e) {
-    // Refreshed on failure too: a rejected command usually means the queue
-    // moved under us, and re-reading is what shows the user what is there now.
-    for (final provider in invalidate) {
-      container.invalidate(provider);
-    }
-    if (context.mounted) {
-      SnackBarHelper.error(context, failureMessage, detail: e);
-    }
-    return false;
-  }
+  return runServiceAction(
+    context,
+    ref,
+    action: () => action(client),
+    successMessage: successMessage,
+    failureMessage: failureMessage,
+    invalidate: invalidate,
+    // A rejected command usually means the queue moved under us, and
+    // re-reading is what shows the user what is there now.
+    refreshOnFailure: true,
+  );
 }
 
 /// What an attempt to add a torrent came to.
@@ -132,6 +122,7 @@ class TransmissionAddReport {
         ServiceFailureReason.noSecureConnection ||
         ServiceFailureReason.localNetworkBlocked ||
         ServiceFailureReason.unauthorized ||
+        ServiceFailureReason.addressRefused ||
         // The password never left the device's storage.
         ServiceFailureReason.secretUnread ||
         // Seerr's own two: never Transmission's, refused before anything

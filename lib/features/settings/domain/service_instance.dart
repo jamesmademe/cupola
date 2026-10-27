@@ -60,7 +60,7 @@ class ServiceInstance {
   final String username;
 
   /// Which person this connection reads and acts as, for the two services
-  /// whose credential names nobody ([ServiceKeyExtension.namesAPerson]):
+  /// whose credential names nobody:
   /// Jellyfin's viewer, whose watch state the library is read through (see
   /// [ServiceKeyExtension.needsViewerSelection]), and the Seerr user an API
   /// key acts as ([seerrActsAs]).

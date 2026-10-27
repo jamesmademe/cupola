@@ -44,7 +44,17 @@ from scenarios.base import (
     require_ok,
 )
 
-CLIENT = "http://127.0.0.1:8080"
+# The client is read on its direct port (18080). qBittorrent checks the
+# Host it is sent against its own WebUI port (8080), so the reading sends
+# that Host and the origin it expects. See docker-compose.testlab.yml.
+CLIENT = "http://127.0.0.1:18080"
+CLIENT_ORIGIN = "http://127.0.0.1:8080"
+CLIENT_HOST = {"Host": "127.0.0.1:8080"}
+
+
+def _host_for(base: str) -> dict[str, str]:
+    """The Host the WebUI expects, for the client and no other service."""
+    return dict(CLIENT_HOST) if base == CLIENT else {}
 SEEDER = "http://127.0.0.1:8081"
 INDEXER_TORRENT = "http://testlab-indexer:8088/torrents/the-great-bunny.torrent"
 TORRENT_NAME = "The.Great.Bunny.2008.1080p.WEB-DL.DDP5.1.H.264-CUPOLA"
@@ -112,7 +122,8 @@ def opener_for(base: str) -> urllib.request.OpenerDirector:
         payload=form,
         headers={
             "Content-Type": "application/x-www-form-urlencoded",
-            "Referer": base,
+            "Referer": CLIENT_ORIGIN if base == CLIENT else base,
+            **_host_for(base),
         },
         opener=opener,
     )
@@ -130,10 +141,10 @@ def api(
     what: str | None = None,
 ) -> Any:
     payload = None
-    headers = None
+    headers = _host_for(base)
     if form is not None:
         payload = urllib.parse.urlencode(form).encode()
-        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        headers["Content-Type"] = "application/x-www-form-urlencoded"
     status, body = request(
         f"{base}{path}",
         method=method,

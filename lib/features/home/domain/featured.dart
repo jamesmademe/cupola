@@ -20,9 +20,6 @@ import 'package:cupola/features/settings/domain/settings_model.dart'
     show serviceWithConnection;
 import 'package:cupola/features/stream/domain/models/stream_item.dart';
 
-/// How many slides Featured holds.
-const featuredSlideLimit = 3;
-
 /// The width a slide's artwork is asked for: the phone's slab on a dense
 /// screen, and a tablet's well.
 const featuredArtWidth = 1280;

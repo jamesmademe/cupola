@@ -4,70 +4,12 @@
 /// a widget to be wrong.
 library;
 
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/features/services/domain/dashboard_decision.dart';
-import 'package:cupola/features/services/domain/source_coverage.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 void main() {
-  group('decisionsRegion', () {
-    const silent = SocketException('Connection refused');
-    final stall = _decision(DecisionKind.stalledDownload, 'stall', at: null);
-
-    test('decisions are shown while another source is still out', () {
-      expect(
-        decisionsRegion([stall], SourceCoverage.pendingOf([ServiceKey.dockge])),
-        DecisionsRegion.shown,
-      );
-    });
-
-    test('nothing yet and a source still out is loading, not absent', () {
-      expect(
-        decisionsRegion(
-          const [],
-          SourceCoverage.merge([
-            SourceCoverage.answeredBy(ServiceKey.seerr),
-            SourceCoverage.pendingOf([ServiceKey.dockge]),
-          ]),
-        ),
-        DecisionsRegion.loading,
-      );
-    });
-
-    test('every source failed is a failure, not absent', () {
-      expect(
-        decisionsRegion(
-          const [],
-          SourceCoverage.merge([
-            SourceCoverage.failure(ServiceKey.seerr, silent),
-            SourceCoverage.failure(ServiceKey.dockge, silent),
-          ]),
-        ),
-        DecisionsRegion.failed,
-      );
-    });
-
-    test('absent only when what answered had nothing waiting', () {
-      expect(
-        decisionsRegion(
-          const [],
-          SourceCoverage.merge([
-            SourceCoverage.answeredBy(ServiceKey.seerr),
-            SourceCoverage.failure(ServiceKey.dockge, silent),
-          ]),
-        ),
-        DecisionsRegion.absent,
-      );
-      expect(
-        decisionsRegion(const [], SourceCoverage.none),
-        DecisionsRegion.absent,
-      );
-    });
-  });
-
   group('rankDecisions', () {
     test('faults come before backlog, however old the backlog is', () {
       final ranked = rankDecisions([
@@ -189,15 +131,6 @@ void main() {
       expect(row.actionId, 7);
       expect(row.instanceId, 'sonarr-1');
       expect(row.route, '/stack/sonarr');
-      // Every count surface reads the members, not the rows.
-      expect(decisionItemCount(grouped), 18);
-      expect(decisionsEyebrow(grouped), '18 items\u00A0· blocked imports');
-      // Found in the rows of a queue walk that stopped short: there may be
-      // more behind them.
-      expect(
-        decisionsEyebrow(grouped, floor: true),
-        '18+ items\u00A0· blocked imports',
-      );
     });
 
     test('a folded row keeps the cause every member shares, and only '
@@ -337,17 +270,6 @@ void main() {
         decisionActionLabel(DecisionKind.stalledDownload),
         'Open in client',
       );
-    });
-
-    test('the eyebrow names the kinds present and no others', () {
-      final eyebrow = decisionsEyebrow([
-        _decision(DecisionKind.stalledDownload, 'a', at: DateTime.utc(2024)),
-        _decision(DecisionKind.pendingRequest, 'b', at: DateTime.utc(2024)),
-        _decision(DecisionKind.pendingRequest, 'c', at: DateTime.utc(2024)),
-      ]);
-
-      expect(eyebrow, '3 items\u00A0· stalls, requests');
-      expect(eyebrow, isNot(contains('certs')));
     });
 
     test('a blocked import names its remedy, not the client', () {

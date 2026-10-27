@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:cupola/core/app_animation.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/readarr/presentation/readarr_overview_provider.dart';
 import 'package:cupola/features/readarr/presentation/readarr_provider.dart';
-import 'package:cupola/features/services/domain/service_tab.dart';
 import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
-import 'package:cupola/features/settings/data/settings_provider.dart';
-import 'package:cupola/core/status/lexicon.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 /// The first tab of Readarr's service home.
@@ -37,196 +33,64 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// SECTION failure level: a Readarr that answers the library and not the queue
 /// still draws its other regions, and the one that could not load says so in
 /// its own slot rather than taking the page with it.
-class ReadarrOverviewScreen extends ConsumerWidget {
-  const ReadarrOverviewScreen({super.key, this.topPadding = _hostedTopPadding});
-
-  /// The room the two glass bands above this page occupy.
-  ///
-  /// Composed from the same two constants the router composes its own from, so
-  /// a screen built outside the router (a test, a preview) reserves the right
-  /// space instead of tucking its first region under the tab bar.
-  static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
+class ReadarrOverviewScreen extends StatelessWidget {
+  const ReadarrOverviewScreen({
+    super.key,
+    this.topPadding = ServiceOverviewPage.hostedTopPadding,
+  });
 
   /// Height of the chrome the host draws above this page.
   final double topPadding;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Before any provider, never after: `readarrServiceProvider` throws for a
-    // Readarr that was never set up, and a `FutureProvider` that throws is a
-    // *failed* provider: Riverpod schedules a retry with backoff for a
-    // condition no amount of waiting changes, which surfaces in tests as a
-    // pending timer and on device as a request loop against nothing.
-    final configured = ref.watch(
-      currentSettingsProvider.select(
-        (settings) => settings.isServiceConfigured(ServiceKey.readarr),
-      ),
-    );
-
-    return AmbientScaffold(
-      accent: ServiceKey.readarr.accent,
-      body: SafeArea(
-        bottom: false,
-        child: configured
-            ? _OverviewBody(topPadding: topPadding)
-            // `.forService`, never the generic form: this is a service
-            // dashboard, so the door goes to Readarr's own connection form
-            // rather than to the settings index. Resolved once here rather than
-            // three times inside three sections, which is what a page made only
-            // of `AsyncValueWidget`s would print on a server that was never set
-            // up.
-            : NotConfiguredPlaceholder.forService(ServiceKey.readarr),
-      ),
-    );
-  }
-}
-
-class _OverviewBody extends ConsumerWidget {
-  const _OverviewBody({required this.topPadding});
-
-  final double topPadding;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return RefreshIndicator(
-      onRefresh: () async {
-        invalidateServiceReadout(ref, ServiceKey.readarr);
-        // The authors list feeds both the rail and the backlog row, so a pull
-        // that refreshed only the derived provider would redraw the same
-        // cached figure and look broken.
-        ref.invalidate(readarrAuthorsProvider);
-        // And the rail's own non-swallowing read of it. See
-        // `readarrKpiLibraryProvider`.
-        ref.invalidate(readarrKpiLibraryProvider);
-        // And the queue behind the rail's fourth figure. `serviceKpiProvider`
-        // is autoDispose; `readarrQueueProvider` is not, so invalidating only
-        // the derived provider redrew the same cached count for the life of the
-        // scope: `Queue` frozen while Authors, Books and Missing moved.
-        ref.invalidate(readarrQueueProvider);
-        ref.invalidate(readarrQueueRecordsProvider);
-        ref.invalidate(readarrBelowCutoffProvider);
-        ref.invalidate(readarrNeedsAttentionProvider);
-        ref.invalidate(readarrRootFoldersProvider);
-        ref.invalidate(readarrHistoryTodayProvider);
-        await Future<void>.delayed(AppAnimation.durationMd);
-      },
-      // One scroll view for the whole page: the regions are one column of
-      // reading, not three independently scrolling panes.
-      child: ServiceOverviewScroll(
-        topPadding: topPadding,
-        children: [
-          const ServiceOverviewIdentity(service: ServiceKey.readarr),
-          ...sectionsOrOneLine(ref, ServiceKey.readarr, [
-            ServiceKpiPeek.room(
-              kpis: ref.watch(serviceKpiProvider(ServiceKey.readarr)),
-              service: ServiceKey.readarr,
-            ),
-            const _NeedsAttentionSection(),
-            const _RootFolderSection(),
-            const _HistoryTodaySection(),
-          ]),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Needs attention ────────────────────────────────────────────────────────
-
-class _NeedsAttentionSection extends ConsumerWidget {
-  const _NeedsAttentionSection();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final items = ref.watch(readarrNeedsAttentionProvider);
-    // `hasValue`, never `asData`: `asData` is null on an `AsyncError` even when
-    // Riverpod retained the value it had, while `AsyncValueWidget` under this
-    // header draws exactly that retained list at full ink beneath the
-    // unreachable band. Read through `asData` the header printed "—" over rows
-    // it was still showing. A source that never answered has no retained value
-    // and still reads "—".
-    //
-    // The faults the rows stand for, not the rows: a folded row of three
-    // downloads is three.
-    final count = items.hasValue
-        ? items.requireValue.fold(0, (sum, item) => sum + item.count)
-        : null;
-    // A queue walk that stopped short: see the Radarr home's twin.
-    final floor =
-        ref.watch(readarrQueueRecordsProvider).value?.cutShort ?? false;
-
-    return ServiceOverviewSection(
-      service: ServiceKey.readarr,
-      title: 'Needs attention',
-      // "—" while the queue and the library are loading or after either failed:
-      // a "0" printed over an unanswered question is a claim nobody made.
-      subtitle: count == null ? '—' : (floor ? Lexicon.floor(count) : '$count'),
-      // No link: these rows belong to different tabs: Queue for a stalled
-      // import, Wanted for the backlog, and a single destination would have to
-      // lie about one of the two. Each row is its own door instead.
-      child: AsyncValueWidget<List<ReadarrAttentionItem>>.section(
-        value: items,
-        service: ServiceKey.readarr,
-        consequence: 'what needs attention is not shown',
-        loadingLabel: 'Loading what needs attention',
-        onRetry: () {
-          ref.invalidate(readarrNeedsAttentionProvider);
-          ref.invalidate(readarrQueueRecordsProvider);
-          // The library is plain, not autoDispose: a Retry that re-ran the
-          // fold alone read its cached failure straight back.
-          ref.invalidate(readarrAuthorsProvider);
-        },
-        skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
-        isEmpty: (data) => data.isEmpty,
-        // The resting case, and it has to be reachable: every row here is
-        // derived from a condition that can clear, so a Readarr with a quiet
-        // queue and a complete library says so rather than badging a standing
-        // 1. A resting state wears no alarm chrome: nothing is wrong, and
-        // saying so is not an error state.
-        emptyBuilder: const ServiceOverviewEmpty(
-          icon: Icons.check_circle_outline_rounded,
-          label: 'Nothing needs you',
-        ),
-        data: (data) => Column(
-          children: [for (final item in data) _AttentionRow(item: item)],
-        ),
-      ),
-    );
-  }
-}
-
-class _AttentionRow extends StatelessWidget {
-  const _AttentionRow({required this.item});
-
-  final ReadarrAttentionItem item;
-
-  @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    // Through the tone rule, never a raw `AppColors.*`: amber is a fault and
-    // the two backlog rows are neutral by construction.
-    final tone = statusToneColor(
-      colorScheme,
-      item.tone,
-      surface: colorScheme.surfaceContainerLow,
-    );
-
-    final door = item.door;
-
-    return ServiceOverviewRow(
-      spoken: item.spoken,
-      leading: Icon(item.icon, size: 18, color: tone),
-      title: item.headline,
-      titleColor: tone,
-      detail: item.detail,
-      onTap: door == null
-          ? null
-          : () => openAttentionDoor(context, ServiceKey.readarr, door),
-      doorHint: door == null
-          ? null
-          : attentionDoorHint(ServiceKey.readarr, door),
+    return ServiceOverviewPage(
+      service: ServiceKey.readarr,
+      topPadding: topPadding,
+      refresh: _refresh,
+      sections: (ref) => [
+        ArrNeedsAttentionSection(
+          service: ServiceKey.readarr,
+          items: readarrNeedsAttentionProvider,
+          queueRecords: readarrQueueRecordsProvider,
+          retry: [
+            readarrNeedsAttentionProvider,
+            readarrQueueRecordsProvider,
+            // The library is plain, not autoDispose: a Retry that re-ran the
+            // fold alone read its cached failure straight back.
+            readarrAuthorsProvider,
+          ],
+        ),
+        const _RootFolderSection(),
+        ArrHistoryTodaySection(
+          service: ServiceKey.readarr,
+          entries: readarrHistoryTodayProvider,
+          retry: [readarrHistoryTodayProvider],
+        ),
+      ],
     );
   }
+}
+
+/// What a pull re-reads besides the readout (`ServiceOverviewPage`).
+void _refresh(WidgetRef ref) {
+  // The authors list feeds both the rail and the backlog row, so a pull
+  // that refreshed only the derived provider would redraw the same
+  // cached figure and look broken.
+  ref.invalidate(readarrAuthorsProvider);
+  // And the rail's own non-swallowing read of it. See
+  // `readarrKpiLibraryProvider`.
+  ref.invalidate(readarrKpiLibraryProvider);
+  // And the queue behind the rail's fourth figure. `serviceKpiProvider`
+  // is autoDispose; `readarrQueueProvider` is not, so invalidating only
+  // the derived provider redrew the same cached count for the life of the
+  // scope: `Queue` frozen while Authors, Books and Missing moved.
+  ref.invalidate(readarrQueueProvider);
+  ref.invalidate(readarrQueueRecordsProvider);
+  ref.invalidate(readarrBelowCutoffProvider);
+  ref.invalidate(readarrNeedsAttentionProvider);
+  ref.invalidate(readarrRootFoldersProvider);
+  ref.invalidate(readarrHistoryTodayProvider);
 }
 
 // ─── Root folder ────────────────────────────────────────────────────────────
@@ -311,68 +175,6 @@ class _RootFolderRow extends StatelessWidget {
       // it belongs on the right, where the eye scans a column of sizes.
       detail: '',
       trailing: folder.freeLabel,
-    );
-  }
-}
-
-// ─── History today ──────────────────────────────────────────────────────────
-
-class _HistoryTodaySection extends ConsumerWidget {
-  const _HistoryTodaySection();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final entries = ref.watch(readarrHistoryTodayProvider);
-
-    return ServiceOverviewSection(
-      service: ServiceKey.readarr,
-      title: 'History',
-      subtitle: 'today',
-      destination: ServiceTab.history,
-      child: AsyncValueWidget<List<ReadarrHistoryEntry>>.section(
-        value: entries,
-        service: ServiceKey.readarr,
-        consequence: "today's history is not shown",
-        loadingLabel: "Loading today's history",
-        onRetry: () => ref.invalidate(readarrHistoryTodayProvider),
-        skeleton: const ServiceOverviewRowsSkeleton(rows: 2),
-        isEmpty: (items) => items.isEmpty,
-        emptyBuilder: const ServiceOverviewEmpty(
-          icon: Icons.history_rounded,
-          label: 'Nothing yet today',
-        ),
-        data: (items) => Column(
-          children: [for (final entry in items) _HistoryRow(entry: entry)],
-        ),
-      ),
-    );
-  }
-}
-
-class _HistoryRow extends StatelessWidget {
-  const _HistoryRow({required this.entry});
-
-  final ReadarrHistoryEntry entry;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final tone = statusToneColor(
-      colorScheme,
-      entry.tone,
-      surface: colorScheme.surfaceContainerLow,
-    );
-
-    return ServiceOverviewRow(
-      spoken: entry.spoken,
-      leading: Container(
-        width: 8,
-        height: 8,
-        margin: const EdgeInsets.only(top: 5),
-        decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
-      ),
-      title: '${entry.title}\u00A0· ${entry.event.toLowerCase()}',
-      detail: entry.detail,
     );
   }
 }

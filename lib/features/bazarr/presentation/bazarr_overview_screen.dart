@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:cupola/core/app_animation.dart';
-
 import 'package:cupola/core/title_light.dart';
 import 'package:cupola/core/widgets/widgets.dart';
 import 'package:cupola/features/media/presentation/arr_public_poster.dart';
@@ -13,10 +11,6 @@ import 'package:cupola/features/bazarr/presentation/bazarr_overview_provider.dar
 import 'package:cupola/features/bazarr/presentation/bazarr_provider.dart';
 
 import 'package:cupola/features/services/domain/service_tab.dart';
-
-import 'package:cupola/features/services/presentation/service_kpi_provider.dart';
-
-import 'package:cupola/features/settings/data/settings_provider.dart';
 
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -38,69 +32,33 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// Bazarr exposes the configured count through badges and throttled-provider
 /// status through `/api/providers`; it does not expose per-provider quota data,
 /// so that unsupported detail is never implied by the overview.
-class BazarrOverviewScreen extends ConsumerWidget {
-  const BazarrOverviewScreen({super.key, this.topPadding = _hostedTopPadding});
-
-  static const double _hostedTopPadding = kToolbarHeight + ServiceTabBar.height;
+class BazarrOverviewScreen extends StatelessWidget {
+  const BazarrOverviewScreen({
+    super.key,
+    this.topPadding = ServiceOverviewPage.hostedTopPadding,
+  });
 
   /// Height of the chrome the host draws above this page.
   final double topPadding;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final configured = ref.watch(
-      currentSettingsProvider.select(
-        (settings) => settings.isServiceConfigured(ServiceKey.bazarr),
-      ),
-    );
-
-    return AmbientScaffold(
-      accent: ServiceKey.bazarr.accent,
-      body: SafeArea(
-        bottom: false,
-        child: configured
-            ? _OverviewBody(topPadding: topPadding)
-            // `.forService`: this is a service dashboard, so the door goes to
-            // Bazarr's own connection form rather than to the settings index.
-            : NotConfiguredPlaceholder.forService(ServiceKey.bazarr),
-      ),
+  Widget build(BuildContext context) {
+    return ServiceOverviewPage(
+      service: ServiceKey.bazarr,
+      topPadding: topPadding,
+      refresh: _refresh,
+      sections: (ref) => [const _WantedSection(), const _HistorySection()],
     );
   }
 }
 
-class _OverviewBody extends ConsumerWidget {
-  const _OverviewBody({required this.topPadding});
-
-  final double topPadding;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return RefreshIndicator(
-      onRefresh: () async {
-        invalidateServiceReadout(ref, ServiceKey.bazarr);
-        ref.invalidate(bazarrBadgesProvider);
-        ref.invalidate(bazarrDashboardWantedProvider);
-        ref.invalidate(bazarrDashboardHistoryProvider);
-        ref.invalidate(bazarrOverviewWantedProvider);
-        ref.invalidate(bazarrOverviewHistoryProvider);
-        await Future<void>.delayed(AppAnimation.durationMd);
-      },
-      child: ServiceOverviewScroll(
-        topPadding: topPadding,
-        children: [
-          const ServiceOverviewIdentity(service: ServiceKey.bazarr),
-          ...sectionsOrOneLine(ref, ServiceKey.bazarr, [
-            ServiceKpiPeek.room(
-              kpis: ref.watch(serviceKpiProvider(ServiceKey.bazarr)),
-              service: ServiceKey.bazarr,
-            ),
-            const _WantedSection(),
-            const _HistorySection(),
-          ]),
-        ],
-      ),
-    );
-  }
+/// What a pull re-reads besides the readout (`ServiceOverviewPage`).
+void _refresh(WidgetRef ref) {
+  ref.invalidate(bazarrBadgesProvider);
+  ref.invalidate(bazarrDashboardWantedProvider);
+  ref.invalidate(bazarrDashboardHistoryProvider);
+  ref.invalidate(bazarrOverviewWantedProvider);
+  ref.invalidate(bazarrOverviewHistoryProvider);
 }
 
 // ─── 1. Wanted subtitles ────────────────────────────────────────────────────

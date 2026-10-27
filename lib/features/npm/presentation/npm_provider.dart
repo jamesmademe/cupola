@@ -4,6 +4,7 @@ import 'package:cupola/core/providers/provider_retry.dart';
 import 'package:cupola/features/npm/data/npm_client.dart';
 import 'package:cupola/features/npm/data/npm_upstream_probe.dart';
 import 'package:cupola/features/npm/domain/models/npm_models.dart';
+import 'package:cupola/features/settings/data/connection_providers.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
@@ -17,46 +18,22 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 /// fresh client per call would mean a fresh login per call, against a server
 /// with no rate limiting, on an account whose password is the key to every
 /// route on the box.
-final npmClientProvider = Provider<NpmClient>((ref) {
-  return _npmClient(ref, instanceId: null);
-});
+final npmClientProvider = _npm.lens;
 
-/// NPM client bound to one named connection, independent of the lens.
-final npmClientForProvider = Provider.family<NpmClient, String>((
-  ref,
-  instanceId,
-) {
-  final lens =
-      ref.read(activeInstanceProvider(ServiceKey.nginxProxyManager))?.id ?? '';
-  if (instanceId.isEmpty || instanceId == lens) {
-    return ref.watch(npmClientProvider);
-  }
-  return _npmClient(ref, instanceId: instanceId);
-});
+final npmClientForProvider = _npm.forConnection;
 
-NpmClient _npmClient(Ref ref, {required String? instanceId}) {
-  // `watchTransport` rather than a hand-written select, and here the narrowness
-  // matters twice over: a rebuild closes the live Dio AND throws away the
-  // bearer token, so watching every field meant a theme change forced a fresh
-  // login. It also follows the lens, which the hand-written version could not:
-  // the fields it read were `npmUrl` and friends, always the first connection.
-  final transport = watchTransport(
-    ref,
-    ServiceKey.nginxProxyManager,
-    instanceId: instanceId,
-  );
-  transport.ensureConfigured(ServiceKey.nginxProxyManager);
-  final client = NpmClient(
+final _npm = ConnectionProviders<NpmClient>.transport(
+  ServiceKey.nginxProxyManager,
+  create: (ref, transport) => NpmClient(
     url: transport.url,
-    identity: transport.username.isEmpty ? null : transport.username,
-    secret: transport.apiKey.isEmpty ? null : transport.apiKey,
+    identity: transport.usernameOrNull,
+    secret: transport.secretOrNull,
     certFingerprint: transport.pin,
     accessHeaders: transport.access.headers(),
     onlyAtHome: transport.onlyAtHomeOf(ServiceKey.nginxProxyManager),
-  );
-  ref.onDispose(() => client.close());
-  return client;
-}
+  ),
+  close: (client) => client.close(),
+);
 
 /// The hostnames NPM fronts.
 final npmProxyHostsProvider = FutureProvider<List<NpmProxyHost>>((ref) async {

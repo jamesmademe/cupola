@@ -21,6 +21,12 @@ class _Daemon implements TransmissionClient {
   }
 
   @override
+  Future<List<TransmissionTorrent>> torrentsSynced() => torrents();
+
+  @override
+  void allowDeltaRead() {}
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 

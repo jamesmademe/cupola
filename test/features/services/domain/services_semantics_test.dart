@@ -2,40 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cupola/features/services/domain/services_semantics.dart';
 
 void main() {
-  group('downloadRowValue', () {
-    test('replaces visual dot separators with commas', () {
-      expect(
-        downloadRowValue(
-          subtitle: 'Movie\u00A0· Furiosa.2024.2160p.WEB-DL-GROUP',
-          percent: 75,
-          warning: null,
-        ),
-        '75 percent downloaded, Movie, Furiosa.2024.2160p.WEB-DL-GROUP',
-      );
-    });
-
-    test("leads with the client's own reason, not the word 'Warning'", () {
-      // A bare "Warning" named that something was wrong without saying what,
-      // while the reason sat unused in the model.
-      expect(
-        downloadRowValue(
-          subtitle: 'Movie',
-          percent: 40,
-          warning: 'Download stalled',
-        ),
-        'Download stalled, 40 percent downloaded, Movie',
-      );
-    });
-
-    test('omits progress entirely when the client reports none', () {
-      // The row paints nothing in that slot either.
-      expect(
-        downloadRowValue(subtitle: 'Movie', percent: null, warning: null),
-        'Movie',
-      );
-    });
-  });
-
   group('serviceMatrixCellValue', () {
     test('leads with reachability, then the signal, then the host', () {
       expect(

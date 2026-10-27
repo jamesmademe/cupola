@@ -235,6 +235,7 @@ class _ReleaseSearchSheetState extends ConsumerState<ReleaseSearchSheet> {
       // Not plain "Search again": the results body behind this dialog already
       // has a button with that label.
       confirmLabel: 'Run the search',
+      enterConfirms: true,
     );
     return result.confirmed;
   }

@@ -187,22 +187,6 @@ class ManualImportService {
     ).where((item) => item.id > 0).toList(growable: false);
   }
 
-  Future<ManualImportCommandStatus> importItem(
-    ManualImportItem item, {
-    required ManualImportMode importMode,
-  }) async {
-    final response = await client.post(
-      '$_prefix/command',
-      data: {
-        'name': 'ManualImport',
-        'importMode': importMode.apiValue,
-        if (service == ServiceKey.lidarr) 'replaceExistingFiles': false,
-        'files': [item.toCommandFileJson(service)],
-      },
-    );
-    return ManualImportCommandStatus.fromJson(stringKeyMap(response.data));
-  }
-
   Future<List<ManualImportEpisode>> getEpisodes({
     required int seriesId,
     int? seasonNumber,

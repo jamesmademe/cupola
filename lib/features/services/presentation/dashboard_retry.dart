@@ -54,8 +54,8 @@ List<ProviderOrFamily> dashboardSourcesOf(ServiceKey service) =>
       // The lens's list, every other Seerr's, which the region reads too, and
       // the waiting page Requests on the Home counts from.
       ServiceKey.seerr => [
-        servicesRequestsProvider,
-        requestsForProvider,
+        requestRowsProvider,
+        requestRowsForProvider,
         pendingRequestsForProvider,
       ],
       // The status list *is* the failing-indexer list; the indexers name them.
@@ -108,7 +108,6 @@ void retryDashboardServices(WidgetRef ref, Iterable<ServiceKey> services) {
     }
     ref.invalidate(serviceSummaryProvider(service));
     ref.invalidate(serviceKpiProvider(service));
-    ref.invalidate(serviceSignalProvider(service));
     ref.invalidate(serviceSignalPairProvider(service));
     ref.invalidate(foldedServiceKpisProvider(service));
     ref.invalidate(foldedServiceSignalPairProvider(service));

@@ -6,6 +6,7 @@ import 'package:cupola/features/discover/domain/models/seerr_request.dart';
 import 'package:cupola/features/discover/presentation/discover_provider.dart';
 
 import '../../../test_helpers/fake_api_client.dart';
+import '../../../test_helpers/fake_services.dart';
 
 SeerrRequest _request({
   required int id,
@@ -20,9 +21,26 @@ SeerrRequest _request({
   type: 'movie',
 );
 
-Future<SeerrDecisions> _resolve(List<SeerrRequest> requests) async {
+/// Names what it is asked to name, and remembers how many rows that was.
+class _NamingSeerr extends FakeSeerrService {
+  final List<int> hydrated = [];
+
+  @override
+  Future<List<SeerrRequest>> hydrate(List<SeerrRequest> requests) async {
+    hydrated.addAll(requests.map((r) => r.id));
+    return requests;
+  }
+}
+
+Future<SeerrDecisions> _resolve(
+  List<SeerrRequest> requests, {
+  SeerrService? seerr,
+}) async {
   final container = ProviderContainer(
-    overrides: [requestsProvider.overrideWith((ref) async => requests)],
+    overrides: [
+      requestRowsProvider.overrideWith((ref) async => requests),
+      seerrServiceProvider.overrideWithValue(seerr ?? FakeSeerrService()),
+    ],
   );
   addTearDown(container.dispose);
   return container.read(seerrDecisionsProvider.future);
@@ -128,6 +146,22 @@ void main() {
 
         expect(decisions.isFloor, isTrue);
       });
+    });
+
+    test('counts every row, names only the few it shows', () async {
+      final seerr = _NamingSeerr();
+      final decisions = await _resolve([
+        for (var id = 1; id <= 12; id++)
+          _request(
+            id: id,
+            createdAt: '2026-09-${id.toString().padLeft(2, '0')}',
+          ),
+      ], seerr: seerr);
+
+      expect(decisions.total, 12);
+      expect(decisions.preview, hasLength(seerrDecisionsPreviewLimit));
+      expect(seerr.hydrated, hasLength(seerrDecisionsPreviewLimit));
+      expect(seerr.hydrated.toSet(), {12, 11, 10, 9, 8});
     });
 
     test('newest first inside the waiting group', () async {

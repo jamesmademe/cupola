@@ -29,7 +29,7 @@ void main() {
       }
     }
     expect(titles.where((item) => item['isSeries'] == true), hasLength(12));
-    expect(titles.where((item) => item['isSeries'] == false), hasLength(40));
+    expect(titles.where((item) => item['isSeries'] == false), hasLength(41));
   });
 
   test('the music and the books are the world catalogue', () {
