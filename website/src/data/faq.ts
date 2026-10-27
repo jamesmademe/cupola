@@ -88,4 +88,4 @@ export const faq = {
 } satisfies Record<string, Qa>;
 
 export type FaqId = keyof typeof faq;
-export const pick = (...ids: FaqId[]) => ids.map((id) => faq[id]);
+export const pick = (...ids: FaqId[]): Qa[] => ids.map((id) => ({ ...faq[id], id }));

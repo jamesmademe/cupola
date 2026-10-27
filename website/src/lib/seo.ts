@@ -72,6 +72,7 @@ export function breadcrumbs(items: { name: string; path: string }[]) {
 export interface Qa {
   q: string;
   a: string; // HTML allowed: links and emphasis only.
+  id?: string; // The question's anchor, so a link can open it.
 }
 
 export function faqPage(qas: Qa[]) {

@@ -8,12 +8,22 @@ const { items, open = -1 } = Astro.props;
 ---
 <div class="faq">
   {items.map((x, i) => (
-    <details open={i === open}>
+    <details id={x.id} open={i === open}>
       <summary><h3>{x.q}</h3><span class="chev" aria-hidden="true"></span></summary>
       <div class="a" set:html={`<p>${x.a}</p>`} />
     </details>
   ))}
 </div>
+
+<script>
+  // A link to one question (/faq/#seekarr) opens it, on arrival and after.
+  const openTarget = () => {
+    const el = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    if (el instanceof HTMLDetailsElement) el.open = true;
+  };
+  openTarget();
+  addEventListener('hashchange', openTarget);
+</script>
 
 <style>
   .faq {
