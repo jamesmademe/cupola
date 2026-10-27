@@ -20,7 +20,8 @@ import 'package:cupola/main.dart' show CupolaApp;
 import '../test_helpers/demo_artwork.dart';
 import '../test_helpers/profiles/profiles.dart';
 
-/// Every place of the demo, on a phone: the four tabs and Settings' pages,
+/// Every place of the demo, on a phone and in a desktop window: the four
+/// tabs and Settings' pages,
 /// every tab of every service, a title, a series, a person, a collection,
 /// a download and a library's own pages. On each the app throws nothing,
 /// lands where it was sent, and asks the world nothing it cannot answer: a
@@ -33,7 +34,16 @@ void main() {
     SharedPreferences.resetStatic();
   });
 
-  testWidgets('every route of the demo is answered', (tester) async {
+  for (final (place, size) in [
+    ('on a phone', const Size(402, 874)),
+    ('in a desktop window', const Size(1440, 900)),
+  ]) {
+    _sweep(place, size);
+  }
+}
+
+void _sweep(String place, Size size) {
+  testWidgets('every route of the demo is answered, $place', (tester) async {
     useDemoArtworkFiles();
     final session = (await tester.runAsync(
       () => DemoSession.start(leaving: const SettingsModel()),
@@ -45,7 +55,7 @@ void main() {
     FlutterError.onError = (details) =>
         thrown.add(details.exceptionAsString().split('\n').first);
     addTearDown(() => FlutterError.onError = previous);
-    tester.view.physicalSize = const Size(402 * 3, 874 * 3);
+    tester.view.physicalSize = size * 3;
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
 
