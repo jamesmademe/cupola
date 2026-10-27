@@ -18,6 +18,7 @@ import 'package:cupola/features/onboarding/presentation/widgets/onboarding_parts
 import 'package:cupola/features/pairing/data/pair_session.dart';
 import 'package:cupola/features/pairing/domain/pair_link.dart';
 import 'package:cupola/features/pairing/domain/pair_plan.dart';
+import 'package:cupola/features/pairing/presentation/pair_scan_screen.dart';
 import 'package:cupola/features/pairing/presentation/pair_words.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
@@ -32,9 +33,10 @@ import 'package:cupola/features/shell/domain/shell_audience.dart';
 /// Outside the shell, at `/welcome/pair`, framed as the sign-in with an
 /// account is: opened by the Welcome's and the Home at zero's *Copy from
 /// another device*, by Settings' row of the same name, and by the other
-/// device's code scanned with the camera (the router takes `cupola://pair`
-/// off the location and holds it for [pairReceiveProvider], which takes it by
-/// itself). A link pasted into the field starts the same fetch.
+/// device's code scanned with the camera (the system camera opens
+/// `cupola://pair`, which the router takes off the location and holds for
+/// [pairReceiveProvider]; on a phone *Scan code* reads it here,
+/// [PairScanScreen]). A link pasted into the field starts the same fetch.
 ///
 /// **The key never stays in the field**: a link, whole or not, is taken out of
 /// it the moment it is read, and the screen says only what the link is for.
@@ -121,6 +123,13 @@ class _PairReceiveScreenState extends ConsumerState<PairReceiveScreen> {
   }
 
   void _goHome() => context.go(ServiceRoutes.home);
+
+  Future<void> _scan() async {
+    _linkFocus.unfocus();
+    final link = await PairScanScreen.open(context);
+    if (link == null || !mounted) return;
+    ref.read(pairReceiveProvider.notifier).receive(link);
+  }
 
   /// Where an invite that arrived goes on: the sign-in, filled, or the Seerr
   /// already here (the account's page, or the connection's form when it
@@ -247,11 +256,23 @@ class _PairReceiveScreenState extends ConsumerState<PairReceiveScreen> {
             ? 'On the device that has Cupola set up, open Settings › Set up '
                   'another device, copy its link and paste it here.'
             : 'On the device that has Cupola set up, open Settings › Set up '
-                  "another device, then point this phone's camera at its "
-                  'code.',
+                  'another device, then scan its code.',
         style: theme.textTheme.bodyMedium,
       ),
       const SizedBox(height: AppSpacing.xl),
+      if (!_pastesTheLink) ...[
+        FilledButton.icon(
+          key: const ValueKey('pair scan'),
+          onPressed: _scan,
+          style: FilledButton.styleFrom(
+            visualDensity: VisualDensity.standard,
+            minimumSize: const Size(64, 44),
+          ),
+          icon: const Icon(Icons.qr_code_scanner_rounded),
+          label: const Text('Scan code'),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+      ],
       OnboardingField(
         key: const ValueKey('pair link'),
         controller: _link,
