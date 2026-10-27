@@ -26,28 +26,20 @@ Future<bool> runDockgeAction(
   required String failureMessage,
   List<ProviderOrFamily> invalidate = const [],
   DockgeClient? client,
-}) async {
+}) {
   // The *lensed* client by default: an action fired while the lens is on an
   // agent has to reach that agent, and `dockgeClientProvider` is always the
   // hub.
   final DockgeClient target = client ?? ref.read(dockgeLensedClientProvider);
-  // Taken before the `await`, not read from [ref] after it: an update runs for
-  // minutes, and the page that asked is routinely gone by the time it ends.
-  final container = ProviderScope.containerOf(context, listen: false);
-  final say = outcomeSayer(context);
-  try {
-    await action(target);
-    for (final provider in invalidate) {
-      container.invalidate(provider);
-    }
-    if (successMessage != null) {
-      say((at) => SnackBarHelper.success(at, successMessage));
-    }
-    return true;
-  } catch (e) {
-    say((at) => SnackBarHelper.error(at, failureMessage, detail: e));
-    return false;
-  }
+  return runServiceAction(
+    context,
+    ref,
+    action: () => action(target),
+    successMessage: successMessage,
+    failureMessage: failureMessage,
+    invalidate: invalidate,
+    refreshOnFailure: true,
+  );
 }
 
 /// Convenience wrapper around [runDockgeAction] for the action buttons/chips

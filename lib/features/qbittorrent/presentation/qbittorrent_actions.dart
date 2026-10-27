@@ -2,8 +2,9 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
+import 'package:cupola/core/utils/service_action.dart';
+
 import 'package:cupola/core/utils/snack_bar_helper.dart';
-import 'package:cupola/features/home/data/home_live.dart';
 import 'package:cupola/features/qbittorrent/data/qbittorrent_service.dart';
 import 'package:cupola/features/qbittorrent/presentation/qbittorrent_provider.dart';
 
@@ -23,25 +24,15 @@ Future<bool> runTorrentAction(
   String? successMessage,
   required String failureMessage,
   List<ProviderOrFamily> invalidate = const [],
-}) async {
+}) {
   final service = ref.read(qbittorrentServiceProvider);
-  // Not [ref] after the `await`: it dies with the page that asked, and the
-  // write may outlast that page.
-  final container = ProviderScope.containerOf(context, listen: false);
-  try {
-    await action(service);
-    for (final provider in invalidate) {
-      container.invalidate(provider);
-    }
-    readDownloadsAfterWrite(container, invalidate);
-    if (successMessage != null && context.mounted) {
-      SnackBarHelper.success(context, successMessage);
-    }
-    return true;
-  } catch (e) {
-    if (context.mounted) {
-      SnackBarHelper.error(context, failureMessage, detail: e);
-    }
-    return false;
-  }
+  return runServiceAction(
+    context,
+    ref,
+    action: () => action(service),
+    successMessage: successMessage,
+    failureMessage: failureMessage,
+    invalidate: invalidate,
+    refreshOnFailure: true,
+  );
 }

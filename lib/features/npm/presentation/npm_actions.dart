@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
 import 'package:cupola/core/capability/capability_copy.dart';
 import 'package:cupola/core/utils/service_action.dart';
-import 'package:cupola/core/utils/snack_bar_helper.dart';
 import 'package:cupola/core/widgets/app_dialog.dart';
 import 'package:cupola/features/npm/data/npm_client.dart';
 import 'package:cupola/features/npm/domain/models/npm_models.dart';
@@ -29,47 +28,29 @@ Future<bool> runNpmAction(
   String? successMessage,
   required String failureMessage,
   List<ProviderOrFamily> invalidate = const [],
-}) async {
+}) {
   final client = ref.read(npmClientProvider);
+  // The second half of decision 34's rule: the role comes back with the
+  // probe, and a refusal on any write marks the connection too. A refusal is
+  // `forbidden` rather than the reason because NPM folds a wrong password and
+  // an expired token onto the same `unauthorized` verdict, and neither of those
+  // says anything about what this account may change.
   final capability = CapabilityTarget(
     connectionId:
         ref.read(activeInstanceProvider(ServiceKey.nginxProxyManager))?.id ??
         '',
     copy: npmCapabilityCopy(resource),
   );
-  // Taken before the `await`, not read from [ref] after it: a renewal or a slow
-  // write outlasts the page that asked.
-  final container = ProviderScope.containerOf(context, listen: false);
-  final say = outcomeSayer(context);
-  try {
-    await action(client);
-    for (final provider in invalidate) {
-      container.invalidate(provider);
-    }
-    if (successMessage != null) {
-      say((at) => SnackBarHelper.success(at, successMessage));
-    }
-    return true;
-  } catch (e) {
-    // The second half of decision 34's rule: the role comes back with the
-    // probe, and a refusal on any write marks the connection too. It reads
-    // `forbidden` rather than the reason because NPM folds a wrong password and
-    // an expired token onto the same `unauthorized` verdict, and neither of
-    // those says anything about what this account may change: dimming the
-    // whole screen over a mistyped password would be a lie with a long tail.
-    final refused = markCapabilityRefusal(container, capability, e);
-    for (final provider in invalidate) {
-      container.invalidate(provider);
-    }
-    say((at) {
-      if (refused) {
-        showCapabilityRefusal(at, capability);
-      } else {
-        SnackBarHelper.error(at, failureMessage, detail: e);
-      }
-    });
-    return false;
-  }
+  return runServiceAction(
+    context,
+    ref,
+    action: () => action(client),
+    successMessage: successMessage,
+    failureMessage: failureMessage,
+    invalidate: invalidate,
+    refreshOnFailure: true,
+    capability: capability,
+  );
 }
 
 /// Asks the user to type [phrase] before an outward-facing change goes through.
