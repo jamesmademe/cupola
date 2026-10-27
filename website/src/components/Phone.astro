@@ -1,0 +1,855 @@
+---
+// The app on a phone, drawn in HTML at its own size (390 × 844 pt) and
+// zoomed to fit. It is a small working model: the tab bar switches screens,
+// a poster opens its page, and each screen lights the room with its title as
+// the app does. Words and tones follow design/system/words.md.
+import Icon from './Icon.astro';
+import { poster, backdrop, still, lit, room, lightOf, type TitleId, type LightId } from '../data/titles';
+
+export type Screen = 'home' | 'discover' | 'title' | 'activity' | 'requests';
+interface Props {
+  show?: Screen;
+  id?: string;
+  /** The phone's width on screen, a CSS length. */
+  width?: string;
+  label?: string;
+}
+const { show = 'home', id, width = '320px', label = 'Cupola running on a phone' } = Astro.props;
+
+const art = (t: TitleId) => `url(${poster(t)})`;
+// Inside the phone each screen keeps its own title's light.
+const own = (id: LightId) => `--light:${lightOf(id).light};--light-fill:${lightOf(id).fill}`;
+// The titles a poster or a Details button can open. Facts are the films'
+// own; the server state is the model's.
+const pagesOf = {
+  singularity: { name: 'Singularity', meta: 'Andy Goralczyk · 2026 · Adventure', about: 'When a cosmic event swallows a small space critter\'s home, he finds refuge among others, watched over by a mysterious celestial being.', hero: still('singadd', true), have: true },
+  tos: { name: 'Tears of Steel', meta: 'Ian Hubert · 2012 · 12 min · Science Fiction', about: 'Warriors and scientists gather in Amsterdam to restage a moment from the past, and save the world from destructive robots.', hero: still('tosbridge', true), have: false },
+  spring: { name: 'Spring', meta: 'Andy Goralczyk · 2019 · 8 min · Fantasy', about: 'A shepherd girl and her dog face ancient spirits in order to continue the cycle of life.', hero: backdrop('spring', true), have: false },
+  sintel: { name: 'Sintel', meta: 'Colin Levy · 2010 · 15 min · Fantasy', about: 'A lonely young woman crosses a hostile world to find the baby dragon she once rescued.', hero: backdrop('sintel', true), have: false },
+  cosmos: { name: 'Cosmos Laundromat', meta: 'Mathieu Auvray · 2015 · 12 min · Fantasy', about: 'On a desolate island, a weary sheep meets a mysterious salesman who offers him the gift of a lifetime.', hero: backdrop('cosmos', true), have: false },
+} as const;
+type PageKey = keyof typeof pagesOf;
+const titleData = Object.fromEntries(
+  (Object.keys(pagesOf) as PageKey[]).map((k) => [
+    k,
+    { ...pagesOf[k], poster: poster(k), room: room(k), light: lightOf(k).light, fill: lightOf(k).fill },
+  ]),
+);
+const first = pagesOf.spring;
+
+const opNav = [
+  { go: 'home', icon: 'home', label: 'Home' },
+  { go: 'discover', icon: 'compass', label: 'Discover' },
+  { go: 'activity', icon: 'pulse', label: 'Activity' },
+  { go: 'stack', icon: 'stack', label: 'Stack' },
+] as const;
+const reqNav = [
+  { go: 'requests', icon: 'home', label: 'Home' },
+  { go: 'discover-r', icon: 'compass', label: 'Discover' },
+  { go: 'requests-list', icon: 'bookmark', label: 'Requests' },
+] as const;
+---
+<figure class="phone" id={id} data-show={show} data-titles={JSON.stringify(titleData)} style={`--w:${width}`} aria-label={label} role="group">
+  <div class="body">
+    <div class="glass">
+      <div class="island" aria-hidden="true"></div>
+
+      <!-- Home: the operator's day, lit by the slide in front -->
+      <section class="screen" data-screen="home" {...lit('singslide')} style={own('singslide')} aria-label="Home">
+        <div class="roomart" style={`background-image:url(${room('singslide')})`}></div>
+        <div class="status"><span>21:04</span><span class="sys"></span></div>
+        <div class="scroll">
+          <h3 class="s-screen">Sunday 11</h3>
+          <p class="s-meta">October · <span class="dot green"></span> 13 of 13 answering</p>
+          <button class="needs" data-go="activity" type="button">
+            <Icon name="warn" size={20} class="tone-amber" />
+            <span class="grow">Charge is stuck</span>
+            <span class="more">+1</span>
+            <span class="act">Review</span>
+          </button>
+          <div class="feature" style={`background-image:url(${still('singslide', true)})`}></div>
+          <h4 class="s-feature">Singularity</h4>
+          <p class="s-meta">New on your server · 2 h ago</p>
+          <button class="s-btn lit-fill" type="button" data-go="title-singularity">Details</button>
+          <div class="slab">
+            <div class="slab-head"><span class="s-section">Coming up</span><span class="s-link">Calendar</span></div>
+            <div class="row">
+              <div class="when"><b>Wed</b><span>14 Oct</span></div>
+              <img class="thumb" src={poster('sprite')} alt="" width="40" height="60" loading="lazy" />
+              <div class="grow"><b>Sprite Fright</b><span><span class="dot neutral"></span> Not out yet</span></div>
+            </div>
+            <div class="row">
+              <div class="when"><b>Fri</b><span>16 Oct</span></div>
+              <img class="thumb" src={poster('cosmos')} alt="" width="40" height="60" loading="lazy" />
+              <div class="grow"><b>Cosmos Laundromat</b><span>on digital</span></div>
+            </div>
+          </div>
+        </div>
+        <nav class="tabs" aria-label="Phone tabs">
+          {opNav.map((t) => (
+            <button type="button" class:list={{ on: t.go === 'home' }} data-go={t.go === 'stack' ? 'activity' : t.go} aria-label={t.label}>
+              <Icon name={t.icon} size={22} />{t.go === 'home' && <span>{t.label}</span>}
+            </button>
+          ))}
+        </nav>
+      </section>
+
+      <!-- Discover -->
+      <section class="screen" data-screen="discover" {...lit('sprite')} style={own('sprite')} aria-label="Discover">
+        <div class="roomart" style={`background-image:${art('sprite')}`}></div>
+        <div class="status"><span>21:04</span><span class="sys"></span></div>
+        <div class="scroll">
+          <h3 class="s-screen">Discover</h3>
+          <div class="field"><Icon name="search" size={18} /> Movies, series, people</div>
+          <div class="slab-head bare"><span class="s-section">Trending this week</span><span class="s-link">All</span></div>
+          <div class="shelf">
+            {(['singularity', 'spring', 'cosmos', 'sintel', 'tos'] as PageKey[]).map((t) => (
+              <button type="button" class="poster" data-go={`title-${t}`} aria-label={`Open ${pagesOf[t].name}`}>
+                <img src={poster(t)} alt="" width="108" height="162" loading="lazy" />
+              </button>
+            ))}
+          </div>
+          <div class="doors">
+            {['Genres', 'Networks', 'Studios', 'People', 'Decades', 'Collections'].map((d) => (
+              <div class="doorx">{d}</div>
+            ))}
+          </div>
+        </div>
+        <nav class="tabs" aria-label="Phone tabs">
+          {opNav.map((t) => (
+            <button type="button" class:list={{ on: t.go === 'discover' }} data-go={t.go === 'stack' ? 'activity' : t.go} aria-label={t.label}>
+              <Icon name={t.icon} size={22} />{t.go === 'discover' && <span>{t.label}</span>}
+            </button>
+          ))}
+        </nav>
+      </section>
+
+      <!-- A title's page: filled from data-titles by the script below -->
+      <section class="screen" data-screen="title" {...lit('spring')} style={own('spring')} aria-label="A movie's page">
+        <div class="roomart" data-t="room" style={`background-image:${art('spring')}`}></div>
+        <div class="status"><span>21:05</span><span class="sys"></span></div>
+        <div class="scroll">
+          <button type="button" class="backbtn" data-go="back" aria-label="Back"><Icon name="back" size={20} /></button>
+          <div class="hero" data-t="hero" style={`background-image:url(${first.hero})`}></div>
+          <div class="heroline">
+            <img class="heroposter" data-t="poster" src={poster('spring')} alt="" width="118" height="177" loading="lazy" />
+            <h4 class="s-media" data-t="name">{first.name}</h4>
+          </div>
+          <p class="s-meta big" data-t="meta">{first.meta}</p>
+          <button class="s-btn lit-fill split" type="button" data-t="want" data-added="Added to Radarr">
+            <span>Add to Radarr</span><Icon name="plus" size={20} />
+          </button>
+          <button class="s-btn lit-fill split" type="button" data-t="have" hidden>
+            <span>Open in Jellyfin</span><Icon name="out" size={20} />
+          </button>
+          <div class="pair">
+            <span class="s-ghost"><Icon name="play" size={18} /> Trailer</span>
+            <span class="s-ghost"><Icon name="bookmark" size={18} /> Watchlist</span>
+          </div>
+          <p class="synopsis" data-t="about">{first.about}</p>
+          <div class="slab">
+            <div class="slab-head"><span class="s-section">On your server</span><span class="s-meta">2 services</span></div>
+            <div class="row line"><b class="grow">Radarr</b><span class="s-meta" data-t="radarr"><span class="dot neutral"></span> Missing</span></div>
+            <div class="row line"><b class="grow">Jellyfin</b><span class="s-meta" data-t="jellyfin">Not there</span></div>
+          </div>
+        </div>
+        <nav class="tabs" aria-label="Phone tabs">
+          {opNav.map((t) => (
+            <button type="button" class:list={{ on: t.go === 'discover' }} data-go={t.go === 'stack' ? 'activity' : t.go} aria-label={t.label}>
+              <Icon name={t.icon} size={22} />{t.go === 'discover' && <span>{t.label}</span>}
+            </button>
+          ))}
+        </nav>
+      </section>
+
+      <!-- Activity: what went wrong, and the way out -->
+      <section class="screen" data-screen="activity" {...lit('charge')} style={own('charge')} aria-label="Activity">
+        <div class="roomart" style={`background-image:${art('charge')}`}></div>
+        <div class="status"><span>21:06</span><span class="sys"></span></div>
+        <div class="scroll">
+          <h3 class="s-screen">Activity</h3>
+          <p class="s-meta">3 faults · 4 downloads</p>
+          <div class="slab">
+            <div class="slab-head"><span class="s-section">Needs you</span></div>
+            <div class="fault">
+              <img class="thumb" src={poster('charge')} alt="" width="40" height="60" loading="lazy" />
+              <div class="grow">
+                <b>Charge is stuck at 47%</b>
+                <span class="tone-amber">Nothing for 3 h · no one has the rest</span>
+              </div>
+            </div>
+            <button class="amberbtn" type="button" data-done="Looking for another download">Try another download</button>
+            <div class="row line">
+              <div class="grow"><b>2 need a manual import</b><span>Radarr could not match the files</span></div>
+              <span class="s-ghost small">Review</span>
+            </div>
+            <div class="row line">
+              <div class="grow">
+                <b class="tone-red"><span class="dot red"></span> Lidarr did not answer since 20:41</b>
+                <span class="mono">At home · nas.home.arpa:8686</span>
+              </div>
+            </div>
+          </div>
+          <div class="slab">
+            <div class="slab-head"><span class="s-section">Downloads</span><span class="s-meta tabular">18.6 MB/s</span></div>
+            <div class="dl">
+              <div class="grow"><b>Tears of Steel</b><span class="tone-blue tabular">64% · about 12 min left</span></div>
+              <div class="track"><i style="width:64%"></i></div>
+            </div>
+            <div class="dl">
+              <div class="grow"><b>Sintel</b><span class="tone-blue tabular">21% · about 40 min left</span></div>
+              <div class="track"><i style="width:21%"></i></div>
+            </div>
+          </div>
+        </div>
+        <nav class="tabs" aria-label="Phone tabs">
+          {opNav.map((t) => (
+            <button type="button" class:list={{ on: t.go === 'activity' }} data-go={t.go === 'stack' ? 'activity' : t.go} aria-label={t.label}>
+              <Icon name={t.icon} size={22} />{t.go === 'activity' && <span>{t.label}</span>}
+            </button>
+          ))}
+        </nav>
+      </section>
+
+      <!-- The household member's Home -->
+      <section class="screen" data-screen="requests" {...lit('sintel')} style={own('sintel')} aria-label="A household member's Home">
+        <div class="roomart" style={`background-image:${art('sintel')}`}></div>
+        <div class="status"><span>21:07</span><span class="sys"></span></div>
+        <div class="scroll">
+          <h3 class="s-screen">Sunday 11</h3>
+          <p class="s-meta">October · Signed in as Alex</p>
+          <p class="s-meta ready-label"><span class="dot green"></span> Ready to watch</p>
+          <div class="feature" style={`background-image:url(${backdrop('sintel', true)})`}></div>
+          <h4 class="s-feature">Sintel</h4>
+          <p class="s-meta">You asked for it on Thursday</p>
+          <div class="slab">
+            <div class="slab-head"><span class="s-section">Your requests</span></div>
+            <div class="row">
+              <img class="thumb" src={poster('tos')} alt="" width="40" height="60" loading="lazy" />
+              <div class="grow"><b>Tears of Steel</b><span class="tone-blue tabular">Downloading 62% · ready around 21:40</span></div>
+            </div>
+            <div class="row">
+              <img class="thumb" src={poster('charge')} alt="" width="40" height="60" loading="lazy" />
+              <div class="grow"><b>Charge</b><span class="tone-blue">Waiting for approval</span></div>
+            </div>
+            <div class="row">
+              <img class="thumb" src={poster('spring')} alt="" width="40" height="60" loading="lazy" />
+              <div class="grow"><b>Spring</b><span>On its way</span></div>
+            </div>
+          </div>
+        </div>
+        <nav class="tabs three" aria-label="Phone tabs">
+          {reqNav.map((t) => (
+            <button type="button" class:list={{ on: t.go === 'requests' }} data-go="requests" aria-label={t.label}>
+              <Icon name={t.icon} size={22} />{t.go === 'requests' && <span>{t.label}</span>}
+            </button>
+          ))}
+        </nav>
+      </section>
+    </div>
+  </div>
+</figure>
+
+<script>
+  // The model's own navigation. A screen change lights the page's room too,
+  // through the event the room listens for.
+  interface TitlePage {
+    name: string;
+    meta: string;
+    about: string;
+    hero: string;
+    poster: string;
+    room: string;
+    light: string;
+    fill: string;
+    have: boolean;
+  }
+  const SCREENS = new Set(['home', 'discover', 'title', 'activity', 'requests']);
+
+  document.querySelectorAll<HTMLElement>('.phone').forEach((phone) => {
+    const pages = JSON.parse(phone.dataset.titles ?? '{}') as Record<string, TitlePage>;
+    const page = phone.querySelector<HTMLElement>('[data-screen="title"]')!;
+    const part = (name: string) => page.querySelector<HTMLElement>(`[data-t="${name}"]`)!;
+    let from = 'discover';
+
+    const fill = (id: string) => {
+      const t = pages[id];
+      if (!t) return;
+      part('name').textContent = t.name;
+      part('meta').textContent = t.meta;
+      part('about').textContent = t.about;
+      part('hero').style.backgroundImage = `url(${t.hero})`;
+      part('room').style.backgroundImage = `url(${t.poster})`;
+      (part('poster') as HTMLImageElement).src = t.poster;
+      part('want').hidden = t.have;
+      part('have').hidden = !t.have;
+      part('radarr').innerHTML = t.have ? '<span class="dot green"></span> Available' : '<span class="dot neutral"></span> Missing';
+      part('jellyfin').innerHTML = t.have ? '<span class="dot green"></span> Available' : 'Not there';
+      page.style.setProperty('--light', t.light);
+      page.style.setProperty('--light-fill', t.fill);
+      Object.assign(page.dataset, { light: id, room: t.room, l: t.light, f: t.fill });
+    };
+
+    const show = (name: string) => {
+      if (name === 'back') name = from;
+      let target = name;
+      if (name.startsWith('title-')) {
+        fill(name.slice(6));
+        target = 'title';
+      }
+      if (!SCREENS.has(target)) target = 'home';
+      if (target !== 'title') from = target;
+      else if (phone.dataset.show !== 'title') from = phone.dataset.show ?? 'discover';
+      // A title stays in the tab it was opened from, as in the app.
+      if (target === 'title') {
+        page.querySelectorAll<HTMLElement>('.tabs button').forEach((b) => {
+          const on = b.dataset.go === from;
+          b.classList.toggle('on', on);
+          const label = b.querySelector('span');
+          if (on && !label) b.insertAdjacentHTML('beforeend', `<span>${b.getAttribute('aria-label')}</span>`);
+          if (!on && label) label.remove();
+        });
+      }
+      phone.dataset.show = target;
+      const screen = phone.querySelector<HTMLElement>(`[data-screen="${target}"]`);
+      if (screen) {
+        screen.querySelector('.scroll')?.scrollTo({ top: 0 });
+        phone.dispatchEvent(new CustomEvent('cupola:light', { bubbles: true, detail: screen }));
+      }
+    };
+
+    phone.addEventListener('click', (e) => {
+      const el = (e.target as HTMLElement).closest<HTMLElement>('[data-go],[data-added],[data-done]');
+      if (!el) return;
+      if (el.dataset.go) return show(el.dataset.go);
+      const done = el.dataset.added ?? el.dataset.done;
+      if (done && !el.classList.contains('done')) {
+        el.classList.add('done');
+        const label = el.querySelector('span') ?? el;
+        const before = label.textContent;
+        label.textContent = done;
+        window.setTimeout(() => {
+          label.textContent = before;
+          el.classList.remove('done');
+        }, 1600);
+      }
+    });
+    // A page can ask for a screen too (the tour does, as it scrolls).
+    phone.addEventListener('cupola:show', (e) => show((e as CustomEvent<string>).detail));
+  });
+</script>
+
+<style>
+  .phone {
+    --z: calc(var(--w) / 414px);
+    margin: 0;
+    width: var(--w);
+    aspect-ratio: 414 / 868;
+    flex: none;
+  }
+  .body {
+    zoom: var(--z);
+    width: 414px;
+    height: 868px;
+    padding: 12px;
+    border-radius: 66px;
+    background: linear-gradient(145deg, #2a2a31, #0d0d11 40%, #1c1c22);
+    box-shadow:
+      0 0 0 1px rgb(255 255 255 / 0.08),
+      inset 0 0 0 2px rgb(255 255 255 / 0.06),
+      0 50px 110px -30px color-mix(in srgb, var(--light) 45%, transparent),
+      0 30px 60px -20px rgb(0 0 0 / 0.8);
+    transition: box-shadow 1500ms ease;
+  }
+  .glass {
+    position: relative;
+    width: 390px;
+    height: 844px;
+    border-radius: 54px;
+    overflow: hidden;
+    background: var(--ground);
+    isolation: isolate;
+  }
+  .island {
+    position: absolute;
+    top: 11px;
+    left: 50%;
+    width: 124px;
+    height: 36px;
+    margin-left: -62px;
+    border-radius: 20px;
+    background: #000;
+    z-index: 20;
+  }
+
+  .screen {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity 420ms var(--ease),
+      visibility 0s 420ms;
+    color: var(--ink);
+    font-family: var(--text);
+    font-size: 15px;
+    line-height: 20px;
+    text-align: left;
+  }
+  .phone[data-show='home'] [data-screen='home'],
+  .phone[data-show='discover'] [data-screen='discover'],
+  .phone[data-show='title'] [data-screen='title'],
+  .phone[data-show='activity'] [data-screen='activity'],
+  .phone[data-show='requests'] [data-screen='requests'] {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 420ms var(--ease);
+  }
+  .roomart {
+    position: absolute;
+    inset: -40px -40px auto;
+    height: 520px;
+    background-size: cover;
+    background-position: center;
+    filter: blur(36px) saturate(2) brightness(0.55);
+    opacity: 0.85;
+    -webkit-mask-image: linear-gradient(to bottom, #000 20%, transparent 95%);
+    mask-image: linear-gradient(to bottom, #000 20%, transparent 95%);
+    z-index: -1;
+  }
+  .status {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 54px;
+    padding: 18px 34px 0 46px;
+    display: flex;
+    justify-content: space-between;
+    font-weight: 600;
+    font-size: 16px;
+    z-index: 15;
+  }
+  .sys {
+    width: 66px;
+    height: 13px;
+    margin-top: 3px;
+    background:
+      linear-gradient(var(--ink), var(--ink)) right 0 top 0 / 25px 12px no-repeat,
+      radial-gradient(circle at 50% 100%, var(--ink) 0 9px, transparent 10px) 18px 0 / 18px 13px no-repeat,
+      linear-gradient(to top, var(--ink) 0 100%) 0 6px / 3px 6px no-repeat,
+      linear-gradient(var(--ink), var(--ink)) 5px 4px / 3px 8px no-repeat,
+      linear-gradient(var(--ink), var(--ink)) 10px 2px / 3px 10px no-repeat;
+    border-radius: 3px;
+    opacity: 0.95;
+  }
+  .scroll {
+    position: absolute;
+    inset: 0;
+    padding: 70px 16px 120px;
+    overflow: hidden;
+  }
+
+  .s-screen {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 36px;
+    line-height: 36px;
+    letter-spacing: -0.02em;
+    font-variation-settings: 'wdth' 92, 'opsz' 36;
+    margin-top: 8px;
+  }
+  .s-feature {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 26px;
+    line-height: 27px;
+    letter-spacing: -0.015em;
+    font-variation-settings: 'wdth' 92, 'opsz' 26;
+    margin-top: 16px;
+  }
+  .s-media {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 42px;
+    line-height: 41px;
+    letter-spacing: -0.02em;
+    font-variation-settings: 'wdth' 90, 'opsz' 42;
+  }
+  .s-section {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 21px;
+    line-height: 24px;
+    font-variation-settings: 'wdth' 96, 'opsz' 21;
+  }
+  .s-meta {
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 500;
+    color: var(--ink-2);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .s-meta.big {
+    font-size: 15px;
+    line-height: 21px;
+    margin-top: 14px;
+  }
+  .s-screen + .s-meta {
+    margin-top: 10px;
+    font-size: 15px;
+  }
+  .s-link {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink-2);
+  }
+
+  button {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    text-align: inherit;
+  }
+
+  .needs {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 52px;
+    margin-top: 18px;
+    padding: 0 16px;
+    border-radius: var(--r-group);
+    background: rgb(22 22 28 / 0.86);
+    border: 1px solid var(--edge);
+    font-size: 15px;
+    font-weight: 500;
+  }
+  .grow {
+    flex: 1;
+    min-width: 0;
+  }
+  .more {
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: var(--fill-strong);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .act {
+    font-weight: 600;
+  }
+  .feature {
+    height: 200px;
+    margin-top: 14px;
+    border-radius: var(--r-slab);
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0 30px 70px -16px color-mix(in srgb, var(--light) 55%, transparent);
+  }
+  .s-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 52px;
+    margin-top: 16px;
+    border-radius: var(--r-button);
+    font-size: 16px;
+    font-weight: 600;
+    transition: transform 180ms var(--ease);
+  }
+  .s-btn:active,
+  .amberbtn:active {
+    transform: scale(0.96);
+  }
+  .s-btn[hidden] {
+    display: none;
+  }
+  .s-btn.split {
+    justify-content: space-between;
+    padding: 0 18px 0 20px;
+  }
+  .lit-fill {
+    background: var(--light-fill);
+    color: var(--ink-on);
+  }
+  .slab {
+    margin-top: 16px;
+    padding: 14px 16px 6px;
+    border-radius: var(--r-slab);
+    background: rgb(18 18 24 / 0.9);
+    border: 1px solid var(--hair);
+  }
+  .slab-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .slab-head.bare {
+    margin: 22px 0 12px;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 9px 0;
+  }
+  .row.line + .row.line,
+  .fault + .amberbtn + .row.line {
+    border-top: 1px solid var(--hair);
+  }
+  .row b,
+  .fault b,
+  .dl b {
+    display: block;
+    font-weight: 600;
+    font-size: 15px;
+    line-height: 20px;
+  }
+  .row .grow > span,
+  .fault .grow > span,
+  .dl .grow > span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 500;
+    color: var(--ink-2);
+  }
+  .row .grow > span.tone-blue,
+  .dl .grow > span.tone-blue {
+    color: var(--blue);
+  }
+  .fault .grow > span.tone-amber {
+    color: var(--amber);
+  }
+  .row .mono {
+    font-size: 12px;
+    color: var(--ink-3);
+  }
+  .when {
+    width: 52px;
+    display: grid;
+    font-size: 13px;
+    line-height: 17px;
+    color: var(--ink-2);
+  }
+  .when b {
+    color: var(--ink);
+    font-size: 15px;
+  }
+  .thumb {
+    width: 36px;
+    height: 54px;
+    border-radius: var(--r-thumb);
+    object-fit: cover;
+    flex: none;
+  }
+
+  .field {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 48px;
+    margin-top: 18px;
+    padding: 0 16px;
+    border-radius: var(--r-button);
+    background: var(--fill-quiet);
+    border: 1px solid var(--edge);
+    color: var(--ink-3);
+  }
+  .shelf {
+    display: flex;
+    gap: 12px;
+    margin-right: -16px;
+  }
+  .poster {
+    flex: none;
+    border-radius: var(--r-poster);
+    overflow: hidden;
+    box-shadow: 0 16px 30px -12px color-mix(in srgb, var(--light) 70%, transparent);
+    transition: transform 180ms var(--ease);
+  }
+  .poster:active {
+    transform: scale(0.96);
+  }
+  .poster img {
+    width: 108px;
+    height: 162px;
+    object-fit: cover;
+  }
+  .doors {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 22px;
+  }
+  .doorx {
+    height: 64px;
+    padding: 12px 14px;
+    border-radius: var(--r-door);
+    background: rgb(22 22 28 / 0.9);
+    border: 1px solid var(--hair);
+    font-weight: 600;
+    display: flex;
+    align-items: flex-end;
+  }
+
+  .backbtn {
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--r-control);
+    background: var(--fill-control);
+    border: 1px solid var(--edge);
+  }
+  .hero {
+    height: 200px;
+    margin-top: 14px;
+    border-radius: var(--r-slab);
+    background-size: cover;
+    background-position: center;
+  }
+  .heroline {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    margin-top: -86px;
+    padding-left: 2px;
+  }
+  .heroposter {
+    width: 96px;
+    height: 144px;
+    border-radius: var(--r-poster);
+    object-fit: cover;
+    box-shadow: 0 16px 30px -12px color-mix(in srgb, var(--light) 80%, transparent);
+  }
+  .pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .s-ghost {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 44px;
+    border-radius: var(--r-control);
+    background: var(--fill-control);
+    border: 1px solid var(--edge);
+    font-weight: 600;
+  }
+  .s-ghost.small {
+    height: 36px;
+    padding: 0 14px;
+    font-size: 14px;
+  }
+  .synopsis {
+    margin-top: 16px;
+    color: var(--ink-2);
+    font-size: 15px;
+    line-height: 22px;
+  }
+
+  .fault {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    padding: 6px 0 4px;
+  }
+  .amberbtn {
+    display: block;
+    width: 100%;
+    height: 44px;
+    margin: 10px 0 8px;
+    border-radius: var(--r-control);
+    background: var(--amber);
+    color: var(--amber-ink);
+    font-weight: 600;
+    text-align: center;
+    transition: transform 180ms var(--ease);
+  }
+  .amberbtn:global(.done),
+  .s-btn:global(.done) {
+    background: var(--fill-strong);
+    color: var(--ink);
+  }
+  .dl {
+    padding: 8px 0 10px;
+  }
+  .dl + .dl {
+    border-top: 1px solid var(--hair);
+  }
+  .track {
+    height: 4px;
+    margin-top: 8px;
+    border-radius: 2px;
+    background: var(--fill-strong);
+    overflow: hidden;
+  }
+  .track i {
+    display: block;
+    height: 100%;
+    background: var(--blue);
+    border-radius: 2px;
+  }
+
+  .ready-label {
+    margin-top: 20px;
+  }
+  .ready-label + .feature {
+    margin-top: 8px;
+  }
+  .tabs {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: 26px;
+    display: flex;
+    gap: 4px;
+    height: 62px;
+    padding: 6px;
+    border-radius: var(--r-sheet);
+    background:
+      linear-gradient(to bottom, color-mix(in srgb, var(--light) 14%, transparent), transparent 70%),
+      rgb(26 26 31 / 0.95);
+    border: 1px solid var(--hair);
+    box-shadow: 0 10px 30px rgb(0 0 0 / 0.5);
+    z-index: 10;
+  }
+  .tabs button {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 25px;
+    color: var(--ink-2);
+    font-weight: 600;
+    font-size: 15px;
+  }
+  .tabs button.on {
+    flex: 1.7;
+    color: var(--ink);
+    background: color-mix(in srgb, var(--light) 18%, rgb(255 255 255 / 0.1));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .screen {
+      transition: none !important;
+    }
+  }
+</style>

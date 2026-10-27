@@ -1,0 +1,35 @@
+---
+import Base from '../layouts/Base.astro';
+import Icon from '../components/Icon.astro';
+---
+<Base title="Not here · Cupola" description="This page does not exist." noindex>
+  <section class="nf" data-light="lamp">
+    <div class="well">
+      <p class="t-meta mono">404 · get-seekarr.org did not find this page</p>
+      <h1 class="t-screen">Nothing answered at this address.</h1>
+      <p class="t-lede">The link may be old, or mistyped. Everything else is where it was.</p>
+      <div class="ctas">
+        <a class="btn btn-ink" href="/">Go to Cupola<Icon name="arrow" /></a>
+        <a class="btn btn-ghost" href="/services/">See the services</a>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .nf {
+    min-height: 80svh;
+    display: grid;
+    align-items: center;
+    padding-top: 120px;
+  }
+  .nf .well {
+    display: grid;
+    gap: 22px;
+  }
+  .ctas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+</style>

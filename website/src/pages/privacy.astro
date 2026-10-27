@@ -1,0 +1,48 @@
+---
+import Guide from '../layouts/Guide.astro';
+import Reach from '../components/Reach.astro';
+import { pick } from '../data/faq';
+import { site } from '../config';
+---
+<Guide
+  page="privacy"
+  lede="Cupola has no server, so there is no Cupola-shaped place for your data to go. It talks straight to the services you run, keeps their keys in the device's own keychain, and reaches exactly two other hosts, each for one stated reason."
+  questions={pick('leaves', 'certs', 'account')}
+  related={['install', 'faq', 'contribute']}
+>
+  <div class="not-prose"><Reach /></div>
+
+  <h2>No account, no cloud, no telemetry</h2>
+  <p>Nothing is collected, and there is no backend to collect it. No analytics, no crash reporting, no sign-up. Your services keep their own sign-in.</p>
+
+  <h2>The two other hosts</h2>
+  <ul>
+    <li><strong><code>image.tmdb.org</code></strong>, for poster, backdrop and cast artwork, because that is where Seerr's metadata points. Those requests carry no credential and no identifier of yours, but TMDB sees the IP address they come from.</li>
+    <li><strong><code>plex.tv</code></strong>, once, if you sign in to Seerr with a Plex account. Cupola keeps none of the token it gets.</li>
+  </ul>
+  <p>Everything else, metadata included, comes from your own instances.</p>
+
+  <h2>Keys stay on the device</h2>
+  <p>API keys, tokens and passwords are kept in the Keychain on Apple devices and in Keystore-backed storage on Android. Inviting someone from Seerr hands over the server's address, never its key. Copying everything to a new phone goes encrypted, over your own Wi-Fi.</p>
+
+  <h2>Self-signed certificates, done properly</h2>
+  <p>Cupola asks before trusting a certificate it has not seen, then pins its SHA-256 fingerprint to the host it came from: a certificate belongs to a host, not to whichever service you reached through it. Two services behind the same reverse proxy are trusted, and forgotten, together. Artwork goes through the same pin. Review or forget any of them under <strong>Settings › Security › Trusted certificates</strong>.</p>
+
+  <h2>Away from home</h2>
+  <p>A connection can carry a second address for when you are out: your VPN, your reverse proxy, a tunnel. Cupola asks both and uses whichever answers. It never sends a key over plain <code>http</code> across the internet. Services behind Cloudflare Access, a proxy password or custom headers get what the gateway asks for, and only on the same origin.</p>
+
+  <h2>Background search is off until you turn it on</h2>
+  <p>Letting a search outlive the screen means handing the request, API key included, to the operating system for the length of the task. So it ships off, and the switch says so in the same words. A task expires after 11 minutes and finished records are cleared at every launch.</p>
+
+  <h2>This website</h2>
+  <p>This site sets no cookies and loads its fonts from itself. It counts visits with Cloudflare Web Analytics, which uses no cookies and does not follow you across sites.</p>
+
+  <p>The whole trust layer is one reviewable file in the <a href={`${site.repo}/blob/main/lib/core/network/cert_trust.dart`} rel="noopener">source</a>.</p>
+</Guide>
+
+<style>
+  .not-prose {
+    width: min(var(--well), calc(100vw - 2 * var(--gutter)));
+    margin-bottom: 40px;
+  }
+</style>

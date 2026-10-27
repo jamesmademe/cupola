@@ -1,0 +1,62 @@
+{
+  "bbb": {
+    "light": "#5fc9f2",
+    "fill": "#94ddf9"
+  },
+  "charge": {
+    "light": "#7baad5",
+    "fill": "#a8c8e6"
+  },
+  "cosmos": {
+    "light": "#cfa081",
+    "fill": "#e6c0a8"
+  },
+  "sintel": {
+    "light": "#81b2cf",
+    "fill": "#a8cfe6"
+  },
+  "spring": {
+    "light": "#81b6cf",
+    "fill": "#a8d1e6"
+  },
+  "sprite": {
+    "light": "#d08187",
+    "fill": "#e6a8ad"
+  },
+  "tos": {
+    "light": "#81b9cf",
+    "fill": "#a8d4e6"
+  },
+  "singularity": {
+    "light": "#e6ce6a",
+    "fill": "#efdf9f"
+  },
+  "tosbridge": {
+    "light": "#cfae81",
+    "fill": "#e6cca8"
+  },
+  "singopen": {
+    "light": "#69bfe7",
+    "fill": "#9ed6f0"
+  },
+  "singfind": {
+    "light": "#81abcf",
+    "fill": "#a8c9e6"
+  },
+  "singadd": {
+    "light": "#d5be7b",
+    "fill": "#e6d6a8"
+  },
+  "singget": {
+    "light": "#e2ce6e",
+    "fill": "#ecdfa1"
+  },
+  "singready": {
+    "light": "#81cfc7",
+    "fill": "#a8e6df"
+  },
+  "singslide": {
+    "light": "#808ed0",
+    "fill": "#a8b3e6"
+  }
+}

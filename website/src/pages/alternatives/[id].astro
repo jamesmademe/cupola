@@ -1,0 +1,49 @@
+---
+import type { GetStaticPaths } from 'astro';
+import Guide from '../../layouts/Guide.astro';
+import Compare from '../../components/Compare.astro';
+import { rivals, type Rival } from '../../data/rivals';
+import { rivalPages } from '../../data/pages';
+import { pick, type FaqId } from '../../data/faq';
+
+export const getStaticPaths: GetStaticPaths = () => rivals.map((rival) => ({ params: { id: rival.id }, props: { rival } }));
+
+const { rival } = Astro.props as { rival: Rival };
+const page = rivalPages.find((p) => p.path === `/alternatives/${rival.id}/`)!;
+const own: Partial<Record<string, FaqId>> = { nzb360: 'nzb360', lunasea: 'lunasea' };
+const questions = pick(...([own[rival.id], 'account', 'free', 'away'].filter(Boolean) as FaqId[]));
+const others = rivalPages.filter((p) => p !== page);
+---
+<Guide page={page} lede={rival.lede} screen="discover" questions={questions} related={[...others, 'install']}>
+  <div class="not-prose"><Compare rival={rival} /></div>
+
+  {rival.ahead.length > 0 && (
+    <>
+      <h2>Where {rival.name} is ahead</h2>
+      <ul>{rival.ahead.map((x) => <li>{x}</li>)}</ul>
+    </>
+  )}
+
+  <h2>Where Cupola differs</h2>
+  <ul>{rival.differs.map((x) => <li>{x}</li>)}</ul>
+
+  <h2>Moving over</h2>
+  <ul>{rival.moving.map((x) => <li>{x}</li>)}</ul>
+
+  <p class="t-meta">
+    Sources:{' '}
+    {rival.sources.map((s, i) => (
+      <>
+        <a href={s.url} rel="noopener">{s.label}</a>{i < rival.sources.length - 1 ? ', ' : '.'}
+      </>
+    ))}{' '}
+    {rival.name} is a trademark of its owner. Something here out of date? <a href="https://github.com/matthw-labs/seekarr/issues/new" rel="noopener">Open an issue</a>.
+  </p>
+</Guide>
+
+<style>
+  .not-prose {
+    width: min(var(--well), calc(100vw - 2 * var(--gutter)));
+    margin-bottom: 16px;
+  }
+</style>

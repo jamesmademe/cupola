@@ -1,0 +1,26 @@
+---
+import Guide from '../layouts/Guide.astro';
+import { pick } from '../data/faq';
+---
+<Guide
+  page="homelab"
+  lede="The media apps run on something, and Cupola reaches that too: TrueNAS pools and disks, Unraid arrays and VMs, Dockge compose stacks with a live terminal, and Nginx Proxy Manager hosts and certificates. In the same app, in the same plain words."
+  services={['truenas', 'unraid', 'dockge', 'nginx_proxy_manager']}
+  questions={pick('away', 'certs', 'tested')}
+  related={['downloads', 'stream', 'contribute']}
+>
+  <h2>The whole lab on one screen</h2>
+  <p>The Stack tab shows every service in bands (media, downloads, streaming, the machine itself) and says which are clean and which need a look. A fault anywhere, a container that stopped or a disk reporting errors, joins the same <em>Needs you</em> list as a stuck download, with its remedy.</p>
+
+  <h2>TrueNAS</h2>
+  <p>A full console: the dashboard, pools and disks, datasets and snapshots, SMB and NFS shares, apps, virtualization, replication and periodic tasks, reporting, users and groups. A disk with errors offers the scrub that repairs it.</p>
+
+  <h2>Unraid</h2>
+  <p>Array status, disks, shares, Docker containers, VMs and notifications. Start and stop VMs, archive notifications. Its integration has been tested against recorded answers from its API, not yet against a running server: if you run Unraid, a report is the most useful thing you can send.</p>
+
+  <h2>Dockge</h2>
+  <p>Compose stacks with live terminal output: start, stop, restart, update and bring them down, and edit or deploy the compose file itself.</p>
+
+  <h2>Nginx Proxy Manager</h2>
+  <p>What the box is fronting, what is broken, and which certificates are about to lapse. Enable or disable a host, point a forward somewhere else, renew a certificate. It signs in with the account's email and password, because that is the only way Nginx Proxy Manager lets anything in.</p>
+</Guide>

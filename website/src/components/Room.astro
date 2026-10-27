@@ -1,0 +1,151 @@
+---
+// The room's light, behind every page. The section nearest the middle of the
+// viewport names a title (data-light); its blurred poster comes up over the
+// old one, as the app's light does (motion.light, 1500 ms), and the title's
+// light and fill colour the controls that take them. A section in a lamp room
+// says data-light="lamp".
+---
+<div class="room" aria-hidden="true">
+  <div class="art" data-slot></div>
+  <div class="art" data-slot></div>
+  <div class="lamp"></div>
+  <div class="glow"></div>
+</div>
+
+<script>
+  const root = document.documentElement;
+  const slots = Array.from(document.querySelectorAll<HTMLElement>('.room [data-slot]'));
+  const lamp = document.querySelector<HTMLElement>('.room .lamp')!;
+  let current = '';
+  let front = 0;
+
+  function light(el: HTMLElement) {
+    const id = el.dataset.light ?? 'lamp';
+    if (id === current) return;
+    current = id;
+    root.style.setProperty('--light', el.dataset.l ?? '#8a8a99');
+    root.style.setProperty('--light-fill', el.dataset.f ?? '#b9b9c6');
+    const art = el.dataset.room;
+    const next = slots[1 - front];
+    const prev = slots[front];
+    if (art) {
+      next.style.backgroundImage = `url("${art}")`;
+      next.style.zIndex = '2';
+      prev.style.zIndex = '1';
+      next.classList.add('on');
+      lamp.classList.remove('on');
+      front = 1 - front;
+      window.setTimeout(() => {
+        if (slots[front] === next) prev.classList.remove('on');
+      }, 1500);
+    } else {
+      prev.classList.remove('on');
+      next.classList.remove('on');
+      lamp.classList.add('on');
+    }
+  }
+
+  // The phone model lights the room with the screen it shows.
+  document.addEventListener('cupola:light', (e) => light((e as CustomEvent<HTMLElement>).detail));
+
+  // The phone model's screens carry their own light and announce it themselves.
+  const rooms = Array.from(document.querySelectorAll<HTMLElement>('[data-light]')).filter((el) => !el.closest('.phone'));
+  if (rooms.length) {
+    light(rooms[0]);
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          // A section that lights itself under some condition (the tour on a
+          // phone, which is pinned) is left to its own script then.
+          const self = (e.target as HTMLElement).closest<HTMLElement>('[data-light-self]');
+          if (self && matchMedia(self.dataset.lightSelf ?? 'all').matches) continue;
+          light(e.target as HTMLElement);
+        }
+      },
+      { rootMargin: '-48% 0px -48% 0px' },
+    );
+    rooms.forEach((r) => io.observe(r));
+  } else {
+    lamp.classList.add('on');
+  }
+</script>
+
+<style>
+  @property --light {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: #8a8a99;
+  }
+  @property --light-fill {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: #b9b9c6;
+  }
+  :global(html) {
+    transition:
+      --light 1500ms ease,
+      --light-fill 1500ms ease;
+  }
+  .room {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    overflow: hidden;
+    background: var(--ground);
+  }
+  .art {
+    position: absolute;
+    left: -15%;
+    right: -15%;
+    top: -20vh;
+    height: 115vh;
+    background-size: cover;
+    background-position: center 30%;
+    filter: blur(40px) saturate(1.6) brightness(0.72);
+    opacity: 0;
+    transition: opacity 1500ms ease;
+    -webkit-mask-image: radial-gradient(120% 85% at 50% 0%, #000 30%, rgb(0 0 0 / 0.55) 60%, transparent 92%);
+    mask-image: radial-gradient(120% 85% at 50% 0%, #000 30%, rgb(0 0 0 / 0.55) 60%, transparent 92%);
+    transform: translateZ(0);
+  }
+  .art:global(.on) {
+    opacity: 0.8;
+  }
+  .lamp {
+    position: absolute;
+    left: 50%;
+    top: 40px;
+    width: min(480px + 42vw, 1100px);
+    height: 520px;
+    transform: translateX(-50%);
+    background: radial-gradient(closest-side, rgb(138 138 153 / 0.42), rgb(138 138 153 / 0.12) 55%, transparent);
+    opacity: 0;
+    transition: opacity 1500ms ease;
+  }
+  .lamp:global(.on) {
+    opacity: 1;
+  }
+  /* The title's light itself, spilling from the top of the room. */
+  .glow {
+    position: absolute;
+    inset: -30vh -20vw auto;
+    height: 110vh;
+    background:
+      radial-gradient(50% 55% at 28% 30%, color-mix(in srgb, var(--light) 34%, transparent), transparent),
+      radial-gradient(40% 45% at 78% 20%, color-mix(in srgb, var(--light) 20%, transparent), transparent);
+    opacity: 1;
+    z-index: 3;
+    mix-blend-mode: screen;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .art,
+    .lamp {
+      transition: none;
+    }
+    :global(html) {
+      transition: none;
+    }
+  }
+</style>

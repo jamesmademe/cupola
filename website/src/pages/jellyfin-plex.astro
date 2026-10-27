@@ -1,0 +1,29 @@
+---
+import Guide from '../layouts/Guide.astro';
+import { pick } from '../data/faq';
+---
+<Guide
+  page="stream"
+  lede="Cupola shows who is watching on Jellyfin and Plex right now, what they are watching and why a stream is transcoding, and lets you pause, stop or message a session from your phone. It is the control room, not the screen: you still watch in Jellyfin or Plex."
+  services={['jellyfin', 'plex']}
+  questions={pick('player', 'account', 'certs')}
+  related={['seerr', 'homelab', 'install']}
+>
+  <h2>Sessions first</h2>
+  <p>A media server's room opens on who is watching: the title, the person, the device, how far in they are, and whether the stream plays directly or transcodes, with the reason when it does. It reads the sessions again while it is on screen, so what you see is what is playing.</p>
+
+  <h2>What you can do</h2>
+  <ul>
+    <li><strong>Jellyfin</strong>: pause, stop or send a message to a session; libraries, users, devices, resume points and scheduled tasks.</li>
+    <li><strong>Plex</strong>: stop a session with a reason the viewer sees; libraries, on deck, devices and playlists.</li>
+  </ul>
+
+  <h2>Part of everything else</h2>
+  <p>Jellyfin and Plex answer in Discover's search beside Seerr and the arrs, and a title's page says whether it is already on your server. Home can show what you were halfway through.</p>
+
+  <h2>Signing in</h2>
+  <ul>
+    <li><strong>Jellyfin</strong> takes an API key, then asks which user's view to use, because a key authenticates as an administrator with no user attached. A household member can sign in as themselves instead.</li>
+    <li><strong>Plex</strong> takes a token, which already is its user.</li>
+  </ul>
+</Guide>

@@ -1,0 +1,35 @@
+---
+import Guide from '../layouts/Guide.astro';
+import Faq from '../components/Faq.astro';
+import { pick } from '../data/faq';
+
+const groups = [
+  { title: 'What it is', items: pick('arrApp', 'nzb360', 'player', 'free', 'seerr', 'lunasea', 'seekarr') },
+  { title: 'How it connects', items: pick('address', 'apiKey', 'account', 'away', 'certs', 'leaves') },
+  { title: 'At home', items: pick('discoverSeerr', 'household', 'widgets') },
+  { title: 'Platforms and status', items: pick('tested', 'desktop', 'english') },
+];
+---
+<Guide
+  page="faq"
+  lede="Short answers to what people ask before they install Cupola. If yours is not here, <a href='https://github.com/matthw-labs/seekarr/issues'>ask on GitHub</a>."
+  questions={groups.flatMap((g) => g.items)}
+  related={['install', 'privacy', 'services']}
+  showQuestions={false}
+>
+  {groups.map((g) => (
+    <section class="group">
+      <h2>{g.title}</h2>
+      <Faq items={g.items} />
+    </section>
+  ))}
+</Guide>
+
+<style>
+  .group + .group {
+    margin-top: 56px;
+  }
+  .group h2 {
+    margin-bottom: 12px;
+  }
+</style>

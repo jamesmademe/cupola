@@ -1,0 +1,206 @@
+---
+import Mark from './Mark.astro';
+import Icon from './Icon.astro';
+import { site } from '../config';
+import { stars } from '../lib/repo';
+
+const count = await stars();
+const path = Astro.url.pathname;
+const nav = [
+  { href: '/services/', label: 'Services' },
+  { href: '/install/', label: 'Install' },
+  { href: '/privacy/', label: 'Privacy' },
+  { href: '/faq/', label: 'FAQ' },
+];
+const tabs = [
+  { href: '/', label: 'Cupola', icon: 'home' },
+  { href: '/services/', label: 'Services', icon: 'stack' },
+  { href: '/install/', label: 'Install', icon: 'download' },
+  { href: '/faq/', label: 'FAQ', icon: 'compass' },
+] as const;
+const here = (href: string) => (href === '/' ? path === '/' : path.startsWith(href));
+---
+<header class="bar">
+  <nav class="pill" aria-label="Main">
+    <a class="brand" href="/" aria-label="Cupola, home">
+      <Mark size={30} file="cupola_launcher" eager />
+      <span>Cupola</span>
+    </a>
+    <ul class="links">
+      {nav.map((n) => (
+        <li><a href={n.href} aria-current={here(n.href) ? 'page' : undefined}>{n.label}</a></li>
+      ))}
+    </ul>
+    <a class="gh" href={site.repo} rel="noopener">
+      <Icon name="github" size={18} />
+      <span class="gh-label">GitHub</span>
+      {count !== null && (
+        <span class="stars tabular" aria-label={`${count} stars`}><Icon name="star" size={14} />{count.toLocaleString('en-US')}</span>
+      )}
+    </a>
+    <a class="get btn btn-ink btn-m" href="/install/">Get Cupola</a>
+  </nav>
+</header>
+
+<nav class="tabbar" aria-label="Sections">
+  {tabs.map((t) => (
+    <a href={t.href} class:list={{ lit: here(t.href) }} aria-current={here(t.href) ? 'page' : undefined}>
+      <Icon name={t.icon} size={22} />
+      <span>{t.label}</span>
+    </a>
+  ))}
+</nav>
+
+<style>
+  .bar {
+    position: fixed;
+    top: 14px;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    display: flex;
+    justify-content: center;
+    padding-inline: var(--gutter);
+    pointer-events: none;
+  }
+  .pill {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    max-width: 920px;
+    padding: 6px 6px 6px 10px;
+    border-radius: var(--r-sheet);
+    background:
+      linear-gradient(to bottom, color-mix(in srgb, var(--light) 14%, transparent), transparent 70%),
+      rgb(26 26 31 / 0.95);
+    border: 1px solid var(--hair);
+    box-shadow:
+      0 10px 30px rgb(0 0 0 / 0.45),
+      inset 0 1px 0 rgb(255 255 255 / 0.06);
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 4px 10px 4px 2px;
+    text-decoration: none;
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 21px;
+    letter-spacing: -0.01em;
+    font-variation-settings: 'wdth' 92, 'opsz' 21;
+  }
+  .brand :global(img) {
+    border-radius: 8px;
+  }
+  .links {
+    display: flex;
+    gap: 2px;
+    margin: 0 auto 0 8px;
+    padding: 0;
+    list-style: none;
+  }
+  .links a {
+    display: block;
+    padding: 10px 14px;
+    border-radius: 999px;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--ink-2);
+    text-decoration: none;
+    transition:
+      background-color var(--standard) var(--ease),
+      color var(--standard) var(--ease);
+  }
+  .links a:hover {
+    color: var(--ink);
+    background: var(--fill-control);
+  }
+  .links a[aria-current='page'] {
+    color: var(--ink);
+    background: var(--fill-strong);
+  }
+  .gh {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 14px;
+    border-radius: var(--r-control);
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--ink);
+  }
+  .gh:hover {
+    background: var(--fill-control);
+  }
+  .stars {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--ink-3);
+    font-weight: 500;
+  }
+  .get {
+    border-radius: 22px;
+  }
+
+  .tabbar {
+    display: none;
+  }
+
+  @media (max-width: 760px) {
+    .links,
+    .gh-label {
+      display: none;
+    }
+    .pill {
+      gap: 2px;
+    }
+    .brand {
+      margin-right: auto;
+    }
+    .gh {
+      padding: 0 10px;
+    }
+    .tabbar {
+      position: fixed;
+      left: 12px;
+      right: 12px;
+      bottom: calc(12px + env(safe-area-inset-bottom));
+      z-index: 50;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      padding: 6px;
+      border-radius: var(--r-sheet);
+      background:
+        linear-gradient(to bottom, color-mix(in srgb, var(--light) 14%, transparent), transparent 70%),
+        rgb(26 26 31 / 0.95);
+      border: 1px solid var(--hair);
+      box-shadow:
+        0 10px 30px rgb(0 0 0 / 0.5),
+        inset 0 1px 0 rgb(255 255 255 / 0.06);
+    }
+    .tabbar a {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      min-height: 50px;
+      border-radius: 24px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--ink-2);
+      text-decoration: none;
+    }
+    .tabbar a.lit {
+      color: var(--ink);
+      background: color-mix(in srgb, var(--light) 18%, rgb(255 255 255 / 0.1));
+    }
+  }
+</style>

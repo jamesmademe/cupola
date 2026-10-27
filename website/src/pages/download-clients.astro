@@ -1,0 +1,36 @@
+---
+import Guide from '../layouts/Guide.astro';
+import { pick } from '../data/faq';
+---
+<Guide
+  page="downloads"
+  lede="Cupola puts qBittorrent, Transmission, SABnzbd and NZBGet in one list on your phone, moving first and stuck next. When a download is stuck, it says why in plain words and leads with the fix that matches the cause."
+  screen="activity"
+  services={['qbittorrent', 'transmission', 'sabnzbd', 'nzbget', 'prowlarr']}
+  questions={pick('away', 'certs', 'widgets')}
+  related={['arr', 'homelab', 'install']}
+>
+  <h2>One queue for every client</h2>
+  <p>Activity gathers the downloads of all four clients in one list, with stop and resume on every row. It keeps itself up to date while it is on screen, and when a client's figures stop updating it says so, rather than showing speeds that are no longer true.</p>
+
+  <h2>Stuck, with the way out on the same card</h2>
+  <p><em>Needs you</em> collects what the stack cannot fix by itself, and each fault leads with the remedy its cause names:</p>
+  <ul>
+    <li><strong>Try another download</strong>, when this one can never finish: the arr drops it, will not pick it again, and looks for another.</li>
+    <li><strong>Look for peers again</strong>, when someone has the whole file but nobody is reachable right now.</li>
+    <li><strong>Review</strong>, when files arrived and wait for you to say where they belong.</li>
+  </ul>
+  <p>The same fault on several downloads is one line with a count, not a long list. The service's own message is one tap away, under <em>Why?</em></p>
+
+  <h2>Each client in its own room</h2>
+  <ul>
+    <li><strong>qBittorrent</strong>: filters, sorting and search; each torrent's info, files and trackers; pause, resume, force-start, recheck, reannounce; speed limits, categories and tags.</li>
+    <li><strong>Transmission</strong>: labels and session settings, reordering, speed limits, and adding a <code>.torrent</code> file from the device.</li>
+    <li><strong>SABnzbd</strong>: queue, history and servers; pause and resume one job or everything; add by URL.</li>
+    <li><strong>NZBGet</strong>: queue, history, feeds and messages; pause, resume, add and delete.</li>
+    <li><strong>Prowlarr</strong>: the indexers behind them, with usage stats; add, test, edit and push them to the apps that use them.</li>
+  </ul>
+
+  <h2>Outside the app</h2>
+  <p>A <em>Downloads</em> widget on iOS and Android, also on the iPhone lock screen, and an optional <em>Needs you</em> notification when something turns into a fault. The phone works both out itself, against your own services: there is no push server, so the operating system decides how often that happens.</p>
+</Guide>

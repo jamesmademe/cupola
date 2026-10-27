@@ -1,0 +1,129 @@
+---
+import Mark from './Mark.astro';
+import { site } from '../config';
+import { version } from '../lib/seo';
+import { rivals } from '../data/rivals';
+
+const cols = [
+  {
+    title: 'Cupola',
+    links: [
+      ['Services', '/services/'],
+      ['Install', '/install/'],
+      ['Privacy', '/privacy/'],
+      ['FAQ', '/faq/'],
+      ['Releases', site.releases],
+    ],
+  },
+  {
+    title: 'For your stack',
+    links: [
+      ['Radarr and Sonarr', '/radarr-sonarr-app/'],
+      ['Requests with Seerr', '/seerr-requests/'],
+      ['Download clients', '/download-clients/'],
+      ['Jellyfin and Plex', '/jellyfin-plex/'],
+      ['NAS and homelab', '/homelab/'],
+    ],
+  },
+  {
+    title: 'Compared with',
+    links: [...rivals.map((r) => [r.name, `/alternatives/${r.id}/`]), ['All alternatives', '/alternatives/']],
+  },
+  {
+    title: 'Project',
+    links: [
+      ['Source on GitHub', site.repo],
+      ['Contribute', '/contribute/'],
+      ['Press kit', '/press/'],
+      ['Credits', '/credits/'],
+      ['Support on Ko-fi', site.kofi],
+    ],
+  },
+];
+---
+<footer class="foot" data-light="lamp">
+  <div class="well">
+    <div class="sign">
+      <Mark size={56} />
+      <p class="claim">{site.claim}</p>
+      <p class="t-meta">Cupola {version} · Apache-2.0 · Free and open source</p>
+    </div>
+    <div class="cols">
+      {cols.map((c) => (
+        <div>
+          <h2 class="t-micro">{c.title}</h2>
+          <ul>
+            {c.links.map(([label, href]) => (
+              <li><a href={href} rel={href.startsWith('http') ? 'noopener' : undefined}>{label}</a></li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+    <p class="legal">
+      Cupola is an independent project, not affiliated with, endorsed or sponsored by the makers of the
+      services it connects to, whose names are used only to identify them. The artwork on this site is from
+      Blender open movies, under Creative Commons Attribution: see <a href="/credits/">credits</a>.
+    </p>
+  </div>
+</footer>
+
+<style>
+  .foot {
+    position: relative;
+    margin-top: 120px;
+    padding: 64px 0 calc(48px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--hair);
+    background: linear-gradient(to bottom, rgb(10 10 13 / 0.6), var(--ground) 40%);
+  }
+  .sign {
+    display: grid;
+    gap: 14px;
+    justify-items: start;
+  }
+  .claim {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 28px;
+    letter-spacing: -0.02em;
+    font-variation-settings: 'wdth' 88, 'opsz' 28;
+  }
+  .cols {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 32px;
+    margin-top: 48px;
+  }
+  .cols ul {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 2px;
+  }
+  .cols a {
+    display: inline-block;
+    padding: 6px 0;
+    font-size: 15px;
+    color: var(--ink-2);
+    text-decoration: none;
+  }
+  .cols a:hover {
+    color: var(--ink);
+  }
+  .legal {
+    margin-top: 48px;
+    max-width: 760px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ink-3);
+  }
+  @media (max-width: 760px) {
+    .foot {
+      padding-bottom: calc(120px + env(safe-area-inset-bottom));
+    }
+    .cols {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+</style>

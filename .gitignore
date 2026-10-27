@@ -83,3 +83,6 @@ coverage/
 
 # File-sync conflict copies (this checkout lives inside a synced folder).
 *sync-conflict-*
+
+# Website (Astro)
+website/node_modules/

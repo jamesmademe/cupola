@@ -1,0 +1,159 @@
+---
+// The seventeen services on a ring, lit one after another the first time
+// the ring comes into view, as the app's way in lights what answered.
+import Mark from './Mark.astro';
+import { services, glyph } from '../lib/repo';
+const all = services();
+---
+<div class="box">
+<div class="ring" data-ring style={`--n:${all.length}`}>
+  <div class="core">
+    <Mark />
+    <p class="fig tabular"><span data-count>0</span> of {all.length}</p>
+    <p class="t-meta">answering</p>
+  </div>
+  <ul>
+    {all.map((s, i) => (
+      <li style={`--i:${i}`}>
+        <a href={`/services/#${s.id}`} title={s.name}>
+          <span class="g" set:html={glyph(s.id)} />
+          <span class="sr-only">{s.name}</span>
+          <span class="dot green" aria-hidden="true"></span>
+        </a>
+      </li>
+    ))}
+  </ul>
+</div>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-ring]').forEach((ring) => {
+    const count = ring.querySelector<HTMLElement>('[data-count]')!;
+    const total = ring.querySelectorAll('li').length;
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (!e.isIntersecting) return;
+        io.disconnect();
+        ring.classList.add('lit');
+        if (reduce) {
+          count.textContent = String(total);
+          return;
+        }
+        let n = 0;
+        const tick = window.setInterval(() => {
+          count.textContent = String(++n);
+          if (n >= total) window.clearInterval(tick);
+        }, 70);
+      },
+      { threshold: 0.45 },
+    );
+    io.observe(ring);
+  });
+</script>
+
+<style>
+  /* The ring takes the width of its column, never more, so it never spills
+     past the edge of a two-column layout. */
+  .box {
+    container-type: inline-size;
+    width: 100%;
+  }
+  .ring {
+    --ring: min(560px, 100cqi);
+    --r: calc(var(--ring) / 2 - 34px);
+    position: relative;
+    width: var(--ring);
+    aspect-ratio: 1;
+    margin-inline: auto;
+  }
+  .ring::before {
+    content: '';
+    position: absolute;
+    inset: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--hair);
+    background: radial-gradient(closest-side, rgb(138 138 153 / 0.1), transparent);
+  }
+  .core {
+    position: absolute;
+    inset: 22%;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    text-align: center;
+    gap: 4px;
+  }
+  .core :global(.mark) {
+    width: calc(var(--ring) * 0.19);
+    height: calc(var(--ring) * 0.19);
+    margin-bottom: 10px;
+  }
+  .fig {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: clamp(30px, 5vw, 44px);
+    line-height: 1;
+    letter-spacing: -0.02em;
+    font-variation-settings: 'wdth' 90, 'opsz' 44;
+  }
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  li {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    --a: calc(var(--i) / var(--n) * 360deg - 90deg);
+    transform: translate(-50%, -50%) rotate(var(--a)) translate(var(--r)) rotate(calc(-1 * var(--a)));
+  }
+  li a {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: clamp(40px, 10cqi, 58px);
+    aspect-ratio: 1;
+    border-radius: 18px;
+    background: rgb(22 22 28 / 0.92);
+    border: 1px solid var(--edge);
+    color: var(--ink-3);
+    transition:
+      color 600ms ease,
+      border-color 600ms ease,
+      transform var(--press) var(--ease);
+    transition-delay: calc(var(--i) * 70ms);
+  }
+  li a:hover {
+    transform: scale(1.08);
+    transition-delay: 0s;
+  }
+  .g {
+    width: 46%;
+  }
+  .g :global(svg) {
+    width: 100%;
+    height: auto;
+  }
+  li .dot {
+    position: absolute;
+    right: -2px;
+    top: -2px;
+    box-shadow: 0 0 0 3px var(--ground);
+    opacity: 0;
+    transform: scale(0.4);
+    transition:
+      opacity 300ms ease,
+      transform 300ms var(--ease);
+    transition-delay: calc(var(--i) * 70ms + 200ms);
+  }
+  .ring:global(.lit) li a {
+    color: var(--ink);
+    border-color: rgb(255 255 255 / 0.16);
+  }
+  .ring:global(.lit) li .dot {
+    opacity: 1;
+    transform: none;
+  }
+</style>

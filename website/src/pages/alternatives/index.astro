@@ -1,0 +1,60 @@
+---
+import Guide from '../../layouts/Guide.astro';
+import Icon from '../../components/Icon.astro';
+import { rivals } from '../../data/rivals';
+import { pick } from '../../data/faq';
+---
+<Guide
+  page="alternatives"
+  lede="Cupola is one of several apps for managing a self-hosted media stack from a phone. Here is how it compares with the ones people ask about most, fact by fact, from each app's own website and store listing."
+  questions={pick('nzb360', 'lunasea', 'free')}
+  related={['services', 'install', 'privacy']}
+>
+  <ul class="cards not-prose">
+    {rivals.map((r) => (
+      <li>
+        <a href={`/alternatives/${r.id}/`}>
+          <span class="t-section">Cupola and {r.name}</span>
+          <span class="t-meta">{r.description}</span>
+          <Icon name="arrow" size={18} />
+        </a>
+      </li>
+    ))}
+  </ul>
+</Guide>
+
+<style>
+  .cards {
+    width: min(var(--well), calc(100vw - 2 * var(--gutter)));
+    list-style: none;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .cards a {
+    position: relative;
+    display: grid;
+    gap: 8px;
+    height: 100%;
+    padding: 22px 52px 22px 22px;
+    border-radius: var(--r-door);
+    background: rgb(22 22 28 / 0.86);
+    border: 1px solid var(--hair);
+    text-decoration: none;
+  }
+  .cards a:hover {
+    border-color: var(--edge);
+  }
+  .cards a :global(svg) {
+    position: absolute;
+    right: 20px;
+    top: 24px;
+    color: var(--ink-3);
+  }
+  @media (max-width: 860px) {
+    .cards {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

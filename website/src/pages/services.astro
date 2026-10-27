@@ -1,0 +1,55 @@
+---
+import Guide from '../layouts/Guide.astro';
+import ServiceTable from '../components/ServiceTable.astro';
+import { services } from '../lib/repo';
+import { pick } from '../data/faq';
+import { site } from '../config';
+
+const all = services();
+const n = (t: string) => all.filter((s) => s.tested === t).length;
+const cats = ['Media', 'Downloads', 'Stream', 'Infrastructure'] as const;
+const blurb = {
+  Media: 'Finding, requesting and keeping titles.',
+  Downloads: 'Getting them, and the indexers behind it.',
+  Stream: 'Who is watching, and how.',
+  Infrastructure: 'The machine everything runs on.',
+};
+---
+<Guide
+  page="services"
+  lede={`Cupola connects to ${all.length} self-hosted services. Set up only the ones you run: a service you skip stays out of the way. Each one says how far Cupola goes with it, and whether it has been run against a real, working instance or only against its API's documentation and recorded answers.`}
+  questions={pick('tested', 'certs')}
+  related={['arr', 'downloads', 'homelab']}
+>
+  <h2>How to read this page</h2>
+  <ul>
+    <li><strong>Control</strong> is how far Cupola goes today: full read and write, or mostly reading.</li>
+    <li><strong>Tested</strong> is deliberately conservative. <span class="tone-green">✓</span> verified end to end against a real server ({n('verified')} of {all.length}); ◐ partly verified, where the screens have read a real instance but its actions have not been run against one ({n('partial')}); ○ tested against recorded answers only ({n('untested')}). Every service has unit tests, which is a different claim.</li>
+    <li>Run one that is not fully verified? <a href={`${site.issues}/new`} rel="noopener">A report either way</a> is the most useful thing you can send.</li>
+  </ul>
+
+  <div class="not-prose">
+    {cats.map((c) => (
+      <section class="cat" aria-labelledby={`cat-${c}`}>
+        <h2 id={`cat-${c}`}>{c}</h2>
+        <p class="t-meta">{blurb[c]}</p>
+        <ServiceTable ids={all.filter((s) => s.category === c).map((s) => s.id)} anchors />
+      </section>
+    ))}
+  </div>
+</Guide>
+
+<style>
+  .not-prose {
+    width: min(var(--well), calc(100vw - 2 * var(--gutter)));
+  }
+  .cat {
+    margin-top: 56px;
+  }
+  .cat h2 {
+    margin-bottom: 6px;
+  }
+  .cat .t-meta {
+    margin-bottom: 20px;
+  }
+</style>
