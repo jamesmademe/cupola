@@ -4,6 +4,7 @@ library;
 import 'package:cupola/features/discover/domain/seerr_permission.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
+import 'package:cupola/demo/world/artwork.dart';
 import 'package:cupola/demo/world/fixtures.dart';
 import 'package:cupola/demo/world/config_profile.dart';
 import 'package:cupola/demo/world/profile_network.dart';
@@ -470,6 +471,8 @@ class SeerrFake extends ServiceFake {
     return {
       'id': t.tmdbId,
       if (t.isSeries) 'name': t.title else 'title': t.title,
+      'posterPath': ?WorldArtwork.posterPath(t),
+      'backdropPath': ?WorldArtwork.backdropPath(t),
       if (t.isSeries)
         'firstAirDate': '${t.year}-05-01'
       else
@@ -613,6 +616,7 @@ class SeerrFake extends ServiceFake {
     'id': t.tmdbId,
     'mediaType': t.isSeries ? 'tv' : 'movie',
     if (t.isSeries) 'name': t.title else 'title': t.title,
+    'posterPath': ?WorldArtwork.posterPath(t),
     if (!t.isSeries) 'releaseDate': '${t.year}-04-10',
     'job': 'Director',
     'department': 'Directing',
@@ -660,6 +664,8 @@ class SeerrFake extends ServiceFake {
           if (t.isSeries) 'name': t.title else 'title': t.title,
           if (!t.isSeries) 'releaseDate': '${t.year}-04-10',
           'voteAverage': 7.4,
+          'posterPath': ?WorldArtwork.posterPath(t),
+          'backdropPath': ?WorldArtwork.backdropPath(t),
         },
     ],
   };
@@ -1102,6 +1108,7 @@ class SeerrFake extends ServiceFake {
                 'title': t.title,
                 'releaseDate': '${t.year}-04-10',
                 'voteAverage': 7.4,
+                'posterPath': ?WorldArtwork.posterPath(t),
                 'mediaInfo': ?_media(c, t),
               },
           ],

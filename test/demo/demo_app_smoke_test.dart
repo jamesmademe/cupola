@@ -11,6 +11,8 @@ import 'package:cupola/features/home/data/home_live.dart';
 import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/main.dart';
 
+import '../test_helpers/demo_artwork.dart';
+
 /// The whole app, opened on the demo the way the onboarding opens it: the
 /// Home draws from the world, and every request it makes is answered.
 void main() {
@@ -21,6 +23,7 @@ void main() {
   });
 
   testWidgets('the demo opens on a Home the world answers', (tester) async {
+    useDemoArtworkFiles();
     final session = (await tester.runAsync(
       () => DemoSession.start(leaving: const SettingsModel()),
     ))!;

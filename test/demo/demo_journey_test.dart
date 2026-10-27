@@ -12,6 +12,7 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 import 'package:cupola/main.dart';
 
 import '../test_helpers/profiles/profiles.dart';
+import '../test_helpers/demo_artwork.dart';
 
 /// The demo's journey, the whole app on the demo's world: a request waiting
 /// for approval is approved, goes to Radarr, downloads, and arrives, and
@@ -24,6 +25,7 @@ void main() {
   });
 
   testWidgets('a request is approved, downloads and arrives', (tester) async {
+    useDemoArtworkFiles();
     final session = (await tester.runAsync(
       () => DemoSession.start(leaving: const SettingsModel()),
     ))!;
@@ -93,10 +95,16 @@ void main() {
     await pullToRefresh();
     expect(find.textContaining('Ready to watch since'), findsWidgets);
 
-    // And the Home says it arrived.
+    // And the Home says it arrived, under what it features.
     await tester.tap(find.text('Home').last);
     await settle();
     await pullToRefresh();
+    await tester.scrollUntilVisible(
+      find.textContaining('Just now'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await settle();
     expect(find.text('Metropolis'), findsWidgets);
     expect(find.textContaining('Just now'), findsOneWidget);
 

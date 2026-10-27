@@ -15,6 +15,7 @@ import 'package:cupola/core/network/pinned_image_cache.dart';
 import 'package:cupola/core/network/route_poster.dart';
 import 'package:cupola/core/network/unanswered_addresses.dart';
 import 'package:cupola/core/startup/startup_overrides.dart';
+import 'package:cupola/demo/world/artwork.dart';
 import 'package:cupola/demo/world/fixtures.dart';
 import 'package:cupola/demo/world/profiles.dart';
 import 'package:cupola/features/npm/presentation/npm_provider.dart';
@@ -78,6 +79,7 @@ class DemoSession {
   }) async {
     if (leaving.instances.isNotEmpty) throw const DemoRefused();
     await WorldFixtures.preload(bundle ?? rootBundle);
+    await WorldArtwork.preload(bundle ?? rootBundle);
     final ends = <FutureOr<void> Function()>[];
 
     // Preferences. `SharedPreferences` writes through whichever store the
@@ -107,6 +109,7 @@ class DemoSession {
     IOOverrides.global = _NoSockets();
     ends.add(() => IOOverrides.global = previousIo);
 
+    ends.add(WorldArtwork.forget);
     ends.add(separateImageCaches('demo'));
     ends.add(() {
       // Flutter's own memory of decoded images is keyed by address too.

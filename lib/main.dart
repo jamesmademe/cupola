@@ -24,6 +24,7 @@ import 'package:cupola/core/widgets/app_snapshot_cover.dart';
 import 'package:cupola/core/widgets/themed_system_bars.dart';
 import 'package:cupola/demo/demo_door.dart';
 import 'package:cupola/demo/demo_session.dart';
+import 'package:cupola/demo/world/artwork.dart';
 import 'package:cupola/features/discover/data/seerr_accounts.dart';
 import 'package:cupola/features/outside/data/outside_background.dart';
 import 'package:cupola/features/outside/data/outside_keeper.dart';
@@ -43,6 +44,7 @@ void main() async {
   // rectangle on the screen. Inert on iOS and Android.
   await DesktopWindow.ensureReady();
   _registerBundledFontLicense();
+  WorldArtwork.registerLicense();
   await _start();
 }
 

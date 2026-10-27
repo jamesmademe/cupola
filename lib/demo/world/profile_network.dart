@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:cupola/features/settings/domain/service_key.dart';
 
+import 'package:cupola/demo/world/artwork.dart';
 import 'package:cupola/demo/world/config_profile.dart';
 import 'package:cupola/demo/world/fake_socket.dart';
 import 'package:cupola/demo/world/fakes/plex_tv_fake.dart';
@@ -73,7 +74,12 @@ class NetworkReply {
     this.body = '',
     this.contentType = 'application/json; charset=utf-8',
     this.headers = const {},
+    this.bytes,
   });
+
+  /// A binary body: a picture.
+  factory NetworkReply.bytes(List<int> bytes, {required String contentType}) =>
+      NetworkReply(200, contentType: contentType, bytes: bytes);
 
   /// A server that took the request and never answers: the connection stays
   /// open and nothing comes back, until the client's own receive deadline
@@ -84,7 +90,8 @@ class NetworkReply {
     : status = 0,
       body = '',
       contentType = '',
-      headers = const {};
+      headers = const {},
+      bytes = null;
 
   /// [body] encoded as JSON.
   factory NetworkReply.json(Object? body, {int status = 200}) =>
@@ -120,6 +127,9 @@ class NetworkReply {
   final String contentType;
   final Map<String, List<String>> headers;
 
+  /// The body as bytes, for a binary reply; [body] is then empty.
+  final List<int>? bytes;
+
   /// Whether this is [NetworkReply.hang].
   bool get hangs => status == 0;
 
@@ -138,6 +148,7 @@ class NetworkReply {
       body: body,
       contentType: contentType,
       headers: merged,
+      bytes: bytes,
     );
   }
 }
@@ -552,6 +563,7 @@ class ProfileNetwork {
 
   IOException? _dialVerdict(ProfileServer? server, Uri uri) {
     if (server == null && uri.host == plexTvHost) return null;
+    if (server == null && WorldArtwork.serves(uri)) return null;
     if (server == null) {
       return SocketException(
         "Failed host lookup: '${uri.host}'",
@@ -606,6 +618,9 @@ class ProfileNetwork {
       return _FakeResponse.fromReply(
         NetworkReply.json({'message': 'NotFound'}, status: 404),
       );
+    }
+    if (server == null && WorldArtwork.serves(raw.uri)) {
+      return _FakeResponse.fromReply(WorldArtwork.answer(request));
     }
     if (server == null) {
       // Unreachable: dialling already failed. Kept for the type system.
@@ -876,7 +891,11 @@ class _FakeResponse extends Stream<List<int>> implements HttpClientResponse {
   factory _FakeResponse.fromReply(NetworkReply reply) {
     final headers = _FakeHeaders()..set('content-type', reply.contentType);
     reply.headers.forEach(headers.set);
-    return _FakeResponse._(reply.status, utf8.encode(reply.body), headers);
+    return _FakeResponse._(
+      reply.status,
+      reply.bytes ?? utf8.encode(reply.body),
+      headers,
+    );
   }
 
   factory _FakeResponse.upgrade(String accept, WebSocketLink socket) {

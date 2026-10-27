@@ -10,6 +10,7 @@ library;
 import 'package:cupola/features/settings/domain/service_key.dart';
 
 import 'package:cupola/demo/world/arr_life.dart';
+import 'package:cupola/demo/world/artwork.dart';
 import 'package:cupola/demo/world/profile_network.dart';
 import 'package:cupola/demo/world/service_fakes.dart';
 import 'package:cupola/demo/world/world.dart';
@@ -438,7 +439,7 @@ class RadarrFake extends ArrFake {
       'added': c.ago(added),
       if (spriteFright) 'digitalRelease': c.ago(const Duration(hours: 6)),
       if (spriteFright) 'physicalRelease': c.ahead(const Duration(days: 13)),
-      'images': const <Object?>[],
+      'images': WorldArtwork.arrImages(title),
       'genres': const ['Animation'],
       'ratings': const <String, Object?>{},
     };
@@ -643,7 +644,7 @@ class RadarrFake extends ArrFake {
                   'titleSlug': '${title.slug}-${title.tmdbId}',
                   'year': title.year,
                   'tmdbId': title.tmdbId,
-                  'images': const <Object?>[],
+                  'images': WorldArtwork.arrImages(title),
                   'minimumAvailability': 'released',
                 },
           );
@@ -767,7 +768,7 @@ class SonarrFake extends ArrFake {
       'path': '${rootFolder(c)}/${title.title}',
       'qualityProfileId': 1,
       'added': c.ago(const Duration(days: 300)),
-      'images': const <Object?>[],
+      'images': WorldArtwork.arrImages(title),
       'genres': const ['Animation'],
       if (cosmos) 'nextAiring': c.ahead(const Duration(days: 3, minutes: 7)),
       if (title == WorldTitles.nightShift)
@@ -829,7 +830,7 @@ class SonarrFake extends ArrFake {
       'path': '${rootFolder(c)}/${title.title}',
       'qualityProfileId': 1,
       'added': c.ago(c.now.difference(live.added)),
-      'images': const <Object?>[],
+      'images': WorldArtwork.arrImages(title),
       'genres': const ['Animation'],
       'seasons': [
         _season(1, files, 8, 8, on: live.seasonsMonitored[1] ?? true),
@@ -1287,7 +1288,7 @@ class SonarrFake extends ArrFake {
                 'tmdbId': title.tmdbId,
                 'status': 'continuing',
                 'seriesType': 'standard',
-                'images': const <Object?>[],
+                'images': WorldArtwork.arrImages(title),
                 'seasons': [
                   {'seasonNumber': 1, 'monitored': true},
                 ],

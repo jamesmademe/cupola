@@ -200,6 +200,9 @@ flutter:
     - assets/fonts/BricolageGrotesque-OFL.txt
     - assets/fonts/Onest-OFL.txt
     - assets/fonts/GeistMono-OFL.txt
+    # The demo's posters and backdrops, the Blender Studio's own pictures of
+    # its open films (CC BY 4.0): `lib/demo/world/artwork.dart`.
+    - assets/demo/artwork/
     # The recorded answers the demo world serves as they are
     # (`lib/demo/world/fixtures.dart`). They keep their one home beside the
     # model tests that read them; every file the world names is listed here,
