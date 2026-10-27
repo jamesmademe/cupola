@@ -32,6 +32,18 @@ if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]] ||
   exit 1
 fi
 
+# A prerelease keeps pubspec.yaml's three numbers (App Store Connect refuses
+# anything else) and carries its suffix in the package names and the tag only:
+# CUPOLA_PRERELEASE=beta.1 packages `cupola-1.0.0-beta.1.*` for `v1.0.0-beta.1`.
+RELEASE="$VERSION"
+if [[ -n "${CUPOLA_PRERELEASE:-}" ]]; then
+  if [[ ! "$CUPOLA_PRERELEASE" =~ ^[0-9A-Za-z]+(\.[0-9A-Za-z]+)*$ ]]; then
+    printf 'Refusing a prerelease suffix that is not dot-separated words: %s\n' "$CUPOLA_PRERELEASE" >&2
+    exit 1
+  fi
+  RELEASE="${VERSION}-${CUPOLA_PRERELEASE}"
+fi
+
 cd "$ROOT_DIR"
 
 # A release is the production identity (AGENTS.md, App identities). Flutter
@@ -63,7 +75,7 @@ if [[ ("$TARGET" == "macos" || "$TARGET" == "all") && "$(uname -s)" == "Darwin" 
   fi
 fi
 
-DIST_DIR="dist/${VERSION}"
+DIST_DIR="dist/${RELEASE}"
 # An upload leaves the packages already built in place.
 if [[ "$TARGET" != "testflight" ]]; then
   rm -rf "$DIST_DIR"
@@ -91,7 +103,7 @@ bash "$ROOT_DIR/scripts/verify_icons.sh"
 if [[ "$TARGET" == "android" || "$TARGET" == "all" ]]; then
   printf '==> Building Android APK...\n'
   flutter build apk --release
-  cp build/app/outputs/flutter-apk/app-release.apk "$DIST_DIR/${APP_SLUG}-${VERSION}.apk"
+  cp build/app/outputs/flutter-apk/app-release.apk "$DIST_DIR/${APP_SLUG}-${RELEASE}.apk"
 fi
 
 # `web` is a compile check, not a shipped target: the README says there is no
@@ -149,7 +161,7 @@ if [[ "$TARGET" == "ios" || "$TARGET" == "all" ]]; then
     flutter build ios --release --no-codesign
 
     APP_PATH="build/ios/iphoneos/Runner.app"
-    IPA_PATH="$DIST_DIR/${APP_SLUG}-${VERSION}.ipa"
+    IPA_PATH="$DIST_DIR/${APP_SLUG}-${RELEASE}.ipa"
 
     if [[ ! -d "$APP_PATH" ]]; then
       printf 'Missing iOS app bundle at %s\n' "$APP_PATH" >&2
@@ -224,7 +236,7 @@ if [[ "$TARGET" == "macos" || "$TARGET" == "all" ]]; then
       -exportPath "$MACOS_EXPORT" -allowProvisioningUpdates
 
     APP_PATH="$MACOS_EXPORT/${APP_NAME}.app"
-    DMG_STEM="$DIST_DIR/${APP_SLUG}-${VERSION}"
+    DMG_STEM="$DIST_DIR/${APP_SLUG}-${RELEASE}"
     DMG_PATH="${DMG_STEM}.dmg"
     DMG_WORK_DIR=$(mktemp -d)
     DMG_STAGING_DIR="$DMG_WORK_DIR/staging"
@@ -232,7 +244,7 @@ if [[ "$TARGET" == "macos" || "$TARGET" == "all" ]]; then
     DMG_DEVICE=""
     DMG_MOUNT_DIR=""
     DMG_VOLUME_NAME=""
-    VOLUME_NAME="${APP_NAME} ${VERSION}"
+    VOLUME_NAME="${APP_NAME} ${RELEASE}"
 
     cleanup() {
       if [[ -n "$DMG_DEVICE" ]]; then
@@ -317,6 +329,6 @@ EOF
 fi
 
 if [[ "$TARGET" != "testflight" ]]; then
-  printf '\n==> Release artifacts for v%s:\n' "$VERSION"
+  printf '\n==> Release artifacts for v%s:\n' "$RELEASE"
   ls -lh "$DIST_DIR/"
 fi

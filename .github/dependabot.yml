@@ -1,0 +1,11 @@
+# Actions are pinned to a commit, so nothing moves them but this. One grouped
+# pull request a month keeps the pins current without a stream of single bumps.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ['*']

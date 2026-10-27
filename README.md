@@ -320,8 +320,8 @@ running while Cupola is open.
 
 > **Coming from Seekarr?** Cupola 1.0 is a **new app**, not an update. It installs
 > beside Seekarr and starts empty: add your services again (same URLs, same API keys),
-> check that they answer, then uninstall Seekarr. In Obtainium, the Seekarr entry will
-> offer 1.0.0 and then refuse it, because the app ID changed: remove that entry and add
+> check that they answer, then uninstall Seekarr. In Obtainium, the Seekarr entry may
+> offer Cupola and then refuse it, because the app ID changed: remove that entry and add
 > Cupola as a new app. Releases before 1.0.0 were published as Seekarr and cover fewer
 > services than this page describes.
 
@@ -346,7 +346,8 @@ device.
 
 To get updates without checking this page, add this repository's URL to
 [**Obtainium**](https://obtainium.imranr.dev/): it installs the `.apk` from each new
-release.
+release. While Cupola is in beta its releases are marked as prereleases, so turn on
+**Include prereleases** when you add it.
 
 </details>
 
@@ -467,12 +468,18 @@ flutter test
 scripts/release.sh all
 ```
 
-`release.sh` writes the packages to `dist/<version>`. The macOS package needs the
+`release.sh` writes the packages to `dist/<version>`. A beta keeps `pubspec.yaml` at
+three numbers and takes its suffix from `CUPOLA_PRERELEASE=beta.1`, which names the
+packages `cupola-<version>-beta.1.*`. Pushing the matching tag (`v<version>-beta.1`)
+builds Windows and Linux on CI into a draft prerelease;
+`scripts/release_attach.sh v<version>-beta.1` then adds the packages built here and
+rewrites `SHA256SUMS` over every file of the draft. The macOS package needs the
 team's Developer ID certificate in the keychain and `CUPOLA_NOTARY_PROFILE` naming
 credentials saved with `xcrun notarytool store-credentials`.
 `scripts/release.sh testflight` uploads an iOS build to App Store Connect instead.
 
-CI runs the first three on every push; infos are fatal. The test suite is offline
+CI runs the first three on every push to `main` and every pull request against it;
+infos are fatal. The test suite is offline
 and deterministic by design: no network, no live instance. An opt-in end-to-end tier
 runs against real services in Docker:
 
