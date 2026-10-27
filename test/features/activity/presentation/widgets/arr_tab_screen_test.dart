@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/api/api_client.dart';
+import 'package:cupola/core/widgets/inline_error_retry.dart';
+import 'package:cupola/core/widgets/shimmer_placeholder.dart';
 import 'package:cupola/features/activity/domain/service_type.dart';
 import 'package:cupola/features/activity/presentation/arr_tab_screen.dart';
 import 'package:cupola/features/movies/data/radarr_service.dart';
@@ -55,6 +59,113 @@ void main() {
       expect(find.text('Grabbed'), findsOneWidget);
       expect(service.historyCalls, 1);
       expect(service.queueCalls, 0);
+    });
+  });
+
+  group('a long History', () {
+    testWidgets('draws its first page while the rest is read, then all of it', (
+      tester,
+    ) async {
+      final rest = Completer<void>();
+      final service = _FakeRadarrActivityService(
+        historyItems: const [
+          {'sourceTitle': 'Newest.Release', 'eventType': 'grabbed'},
+          {'sourceTitle': 'Oldest.Release', 'eventType': 'grabbed'},
+        ],
+        historyFirstPage: const [
+          {'sourceTitle': 'Newest.Release', 'eventType': 'grabbed'},
+        ],
+        historyHeld: rest,
+      );
+
+      await tester.pumpWidget(
+        _host(
+          service,
+          const ArrTabScreen(
+            serviceType: ServiceType.movies,
+            mode: ArrTabMode.history,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      // The first page is a list on screen, with the loading rows under it.
+      expect(find.text('Newest.Release'), findsOneWidget);
+      expect(find.text('Oldest.Release'), findsNothing);
+      expect(find.byType(ShimmerList), findsOneWidget);
+
+      rest.complete();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Newest.Release'), findsOneWidget);
+      expect(find.text('Oldest.Release'), findsOneWidget);
+      expect(find.byType(ShimmerList), findsNothing);
+    });
+
+    testWidgets('a page that fails keeps the rows and says the rest did not '
+        'arrive', (tester) async {
+      final rest = Completer<void>();
+      final service = _FakeRadarrActivityService(
+        historyFirstPage: const [
+          {'sourceTitle': 'Newest.Release', 'eventType': 'grabbed'},
+        ],
+        historyHeld: rest,
+        historyFailure: Exception('connection reset'),
+      );
+
+      await tester.pumpWidget(
+        _host(
+          service,
+          const ArrTabScreen(
+            serviceType: ServiceType.movies,
+            mode: ArrTabMode.history,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('Newest.Release'), findsOneWidget);
+      expect(find.byType(ShimmerList), findsOneWidget);
+
+      rest.complete();
+      await tester.pumpAndSettle();
+
+      // What was being read stays; the loading rows give way to the notice.
+      expect(find.text('Newest.Release'), findsOneWidget);
+      expect(find.byType(ShimmerList), findsNothing);
+      expect(find.byType(InlineErrorRetry), findsOneWidget);
+      expect(
+        find.textContaining('the rest of the history did not arrive'),
+        findsOneWidget,
+      );
+
+      // Its Retry reads the history again, from the first page.
+      final calls = service.historyCalls;
+      await tester.tap(find.text('Retry'));
+      await tester.pump();
+      expect(service.historyCalls, calls + 1);
+    });
+
+    testWidgets('with no first page yet it is the skeleton, as before', (
+      tester,
+    ) async {
+      final service = _FakeRadarrActivityService(
+        historyHeld: Completer<void>(),
+      );
+
+      await tester.pumpWidget(
+        _host(
+          service,
+          const ArrTabScreen(
+            serviceType: ServiceType.movies,
+            mode: ArrTabMode.history,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(ShimmerList), findsOneWidget);
     });
   });
 
@@ -253,7 +364,17 @@ class _FakeRadarrActivityService extends RadarrService {
     this.missingItems = const [],
     this.cutoffItems = const [],
     this.qualityProfileResponses = const [],
+    this.historyFirstPage,
+    this.historyHeld,
+    this.historyFailure,
   }) : super(ApiClient(baseUrl: 'https://radarr.example.com', apiKey: 'key'));
+
+  /// When set, History says this much, and then waits for [historyHeld].
+  final List<dynamic>? historyFirstPage;
+  final Completer<void>? historyHeld;
+
+  /// When set, History fails with this once [historyHeld] is let go.
+  final Object? historyFailure;
 
   final List<dynamic> queueItems;
   final List<dynamic> historyItems;
@@ -278,8 +399,15 @@ class _FakeRadarrActivityService extends RadarrService {
   @override
   Future<List<dynamic>> getAllHistory({
     Map<String, dynamic>? queryParameters,
+    void Function(List<dynamic> records)? onProgress,
   }) async {
     historyCalls++;
+    final first = historyFirstPage;
+    if (first != null) onProgress?.call(first);
+    await historyHeld?.future;
+    final failure = historyFailure;
+    // The first read only: a Retry gets an answer.
+    if (failure != null && historyCalls == 1) throw failure;
     return historyItems;
   }
 
@@ -342,3 +470,15 @@ class _FakeSonarrActivityService extends SonarrService {
     return cutoffItems;
   }
 }
+
+/// The tab over a Radarr, without settling: a read held open keeps the
+/// skeleton animating, and a settle would wait for it forever.
+Widget _host(_FakeRadarrActivityService service, Widget child) => ProviderScope(
+  overrides: [
+    currentSettingsProvider.overrideWith(
+      (ref) => settingsWithServices([ServiceKey.radarr]),
+    ),
+    radarrServiceProvider.overrideWith((ref) => service),
+  ],
+  child: MaterialApp(home: Scaffold(body: child)),
+);

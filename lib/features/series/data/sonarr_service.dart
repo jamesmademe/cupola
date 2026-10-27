@@ -133,13 +133,17 @@ class SonarrService with ArrActivityMixin {
   }
 
   @override
-  Future<List<dynamic>> getAllHistory({Map<String, dynamic>? queryParameters}) {
+  Future<List<dynamic>> getAllHistory({
+    Map<String, dynamic>? queryParameters,
+    void Function(List<dynamic> records)? onProgress,
+  }) {
     return super.getAllHistory(
       queryParameters: {
         'includeSeries': true,
         'includeEpisode': true,
         ...?queryParameters,
       },
+      onProgress: onProgress,
     );
   }
 

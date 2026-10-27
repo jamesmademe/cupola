@@ -102,9 +102,13 @@ class RadarrService with ArrActivityMixin {
   }
 
   @override
-  Future<List<dynamic>> getAllHistory({Map<String, dynamic>? queryParameters}) {
+  Future<List<dynamic>> getAllHistory({
+    Map<String, dynamic>? queryParameters,
+    void Function(List<dynamic> records)? onProgress,
+  }) {
     return super.getAllHistory(
       queryParameters: {'includeMovie': true, ...?queryParameters},
+      onProgress: onProgress,
     );
   }
 

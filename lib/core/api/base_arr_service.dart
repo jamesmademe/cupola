@@ -115,7 +115,9 @@ Future<List<T>> _recordsOf<T>(
 }
 
 /// Pages [from] to [to], at most [_pageWalkLanes] requests in flight, answered
-/// in page order whichever finished first.
+/// in page order whichever finished first. [onPrefix] hears the pages in hand
+/// from [from] on, in order, each time that run grows and the range is not yet
+/// whole.
 ///
 /// A page that fails fails the read, as it does in the sequential walk: the
 /// error surfaces at once, no lane starts another request after it, and the
@@ -124,12 +126,14 @@ Future<List<T>> _recordsOf<T>(
 Future<List<ArrRecordPage>> _fetchPageRange(
   Future<ArrRecordPage> Function(int page) fetchPage,
   int from,
-  int to,
-) async {
+  int to, {
+  void Function(List<ArrRecordPage> inOrder)? onPrefix,
+}) async {
   if (to < from) return const [];
   final pages = List<ArrRecordPage?>.filled(to - from + 1, null);
   var nextPage = from;
   var failed = false;
+  var prefix = 0;
 
   Future<void> lane() async {
     while (!failed && nextPage <= to) {
@@ -139,6 +143,17 @@ Future<List<ArrRecordPage>> _fetchPageRange(
       } catch (_) {
         failed = true;
         rethrow;
+      }
+      // Told when the pages from the first one on are all in hand, never of a
+      // page that finished ahead of one before it: a list that grows downward.
+      if (onPrefix != null) {
+        final before = prefix;
+        while (prefix < pages.length && pages[prefix] != null) {
+          prefix++;
+        }
+        if (prefix > before && prefix < pages.length) {
+          onPrefix([for (var i = 0; i < prefix; i++) pages[i]!]);
+        }
       }
     }
   }
@@ -405,11 +420,17 @@ mixin ArrActivityMixin {
   /// and a small NAS answers three together sooner than fifty in a heap.
   /// Whatever the batch did not settle (a count that grew under the walk) goes
   /// on one page at a time, as before.
+  ///
+  /// [onProgress], when given, hears the records in hand (a fresh list each
+  /// time, in page order) after the first page and each time the pages after it
+  /// extend the run, until the walk is whole; it is not told of the whole,
+  /// which is the answer. A screen draws from it before the walk ends.
   Future<ArrRecordPage> _fetchAllPages(
     String endpoint, {
     Map<String, dynamic> extraParams = const {},
     int pageSize = 250,
     int maxPages = 50,
+    void Function(List<dynamic> records)? onProgress,
   }) async {
     Future<ArrRecordPage> fetchPage(int page) async {
       final response = await client.get(
@@ -468,7 +489,18 @@ mixin ArrActivityMixin {
           maxPages,
           (total / envelope.records.length).ceil(),
         );
-        batch = await _fetchPageRange(fetchPage, 2, last);
+        if (onProgress != null) onProgress(List.of(records));
+        batch = await _fetchPageRange(
+          fetchPage,
+          2,
+          last,
+          onPrefix: onProgress == null
+              ? null
+              : (pages) => onProgress([
+                  ...records,
+                  for (final page in pages) ...page.records,
+                ]),
+        );
       }
     }
 
@@ -477,13 +509,16 @@ mixin ArrActivityMixin {
     return ArrRecordPage(records: records, total: total, cutShort: true);
   }
 
-  /// Fetches all history records across all pages.
+  /// Fetches all history records across all pages. [onProgress] hears the
+  /// records in hand before the walk is whole (see `_fetchAllPages`).
   Future<List<dynamic>> getAllHistory({
     Map<String, dynamic>? queryParameters,
+    void Function(List<dynamic> records)? onProgress,
   }) async {
     final result = await _fetchAllPages(
       'history',
       extraParams: {..._historySort, ...?queryParameters},
+      onProgress: onProgress,
     );
     return result.records;
   }

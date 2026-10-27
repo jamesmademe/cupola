@@ -270,6 +270,37 @@ void main() {
         expect(page.cutShort, isTrue);
       });
 
+      test('a history walk says what it has after each run of pages', () async {
+        client.getResponseQueue.addAll([
+          {'records': rows(250), 'totalRecords': 1000},
+          {'records': rows(250), 'totalRecords': 1000},
+          {'records': rows(250), 'totalRecords': 1000},
+          {'records': rows(250), 'totalRecords': 1000},
+        ]);
+        final heard = <int>[];
+
+        final all = await service.getAllHistory(
+          onProgress: (records) => heard.add(records.length),
+        );
+
+        // The first page alone, then the run growing; never the whole, which
+        // is the answer, and never a count that goes down.
+        expect(heard.first, 250);
+        expect(heard, isNot(contains(1000)));
+        expect(heard, orderedEquals([...heard]..sort()));
+        expect(all, hasLength(1000));
+      });
+
+      test('a history of one page says nothing before its answer', () async {
+        client.getResponseData = {'records': rows(12), 'totalRecords': 12};
+        var heard = 0;
+
+        final all = await service.getAllHistory(onProgress: (_) => heard++);
+
+        expect(heard, 0);
+        expect(all, hasLength(12));
+      });
+
       test('the record-only getters still answer with the rows', () async {
         client.getResponseData = {'records': rows(200)};
 

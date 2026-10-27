@@ -77,6 +77,7 @@ class FakeRadarrService extends RadarrService {
   @override
   Future<List<dynamic>> getAllHistory({
     Map<String, dynamic>? queryParameters,
+    void Function(List<dynamic> records)? onProgress,
   }) async => const [];
 
   Future<List<dynamic>> getBlocklist() async => const [];
@@ -218,6 +219,7 @@ class FakeSonarrService extends SonarrService {
   @override
   Future<List<dynamic>> getAllHistory({
     Map<String, dynamic>? queryParameters,
+    void Function(List<dynamic> records)? onProgress,
   }) async => const [];
 
   Future<List<dynamic>> getBlocklist() async => const [];
@@ -343,6 +345,7 @@ class FakeLidarrService extends LidarrService {
   @override
   Future<List<dynamic>> getAllHistory({
     Map<String, dynamic>? queryParameters,
+    void Function(List<dynamic> records)? onProgress,
   }) async => const [];
 
   Future<List<dynamic>> getBlocklist() async => const [];
