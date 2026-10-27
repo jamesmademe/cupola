@@ -305,25 +305,46 @@ running while Cupola is open.
 
 ## Install
 
-> **Just want to use it?** Grab the file for your platform from
-> [**Releases**](https://github.com/matthw-labs/seekarr/releases). No toolchain
-> needed. Releases before 1.0.0 were published under the project's former name,
-> Seekarr, and cover fewer services than this page describes.
+> **Just want to use it?** iPhone and iPad install through TestFlight; Android and
+> macOS download from [**Releases**](https://github.com/matthw-labs/seekarr/releases).
+> No toolchain needed. The App Store and Google Play come later.
 
-| Platform | Status | Download |
+| Platform | Status | Get it |
 | --- | --- | --- |
-| **Android** | Supported | `.apk` |
-| **macOS** | Supported | `.dmg` |
-| **iOS** | Supported (sideload) | unsigned `.ipa` |
-| Windows / Linux | Built by CI, untested | `.zip` / `.tar.gz` |
+| **iOS / iPadOS** | Supported, iOS 17+ | [TestFlight]({TESTFLIGHT_URL}) |
+| **Android** | Supported, Android 7.0+ | `.apk` from Releases, or Obtainium |
+| **macOS** | Supported, macOS 12+ | `.dmg` from Releases |
+| Windows / Linux | Built by CI, untested | `.zip` / `.tar.gz` from Releases |
 | Web | Not a goal | none |
+
+> **Coming from Seekarr?** Cupola 1.0 is a **new app**, not an update. It installs
+> beside Seekarr and starts empty: add your services again (same URLs, same API keys),
+> check that they answer, then uninstall Seekarr. Obtainium users add Cupola as a new
+> app; the old entry stays on Seekarr 0.8.0. Releases before 1.0.0 were published as
+> Seekarr and cover fewer services than this page describes.
+
+<details>
+<summary><b>iOS and iPadOS</b></summary>
+<br/>
+
+Open the [TestFlight link]({TESTFLIGHT_URL}) on your iPhone or iPad, install Apple's
+TestFlight app when it asks, then tap **Install**. TestFlight brings each new version
+on its own. The public link has a limited number of places: if it says the beta is
+full, try again after the next release.
+
+</details>
 
 <details>
 <summary><b>Android</b></summary>
 <br/>
 
-Download the `.apk` and install it. You may need to allow installs from unknown
-sources for your browser or file manager.
+Download `cupola-<version>.apk` from Releases and install it. You may need to allow
+installs from unknown sources for your browser or file manager. One file covers every
+device.
+
+To get updates without checking this page, add this repository's URL to
+[**Obtainium**](https://obtainium.imranr.dev/): it installs the `.apk` from each new
+release.
 
 </details>
 
@@ -333,22 +354,6 @@ sources for your browser or file manager.
 
 Download the `.dmg`, drag **Cupola** to `/Applications`, and launch it. The app is
 signed with a Developer ID and notarized by Apple, so it opens like any other.
-
-</details>
-
-<details>
-<summary><b>iOS</b></summary>
-<br/>
-
-The `.ipa` is **not signed by Apple**, so it has to go through a sideloading tool
-that applies an ad-hoc signature on install:
-
-- [**AltStore**](https://altstore.io/): refreshes over Wi-Fi from the same machine
-- [**Sideloadly**](https://sideloadly.io/): desktop tool, no account needed on macOS
-- [**SideStore**](https://sidestore.io/): AltStore's sibling, refreshes on the phone itself
-
-Ad-hoc signatures expire, so the app needs periodic re-installation: **7 days** with
-a free Apple ID, **1 year** with a paid Apple Developer account.
 
 </details>
 
