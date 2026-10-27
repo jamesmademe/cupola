@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:cupola/core/app_radius.dart';
 import 'package:cupola/core/app_spacing.dart';
@@ -37,6 +38,73 @@ class AppConfirmResult {
   bool option(String key) => options[key] ?? false;
 }
 
+/// Enter on a [showAppConfirmDialog] that opted in: the confirm.
+class _ConfirmIntent extends Intent {
+  const _ConfirmIntent();
+}
+
+/// Runs the confirm for Enter, but only while the dialog's own focus holds the
+/// key. Elsewhere Enter is the control's: a button presses itself, a checkbox
+/// toggles, a field takes a newline (multiline or not). A disabled action lets
+/// the key fall through to them, so the nearest-first binding never steals it.
+class _ConfirmAction extends Action<_ConfirmIntent> {
+  _ConfirmAction({required this.isOwnFocus, required this.onConfirm});
+
+  final bool Function() isOwnFocus;
+  final VoidCallback onConfirm;
+
+  @override
+  bool isEnabled(_ConfirmIntent intent, [BuildContext? context]) =>
+      isOwnFocus();
+
+  @override
+  Object? invoke(_ConfirmIntent intent) {
+    onConfirm();
+    return null;
+  }
+}
+
+/// The Enter binding of an opted-in [showAppConfirmDialog]. It holds a focus
+/// of its own, taken on open: a key only reaches the [Shortcuts] through the
+/// focus inside them, and before any control has one there is none. The focus
+/// is no control: Tab goes on to Cancel, and no ring draws on it.
+class _ConfirmScope extends StatefulWidget {
+  const _ConfirmScope({required this.onConfirm, required this.child});
+
+  final VoidCallback onConfirm;
+  final Widget child;
+
+  @override
+  State<_ConfirmScope> createState() => _ConfirmScopeState();
+}
+
+class _ConfirmScopeState extends State<_ConfirmScope> {
+  final _focus = FocusNode(debugLabel: 'app-confirm');
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Shortcuts(
+    shortcuts: const {
+      SingleActivator(LogicalKeyboardKey.enter): _ConfirmIntent(),
+      SingleActivator(LogicalKeyboardKey.numpadEnter): _ConfirmIntent(),
+    },
+    child: Actions(
+      actions: {
+        _ConfirmIntent: _ConfirmAction(
+          isOwnFocus: () => FocusManager.instance.primaryFocus == _focus,
+          onConfirm: widget.onConfirm,
+        ),
+      },
+      child: Focus(focusNode: _focus, autofocus: true, child: widget.child),
+    ),
+  );
+}
+
 /// The confirm label for the options as they currently stand: `checked(key)`
 /// reads one of them.
 typedef AppConfirmLabelFor = String Function(bool Function(String key) checked);
@@ -67,6 +135,13 @@ typedef AppConfirmLabelFor = String Function(bool Function(String key) checked);
 /// There is no `destructive` flag any more: once it stopped painting red it
 /// did nothing true. Call sites that want a haptic already fire it themselves
 /// before the dialog opens.
+///
+/// [enterConfirms] lets Enter (and the keypad's Enter) run the confirm, the
+/// primary action. It is off by default: a delete, a stop, a discard or a
+/// decline must be confirmed with a pointer or a Tab-and-Space, never by a
+/// key that might be held down by habit. A call site turns it on only for an
+/// action it can reverse. With the focus on a button, Enter presses that
+/// button; in a multiline field Enter stays a newline.
 Future<AppConfirmResult> showAppConfirmDialog({
   required BuildContext context,
   required String title,
@@ -77,6 +152,7 @@ Future<AppConfirmResult> showAppConfirmDialog({
   String cancelLabel = 'Cancel',
   List<AppConfirmOption> options = const [],
   bool useRootNavigator = true,
+  bool enterConfirms = false,
 }) async {
   final values = {for (final o in options) o.key: o.initialValue};
   assert(
@@ -96,7 +172,7 @@ Future<AppConfirmResult> showAppConfirmDialog({
             confirmLabelFor?.call((key) => values[key] ?? false) ??
             confirmLabel;
 
-        return AlertDialog(
+        final dialog = AlertDialog(
           // The title scrolls with the content, and is never cut. A title
           // names what the action will touch (`Remove Big.Buck.Bunny…?`),
           // and capped at two lines it hid the very name the confirmation
@@ -168,6 +244,13 @@ Future<AppConfirmResult> showAppConfirmDialog({
               child: Text(label),
             ),
           ],
+        );
+        if (!enterConfirms) return dialog;
+        return _ConfirmScope(
+          onConfirm: () => Navigator.of(
+            context,
+          ).pop(AppConfirmResult(confirmed: true, options: Map.of(values))),
+          child: dialog,
         );
       },
     ),

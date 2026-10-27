@@ -129,6 +129,7 @@ class BazarrProvidersScreen extends ConsumerWidget {
           'Bazarr stops waiting out $providers and asks them again on its '
           'next search. A provider still over its limit throttles again.',
       confirmLabel: 'Reset throttles',
+      enterConfirms: true,
     );
     if (!result.confirmed || !context.mounted) return;
     await _resetStatuses(context, ref);

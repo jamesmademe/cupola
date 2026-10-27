@@ -30,6 +30,7 @@ Future<void> updateAllApps(
     title: 'Update ${upgradable.length} app$plural?',
     message: upgradable.map((a) => a.title).join(', '),
     confirmLabel: 'Update all',
+    enterConfirms: true,
   );
   if (!result.confirmed || !context.mounted) return;
 

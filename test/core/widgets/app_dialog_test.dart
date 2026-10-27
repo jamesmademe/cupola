@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/core/theme.dart';
@@ -271,5 +272,80 @@ void main() {
     );
     expect(button.bottom, lessThanOrEqualTo(600));
     expect(tester.takeException(), isNull);
+  });
+
+  group('Enter on showAppConfirmDialog', () {
+    Future<void> openApprove(
+      WidgetTester tester,
+      void Function(AppConfirmResult result) onResult, {
+      bool enterConfirms = true,
+    }) => _open(tester, AppTheme.darkTheme(), (context) async {
+      onResult(
+        await showAppConfirmDialog(
+          context: context,
+          title: 'Approve this request?',
+          confirmLabel: 'Approve request',
+          enterConfirms: enterConfirms,
+        ),
+      );
+    });
+
+    testWidgets('runs the confirm when the dialog opts in', (tester) async {
+      AppConfirmResult? result;
+      await openApprove(tester, (r) => result = r);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+
+      expect(result?.confirmed, isTrue);
+      expect(find.byType(AlertDialog), findsNothing);
+    });
+
+    testWidgets('the keypad Enter runs the confirm too', (tester) async {
+      AppConfirmResult? result;
+      await openApprove(tester, (r) => result = r);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.numpadEnter);
+      await tester.pumpAndSettle();
+
+      expect(result?.confirmed, isTrue);
+    });
+
+    testWidgets('does nothing when the dialog did not opt in', (tester) async {
+      AppConfirmResult? result;
+      await openApprove(tester, (r) => result = r, enterConfirms: false);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+
+      expect(result, isNull);
+      expect(find.byType(AlertDialog), findsOneWidget);
+    });
+
+    testWidgets('on the focused Cancel it cancels, not confirms', (
+      tester,
+    ) async {
+      AppConfirmResult? result;
+      await openApprove(tester, (r) => result = r);
+
+      // Cancel is the first control in the dialog, so one Tab lands on it.
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+
+      expect(result?.confirmed, isFalse);
+    });
+
+    testWidgets('on the focused confirm it confirms', (tester) async {
+      AppConfirmResult? result;
+      await openApprove(tester, (r) => result = r);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+
+      expect(result?.confirmed, isTrue);
+    });
   });
 }

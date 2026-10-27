@@ -573,6 +573,7 @@ Future<bool> confirmManualImport(
       reimports: reimports,
     ),
     confirmLabel: 'Import $files',
+    enterConfirms: true,
   );
   return result.confirmed;
 }

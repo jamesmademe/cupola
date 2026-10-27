@@ -44,8 +44,14 @@ Material's: a dialog route, checkbox tiles that announce their state, two button
 
 Each sheet is drawn in the dark and the light room; the delete dialog also on the desktop.
 
-- Standard, with an icon, a delete with its options ticked and unticked, a delete with no options, a long title, the typed confirmation.
+- Standard, with an icon, Enter confirms with the confirm focused, a delete with its options ticked and unticked, a delete with no options, a long title, the typed confirmation.
 - Text at 200%: the grab confirmation, the delete with two options, the typed confirmation.
+
+## Keyboard
+
+Enter runs the confirm, the primary action, only where the call site passes `enterConfirms: true`: an action it can reverse (*Download release*, *Approve request*, *Save changes*, *Import 3 files*). A delete, a stop, a discard, a decline or a sign-out stays off, so a key pressed by habit never removes anything; the typed variant has no Enter at all. The key is taken only while the dialog's own focus holds it, which the dialog takes on open and no ring marks. With a button focused, Enter presses that button (Cancel cancels); on a checkbox it toggles it; in a text field it stays a newline, multiline or not. The keypad's Enter does the same as Enter.
+
+The catalog's *Enter confirms* scene tabs to the confirm, so the ring sits on the primary action.
 
 ## Do / don't
 

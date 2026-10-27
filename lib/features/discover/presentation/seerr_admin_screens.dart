@@ -109,6 +109,7 @@ class _SeerrIssuesScreenState extends ConsumerState<SeerrIssuesScreen> {
         'Seerr marks it resolved; it can be reopened from Seerr.',
       ].join('\n\n'),
       confirmLabel: 'Resolve issue',
+      enterConfirms: true,
     );
     if (!result.confirmed || !mounted) return;
 

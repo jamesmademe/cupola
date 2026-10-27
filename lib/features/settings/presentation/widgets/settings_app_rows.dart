@@ -154,6 +154,7 @@ class SettingsRevisitOnboardingRow extends ConsumerWidget {
           "You'll see the Welcome again. Nothing about your services or "
           'settings is changed or removed.',
       confirmLabel: 'Revisit onboarding',
+      enterConfirms: true,
     );
 
     if (!result.confirmed) return;

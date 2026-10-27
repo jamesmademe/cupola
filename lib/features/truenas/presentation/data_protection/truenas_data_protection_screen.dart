@@ -109,6 +109,7 @@ class _TaskTile extends ConsumerWidget {
             'Scrubbing "${task.poolName}" reads the whole pool and can take '
             'hours.',
         confirmLabel: 'Start scrub',
+        enterConfirms: true,
       );
       if (!result.confirmed || !context.mounted) return;
     }

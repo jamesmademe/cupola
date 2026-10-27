@@ -137,6 +137,7 @@ class ActivityActions {
           'looks for a different release.',
       icon: Icons.refresh_rounded,
       confirmLabel: 'Try another download',
+      enterConfirms: true,
     );
 
     if (!result.confirmed) return;
@@ -169,6 +170,7 @@ class ActivityActions {
       message: '$title becomes eligible to be grabbed again.',
       icon: Icons.playlist_add_check_rounded,
       confirmLabel: 'Remove from blocklist',
+      enterConfirms: true,
     );
 
     if (!result.confirmed) return;
@@ -278,6 +280,7 @@ class ActivityActions {
           message: confirmation.message,
           icon: Icons.check_circle_outline_rounded,
           confirmLabel: 'Approve request',
+          enterConfirms: true,
         );
         if (!result.confirmed) return null;
       }
