@@ -41,6 +41,18 @@ export const faq = {
     q: 'What data leaves my network?',
     a: 'Two things, each for one reason. Poster and cast artwork comes from TMDB\'s image CDN, because that is where Seerr\'s metadata points; those requests carry no credential of yours. Signing in to Seerr with a Plex account goes through plex.tv once. Nothing else: no telemetry, no analytics, no crash reports. See <a href="/privacy/">privacy</a>.',
   },
+  address: {
+    q: 'What address do I type for a service?',
+    a: 'The one you open its web interface at, with the port: <code>http://192.168.1.20:7878</code> for Radarr, for instance, or <code>https://radarr.example.com</code> behind a reverse proxy. If you leave out <code>http://</code>, Cupola tries https, so a service on plain http needs the <code>http://</code> written out. A URL base (<code>/radarr</code>) goes on the end. A container name such as <code>radarr:7878</code> only works inside Docker: from your phone, use the address of the machine it runs on. When the connection fails, Cupola says what it found, such as a port that answers in plain http, a sign-in page in front of the service, or an address where nothing answered.',
+  },
+  apiKey: {
+    q: 'Where do I find the API key?',
+    a: 'In the service\'s own web interface. Radarr, Sonarr, Lidarr, Readarr, Prowlarr, Bazarr and Seerr keep it under Settings, General; SABnzbd under Config, General; Jellyfin under Dashboard, Advanced, API Keys; TrueNAS under Credentials, API Keys; Unraid under Settings, Management Access, API Keys. Plex calls it a token: open any item, then Get Info, View XML. qBittorrent, Transmission, NZBGet, Dockge and Nginx Proxy Manager take the login you already use for their web interface instead. The connection form says, for each service, where to look. Household members signing in to Seerr with their own account need no key at all.',
+  },
+  discoverSeerr: {
+    q: 'Do I need Seerr for Discover?',
+    a: 'For most of it, yes. Trending, genres, networks, people, collections and requests all come from Seerr (or Overseerr, or Jellyseerr). Without it, Discover still shows the calendar from Radarr, Sonarr and Lidarr and searches your libraries, and everything else in Cupola works as usual.',
+  },
   certs: {
     q: 'My services are behind a reverse proxy with a self-signed certificate. Will it work?',
     a: 'Yes, that is the expected setup. Cupola asks before trusting a certificate it has not seen, then pins its SHA-256 fingerprint to that host, so two services behind the same proxy are trusted together. Cloudflare Access service tokens, proxy passwords and custom headers are supported too.',
@@ -59,7 +71,7 @@ export const faq = {
   },
   seekarr: {
     q: 'What happened to Seekarr?',
-    a: 'Seekarr is now Cupola. Releases up to 0.8.0 were published as Seekarr and covered five services; Cupola 1.0 covers seventeen and is a new app rather than an update. The source, the issues and the history are in the same repository.',
+    a: 'Seekarr is now Cupola. Releases up to 0.8.0 were published as Seekarr and covered five services; Cupola 1.0 covers seventeen and is a new app rather than an update. It installs beside Seekarr and starts empty, so add your services again (same addresses, same keys), check they answer, then remove Seekarr. On Android the package name changed too, so Obtainium needs Cupola added as a new app. The source, the issues and the history are in the same repository.',
   },
   widgets: {
     q: 'Are there widgets and notifications?',
