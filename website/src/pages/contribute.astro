@@ -15,7 +15,7 @@ const unverified = services().filter((s) => s.tested !== 'verified');
   <p>Every integration is written to the service's official API and covered by tests that run offline. Whether it works against your instance, behind your proxy, with your certificates, is something only a real stack can say. These are not yet verified end to end:</p>
   <ul>
     {unverified.map((s) => (
-      <li><a href={`/services/#${s.id}`}>{s.name}</a>: {s.tested === 'partial' ? 'partly verified' : 'recorded answers only'}</li>
+      <li><a href={`/services/${s.id}/`}>{s.name}</a>: {s.tested === 'partial' ? 'partly verified' : 'recorded answers only'}</li>
     ))}
   </ul>
   <p><a href={`${site.issues}/new`} rel="noopener">Open an issue</a> with the service, its version, how you reach it, and what you saw. A report that says “it works” is as welcome as one that says it does not.</p>

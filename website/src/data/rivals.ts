@@ -172,4 +172,99 @@ export const rivals: Rival[] = [
     ],
     sources: [{ label: 'LunaSea releases on GitHub', url: 'https://github.com/JagandeepBrar/LunaSea/releases' }],
   },
+  {
+    id: 'ruddarr',
+    name: 'Ruddarr',
+    title: 'A Ruddarr alternative, also on Android · Cupola',
+    heading: 'Comparing Ruddarr and Cupola.',
+    description:
+      'Ruddarr is an open-source Radarr and Sonarr app for iOS 26. Cupola is free and open source too, covers seventeen services, and runs on Android.',
+    lede: 'Ruddarr is an open-source app for Radarr and Sonarr on iPhone and iPad, and it needs iOS 26 or later. Cupola is free and open source too, reaches past Radarr and Sonarr to fifteen more services, and runs on Android and on iPhones back to iOS 17.',
+    checked: '30 October 2026',
+    facts: [
+      {
+        label: 'Platforms',
+        them: 'iPhone and iPad; on Apple silicon Macs as an iPad app, which the App Store lists as not verified for macOS',
+        cupola: cupola.platforms,
+      },
+      { label: 'Oldest system', them: 'iOS 26', cupola: 'iOS 17, Android 7, macOS 12 (Apple silicon)' },
+      { label: 'Price', them: 'Free. Notifications need Ruddarr+, a $5.99 in-app subscription', cupola: cupola.price },
+      { label: 'Source code', them: 'Open source, MIT License', cupola: cupola.source },
+      { label: 'Around since', them: '2024 (first release in April)', cupola: '2026 as Cupola, earlier as Seekarr' },
+      {
+        label: 'Services',
+        them: 'Radarr and Sonarr',
+        cupola: 'Seventeen: Radarr, Sonarr, Lidarr, Readarr, Bazarr, Seerr, Prowlarr, four download clients, Jellyfin, Plex and the server underneath',
+      },
+      { label: 'Languages', them: 'English and seven more', cupola: 'English only' },
+    ],
+    ahead: [
+      'Fine-grained push notifications (with Ruddarr+), Siri Shortcuts, Spotlight search and iCloud sync of settings between devices.',
+      'It is translated into eight languages; Cupola is in English only.',
+      'A long record on the App Store: 4.9 out of 5 from 767 ratings when this page was checked.',
+    ],
+    differs: [
+      'It runs on Android as well as on iPhone, iPad and Mac, and on iPhones back to iOS 17.',
+      'It reaches past Radarr and Sonarr: Seerr for requests, Lidarr, Bazarr, Prowlarr, the download clients, Jellyfin and Plex sessions, and the server underneath.',
+      'Household members can sign in to Seerr with their own account and get a simpler app for requests.',
+      'Everything is free: nothing to subscribe to, and no Cupola account.',
+    ],
+    moving: [
+      'Cupola does not import Ruddarr settings. Add each Radarr and Sonarr connection again with the same address and API key.',
+      'Custom HTTP headers for a reverse proxy go in the same place in Cupola: the connection\'s access settings.',
+      'Each connection can be tested before you save it, and says why when it fails.',
+    ],
+    sources: [
+      { label: 'Ruddarr on GitHub', url: 'https://github.com/ruddarr/app' },
+      { label: 'Ruddarr on the App Store', url: 'https://apps.apple.com/app/ruddarr/id6476240130' },
+    ],
+  },
+  {
+    id: 'arrmatey',
+    name: 'ArrMatey',
+    title: 'An ArrMatey alternative for iPhone, Android and Mac · Cupola',
+    heading: 'Comparing ArrMatey and Cupola.',
+    description:
+      'ArrMatey is an open-source arr client released as an Android APK. Cupola is free and open source too, and installs on iPhone, iPad and Mac today.',
+    lede: 'ArrMatey is an open-source client for the arr apps, released as an Android APK; its iOS version is built from source in Xcode. Cupola installs on iPhone, iPad and Mac from a public TestFlight beta, and reaches further into downloads, streaming and the server underneath.',
+    checked: '30 October 2026',
+    facts: [
+      { label: 'Platforms', them: 'Android; iOS when built from source', cupola: cupola.platforms },
+      { label: 'Price', them: 'No price stated; donation links', cupola: cupola.price },
+      { label: 'Source code', them: 'Open source, MIT License', cupola: cupola.source },
+      { label: 'Around since', them: '2026 (first release in February), still before 1.0', cupola: '2026 as Cupola, earlier as Seekarr' },
+      {
+        label: 'Media and requests',
+        them: 'Sonarr, Radarr, Lidarr, Bookshelf, Listenarr, Seerr, Bazarr',
+        cupola: 'Sonarr, Radarr, Lidarr, Readarr, Bazarr, Seerr (with sign-in for household members)',
+      },
+      {
+        label: 'Download clients and indexers',
+        them: 'qBittorrent, Transmission, Deluge, SABnzbd, Prowlarr',
+        cupola: 'SABnzbd, NZBGet, qBittorrent, Transmission, Prowlarr',
+      },
+      {
+        label: 'Streaming and server',
+        them: 'Tracearr',
+        cupola: 'Jellyfin and Plex sessions, TrueNAS, Unraid, Dockge, Nginx Proxy Manager',
+      },
+    ],
+    ahead: [
+      'More apps for books and audio, Bookshelf and Listenarr, plus Deluge and Tracearr, which Cupola does not support.',
+      'A combined dashboard you arrange yourself, and import and export of settings.',
+    ],
+    differs: [
+      'It installs on iPhone, iPad and Mac from a public TestFlight beta, without building it yourself.',
+      'It reaches the machine under the media apps: TrueNAS, Unraid, Dockge and Nginx Proxy Manager, plus Jellyfin and Plex sessions.',
+      'Household members can sign in to Seerr with their own account and get a simpler app for requests.',
+    ],
+    moving: [
+      'Cupola does not import ArrMatey settings. Add each connection again with the same address and API key or password.',
+      'Each connection can be tested before you save it, and says why when it fails.',
+    ],
+    sources: [
+      { label: 'ArrMatey on GitHub', url: 'https://github.com/owenlejeune/arrmatey' },
+      { label: 'ArrMatey releases', url: 'https://github.com/owenlejeune/arrmatey/releases' },
+    ],
+  },
 ];

@@ -15,7 +15,7 @@ const all = services();
   <ul>
     {all.map((s, i) => (
       <li style={`--i:${i}`}>
-        <a href={`/services/#${s.id}`} title={s.name}>
+        <a href={`/services/${s.id}/`} title={s.name}>
           <span class="g" set:html={glyph(s.id)} />
           <span class="sr-only">{s.name}</span>
           <span class="dot green" aria-hidden="true"></span>
