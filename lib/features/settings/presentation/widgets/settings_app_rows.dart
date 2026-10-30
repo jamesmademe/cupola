@@ -60,7 +60,7 @@ List<Widget> settingsAboutRows(
     SettingsCard.grouped(
       leading: const Icon(Icons.feedback_rounded),
       title: 'Send feedback',
-      subtitle: 'Email the developer',
+      subtitle: 'Email us',
       semanticHint: 'opens your email composer',
       onTap: () => _launchExternalUri(
         context: context,
@@ -71,7 +71,7 @@ List<Widget> settingsAboutRows(
     SettingsCard.grouped(
       leading: const Icon(Icons.favorite_rounded),
       title: 'Support development',
-      subtitle: 'Buy me a coffee',
+      subtitle: 'Buy us a coffee',
       onTap: () => _openDonation(context),
     ),
     // The only way into the licence page. `main.dart` registers each bundled
