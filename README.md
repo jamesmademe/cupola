@@ -107,7 +107,7 @@ about all of them.
 
 | Platform | Status | Get it |
 | --- | --- | --- |
-| **iOS / iPadOS** | Supported, iOS 15+ (widgets need iOS 17) | [TestFlight]({TESTFLIGHT_URL}) |
+| **iOS / iPadOS** | Supported, iOS 17+ | [TestFlight]({TESTFLIGHT_URL}) |
 | **Android** | Supported, Android 7.0+ | `.apk` from Releases, or Obtainium |
 | **macOS** | Supported, Apple silicon, macOS 12+ | `.dmg` from Releases |
 | Windows / Linux | Built by CI, untested | `.zip` / `.tar.gz` from Releases |
