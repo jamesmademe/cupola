@@ -19,7 +19,7 @@ One native app for your entire self-hosted media stack, and the box it runs on.<
 
 <br/>
 
-<img src="screenshots/home.png" width="240" alt="Home: what is new on your server, what is coming up, and what needs you" />
+<img src="screenshots/home.png" width="240" alt="Home: what you were watching, what is new on your server and what is coming up" />
 <img src="screenshots/trending.png" width="240" alt="Discover: what is trending this week" />
 <img src="screenshots/title.png" width="240" alt="A movie's page, with its ratings and the button that adds it to Radarr" />
 
@@ -72,12 +72,12 @@ about all of them.
 
 <table>
   <tr>
-    <td align="center" width="33%"><img src="screenshots/home.png" alt="Home" /><br/><sub><b>Home</b> · what is new, what is next, what needs you</sub></td>
+    <td align="center" width="33%"><img src="screenshots/home.png" alt="Home" /><br/><sub><b>Home</b> · what you were watching, what is new, what is next</sub></td>
     <td align="center" width="33%"><img src="screenshots/discover.png" alt="Discover" /><br/><sub><b>Discover</b> · calendar, trending, every way in</sub></td>
     <td align="center" width="33%"><img src="screenshots/title.png" alt="A movie's page" /><br/><sub><b>A title</b> · one page to decide and act</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="screenshots/activity.png" alt="Activity" /><br/><sub><b>Activity</b> · what went wrong, and how to fix it</sub></td>
+    <td align="center"><img src="screenshots/activity.png" alt="Activity" /><br/><sub><b>Activity</b> · everyone's requests, and where they stand</sub></td>
     <td align="center"><img src="screenshots/stack.png" alt="Stack" /><br/><sub><b>Stack</b> · every service at a glance</sub></td>
     <td align="center"><img src="screenshots/sonarr.png" alt="Sonarr" /><br/><sub><b>Sonarr</b> · each service with its own tabs</sub></td>
   </tr>
