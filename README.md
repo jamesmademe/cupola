@@ -105,9 +105,13 @@ about all of them.
 > macOS download from [**Releases**](https://github.com/matthw-labs/cupola/releases).
 > No toolchain needed. The App Store and Google Play come later.
 
+> **No server at hand?** On the first screen, **Explore a demo home** opens an invented
+> household with all seventeen services. It runs entirely inside the app: nothing is
+> saved and nothing goes out to the network. **Settings → Leave demo** takes you back.
+
 | Platform | Status | Get it |
 | --- | --- | --- |
-| **iOS / iPadOS** | Supported, iOS 17+ | [TestFlight]({TESTFLIGHT_URL}) |
+| **iOS / iPadOS** | Supported, iOS 17+ | [TestFlight](https://testflight.apple.com/join/tqmwnCMj) |
 | **Android** | Supported, Android 7.0+ | `.apk` from Releases, or Obtainium |
 | **macOS** | Supported, Apple silicon, macOS 12+ | `.dmg` from Releases |
 | Windows / Linux | Built by CI, untested | `.zip` / `.tar.gz` from Releases |
@@ -124,7 +128,7 @@ about all of them.
 <summary><b>iOS and iPadOS</b></summary>
 <br/>
 
-Open the [TestFlight link]({TESTFLIGHT_URL}) on your iPhone or iPad, install Apple's
+Open the [TestFlight link](https://testflight.apple.com/join/tqmwnCMj) on your iPhone or iPad, install Apple's
 TestFlight app when it asks, then tap **Install**. TestFlight brings each new version
 on its own. The public link has a limited number of places: if it says the beta is
 full, try again after the next release.
@@ -201,8 +205,8 @@ Two columns say how far each integration goes:
 
 | Service | What Cupola does | Auth | Control | Tested |
 | --- | --- | --- | --- | :-: |
-| **qBittorrent** | Live queue with filters, sorting and search; per-torrent Info / Files / Trackers / Actions; pause, resume, force-start, recheck, reannounce, speed limits, categories, tags, delete | User + password | Read + write | ✅ |
-| **Transmission** | Live queue, labels and session settings; start, stop, verify, reannounce, reorder, add, delete, speed limits | User + password | Read + write | ✅ |
+| **qBittorrent** | Live queue with filters, sorting and search; per-torrent Info / Files / Trackers / Actions; pause, resume, force-start, recheck, reannounce, per-torrent speed limits, the alternative speed switch, categories, tags, delete | User + password | Read + write | ✅ |
+| **Transmission** | Live queue, labels and session settings; start, stop, verify, reannounce, reorder, add, delete, Slow mode | User + password | Read + write | ✅ |
 | **Prowlarr** | Indexer overview and usage stats; add, edit, test, delete and bulk-manage indexers; push to connected apps; tags and app profiles | API key | Read + write | ✅ |
 | **SABnzbd** | Live queue, history and servers; pause and resume one job or everything, add by URL, delete | API key | Read + write | ✅ |
 | **NZBGet** | Live queue, history, feeds and messages; pause and resume, add, delete | User + password | Read + write | ✅ |
@@ -211,8 +215,8 @@ Two columns say how far each integration goes:
 
 | Service | What Cupola does | Auth | Control | Tested |
 | --- | --- | --- | --- | :-: |
-| **Jellyfin** | Who is watching right now, transcode reasons, resume points, libraries, users, devices and tasks; pause, stop or message a session | API key + viewer, or a user's own sign-in | Read + sessions | ✅ |
-| **Plex** | The same session-first board, driven by Plex's own semantics: libraries, on deck, devices, playlists; stop a session with a reason | Token | Read + stop | ◐ |
+| **Jellyfin** | Who is watching right now, transcode reasons, resume points, libraries, users, devices and tasks; pause, stop or message a session | API key + viewer | Read + sessions | ✅ |
+| **Plex** | The same session-first board, driven by Plex's own semantics: libraries, on deck, devices, playlists; stop a session | Token | Read + stop | ◐ |
 
 ### Infrastructure
 
@@ -221,7 +225,7 @@ Two columns say how far each integration goes:
 | **TrueNAS** | Full console: dashboard, pools and disks, datasets and snapshots, SMB/NFS shares, apps, virtualization, replication and periodic tasks, reporting, users and groups; a disk with errors offers the scrub that repairs it | API key | Read + write | ◐ |
 | **Dockge** | Compose stacks with live terminal output: start, stop, restart, update, down, and edit or deploy the compose file itself | User + password | Read + write | ✅ |
 | **Unraid** | Array status, disks, shares, Docker containers, VMs and notifications; start and stop VMs, archive notifications | API key | Read + VMs | ○ ¹ |
-| **Nginx Proxy Manager** | What the box is fronting, what is broken, which certificates are about to lapse; enable/disable hosts, retarget a forward, renew a certificate | Email + password | Read + write | ◐ |
+| **Nginx Proxy Manager** | What the box is fronting, what is broken, which certificates are about to lapse; enable/disable hosts, renew a certificate | Email + password | Read + write | ◐ |
 
 ¹ Unraid is a whole operating system and we do not run it, so its integration is
 tested only against recorded answers from its API.
@@ -261,13 +265,14 @@ no longer want.
 <br/>
 
 *Needs you* gathers what the stack cannot fix by itself: a download stuck for days,
-imports waiting for a decision, a container that stopped, a disk reporting errors, an
-indexer that stopped watching for new releases. Each one says what happened, keeps
-the service's raw message one tap away, and offers the fix first: try another download, look for peers again, review the
-import, start the container, scrub the pool.
+imports waiting for a decision, a disk reporting errors, an indexer that stopped
+watching for new releases. Each one says what happened, keeps the service's raw
+message one tap away, and offers the fix first: try another download, look for peers
+again, review the import, scrub the pool.
 
-Downloads from all four clients sit in one list, moving first and stuck next, with
-stop and resume on every row. Requests and history are a tab away.
+Downloads from all four clients sit in one list, moving first and stuck next. Open
+one to stop or resume it; on the desktop the table does it from the row. Requests and
+history are a tab away.
 
 </details>
 
@@ -278,7 +283,7 @@ stop and resume on every row. Requests and history are a tab away.
 The Stack shows the whole lab in bands (media, downloads, streaming, the box itself)
 and says which services are clean and which need a look. Each service opens on its
 own Overview, with its own tabs: Radarr's library, calendar, queue and wanted list;
-qBittorrent's queue with filters, sorting, categories, tags and speed limits;
+qBittorrent's queue with filters, sorting, categories and tags;
 TrueNAS's full console.
 
 - Grab something automatically, or open the release list and choose it yourself
@@ -379,8 +384,8 @@ base URL plus whatever it authenticates with (see the
 
 Good to know:
 
-- **A guided first run.** On first launch Cupola walks you through the services you
-  run, one at a time, and skips the rest.
+- **A guided first run.** On first launch Cupola helps you set up one service, then
+  offers the ones your Seerr or Prowlarr already knows about.
 - **Everything is optional.** Configure one service or all seventeen. Unconfigured
   services show a placeholder and never block a screen.
 - **More than one of each.** Two Radarrs (say, one for 4K) are two connections; the
@@ -569,6 +574,16 @@ No. It talks straight to your instances over LAN, VPN or a reverse proxy. There 
 no Cupola backend, so there is nothing to sign up for and nothing reporting back to
 us. What leaves your network is artwork from TMDB's image CDN, and plex.tv when you
 sign in to Seerr with Plex: see [Security & privacy](#security--privacy).
+</details>
+
+<details>
+<summary><b>Can I try it without a server?</b></summary>
+<br/>
+Yes. With no connections set up, the first screen offers <b>Explore a demo home</b>: an
+invented household running all seventeen services, answered from inside the app. It
+keeps nothing and sends nothing over the network, and widgets, notifications and
+background work stay off while it runs. <b>Settings → Leave demo</b> brings you back to
+the start.
 </details>
 
 <details>

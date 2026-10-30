@@ -99,7 +99,7 @@ export const rivals: Rival[] = [
     checked: '25 October 2026',
     facts: [
       { label: 'Platforms', them: 'iPhone, iPad, Mac (Apple silicon) and Vision Pro', cupola: cupola.platforms },
-      { label: 'Oldest system', them: 'iOS 26', cupola: 'iOS 17, Android 7, macOS 12' },
+      { label: 'Oldest system', them: 'iOS 26', cupola: 'iOS 17, Android 7, macOS 12 (Apple silicon)' },
       {
         label: 'Price',
         them: 'Free to install. Pro at $3.99 a month or $34.99 once, Ultra at $4.99 a month, or single services from $3.99',
