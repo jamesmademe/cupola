@@ -105,6 +105,10 @@ about all of them.
 > macOS download from [**Releases**](https://github.com/matthw-labs/cupola/releases).
 > No toolchain needed. The App Store and Google Play come later.
 
+> **No server at hand?** On the first screen, **Explore a demo home** opens an invented
+> household with all seventeen services. It runs entirely inside the app: nothing is
+> saved and nothing goes out to the network. **Settings → Leave demo** takes you back.
+
 | Platform | Status | Get it |
 | --- | --- | --- |
 | **iOS / iPadOS** | Supported, iOS 17+ | [TestFlight](https://testflight.apple.com/join/tqmwnCMj) |
@@ -570,6 +574,16 @@ No. It talks straight to your instances over LAN, VPN or a reverse proxy. There 
 no Cupola backend, so there is nothing to sign up for and nothing reporting back to
 us. What leaves your network is artwork from TMDB's image CDN, and plex.tv when you
 sign in to Seerr with Plex: see [Security & privacy](#security--privacy).
+</details>
+
+<details>
+<summary><b>Can I try it without a server?</b></summary>
+<br/>
+Yes. With no connections set up, the first screen offers <b>Explore a demo home</b>: an
+invented household running all seventeen services, answered from inside the app. It
+keeps nothing and sends nothing over the network, and widgets, notifications and
+background work stay off while it runs. <b>Settings → Leave demo</b> brings you back to
+the start.
 </details>
 
 <details>
