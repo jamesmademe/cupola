@@ -213,29 +213,40 @@ class LabCredentials {
     return files;
   }
 
-  /// The state directories of the lab, under the host's home: the worktrees
-  /// the sessions run in and the checkouts they are made from.
+  /// The state directory a run names, then the ones found under the host's
+  /// home: the checkouts in `~/Documents/Dev`.
+  ///
+  /// A checkout or worktree elsewhere names the lab's state with
+  /// `CUPOLA_TESTLAB_STATE_DIR` (the main checkout's
+  /// `.ai/scratch/zz_testlab/state`). A run on the host reads it from the
+  /// environment; a run on a simulator cannot see the host's environment, so
+  /// it passes the same value with `--dart-define`.
   static List<String> _candidateStateDirs() {
+    final named = _namedStateDir();
+    final dirs = <String>[?named];
     final home = _hostHome();
-    if (home == null) return const [];
-    final dirs = <String>[];
-    for (final root in [
-      '$home/.local/share/opencode/worktree',
-      '$home/Documents/Dev',
-    ]) {
-      final directory = Directory(root);
-      if (!directory.existsSync()) continue;
-      for (final entry in directory.listSync()) {
-        if (entry is! Directory) continue;
-        for (final shape in [
-          '${entry.path}/.ai/scratch/zz_testlab/state',
-          '${entry.path}/testlab/.ai/scratch/zz_testlab/state',
-        ]) {
-          if (File('$shape/credentials.env').existsSync()) dirs.add(shape);
-        }
+    if (home == null) return dirs;
+    final checkouts = Directory('$home/Documents/Dev');
+    if (!checkouts.existsSync()) return dirs;
+    for (final entry in checkouts.listSync()) {
+      if (entry is! Directory) continue;
+      for (final shape in [
+        '${entry.path}/.ai/scratch/zz_testlab/state',
+        '${entry.path}/testlab/.ai/scratch/zz_testlab/state',
+      ]) {
+        if (File('$shape/credentials.env').existsSync()) dirs.add(shape);
       }
     }
     return dirs;
+  }
+
+  /// The state directory the run names, from the environment or from a
+  /// `--dart-define`, or null.
+  static String? _namedStateDir() {
+    final named = Platform.environment['CUPOLA_TESTLAB_STATE_DIR'];
+    if (named != null && named.isNotEmpty) return named;
+    const defined = String.fromEnvironment('CUPOLA_TESTLAB_STATE_DIR');
+    return defined.isEmpty ? null : defined;
   }
 
   /// The host's home directory, seen from the app.
@@ -299,10 +310,8 @@ class LabWorld {
 
   static List<File> _files() {
     final files = <File>[];
-    final named = Platform.environment['CUPOLA_TESTLAB_STATE_DIR'];
-    if (named != null && named.isNotEmpty) {
-      files.add(File('$named/seerr-world.json'));
-    }
+    final named = LabCredentials._namedStateDir();
+    if (named != null) files.add(File('$named/seerr-world.json'));
     files.add(File('.ai/scratch/zz_testlab/state/seerr-world.json'));
     for (final state in LabCredentials._candidateStateDirs()) {
       files.add(File('$state/seerr-world.json'));
