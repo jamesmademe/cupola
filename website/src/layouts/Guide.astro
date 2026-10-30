@@ -80,7 +80,7 @@ if (questions.length) jsonld.push(faqPage(questions));
   {get && (
     <section class="well block" aria-labelledby="get-h">
       <h2 id="get-h" class="t-room">Get Cupola</h2>
-      <p class="t-meta sub">Free and open source. You need your own services: Cupola does not come with any.</p>
+      <p class="t-meta sub">Free and open source. It works with the services you already run.</p>
       <Get compact />
     </section>
   )}
@@ -122,6 +122,10 @@ if (questions.length) jsonld.push(faqPage(questions));
     max-width: 760px;
   }
   .crumbs a {
+    /* A 44px target around a one-line link, without moving the line. */
+    display: inline-block;
+    padding: 13px 0;
+    margin: -13px 0;
     color: var(--ink-2);
     text-decoration: none;
   }

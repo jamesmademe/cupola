@@ -2,9 +2,9 @@
 import Guide from '../layouts/Guide.astro';
 import { titles } from '../data/titles';
 ---
-<Guide page="credits" lede="The films, typefaces and names you see on this site, and who they belong to." related={['press', 'contribute', 'privacy']} get={false}>
-  <h2>The movies that light this site</h2>
-  <p>Every poster and still on this site comes from an open movie made by the Blender Foundation and Blender Studio, released under Creative Commons Attribution. They stand in for the titles on your own server. Thank you to everyone who made them.</p>
+<Guide page="credits" lede="The movies, typefaces and names on this site, and who they belong to." related={['press', 'contribute', 'privacy']} get={false}>
+  <h2>The movies on this site</h2>
+  <p>Every poster and still on this site comes from an open movie by the Blender Foundation and Blender Studio, released under Creative Commons Attribution. They stand in for the titles on your server. Thank you to everyone who made them.</p>
   <ul>
     {Object.values(titles)
       .sort((a, b) => a.year - b.year)
@@ -21,8 +21,10 @@ import { titles } from '../data/titles';
   </ul>
 
   <h2>Service marks</h2>
-  <p>The marks for Radarr, Sonarr, qBittorrent, Transmission, Nginx Proxy Manager and Jellyfin come from Simple Icons (CC0 1.0); Seerr, Lidarr, Readarr, Prowlarr, Bazarr, SABnzbd, NZBGet and Dockge are drawn from each project's own logo. TrueNAS, Unraid and Plex are shown with marks drawn for Cupola (a drive rack, a hard disk and a film strip), not their logos. Each mark only identifies the service Cupola connects to.</p>
+  <p>The marks for Radarr, Sonarr, qBittorrent, Transmission, Nginx Proxy Manager and Jellyfin come from Simple Icons (CC0 1.0). Seerr, Lidarr, Readarr, Prowlarr, Bazarr, SABnzbd, NZBGet and Dockge are drawn from each project's own logo.</p>
+  <p>TrueNAS, Unraid and Plex use marks drawn for Cupola (a drive rack, a hard disk and a strip of frames), not their logos. Each mark only identifies the service.</p>
 
   <h2>Trademarks</h2>
-  <p>Cupola is an independent project. It is not affiliated with, endorsed or sponsored by the makers of the services it connects to, whose names are used only to identify them. Plex and Plex Media Server are trademarks of Plex. TrueNAS® is a registered trademark of iXsystems, dba TrueNAS. Unraid® is a registered trademark of Lime Technology, Inc. All other product names are trademarks of their respective owners.</p>
+  <p>Cupola is an independent project. It is not affiliated with, endorsed or sponsored by the makers of the services it connects to; their names are used only to identify them.</p>
+  <p>Plex and Plex Media Server are trademarks of Plex. TrueNAS® is a registered trademark of iXsystems, dba TrueNAS. Unraid® is a registered trademark of Lime Technology, Inc. All other product names are trademarks of their respective owners.</p>
 </Guide>
