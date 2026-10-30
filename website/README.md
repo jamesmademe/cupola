@@ -38,7 +38,15 @@ Connect the GitHub repository to a Pages project with:
 | Build output directory | `dist` |
 | Environment variable | `NODE_VERSION` = `24` |
 
-Then add the custom domain `get-seekarr.org`, and turn on **Web Analytics** in the project: Cloudflare injects its cookieless beacon, which `public/_headers` already allows. Security headers, caching and short redirects (`/download`, `/sonarr`, `/lunasea`, ...) live in `public/_headers` and `public/_redirects`.
+Then add the custom domain `get-seekarr.org`, and turn on **Web Analytics** in the project: Cloudflare injects its cookieless beacon, which `public/_headers` already allows. Security headers, caching and short redirects (`/download`, `/sonarr`, `/lunasea`, ...) live in `public/_headers` and `public/_redirects`; the project's own `pages.dev` address answers with `noindex`, so search engines keep only the real domain.
+
+## After a deploy
+
+```bash
+npm run indexnow
+```
+
+It submits every page of the live sitemap to IndexNow (Bing, Yandex, Seznam, Naver and the engines that share with them). The key is public by design: `public/indexnow-key.txt` holds it, and the site serves it so IndexNow can check the site is ours. Google is not part of IndexNow: it reads `sitemap-index.xml` through Search Console.
 
 ## Artwork
 

@@ -43,7 +43,7 @@ export const rivals: Rival[] = [
     title: 'An nzb360 alternative for iPhone, Android and Mac · Cupola',
     heading: 'Looking for nzb360 on iPhone?',
     description:
-      'nzb360 is an Android app. Cupola is a free, open-source client for Sonarr, Radarr, Seerr, the download clients and the server underneath, on iPhone, Android and Mac.',
+      'nzb360 is Android only. Cupola is a free, open-source client for Sonarr, Radarr, Seerr and the download clients, on iPhone, Android and Mac.',
     lede: 'nzb360 is an Android app, and there is no iPhone version. Cupola covers much of the same ground (Sonarr, Radarr, Lidarr, Seerr, Prowlarr, Bazarr and the download clients) on iPhone, Android and Mac, and it is free and open source.',
     checked: '25 October 2026',
     facts: [
@@ -94,7 +94,7 @@ export const rivals: Rival[] = [
     title: 'A free Helmarr alternative, also on Android · Cupola',
     heading: 'Comparing Helmarr and Cupola.',
     description:
-      'Helmarr is an Apple-only app with paid unlocks and a minimum of iOS 26. Cupola is a free, open-source client for the self-hosted media stack on iPhone, Android and Mac.',
+      'Helmarr is Apple-only, with paid unlocks and iOS 26 or later. Cupola is a free, open-source client for your media stack on iPhone, Android and Mac.',
     lede: 'Helmarr is an app for iPhone, iPad, Mac and Vision Pro, free to install with paid unlocks, that needs iOS 26 or later. Cupola is free and open source with nothing to unlock, and runs on Android as well as on Apple devices.',
     checked: '25 October 2026',
     facts: [
