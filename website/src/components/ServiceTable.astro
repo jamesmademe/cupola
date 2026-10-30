@@ -20,7 +20,7 @@ const tested = {
       <div class="name">
         <span class="g" set:html={glyph(s.id)} />
         <div>
-          <h3>{s.name}</h3>
+          <h3><a href={`/services/${s.id}/`}>{s.name}</a></h3>
           {s.aka && <p class="t-meta">{s.aka}</p>}
         </div>
       </div>
@@ -84,6 +84,14 @@ const tested = {
     line-height: 1.1;
     font-variation-settings: 'wdth' 94, 'opsz' 21;
     margin-top: 2px;
+  }
+  h3 a {
+    color: inherit;
+    text-decoration: none;
+  }
+  h3 a:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
   .what {
     color: var(--ink-2);

@@ -25,18 +25,22 @@ interface Props {
   get?: boolean;
   /** Draw the questions as a section; the FAQ page draws its own. */
   showQuestions?: boolean;
+  /** The page this one sits under in the breadcrumb, such as Services. */
+  parent?: PageId;
 }
-const { page: id, h1, lede, screen, services, questions = [], related = [], get = true, showQuestions = true } = Astro.props;
+const { page: id, h1, lede, screen, services, questions = [], related = [], get = true, showQuestions = true, parent } = Astro.props;
 const page = typeof id === 'string' ? pages[id] : id;
 const links = related.map((r) => (typeof r === 'string' ? pages[r] : r));
-const jsonld: object[] = [breadcrumbs([{ name: page.name, path: page.path }]), softwareApplication()];
+const up = parent ? pages[parent] : undefined;
+const trail = [...(up ? [{ name: up.name, path: up.path }] : []), { name: page.name, path: page.path }];
+const jsonld: object[] = [breadcrumbs(trail), softwareApplication()];
 if (questions.length) jsonld.push(faqPage(questions));
 ---
 <Base title={page.title} description={page.description} og={page.slug} jsonld={jsonld}>
   <section class:list={['top', { solo: !screen }]} {...lit(page.light)}>
     <div class="well grid">
       <div class="intro">
-        <nav class="crumbs t-meta" aria-label="Breadcrumb"><a href="/">Cupola</a> <span aria-hidden="true">/</span> <span aria-current="page">{page.name}</span></nav>
+        <nav class="crumbs t-meta" aria-label="Breadcrumb"><a href="/">Cupola</a> <span aria-hidden="true">/</span> {up && <><a href={up.path}>{up.name}</a> <span aria-hidden="true">/</span> </>}<span aria-current="page">{page.name}</span></nav>
         <h1 class="t-screen">{h1 ?? page.heading}</h1>
         <p class="t-lede" set:html={lede} />
         <div class="ctas">

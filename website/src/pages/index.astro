@@ -137,7 +137,7 @@ const story = [
               <span class="t-micro">{c}</span>
               <span>{all.filter((s) => s.category === c).map((s, i, arr) => (
                 <>
-                  <a href={`/services/#${s.id}`}>{s.name}</a>{i < arr.length - 1 ? ', ' : ''}
+                  <a href={`/services/${s.id}/`}>{s.name}</a>{i < arr.length - 1 ? ', ' : ''}
                 </>
               ))}</span>
             </li>
@@ -217,7 +217,7 @@ const story = [
         <ul>
           {helpWanted.map((s) => (
             <li>
-              <a href={`/services/#${s.id}`}>
+              <a href={`/services/${s.id}/`}>
                 <span>{s.name}</span>
                 <span class="mark-t">{s.tested === 'partial' ? '◐ partly verified' : '○ recorded answers only'}</span>
               </a>

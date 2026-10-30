@@ -27,6 +27,7 @@ const extras = [
   [/^\/faq\/$/, ['src/data/faq.ts']],
   [/^\/alternatives\//, ['src/data/rivals.ts']],
   [/^\/services\/$/, ['../README.md']],
+  [/^\/services\/.+\/$/, ['../README.md', '../lib/features/settings/domain/service_key.dart']],
 ];
 
 /** The source files of the page at [path] (`/`, `/faq/`, `/alternatives/lunasea/`). */

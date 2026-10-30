@@ -3,6 +3,7 @@
 // related links all read from here.
 import type { LightId } from './titles';
 import { rivals } from './rivals';
+import { services, type Category } from '../lib/repo';
 
 export interface Page {
   path: string;
@@ -112,9 +113,9 @@ export const pages = {
     path: '/alternatives/',
     slug: 'alternatives',
     name: 'Alternatives',
-    title: 'Cupola compared with nzb360, Helmarr and LunaSea',
+    title: 'Cupola compared with nzb360, LunaSea, Ruddarr and more',
     heading: 'Cupola and the other apps.',
-    description: 'How Cupola compares with nzb360, Helmarr and LunaSea: platforms, price, source code and services, from each app\'s own pages, with the date they were checked.',
+    description: 'How Cupola compares with nzb360, Helmarr, LunaSea, Ruddarr and ArrMatey: platforms, price, source code and services, from each app\'s own pages.',
     light: 'lamp',
   },
   contribute: {
@@ -159,4 +160,17 @@ export const rivalPages: Page[] = rivals.map((r) => ({
   light: 'spring',
 }));
 
-export const allPages: Page[] = [...Object.values(pages), ...rivalPages];
+const serviceLight: Record<Category, LightId> = { Media: 'tos', Downloads: 'charge', Stream: 'sintel', Infrastructure: 'lamp' };
+
+/** One page per service in the README, at /services/<id>/. */
+export const servicePages: Page[] = services().map((s) => ({
+  path: `/services/${s.id}/`,
+  slug: `service-${s.id}`,
+  name: s.name,
+  title: `${s.name} app for iPhone and Android · Cupola`,
+  heading: `${s.name}, from your phone.`,
+  description: `Manage ${s.name} from iPhone, Android or Mac with Cupola, free and open source: what it can do, how to connect it, and how well it is tested.`,
+  light: serviceLight[s.category],
+}));
+
+export const allPages: Page[] = [...Object.values(pages), ...rivalPages, ...servicePages];
