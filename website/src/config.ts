@@ -16,12 +16,14 @@ export const site = {
   promise: 'Nothing left in the dark.',
   description:
     'Cupola is a free, open-source app for Radarr, Sonarr, Seerr, qBittorrent and the rest of your self-hosted media stack, on iPhone, Android and Mac. It talks straight to your own services: no Cupola account, no cloud.',
-  // The APK and the dmg are assets of a pinned release, named as its notes
-  // name them: they 404 until that release is published, and move with the
-  // next one only when these lines do.
+  // One public TestFlight link serves iPhone, iPad and Mac. The APK and the
+  // dmg are assets of a GitHub release: set them, with the release's own tag
+  // and file names, only once that release is published, e.g.
+  // `${repo}/releases/download/v1.0.0-beta.1/cupola-1.0.0-beta.1.apk`.
+  // Until then the site offers no release at all, Windows and Linux included.
   downloads: {
-    testflight: null as string | null,
-    apk: `${repo}/releases/download/v1.0.0-beta.1/cupola-1.0.0-beta.1.apk` as string | null,
-    macos: `${repo}/releases/download/v1.0.0-beta.1/cupola-1.0.0-beta.1.dmg` as string | null,
+    testflight: 'https://testflight.apple.com/join/tqmwnCMj' as string | null,
+    apk: null as string | null,
+    macos: null as string | null,
   },
 } as const;

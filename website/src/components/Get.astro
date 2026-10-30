@@ -6,6 +6,7 @@ import Icon from './Icon.astro';
 import { site } from '../config';
 
 const d = site.downloads;
+const released = Boolean(d.apk || d.macos);
 const platforms = [
   {
     id: 'ios',
@@ -14,6 +15,7 @@ const platforms = [
     how: 'TestFlight beta, from Apple',
     href: d.testflight,
     action: 'Join the beta',
+    alt: null,
   },
   {
     id: 'android',
@@ -22,14 +24,17 @@ const platforms = [
     how: 'APK from GitHub releases',
     href: d.apk,
     action: 'Download the APK',
+    alt: null,
   },
   {
     id: 'mac',
     icon: 'desktop',
     name: 'Mac',
-    how: 'Signed and notarized .dmg',
-    href: d.macos,
-    action: 'Download for Mac',
+    // TestFlight first, as on iPhone; the dmg stays one link away.
+    href: d.testflight ?? d.macos,
+    action: d.testflight ? 'Join the beta' : 'Download for Mac',
+    how: d.testflight ? 'TestFlight beta, from Apple' : 'Signed and notarized .dmg',
+    alt: d.testflight && d.macos ? { href: d.macos, label: 'Or download the signed .dmg' } : null,
   },
 ] as const;
 interface Props {
@@ -48,7 +53,10 @@ const { compact = false } = Astro.props;
         </div>
       </div>
       {p.href ? (
-        <a class="btn btn-lit" href={p.href} rel="noopener">{p.action}<Icon name="arrow" /></a>
+        <div class="go">
+          <a class="btn btn-lit" href={p.href} rel="noopener">{p.action}<Icon name="arrow" /></a>
+          {p.alt && <a class="alt t-meta" href={p.alt.href} rel="noopener">{p.alt.label}</a>}
+        </div>
       ) : (
         <p class="wait"><span class="dot neutral"></span> Not open yet. <a href={site.watch} rel="noopener">Watch releases</a> to hear when it is.</p>
       )}
@@ -56,7 +64,11 @@ const { compact = false } = Astro.props;
   ))}
   {!compact && (
     <p class="rest t-meta">
-      Windows and Linux builds come with every <a href={site.releases} rel="noopener">release</a>, not yet tested on real machines. Or <a href="/install/#source">build it from source</a>.
+      {released ? (
+        <>Windows and Linux builds come with every <a href={site.releases} rel="noopener">release</a>, not yet tested on real machines. Or <a href="/install/#source">build it from source</a>.</>
+      ) : (
+        <>Windows and Linux builds will come with the first release on GitHub. Until then, <a href="/install/#source">build it from source</a>.</>
+      )}
     </p>
   )}
 </div>
@@ -115,6 +127,14 @@ const { compact = false } = Astro.props;
   .plat .btn {
     justify-content: space-between;
     width: 100%;
+  }
+  .go {
+    display: grid;
+    gap: 12px;
+  }
+  .alt {
+    justify-self: center;
+    color: var(--ink-2);
   }
   .wait {
     display: flex;
