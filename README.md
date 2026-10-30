@@ -442,6 +442,8 @@ data to go.
 
 The whole trust layer is one reviewable file: [`lib/core/network/cert_trust.dart`](lib/core/network/cert_trust.dart).
 
+Found a vulnerability? Report it privately, as [SECURITY.md](SECURITY.md) explains.
+
 ---
 
 ## Build from source
