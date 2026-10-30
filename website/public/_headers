@@ -9,6 +9,12 @@
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
   Cross-Origin-Opener-Policy: same-origin
 
+# The project's own pages.dev address serves the same pages as get-seekarr.org.
+# Keep it out of search so only the real domain is indexed (previews already
+# carry noindex from Cloudflare).
+https://:project.pages.dev/*
+  X-Robots-Tag: noindex
+
 /_astro/*
   Cache-Control: public, max-age=31536000, immutable
 /fonts/*

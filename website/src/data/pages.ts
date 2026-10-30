@@ -24,7 +24,7 @@ export const pages = {
     name: 'Cupola',
     title: 'Cupola: Radarr, Sonarr and Seerr app for iPhone and Android',
     heading: 'A Cupola over your server.',
-    description: '',
+    description: 'A free, open-source app for Radarr, Sonarr, Seerr, qBittorrent and the rest of your self-hosted media stack. iPhone, Android and Mac. No account, no cloud.',
     light: 'singularity',
   },
   services: {
@@ -42,7 +42,7 @@ export const pages = {
     name: 'Install',
     title: 'Install Cupola on iPhone, Android, Mac, Windows and Linux',
     heading: 'Get Cupola on every device you use.',
-    description: 'How to install Cupola: TestFlight on iPhone and iPad, an APK on Android, a notarized app on the Mac, builds for Windows and Linux, and building from source. Plus what you need before you start.',
+    description: 'How to install Cupola: the TestFlight beta on iPhone, iPad and Mac, what Android, Windows and Linux get, building from source, and what you need first.',
     light: 'spring',
   },
   privacy: {
@@ -51,7 +51,7 @@ export const pages = {
     name: 'Privacy',
     title: 'Privacy and security · Cupola',
     heading: 'No Cupola server. Nowhere for your data to go.',
-    description: 'Cupola talks straight to your own services. How it stores keys, pins self-signed certificates, reaches your server away from home, and the only two third parties it ever contacts.',
+    description: 'Cupola talks straight to your own services. How it stores keys, pins self-signed certificates, and the only two third parties it ever contacts.',
     light: 'lamp',
   },
   faq: {
@@ -69,7 +69,7 @@ export const pages = {
     name: 'Radarr and Sonarr',
     title: 'Radarr and Sonarr app for iPhone and Android · Cupola',
     heading: 'Radarr, Sonarr and Lidarr, on your phone.',
-    description: 'Cupola is a free, native Radarr, Sonarr, Lidarr and Readarr client for iPhone, Android and Mac: libraries, calendar, queue, interactive search, quality profiles and manual import, straight to your own instances.',
+    description: 'A free, native Radarr, Sonarr, Lidarr and Readarr app for iPhone, Android and Mac: libraries, calendar, queue, interactive search and manual import.',
     light: 'tos',
   },
   seerr: {
@@ -78,7 +78,7 @@ export const pages = {
     name: 'Requests with Seerr',
     title: 'Overseerr and Jellyseerr app for iPhone and Android · Cupola',
     heading: 'Requests for everyone at home.',
-    description: 'Cupola turns Seerr, Overseerr or Jellyseerr into a native app: Discover, requests and approvals for whoever runs the server, and a simpler app for household members who sign in with their own account.',
+    description: 'Seerr, Overseerr and Jellyseerr as a native app: Discover, requests and approvals for the admin, and a simpler app for everyone else at home.',
     light: 'sintel',
   },
   downloads: {
@@ -87,7 +87,7 @@ export const pages = {
     name: 'Download clients',
     title: 'qBittorrent, SABnzbd and NZBGet from your phone · Cupola',
     heading: 'Every download, one list, and a way out when one is stuck.',
-    description: 'Manage qBittorrent, Transmission, SABnzbd, NZBGet and Prowlarr from iPhone or Android: a live queue across all clients, stuck downloads explained with their remedy, speed limits, categories and indexers.',
+    description: 'qBittorrent, Transmission, SABnzbd, NZBGet and Prowlarr from iPhone or Android: one live queue, stuck downloads explained, speed limits and indexers.',
     light: 'charge',
   },
   stream: {
@@ -105,7 +105,7 @@ export const pages = {
     name: 'NAS and homelab',
     title: 'TrueNAS, Unraid and Dockge from your phone · Cupola',
     heading: 'The machine under the media, in the same app.',
-    description: 'Cupola reaches past the media apps to the box they run on: TrueNAS pools, disks and apps, Unraid arrays and VMs, Dockge compose stacks with a live terminal, and Nginx Proxy Manager hosts and certificates.',
+    description: 'TrueNAS pools and apps, Unraid arrays and VMs, Dockge stacks with a live terminal, Nginx Proxy Manager hosts: the box under your media apps, in Cupola.',
     light: 'lamp',
   },
   alternatives: {
@@ -123,7 +123,7 @@ export const pages = {
     name: 'Contribute',
     title: 'Contribute to Cupola',
     heading: 'Help make it work on your stack too.',
-    description: 'Cupola is open source. The most useful contribution is a report from a service you run, verified or not. Then accessibility, integrations and code: here is how.',
+    description: 'Cupola is open source. The most useful help is a report from a service you run; then accessibility, integrations and code. Here is how.',
     light: 'lamp',
   },
   press: {
