@@ -30,6 +30,7 @@ The mark is decorative.
 
 - The operator's foot, after Danger zone.
 - At 200%, the claim on two lines.
+- The operator's About group it closes, in the plural voice of the people who make Cupola ("Email us", "Buy us a coffee").
 
 ## Don't
 
