@@ -30,13 +30,28 @@ import { site } from '../config';
   )}
 
   <h2 id="android">Android</h2>
-  <p>Download the <code>.apk</code> and open it. Android asks once to allow installs from your browser or file manager. A newer release installs over the old one.</p>
+  {site.downloads.apk ? (
+    <p><a href={site.downloads.apk} rel="noopener">Download the <code>.apk</code></a> and open it. Android asks once to allow installs from your browser or file manager. A newer release installs over the old one.</p>
+  ) : (
+    <p>Android gets an <code>.apk</code> with the first release on GitHub. It is not out yet: <a href={site.watch} rel="noopener">watch releases</a> to hear when it is.</p>
+  )}
 
   <h2 id="mac">Mac</h2>
-  <p>Open the <code>.dmg</code> and drag Cupola to Applications. It is signed with a Developer ID and notarized by Apple, so it opens like any other app.</p>
+  {site.downloads.testflight && (
+    <p>The Mac app is in the same TestFlight beta as the iPhone one: open the <a href={site.downloads.testflight} rel="noopener">invitation link</a> on the Mac and install it from TestFlight, which keeps it up to date.</p>
+  )}
+  {site.downloads.macos ? (
+    <p>{site.downloads.testflight ? 'Or skip TestFlight: ' : ''}<a href={site.downloads.macos} rel="noopener">download the <code>.dmg</code></a>, open it and drag Cupola to Applications. It is signed with a Developer ID and notarized by Apple, so it opens like any other app.</p>
+  ) : !site.downloads.testflight && (
+    <p>The Mac app comes as a TestFlight beta and as a signed <code>.dmg</code>. Neither is open yet: <a href={site.watch} rel="noopener">watch releases</a> to hear when it is.</p>
+  )}
 
   <h2 id="desktop">Windows and Linux</h2>
-  <p>Every <a href={site.releases} rel="noopener">release</a> includes a Windows and a Linux build. On Windows, unzip it and run <code>cupola.exe</code>; the build is not signed, so SmartScreen asks once. On Linux, untar it and run <code>cupola</code>; it needs GTK 3 and libsecret, present on most desktops. Neither has been tested on a real machine yet, so a report either way helps.</p>
+  {site.downloads.apk || site.downloads.macos ? (
+    <p>Every <a href={site.releases} rel="noopener">release</a> includes a Windows and a Linux build. On Windows, unzip it and run <code>cupola.exe</code>; the build is not signed, so SmartScreen asks once. On Linux, untar it and run <code>cupola</code>; it needs GTK 3 and libsecret, present on most desktops. Neither has been tested on a real machine yet, so a report either way helps.</p>
+  ) : (
+    <p>Windows and Linux builds come with the first release on GitHub, which is not out yet. Until then, <a href="#source">build Cupola from source</a>.</p>
+  )}
 
   <h2 id="source">From source</h2>
   <p>Cupola is a Flutter app. With the Flutter SDK named in <code>pubspec.yaml</code>:</p>

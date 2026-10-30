@@ -6,6 +6,8 @@ import { faq } from '../data/faq';
 import { services } from './repo';
 import { abs, version } from './seo';
 
+const d = site.downloads;
+
 const text = (html: string) =>
   html
     .replace(/<a href="([^"]+)">([^<]+)<\/a>/g, (_, href: string, label: string) => `[${label}](${href.startsWith('/') ? abs(href) : href})`)
@@ -62,10 +64,10 @@ ${rows}
 
 ## Install
 
-- iPhone and iPad: TestFlight beta${site.downloads.testflight ? '' : ' (not open yet)'}.
-- Android: APK from GitHub releases.
-- Mac: signed and notarized .dmg.
-- Windows and Linux: builds in every release, not yet tested on real machines.
+- iPhone and iPad: TestFlight beta${d.testflight ? '' : ' (not open yet)'}.
+- Android: APK from GitHub releases${d.apk ? '' : ' (not out yet)'}.
+- Mac: ${d.testflight ? 'TestFlight beta' : 'TestFlight beta (not open yet)'}${d.macos ? ', or a signed and notarized .dmg' : ''}.
+- Windows and Linux: builds in every GitHub release${d.apk || d.macos ? '' : ' (from the first one, not out yet)'}, not yet tested on real machines.
 - From source: Flutter; see the repository.
 
 Details: ${abs('/install/')}
