@@ -78,6 +78,13 @@ DESIGN.md
 # debugging aid, never a repo artifact.
 test/failures/
 
+# The e2e containers' runtime state. `docker-compose.e2e.yml` mounts each
+# seed directory as the service's `/config`, so databases, logs and backups
+# land next to the seed files. Only the seed files are tracked.
+test/e2e/seed/*/*
+!test/e2e/seed/readarr/config.xml
+!test/e2e/seed/sabnzbd/sabnzbd.ini
+
 # Coverage reports (`flutter test --coverage`).
 coverage/
 
