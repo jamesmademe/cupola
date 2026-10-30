@@ -137,6 +137,10 @@ dependencies:
   window_manager: ^0.5.0
   material_symbols_icons: ^4.2960.0
 
+  # Reads the other device's code in Copy from another device, on iOS and
+  # Android only: a computer pastes the link. It asks for the camera itself.
+  mobile_scanner: ^7.4.2
+
 dependency_overrides:
   # path_provider_foundation 2.6.0 pulls in objective_c native assets,
   # which currently breaks iOS release install/signing on device.

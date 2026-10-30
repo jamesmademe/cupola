@@ -26,6 +26,7 @@ import 'package:cupola/features/pairing/domain/pair_link.dart';
 import 'package:cupola/features/pairing/domain/pair_package.dart';
 import 'package:cupola/features/pairing/domain/pair_plan.dart';
 import 'package:cupola/features/pairing/presentation/pair_receive_screen.dart';
+import 'package:cupola/features/pairing/presentation/pair_scan_screen.dart';
 import 'package:cupola/features/settings/data/settings_provider.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
@@ -150,21 +151,31 @@ FilledButton _filled(WidgetTester tester, String label) =>
 
 void main() {
   group('waiting for a link', () {
-    testWidgets('says how to get one, and asks for it in a field', (
-      tester,
-    ) async {
+    testWidgets('says how to get one, offers the scanner, and asks for the '
+        'link in a field', (tester) async {
       await _pump(tester);
 
       expect(find.text('Copy from another device'), findsOneWidget);
       expect(
         find.text(
           'On the device that has Cupola set up, open Settings › Set up '
-          "another device, then point this phone's camera at its code.",
+          'another device, then scan its code.',
         ),
         findsOneWidget,
       );
+      expect(find.text('Scan code'), findsOneWidget);
       expect(find.text('Link from the other device'), findsOneWidget);
       expect(_field(), findsOneWidget);
+    });
+
+    testWidgets('Scan code opens the camera over the screen', (tester) async {
+      await _pump(tester);
+
+      await tester.tap(find.text('Scan code'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.byType(PairScanScreen), findsOneWidget);
     });
 
     for (final platform in [
@@ -186,6 +197,7 @@ void main() {
             findsOneWidget,
           );
           expect(find.textContaining('camera'), findsNothing);
+          expect(find.text('Scan code'), findsNothing);
         } finally {
           debugDefaultTargetPlatformOverride = null;
         }

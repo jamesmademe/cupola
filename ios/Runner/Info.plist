@@ -61,6 +61,10 @@
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Cupola talks to the services running on your own network: Radarr, Sonarr, Plex, your NAS. Without this, it cannot reach them.</string>
+	<!-- Copy from another device scans the other device's code here
+	     (mobile_scanner), so a phone reads it without leaving the app. -->
+	<key>NSCameraUsageDescription</key>
+	<string>Cupola uses the camera only to read the code another device shows when you copy its connections.</string>
 	<!-- file_picker links DKImagePickerController, which references the photo
 	     library, so App Store Connect refuses a build without this string. Cupola
 	     only picks .torrent files through the document picker: the prompt never
