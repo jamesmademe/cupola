@@ -58,7 +58,7 @@ const { compact = false } = Astro.props;
           {p.alt && <a class="alt t-meta" href={p.alt.href} rel="noopener">{p.alt.label}</a>}
         </div>
       ) : (
-        <p class="wait"><span class="dot neutral"></span> Not open yet. <a href={site.watch} rel="noopener">Watch releases</a> to hear when it is.</p>
+        <p class="wait"><span class="dot neutral"></span><span>Not open yet. <a href={site.watch} rel="noopener">Watch releases</a> to hear when it is.</span></p>
       )}
     </div>
   ))}
@@ -121,6 +121,11 @@ const { compact = false } = Astro.props;
     margin-top: 2px;
     color: var(--ink-2);
   }
+  .head h3 {
+    /* The install page sets these cards inside its prose, whose h3 margin
+       would push the name below its icon. */
+    margin-top: 0;
+  }
   .head p {
     margin-top: 4px;
   }
@@ -137,10 +142,10 @@ const { compact = false } = Astro.props;
     color: var(--ink-2);
   }
   .wait {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 10px;
     align-items: baseline;
-    gap: 8px;
-    flex-wrap: wrap;
     min-height: 52px;
     align-content: center;
     font-size: 15px;

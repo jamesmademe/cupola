@@ -15,6 +15,10 @@ const questions = pick(...([own[rival.id], 'account', 'free', 'away'].filter(Boo
 const others = rivalPages.filter((p) => p !== page);
 ---
 <Guide page={page} lede={rival.lede} screen="discover" questions={questions} related={[...others, 'install']}>
+  <h2>Where Cupola stands out</h2>
+  <ul>{rival.differs.map((x) => <li>{x}</li>)}</ul>
+
+  <h2>Side by side</h2>
   <div class="not-prose"><Compare rival={rival} /></div>
 
   {rival.ahead.length > 0 && (
@@ -24,10 +28,7 @@ const others = rivalPages.filter((p) => p !== page);
     </>
   )}
 
-  <h2>Where Cupola differs</h2>
-  <ul>{rival.differs.map((x) => <li>{x}</li>)}</ul>
-
-  <h2>Moving over</h2>
+  <h2>Moving to Cupola</h2>
   <ul>{rival.moving.map((x) => <li>{x}</li>)}</ul>
 
   <p class="t-meta">
@@ -37,7 +38,7 @@ const others = rivalPages.filter((p) => p !== page);
         <a href={s.url} rel="noopener">{s.label}</a>{i < rival.sources.length - 1 ? ', ' : '.'}
       </>
     ))}{' '}
-    {rival.name} is a trademark of its owner. Something here out of date? <a href="https://github.com/matthw-labs/seekarr/issues/new" rel="noopener">Open an issue</a>.
+    {rival.name} is a trademark of its owner. Something out of date? <a href="https://github.com/matthw-labs/seekarr/issues/new" rel="noopener">Open an issue</a>.
   </p>
 </Guide>
 

@@ -17,15 +17,17 @@ const blurb = {
 ---
 <Guide
   page="services"
-  lede={`Cupola connects to ${all.length} self-hosted services. Set up only the ones you run: a service you skip stays out of the way. Each one says how far Cupola goes with it, and whether it has been run against a real, working instance or only against its API's documentation and recorded answers.`}
+  lede={`Cupola connects to ${all.length} self-hosted services. Set up only the ones you run. Each one says what Cupola can do with it, and whether we have tested it on a real server.`}
   questions={pick('tested', 'certs')}
   related={['arr', 'downloads', 'homelab']}
 >
   <h2>How to read this page</h2>
   <ul>
-    <li><strong>Control</strong> is how far Cupola goes today: full read and write, or mostly reading.</li>
-    <li><strong>Tested</strong> is deliberately conservative. <span class="tone-green">✓</span> verified end to end against a real server ({n('verified')} of {all.length}); ◐ partly verified, where the screens have read a real instance but its actions have not been run against one ({n('partial')}); ○ tested against recorded answers only ({n('untested')}). Every service has unit tests, which is a different claim.</li>
-    <li>Run one that is not fully verified? <a href={`${site.issues}/new`} rel="noopener">A report either way</a> is the most useful thing you can send.</li>
+    <li><strong>Control</strong> is how far Cupola goes: full read and write, or mostly reading.</li>
+    <li><span class="tone-green">✓</span> <strong>Verified</strong> on a real server, screens and actions ({n('verified')} of {all.length}).</li>
+    <li>◐ <strong>Partly verified</strong>: the screens have read a real server, the actions not yet ({n('partial')}).</li>
+    <li>○ <strong>Recorded answers only</strong>: not yet tried on a running server ({n('untested')}).</li>
+    <li>Run one that is not fully verified? <a href={`${site.issues}/new`} rel="noopener">Tell us how it goes</a>, either way.</li>
   </ul>
 
   <div class="not-prose">
@@ -47,6 +49,7 @@ const blurb = {
     margin-top: 56px;
   }
   .cat h2 {
+    margin-top: 0;
     margin-bottom: 6px;
   }
   .cat .t-meta {

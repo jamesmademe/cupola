@@ -19,7 +19,7 @@ const { show = 'home', id, width = '320px', label = 'Cupola running on a phone' 
 const art = (t: TitleId) => `url(${poster(t)})`;
 // Inside the phone each screen keeps its own title's light.
 const own = (id: LightId) => `--light:${lightOf(id).light};--light-fill:${lightOf(id).fill}`;
-// The titles a poster or a Details button can open. Facts are the films'
+// The titles a poster or a Details button can open. Facts are the movies'
 // own; the server state is the model's.
 const pagesOf = {
   singularity: { name: 'Singularity', meta: 'Andy Goralczyk · 2026 · Adventure', about: 'When a cosmic event swallows a small space critter\'s home, he finds refuge among others, watched over by a mysterious celestial being.', hero: still('singadd', true), have: true },

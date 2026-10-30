@@ -1,9 +1,10 @@
 // What each service says about itself in the app's own registry
 // (lib/features/settings/domain/service_key.dart): its default port, where its
-// credential lives, and the caveat the settings screen shows before anything
-// is typed. Read from the Dart source rather than copied, like the README
-// tables in repo.ts, so a service page cannot drift from what the app says.
-// A getter whose shape changes fails the build here.
+// credential lives, and the caveat the first-run walk shows beside the fields
+// (`walkNote`, the short form of the settings screen's `setupNote`). Read from
+// the Dart source rather than copied, like the README tables in repo.ts, so a
+// service page cannot drift from what the app says. A getter whose shape
+// changes fails the build here.
 import { readFileSync } from 'node:fs';
 import { inRepo } from './paths';
 
@@ -65,7 +66,7 @@ export interface Registry {
   defaultPort: number;
   /** Where the credential lives in the service's own interface; null for a web login. */
   credentialPath: string | null;
-  /** The caveat the settings screen shows first, when there is one. */
+  /** The caveat the first-run walk shows beside the fields, when there is one. */
   setupNote: string | null;
 }
 
@@ -77,7 +78,7 @@ export function registryOf(name: string): Registry {
     const titles = switchOf('title');
     const ports = switchOf('defaultPort');
     const paths = switchOf('credentialPath');
-    const notes = switchOf('setupNote');
+    const notes = switchOf('walkNote');
     cache = new Map();
     for (const [key, title] of titles) {
       cache.set(String(title), {

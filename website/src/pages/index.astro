@@ -5,11 +5,9 @@ import Icon from '../components/Icon.astro';
 import Phone from '../components/Phone.astro';
 import Desktop from '../components/Desktop.astro';
 import ServiceRing from '../components/ServiceRing.astro';
-import Tones from '../components/Tones.astro';
 import Reach from '../components/Reach.astro';
 import Get from '../components/Get.astro';
 import Faq from '../components/Faq.astro';
-import Journey from '../components/Journey.astro';
 import { site } from '../config';
 import { lit, still } from '../data/titles';
 import { services, stars } from '../lib/repo';
@@ -28,36 +26,36 @@ const story = [
     screen: 'home',
     light: 'singslide',
     tab: 'Home',
-    title: 'The evening, at a glance.',
-    body: 'Home opens on today: what arrived on your server, what comes out next, what you were halfway through, and the one thing that needs you. Each part is a module you keep, order or leave out.',
+    title: 'Today, at a glance.',
+    body: 'What arrived today, what comes out next, what you were halfway through, and anything that needs you. Arrange it your way.',
   },
   {
     screen: 'discover',
     light: 'sprite',
     tab: 'Discover',
     title: 'Find the next thing to watch.',
-    body: 'Trending this week, a calendar of what is coming, and every way in: genres, networks, studios, people, decades. One search asks Seerr, Radarr, Sonarr, Jellyfin and Plex together, so “do I already have this?” is one search instead of five browser tabs.',
+    body: 'Trending, a calendar, genres, people and more. One search checks Seerr, Radarr, Sonarr, Jellyfin and Plex at once, so you know if you already have it.',
   },
   {
     screen: 'title-spring',
     light: 'spring',
     tab: 'A title',
     title: 'Decide on one page.',
-    body: 'Ratings, who is in it, the trailer and where it stands on your server, then the action that fits: add it to Radarr or Sonarr, send a request, or open the release list and pick one yourself.',
+    body: 'Ratings, cast, trailer and where it stands on your server. Then one tap: add it to Radarr or Sonarr, request it, or pick a release yourself.',
   },
   {
     screen: 'activity',
     light: 'charge',
     tab: 'Activity',
-    title: 'When something breaks, the way out comes with it.',
-    body: 'A download stuck for hours, files waiting for an import, a service that stopped answering. Activity says what happened once, in plain words, and leads with the remedy its cause names: try another download, review the import, look at the address it asked.',
+    title: 'When something breaks, the fix is right there.',
+    body: 'A stuck download, files waiting to be imported, a service that stopped answering. Activity says what happened in plain words and offers the fix.',
   },
   {
     screen: 'requests',
     light: 'sintel',
     tab: 'The household',
     title: 'Everyone at home can ask.',
-    body: 'A household member signs in to Seerr with their own account and gets a simpler Cupola: what is ready to watch, what they asked for, and when it will be there. No API keys, no plumbing, and no button the server would refuse them.',
+    body: 'Family members sign in to Seerr with their own account. They get a simpler Cupola: what is ready, what they asked for, and when it will arrive.',
   },
 ] as const;
 ---
@@ -74,7 +72,7 @@ const story = [
       <div class="copy">
         <h1 id="claim" class="t-giant">{site.claim}</h1>
         <p class="t-lede">
-          One app for Radarr, Sonarr, Seerr, your download clients and the machine they run on. On your phone, straight to your own services.
+          One app for Radarr, Sonarr, Seerr, your download clients and the server they run on. It talks straight to your own services.
         </p>
         <div class="ctas">
           <a class="btn btn-ink" href="/install/">Get Cupola<Icon name="arrow" /></a>
@@ -84,7 +82,6 @@ const story = [
         </div>
         <p class="t-meta facts">Free and open source · iPhone, Android and Mac · No Cupola account</p>
       </div>
-      <p class="arrive t-screen" aria-hidden="true">Every room takes its light<br />from the title in front of it.</p>
       <span class="cue" aria-hidden="true"></span>
     </div>
   </section>
@@ -111,25 +108,13 @@ const story = [
     </div>
   </section>
 
-  <!-- One title, start to finish. -->
-  <section class="block journeyb" aria-labelledby="journey-h">
-    <div class="well">
-      <div class="head">
-        <h2 id="journey-h" class="t-screen rise">One title, from trending to tonight.</h2>
-        <p class="t-lede rise" style="--i:1">Follow Singularity through Cupola: found in Discover, added in one tap, followed to the disk, and ready when you sit down.</p>
-      </div>
-      <Journey />
-      <p class="t-meta credit">Frames from <a href="https://studio.blender.org/projects/singularity/" rel="noopener">Singularity</a> by Blender Studio, CC BY.</p>
-    </div>
-  </section>
-
   <!-- The stack. -->
   <section class="block stackb" data-light="lamp" aria-labelledby="stack-h">
     <div class="well two">
       <div>
-        <h2 id="stack-h" class="t-screen rise">Your whole stack, not a slice.</h2>
+        <h2 id="stack-h" class="t-screen rise">Your whole stack in one app.</h2>
         <p class="t-lede rise" style="--i:1">
-          Seerr, the *arr family, four download clients, two media servers, and the machine underneath: TrueNAS, Unraid, Dockge, Nginx Proxy Manager. Set up only what you run. A service you skip stays out of the way and never blocks a screen.
+          Seerr, the arr apps, four download clients, Jellyfin, Plex, and the machine underneath. Set up only what you run; the rest stays out of the way.
         </p>
         <ul class="cats rise" style="--i:2">
           {(['Media', 'Downloads', 'Stream', 'Infrastructure'] as const).map((c) => (
@@ -145,23 +130,10 @@ const story = [
         </ul>
         <p class="rise honest" style="--i:3">
           <Icon name="check" size={18} />
-          <span><b>{verified} of {all.length}</b> verified end to end against real servers. The rest are marked as such, service by service, on the <a href="/services/">services page</a>.</span>
+          <span><b>{verified} of {all.length}</b> verified end to end on real servers. The <a href="/services/">services page</a> shows the rest.</span>
         </p>
       </div>
       <ServiceRing />
-    </div>
-  </section>
-
-  <!-- Color and faults. -->
-  <section class="block" {...lit('charge')} aria-labelledby="tone-h">
-    <div class="well two flip">
-      <div>
-        <h2 id="tone-h" class="t-screen rise">Color means something here.</h2>
-        <p class="t-lede rise" style="--i:1">
-          The interface is ink on a dark room. Color reaches it from two places only: the artwork, as light, and the state of things, as five tones. A switch that is on is not green. A delete is not red. When amber shows up, something is actually wrong, and the button that fixes it is right there.
-        </p>
-      </div>
-      <div class="rise" style="--i:2"><Tones /></div>
     </div>
   </section>
 
@@ -171,11 +143,11 @@ const story = [
       <div class="head">
         <h2 id="reach-h" class="t-screen rise">Your server is the backend.</h2>
         <p class="t-lede rise" style="--i:1">
-          Cupola talks straight to the services you run, at home or away: a connection can carry a second address, through your VPN or your reverse proxy, and Cupola uses whichever answers. Keys stay in the Keychain or the Keystore. Self-signed certificates are trusted once and pinned.
+          Cupola connects straight to your services, at home or through your VPN or reverse proxy. Keys stay on your device. Self-signed certificates are trusted once, then pinned.
         </p>
       </div>
       <div class="rise" style="--i:2"><Reach /></div>
-      <p class="more"><a href="/privacy/">How Cupola handles keys, certificates and background work<Icon name="arrow" size={16} /></a></p>
+      <p class="more"><a href="/privacy/">How Cupola keeps your keys and data safe<Icon name="arrow" size={16} /></a></p>
     </div>
   </section>
 
@@ -185,7 +157,7 @@ const story = [
       <div class="head">
         <h2 id="every-h" class="t-screen rise">Made for the phone. At home on a desk.</h2>
         <p class="t-lede rise" style="--i:1">
-          Designed at 390 points first, then the rest. On a tablet a title opens beside the list it came from. On a Mac the window gets a sidebar with keys, a command palette and an inspector. The same app on all five platforms, never a web page in a frame.
+          Designed for the phone first. On a tablet, a title opens beside its list. On a Mac you get a sidebar, keyboard shortcuts and a command palette. One design on every platform.
         </p>
       </div>
       <div class="rise" style="--i:2"><Desktop /></div>
@@ -193,7 +165,7 @@ const story = [
         <li><Icon name="apple" /><span><b>iPhone and iPad</b> Widgets, lock screen, Dynamic Type, VoiceOver</span></li>
         <li><Icon name="android" /><span><b>Android</b> Widgets, TalkBack, phones and tablets</span></li>
         <li><Icon name="desktop" /><span><b>Mac</b> Signed and notarized, keyboard first</span></li>
-        <li><Icon name="desktop" /><span><b>Windows and Linux</b> In every release, not yet tested on real machines</span></li>
+        <li><Icon name="desktop" /><span><b>Windows and Linux</b> Same app, not yet tested on real machines</span></li>
       </ul>
     </div>
   </section>
@@ -204,7 +176,7 @@ const story = [
       <div>
         <h2 id="open-h" class="t-screen rise">Built in the open.</h2>
         <p class="t-lede rise" style="--i:1">
-          Every line is on GitHub under the Apache License 2.0. No ads, no subscription, nothing to unlock. The app is held to its design by its own tests: contrast, touch targets, text that grows to 200%, rows that speak one sentence to a screen reader.
+          All the code is on GitHub under the Apache License 2.0, and the app is free with nothing to unlock. Tests hold it to its design: contrast, touch targets, large text and screen readers.
         </p>
         <div class="ctas rise" style="--i:2">
           <a class="btn btn-ink" href={site.repo} rel="noopener"><Icon name="star" />Star the repository{count !== null && <span class="count">{count.toLocaleString('en-US')}</span>}</a>
@@ -213,7 +185,7 @@ const story = [
       </div>
       <div class="help rise" style="--i:3">
         <h3 class="t-section">Run one of these? Help verify it.</h3>
-        <p class="t-meta">Each is written to the service's official API and covered by tests, but has not been run end to end against a real server. A report either way turns its mark into a check.</p>
+        <p class="t-meta">These follow each service's official API but have not been tested end to end on a real server yet. Tell us how it goes, either way.</p>
         <ul>
           {helpWanted.map((s) => (
             <li>
@@ -241,10 +213,13 @@ const story = [
   </section>
 
   <!-- The close: the promise, and the way to get it. -->
-  <section class="close" {...lit('singopen')} aria-labelledby="promise">
+  <section class="close" {...lit('singopen')} aria-labelledby="get-h">
     <div class="well">
       <Mark size={72} />
-      <h2 id="promise" class="t-giant">{site.promise}</h2>
+      <div class="head">
+        <h2 id="get-h" class="t-screen">Get Cupola</h2>
+        <p class="t-meta">{site.promise}</p>
+      </div>
       <Get />
     </div>
   </section>
@@ -362,7 +337,7 @@ const story = [
     height: 100svh;
   }
   .descent:global(.moving) {
-    height: 280svh;
+    height: 200svh;
   }
   .stage {
     --copy: 1;
@@ -436,18 +411,6 @@ const story = [
   .facts {
     margin-top: -4px;
   }
-  .arrive {
-    position: absolute;
-    z-index: 3;
-    left: var(--gutter);
-    right: var(--gutter);
-    bottom: 12vh;
-    max-width: var(--well);
-    margin-inline: auto;
-    opacity: var(--arrive);
-    transform: translateY(calc((1 - var(--arrive)) * 24px));
-    pointer-events: none;
-  }
   .cue {
     position: absolute;
     z-index: 3;
@@ -460,7 +423,6 @@ const story = [
     background: linear-gradient(to bottom, transparent, var(--ink-3));
     opacity: calc(var(--copy) * 0.8);
   }
-  .descent:not(:global(.moving)) .arrive,
   .descent:not(:global(.moving)) .portal,
   .descent:not(:global(.moving)) .cue {
     display: none;
@@ -579,15 +541,20 @@ const story = [
       max-width: none;
       opacity: 0;
       transform: translateY(10px);
+      /* The step leaving goes quickly; the next one waits for it, so two
+         texts never show on top of each other. */
       transition:
-        opacity var(--standard) var(--ease),
-        transform var(--standard) var(--ease);
+        opacity 120ms ease-out,
+        transform 120ms ease-out;
       pointer-events: none;
     }
     .step:global(.active) {
       opacity: 1;
       transform: none;
       pointer-events: auto;
+      transition:
+        opacity var(--standard) var(--ease) 120ms,
+        transform var(--standard) var(--ease) 120ms;
     }
     .step .t-room {
       font-size: 26px;
@@ -647,9 +614,6 @@ const story = [
     display: grid;
     gap: 22px;
     align-content: start;
-  }
-  .flip > div:first-child {
-    order: 0;
   }
   .two .ctas {
     justify-content: flex-start;
@@ -756,12 +720,6 @@ const story = [
   .help .btn {
     justify-self: start;
   }
-  .journeyb {
-    padding-top: clamp(72px, 12vh, 140px);
-  }
-  .credit {
-    margin-top: 18px;
-  }
   .faqgrid {
     align-items: start;
   }
@@ -773,8 +731,9 @@ const story = [
     display: grid;
     gap: 36px;
   }
-  .close h2 {
-    max-width: 10ch;
+  .close .head {
+    gap: 8px;
+    margin-bottom: 0;
   }
 
   @media (max-width: 960px) {

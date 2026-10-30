@@ -84,7 +84,8 @@ const here = (href: string) => (href === '/' ? path === '/' : path.startsWith(hr
     display: flex;
     align-items: center;
     gap: 9px;
-    padding: 4px 10px 4px 2px;
+    min-height: 44px;
+    padding: 0 10px 0 2px;
     text-decoration: none;
     font-family: var(--display);
     font-weight: 600;
@@ -103,8 +104,10 @@ const here = (href: string) => (href === '/' ? path === '/' : path.startsWith(hr
     list-style: none;
   }
   .links a {
-    display: block;
-    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 14px;
     border-radius: 999px;
     font-size: 15px;
     font-weight: 500;
@@ -133,6 +136,9 @@ const here = (href: string) => (href === '/' ? path === '/' : path.startsWith(hr
     font-weight: 600;
     text-decoration: none;
     color: var(--ink);
+  }
+  .gh :global(svg) {
+    flex-shrink: 0;
   }
   .gh:hover {
     background: var(--fill-control);
@@ -201,6 +207,26 @@ const here = (href: string) => (href === '/' ? path === '/' : path.startsWith(hr
     .tabbar a.lit {
       color: var(--ink);
       background: color-mix(in srgb, var(--light) 18%, rgb(255 255 255 / 0.1));
+    }
+  }
+  /* Between the tab bar and a wide window the four links leave no room for
+     the word GitHub: the mark and the star count say it. */
+  @media (max-width: 900px) {
+    .gh-label {
+      display: none;
+    }
+  }
+  /* Small phones keep the GitHub mark and drop the star count, which would
+     push Get Cupola out of the bar as it grows. The narrowest drop the pill
+     too: GitHub stays one tap away in the footer and on every page. */
+  @media (max-width: 389px) {
+    .stars {
+      display: none;
+    }
+  }
+  @media (max-width: 340px) {
+    .gh {
+      display: none;
     }
   }
 </style>

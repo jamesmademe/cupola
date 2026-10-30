@@ -7,30 +7,30 @@ const unverified = services().filter((s) => s.tested !== 'verified');
 ---
 <Guide
   page="contribute"
-  lede="Cupola is open source under the Apache License 2.0 and built in the open on GitHub. The single most useful thing you can send is a report from a service you run, whether it worked or not."
+  lede="Cupola is open source under the Apache License 2.0. The most useful thing you can send us is a report from a service you run, whether it worked or not."
   related={['services', 'press', 'install']}
   get={false}
 >
   <h2>Report from your own stack</h2>
-  <p>Every integration is written to the service's official API and covered by tests that run offline. Whether it works against your instance, behind your proxy, with your certificates, is something only a real stack can say. These are not yet verified end to end:</p>
+  <p>Every integration follows the service's official API and has tests. Only a real server shows whether it works with your setup. These are not fully verified yet:</p>
   <ul>
     {unverified.map((s) => (
       <li><a href={`/services/${s.id}/`}>{s.name}</a>: {s.tested === 'partial' ? 'partly verified' : 'recorded answers only'}</li>
     ))}
   </ul>
-  <p><a href={`${site.issues}/new`} rel="noopener">Open an issue</a> with the service, its version, how you reach it, and what you saw. A report that says “it works” is as welcome as one that says it does not.</p>
+  <p><a href={`${site.issues}/new`} rel="noopener">Open an issue</a> with the service, its version, how you reach it, and what you saw. “It works” is as useful to us as “it does not”.</p>
 
   <h2>Accessibility</h2>
-  <p>Dynamic Type, contrast, touch targets and screen-reader labels are held by tests, so a row that reads badly with VoiceOver or TalkBack is a bug. Please report it the same way.</p>
+  <p>Large text, contrast, touch targets and screen readers are covered by tests. Something that reads badly with VoiceOver or TalkBack is a bug: please report it.</p>
 
   <h2>Code and integrations</h2>
-  <p>Open an issue first, so scope and direction are agreed before you write code. Setup, conventions and what a pull request needs are in <a href={site.contributing} rel="noopener">CONTRIBUTING.md</a>. The app has a written design system, with a rendered card for every widget, under <code>design/</code> in the repository.</p>
+  <p>Open an issue first, so we agree on the plan before you write code. Setup and conventions are in <a href={site.contributing} rel="noopener">CONTRIBUTING.md</a>, and the design system is in <code>design/</code>.</p>
 
   <h2>Help other people find it</h2>
   <ul>
-    <li><a href={site.repo} rel="noopener">Star the repository</a>, so people searching GitHub see that it is alive.</li>
-    <li>Tell the people who run the same stack: your Discord, your forum, the thread where someone asked for a Sonarr app.</li>
+    <li><a href={site.repo} rel="noopener">Star the repository</a>, so people on GitHub can find it.</li>
+    <li>Tell people who run the same stack: your Discord, your forum, the thread asking for a Sonarr app.</li>
     <li>Writing about it? The <a href="/press/">press kit</a> has descriptions, the mark and the facts.</li>
-    <li>If it is useful to you, a donation on <a href={site.kofi} rel="noopener">Ko-fi</a> helps keep it moving.</li>
+    <li>If it helps you, a donation on <a href={site.kofi} rel="noopener">Ko-fi</a> keeps it moving.</li>
   </ul>
 </Guide>

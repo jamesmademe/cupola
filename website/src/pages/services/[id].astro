@@ -35,9 +35,9 @@ const address = reg.defaultPort === 443 ? 'https://192.168.1.20' : `http://192.1
 const webLogin = reg.credentialPath === null;
 
 const tested = {
-  verified: `Verified end to end: Cupola's screens and its actions have run against a real, working ${s.name}.`,
-  partial: `Partly verified: Cupola's screens have read a real ${s.name} (or a faithful stand-in), but its actions have not yet been run against one.`,
-  untested: `Tested against recorded answers from ${s.name}'s API, not yet against a running server.`,
+  verified: `Verified end to end: Cupola's screens and actions have run against a real ${s.name}.`,
+  partial: `Partly verified: Cupola's screens have read a real ${s.name}, but its actions have not been tried on one yet.`,
+  untested: `Tested against recorded answers from ${s.name}'s API, not yet on a running server.`,
 }[s.tested];
 
 const home: PageId =
@@ -48,20 +48,20 @@ const d = site.downloads;
 const availability = d.apk
   ? 'It is a public TestFlight beta on iPhone, iPad and Mac, and an APK on Android.'
   : d.testflight
-    ? 'On iPhone, iPad and Mac it is a public TestFlight beta today; the Android build comes with the first release on GitHub.'
+    ? 'It is a public TestFlight beta on iPhone, iPad and Mac today; Android comes with the first GitHub release.'
     : 'It is not open to download yet.';
 
 const questions: Qa[] = [
   {
     id: 'app',
     q: `Is there a ${s.name} app for iPhone and Android?`,
-    a: `Cupola is one: a free, open-source app for iPhone, iPad, Android and Mac that connects to ${s.name} directly, with no Cupola account in between. ${availability} See <a href="/install/">install</a>.`,
+    a: `Yes: Cupola, free and open source, connects to ${s.name} directly. ${availability} See <a href="/install/">install</a>.`,
   },
   webLogin
     ? {
         id: 'login',
         q: `What does Cupola sign in to ${s.name} with?`,
-        a: `${escape(s.auth)}: the same login its web interface asks for. Cupola keeps the password in the device's secure storage.`,
+        a: `${escape(s.auth)}: the same login as its web interface. Cupola keeps it in your device's secure storage.`,
       }
     : {
         id: 'key',
@@ -74,7 +74,7 @@ const questions: Qa[] = [
 <Guide
   page={page}
   parent="services"
-  lede={`Cupola is a free, open-source app for ${s.name}${aka ? ` (${aka} too)` : ''} on iPhone, iPad, Android and Mac. It talks straight to your own ${s.name}, with no Cupola account or server in between.`}
+  lede={`Cupola is a free, open-source app for ${s.name}${aka ? ` (${aka} too)` : ''} on iPhone, iPad, Android and Mac. It connects straight to your own ${s.name}, with no account.`}
   questions={questions}
   related={[home, 'services', 'install']}
 >
@@ -84,10 +84,9 @@ const questions: Qa[] = [
 
   <h2>How well it is tested</h2>
   <p>
-    {tested}
-    {s.note && <> {s.note}</>}
+    {s.note ?? tested}
     {s.tested !== 'verified' && (
-      <> If you run {s.name}, <a href={`${site.issues}/new`} rel="noopener">a report either way</a> helps more than anything else.</>
+      <> If you run {s.name}, <a href={`${site.issues}/new`} rel="noopener">tell us how it goes</a>.</>
     )}
   </p>
 
@@ -95,21 +94,21 @@ const questions: Qa[] = [
   {reg.setupNote && <p><strong>Before you start.</strong> <span set:html={html(reg.setupNote)} /></p>}
   <ol>
     <li>
-      <strong>Its address</strong>, as you open its web interface{reg.defaultPort === 443 ? '' : ', with the port'}: <code>{address}</code> by default, or the name your reverse proxy gives it. <a href="/faq/#address">More on addresses</a>.
+      <strong>Its address</strong>{reg.defaultPort === 443 ? '' : ', with the port'}: <code>{address}</code> by default, or your reverse proxy's address. <a href="/faq/#address">More on addresses</a>.
     </li>
     {webLogin ? (
-      <li><strong>{s.auth}</strong>: the same login its web interface asks for.</li>
+      <li><strong>{s.auth}</strong>: the same login as its web interface.</li>
     ) : (
       <li>
-        <strong>{s.id === 'plex' ? 'The token' : 'The API key'}</strong>, from {s.name}'s own web interface: <strong>{reg.credentialPath}</strong>.
+        <strong>{s.id === 'plex' ? 'The token' : 'The API key'}</strong>, in {s.name}'s web interface: <strong>{reg.credentialPath}</strong>.
       </li>
     )}
     <li>
-      <strong>Test it before you save.</strong> When the connection fails, Cupola says what it found: a port that answers in plain http, a sign-in page in front of the service, or nothing at all.
+      <strong>Test it before you save.</strong> If it fails, Cupola tells you why.
     </li>
   </ol>
   <p>
-    Away from home, Cupola uses the route you already have, a VPN or a reverse proxy: <a href="/faq/#away">how that works</a>.
+    Away from home, Cupola uses your VPN or reverse proxy: <a href="/faq/#away">how that works</a>.
   </p>
 
   <h2>Also in {s.category}</h2>

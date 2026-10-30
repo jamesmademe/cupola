@@ -4,34 +4,34 @@ import { pick } from '../data/faq';
 ---
 <Guide
   page="arr"
-  lede="Yes, there is a native app for that. Cupola is a free, open-source client for Radarr, Sonarr, Lidarr and Readarr on iPhone, Android and Mac. It talks straight to your instances with their own API keys, and puts the library, the calendar, the queue and the release list in your pocket."
+  lede="Yes. Cupola is a free, open-source app for Radarr, Sonarr, Lidarr and Readarr on iPhone, Android and Mac. Your library, calendar, queue and releases, on your phone."
   screen="title"
   services={['radarr', 'sonarr', 'lidarr', 'readarr', 'bazarr', 'prowlarr']}
   questions={pick('arrApp', 'account', 'away', 'certs', 'free')}
   related={['seerr', 'downloads', 'install']}
 >
-  <h2>Everything you open the web UI for</h2>
+  <h2>What you can do</h2>
   <ul>
-    <li><strong>The library, with where each title stands.</strong> Movies, series, artists and authors, with what is on disk, monitored, on its way or missing. Search it, filter it, pull to refresh.</li>
-    <li><strong>The calendar.</strong> What airs or comes out next: episodes with their time, movies with their three dates (in cinemas, on digital, on disc).</li>
-    <li><strong>Searching your way.</strong> Let Radarr or Sonarr grab a release by itself, or open the release list and choose one yourself.</li>
-    <li><strong>What the arr could not finish alone.</strong> Files that landed under the wrong name go through manual import. Wanted and cutoff unmet lists come with a search per episode or per season.</li>
-    <li><strong>Changing your mind properly.</strong> Flip monitoring, change the quality profile, and delete with a clear say over the files and over whether the title can come back.</li>
+    <li><strong>Browse your library.</strong> Movies, series, artists and authors, and where each one stands.</li>
+    <li><strong>See what is coming.</strong> A calendar of episodes and movies, with cinema, digital and disc dates.</li>
+    <li><strong>Search your way.</strong> Let Radarr or Sonarr pick a release, or choose one yourself.</li>
+    <li><strong>Fix what got stuck.</strong> Manual import for misnamed files, and a search for anything wanted.</li>
+    <li><strong>Change your mind.</strong> Toggle monitoring, switch the quality profile, or delete, with or without the files.</li>
   </ul>
 
   <h2>Seasons, artists and authors</h2>
-  <p>Sonarr's series open on their seasons and episodes, with a search for each. Lidarr's artists and Readarr's authors open on a page of their own, with every album or book and where it stands. Bazarr sits beside them with the subtitles still wanted, and Prowlarr with the indexers that feed them all.</p>
+  <p>Series open on their seasons and episodes, each with its own search. Artists and authors get a page with every album or book. Bazarr and Prowlarr sit alongside.</p>
 
   <h2>More than one of each</h2>
-  <p>Two Radarrs, say one for 4K, are two connections. Cupola shows them together and lets you look at one at a time.</p>
+  <p>Run two Radarrs, one for 4K? Add both. Cupola shows them together or one at a time.</p>
 
-  <h2>From a poster to the disk</h2>
-  <p>With Seerr connected, a title you find in Discover opens on one page that says where it stands in every service you run, and offers the action that fits: add it to Radarr or Sonarr, or send a request. Activity then follows the download until it arrives, and says so plainly if it gets stuck.</p>
+  <h2>From a poster to your server</h2>
+  <p>With Seerr connected, any title opens on one page that shows where it stands everywhere. Add it or request it in one tap, then follow the download in Activity.</p>
 
   <h2>What you need</h2>
   <ul>
-    <li>The address and API key of each instance. The key is in the arr's own web UI, under <strong>Settings › General › Security</strong>.</li>
-    <li>A way to reach it: the same network, a VPN, or a reverse proxy. Away from home, Cupola refuses to send a key over plain <code>http</code> and asks for <code>https</code> instead.</li>
-    <li>Nothing else. There is no Cupola account, and nothing to install on the server.</li>
+    <li>The address and API key of each instance. The key is under <strong>Settings › General</strong> in its web interface.</li>
+    <li>A way to reach it: your home network, a VPN or a reverse proxy.</li>
+    <li>Nothing to install on the server, and no Cupola account.</li>
   </ul>
 </Guide>

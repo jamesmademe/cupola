@@ -6,38 +6,38 @@ import { site } from '../config';
 ---
 <Guide
   page="privacy"
-  lede="Cupola has no server, so there is no Cupola-shaped place for your data to go. It talks straight to the services you run, keeps their keys in the device's own keychain, and reaches exactly two other hosts, each for one stated reason."
+  lede="Cupola has no server, so your data has nowhere else to go. It talks straight to your services, keeps their keys on your device, and contacts only two other hosts, each for one reason."
   questions={pick('leaves', 'certs', 'account')}
   related={['install', 'faq', 'contribute']}
 >
   <div class="not-prose"><Reach /></div>
 
-  <h2>No account, no cloud, no telemetry</h2>
-  <p>Nothing is collected, and there is no backend to collect it. No analytics, no crash reporting, no sign-up. Your services keep their own sign-in.</p>
+  <h2>Nothing collected</h2>
+  <p>No sign-up, no analytics, no crash reports. Your services keep their own logins.</p>
 
   <h2>The two other hosts</h2>
   <ul>
-    <li><strong><code>image.tmdb.org</code></strong>, for poster, backdrop and cast artwork, because that is where Seerr's metadata points. Those requests carry no credential and no identifier of yours, but TMDB sees the IP address they come from.</li>
-    <li><strong><code>plex.tv</code></strong>, once, if you sign in to Seerr with a Plex account. Cupola keeps none of the token it gets.</li>
+    <li><strong><code>image.tmdb.org</code></strong> for posters and cast photos, because that is where Seerr points. No credentials are sent, but TMDB sees your IP address.</li>
+    <li><strong><code>plex.tv</code></strong>, once, if you sign in to Seerr with Plex. Cupola does not keep the token.</li>
   </ul>
-  <p>Everything else, metadata included, comes from your own instances.</p>
+  <p>Everything else comes from your own servers.</p>
 
-  <h2>Keys stay on the device</h2>
-  <p>API keys, tokens and passwords are kept in the Keychain on Apple devices and in Keystore-backed storage on Android. Inviting someone from Seerr hands over the server's address, never its key. Copying everything to a new phone goes encrypted, over your own Wi-Fi.</p>
+  <h2>Keys stay on your device</h2>
+  <p>API keys, tokens and passwords live in the Keychain on Apple devices and in the Keystore on Android. A Seerr invite shares the server's address, never its key. Moving to a new phone is encrypted and stays on your Wi-Fi.</p>
 
-  <h2>Self-signed certificates, done properly</h2>
-  <p>Cupola asks before trusting a certificate it has not seen, then pins its SHA-256 fingerprint to the host it came from: a certificate belongs to a host, not to whichever service you reached through it. Two services behind the same reverse proxy are trusted, and forgotten, together. Artwork goes through the same pin. Review or forget any of them under <strong>Settings › Security › Trusted certificates</strong>.</p>
+  <h2>Self-signed certificates</h2>
+  <p>Cupola asks before trusting a certificate it has not seen, then pins it to that host. Services behind the same proxy are trusted together. Review or remove them in <strong>Settings › Security › Trusted certificates</strong>.</p>
 
   <h2>Away from home</h2>
-  <p>A connection can carry a second address for when you are out: your VPN, your reverse proxy, a tunnel. Cupola asks both and uses whichever answers. It never sends a key over plain <code>http</code> across the internet. Services behind Cloudflare Access, a proxy password or custom headers get what the gateway asks for, and only on the same origin.</p>
+  <p>A connection can have a second address for when you are out, through your VPN or reverse proxy. Cupola never sends a key over plain <code>http</code> across the internet. Cloudflare Access, proxy passwords and custom headers are supported.</p>
 
-  <h2>Background search is off until you turn it on</h2>
-  <p>Letting a search outlive the screen means handing the request, API key included, to the operating system for the length of the task. So it ships off, and the switch says so in the same words. A task expires after 11 minutes and finished records are cleared at every launch.</p>
+  <h2>Background search is off by default</h2>
+  <p>A search that keeps running after you leave the screen hands the request, key included, to the operating system. That is why it starts off. Tasks expire after 11 minutes, and finished ones are cleared at every launch.</p>
 
   <h2>This website</h2>
-  <p>This site sets no cookies and loads its fonts from itself. It counts visits with Cloudflare Web Analytics, which uses no cookies and does not follow you across sites.</p>
+  <p>No cookies, and fonts served from this site. Visits are counted with Cloudflare Web Analytics, which uses no cookies and does not track you across sites.</p>
 
-  <p>The whole trust layer is one reviewable file in the <a href={`${site.repo}/blob/main/lib/core/network/cert_trust.dart`} rel="noopener">source</a>.</p>
+  <p>All of the certificate handling is in one file you can read in the <a href={`${site.repo}/blob/main/lib/core/network/cert_trust.dart`} rel="noopener">source</a>.</p>
 </Guide>
 
 <style>
