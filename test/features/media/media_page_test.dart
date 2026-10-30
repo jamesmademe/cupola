@@ -1410,6 +1410,80 @@ void main() {
       await harness.unmount(tester);
     });
 
+    testWidgets('Automatic search asks Sonarr for every season, or a season '
+        'it monitors that has aired', (tester) async {
+      final harness = await _pump(
+        tester,
+        Profiles.p1,
+        WorldTitles.cosmosLaundromat,
+        key: cosmos,
+        height: 3600,
+      );
+      final row = find.text('Automatic search');
+      await tester.ensureVisible(row);
+      expect(
+        find.text('Sonarr looks now for what it monitors'),
+        findsOneWidget,
+      );
+      await tester.tap(row);
+      await tester.pumpAndSettle();
+      expect(find.bySemanticsLabel('Search Every season'), findsOneWidget);
+      expect(find.bySemanticsLabel('Search Season 1'), findsOneWidget);
+      expect(find.bySemanticsLabel('Search Season 2'), findsOneWidget);
+      // Nothing of the third has aired.
+      expect(find.bySemanticsLabel('Search Season 3'), findsNothing);
+
+      List<Object?> commands() => [
+        for (final r in harness.network.requestsTo(WorldIds.sonarr))
+          if (r.method == 'POST' && r.uri.path == '/api/v3/command') r.json,
+      ];
+
+      await tester.tap(find.bySemanticsLabel('Search Every season'));
+      await _answer(tester);
+      expect(commands(), [
+        {'name': 'SeriesSearch', 'seriesId': 1},
+      ]);
+      expect(find.text('Sonarr is searching for every season'), findsOneWidget);
+
+      await tester.tap(find.bySemanticsLabel('Search Season 2'));
+      await _answer(tester);
+      expect(commands().last, {
+        'name': 'SeasonSearch',
+        'seriesId': 1,
+        'seasonNumber': 2,
+      });
+
+      await harness.unmount(tester);
+    });
+
+    testWidgets('Automatic search goes to the Sonarr that holds the copy', (
+      tester,
+    ) async {
+      // Agent 327 is on the anime Sonarr only.
+      final (harness, _) = await _pumpRouted(
+        tester,
+        Profiles.p6,
+        WorldTitles.agent327,
+        key: MediaKey.tv(WorldTitles.agent327.tmdbId),
+        focus: WorldIds.sonarrAnime,
+        height: 3600,
+      );
+      final row = find.text('Automatic search');
+      await tester.ensureVisible(row);
+      await tester.tap(row);
+      await tester.pumpAndSettle();
+      await tester.tap(find.bySemanticsLabel(RegExp(r'^Search Season ')).first);
+      await _answer(tester);
+
+      bool asked(String id) => harness.network
+          .requestsTo(id)
+          .any((r) => r.method == 'POST' && r.uri.path == '/api/v3/command');
+      expect(asked(WorldIds.sonarrAnime), isTrue);
+      expect(asked(WorldIds.sonarr), isFalse);
+
+      await harness.unmount(tester);
+    });
+
     testWidgets('Remove asks what goes with it, then asks Sonarr', (
       tester,
     ) async {

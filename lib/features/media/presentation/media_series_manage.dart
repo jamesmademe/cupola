@@ -37,9 +37,14 @@ typedef MediaSeriesHeld = ({
   List<SonarrEpisode> episodes,
 });
 
+/// An automatic search Sonarr is asked for: one copy's whole series, or one
+/// of its seasons.
+typedef _AutomaticSearch = ({MediaSeriesHeld copy, MediaSeasonFiles? season});
+
 /// A series' Manage, for the operator: each Sonarr copy's files and
-/// seasons with what Sonarr does about them, what it has done, a season's
-/// releases to choose from, and its removal.
+/// seasons with what Sonarr does about them, what it has done, a search
+/// Sonarr runs on its own for the series or a season, a season's releases to
+/// choose from, and its removal.
 ///
 /// The files are read when Manage is drawn (the closed rows name their
 /// qualities and the last import); the history when it opens.
@@ -135,6 +140,19 @@ class MediaSeriesManage extends ConsumerWidget {
                   ?.episodes,
             ),
           ),
+        if (_automaticSearches(single) case final searches
+            when searches.isNotEmpty)
+          MediaManageRow(
+            title: 'Automatic search',
+            summary: single
+                ? '${copies.single.name} looks now for what it monitors'
+                : names,
+            body: (context) => MediaCopyChoices<_AutomaticSearch>(
+              verb: 'Search',
+              copies: searches,
+              onChoose: (search) => _search(context, ref, search),
+            ),
+          ),
         MediaManageRow(
           title: 'Search releases',
           summary: names,
@@ -193,6 +211,67 @@ class MediaSeriesManage extends ConsumerWidget {
     [final one] => one,
     _ => '${names.take(names.length - 1).join(', ')} and ${names.last}',
   };
+
+  /// What Sonarr's automatic search can be asked for, copy by copy: every
+  /// season, then each season it monitors that has aired. Sonarr passes over
+  /// what it does not monitor, so a series or a season it does not watch
+  /// offers nothing; one season alone is not offered twice.
+  List<({String name, _AutomaticSearch target})> _automaticSearches(
+    bool single,
+  ) => [
+    for (final copy in copies)
+      if (copy.series.monitored)
+        if ([
+              for (final season in mediaSeasonFilesOf(
+                copy.series,
+                copy.episodes,
+                now: now,
+              ))
+                if (season.aired && season.monitored) season,
+            ]
+            case final seasons when seasons.isNotEmpty) ...[
+          if (seasons.length > 1)
+            (
+              name: single ? 'Every season' : 'Every season on ${copy.name}',
+              target: (copy: copy, season: null),
+            ),
+          for (final season in seasons)
+            (
+              name: single ? season.label : '${season.label} on ${copy.name}',
+              target: (copy: copy, season: season),
+            ),
+        ],
+  ];
+
+  /// Asks [search]'s Sonarr to look for the series or the season now, as an
+  /// episode's search asks: it says so, or why it could not.
+  Future<void> _search(
+    BuildContext context,
+    WidgetRef ref,
+    _AutomaticSearch search,
+  ) async {
+    final (:copy, :season) = search;
+    final sonarr = ref.read(sonarrServiceForProvider(copy.connection.id));
+    try {
+      if (season == null) {
+        await sonarr.searchSeries(copy.series.id);
+      } else {
+        await sonarr.searchSeason(copy.series.id, season.number);
+      }
+      if (!context.mounted) return;
+      SnackBarHelper.success(
+        context,
+        '${copy.name} is searching for ${season?.label ?? 'every season'}',
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      SnackBarHelper.error(
+        context,
+        'Could not ask ${copy.name} to search',
+        detail: error,
+      );
+    }
+  }
 
   /// Removes [copy] from its Sonarr after the question removing asks, as a
   /// movie's copy is removed; then the page reads Sonarr again.

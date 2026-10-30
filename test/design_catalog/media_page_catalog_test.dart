@@ -739,6 +739,10 @@ List<MediaRow> _series() {
             'monitored': true,
             'images': _art,
             'genres': ['Animation'],
+            'seasons': [
+              for (final season in [1, 2, 3])
+                {'seasonNumber': season, 'monitored': true},
+            ],
           }),
           queue: ArrQueueSnapshot.empty,
           episodes: episodes,
@@ -875,6 +879,7 @@ CatalogScene _scene(
   MediaKey key = _key,
   int? season,
   bool paned = false,
+  Future<void> Function(WidgetTester tester, Finder scene)? act,
 }) => CatalogScene(
   caption,
   (_) => paned
@@ -887,6 +892,7 @@ CatalogScene _scene(
   width: width,
   height: height,
   textScale: textScale,
+  act: act,
   overrides: [
     mediaRowsProvider.overrideWith((ref, key) => rows),
     audienceProvider.overrideWithValue(audience),
@@ -988,6 +994,34 @@ void main() {
         height: 2200,
         key: const MediaKey.tv(358332),
         season: 1,
+      ),
+      _scene(
+        'Series · Manage, Automatic search open: every season, then each '
+        'season Sonarr monitors that has aired',
+        _series(),
+        height: 1000,
+        key: const MediaKey.tv(358332),
+        act: (tester, scene) async {
+          // The page builds what is near its fold: scroll until Manage is
+          // built, then bring the row up where it opens in view.
+          final row = find.descendant(
+            of: scene,
+            matching: find.text('Automatic search'),
+          );
+          await tester.scrollUntilVisible(
+            row,
+            300,
+            duration: Duration.zero,
+            scrollable: find
+                .descendant(of: scene, matching: find.byType(Scrollable))
+                .first,
+          );
+          await Scrollable.ensureVisible(tester.element(row), alignment: 0.2);
+          await tester.pump();
+          // The sheet settles once the act is done: no time passes here, so
+          // the scenes beside it are drawn at the same turn.
+          await tester.tap(row);
+        },
       ),
       _scene('Waiting · nobody has said who the title is yet', [
         MediaConnectionRow<MediaRadarrCopy>(
