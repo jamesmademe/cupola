@@ -22,7 +22,7 @@ export function llms(): string {
 
 > ${site.description}
 
-Cupola (formerly Seekarr) is a native client for the self-hosted media stack: one app for ${services().length} services, on iOS, Android and macOS, with Windows and Linux builds. It is free and open source (Apache-2.0), has no Cupola account, server or telemetry, and connects directly to the user's own instances on the home network, over a VPN or through a reverse proxy. It is not a media player. Current version: ${version}.
+Cupola (formerly Seekarr) is a native client for the self-hosted media stack: one app for ${services().length} services, on iOS, Android and macOS, with Windows and Linux builds. It is free and open source (Apache-2.0), has no Cupola account or server, sends no analytics or crash reports of its own (on Android, the QR code scanner is Google's ML Kit, which sends Google diagnostic and usage data), and connects directly to the user's own instances on the home network, over a VPN or through a reverse proxy. It is not a media player. Current version: ${version}.
 
 Services: ${services().map((s) => s.name).join(', ')}.
 
@@ -54,7 +54,7 @@ export function llmsFull(): string {
 - Household: a member signs in to Seerr with their own account (email, Jellyfin or Plex) and gets Home, Discover and their requests, without operator controls.
 - Widgets and notifications on iOS and Android, computed on the device; no push server.
 - Home and away: a connection can carry a second address; Cupola uses whichever answers. It does not create a tunnel.
-- Security: keys in the Keychain or Keystore; self-signed certificates trusted on first use and pinned per host; artwork from TMDB's image CDN; plex.tv only for a Plex sign-in to Seerr.
+- Security: keys in the Keychain or Keystore; self-signed certificates trusted on first use and pinned per host; artwork from TMDB's image CDN; plex.tv only for a Plex sign-in to Seerr; on Android, Google's ML Kit (the QR code scanner in Copy from another device) sends Google diagnostic and usage data.
 
 ## Services
 

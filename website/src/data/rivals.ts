@@ -109,7 +109,7 @@ export const rivals: Rival[] = [
       {
         label: 'Data collected by the app',
         them: 'Usage data for analytics and crash data, not linked to you (App Store privacy label)',
-        cupola: 'None: no analytics, no crash reporting',
+        cupola: 'None on iPhone, iPad and Mac. On Android, the code scanner (Google ML Kit) sends Google diagnostic and usage data; we collect nothing ourselves',
       },
       {
         label: 'Media and requests',
@@ -135,7 +135,7 @@ export const rivals: Rival[] = [
     differs: [
       'On Android as well as iPhone, iPad and Mac, and on iOS 17 or later.',
       'Free and open source: no subscription, no per-service unlocks.',
-      'Collects nothing, not even anonymous analytics.',
+      'On iPhone, iPad and Mac, collects nothing, not even anonymous analytics.',
       'Reaches TrueNAS, Dockge and Nginx Proxy Manager, and family members can request with their own Seerr account.',
     ],
     moving: [
