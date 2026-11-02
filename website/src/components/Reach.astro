@@ -1,6 +1,7 @@
 ---
-// Who Cupola talks to: your own services, directly, and two third parties
-// for one thing each. The box in the middle is the server Cupola does not have.
+// Who Cupola talks to: your own services, directly, two third parties for one
+// thing each, and on Android Google, through the code scanner's ML Kit. The box
+// in the middle is the server Cupola does not have.
 import Mark from './Mark.astro';
 import Icon from './Icon.astro';
 ---
@@ -38,9 +39,14 @@ import Icon from './Icon.astro';
     <p class="mono">plex.tv</p>
     <p class="t-meta">Once, only for a Plex sign-in to Seerr</p>
   </div>
+  <div class="third google">
+    <p class="mono">Google</p>
+    <p class="t-meta">Android only: the code scanner's usage data</p>
+  </div>
   <figcaption class="sr-only">
-    Cupola connects directly to your own services. There is no Cupola server. The only other hosts it reaches are
-    TMDB's image CDN for artwork, and plex.tv once if you sign in to Seerr with a Plex account.
+    Cupola connects directly to your own services. There is no Cupola server. The other hosts it reaches are
+    TMDB's image CDN for artwork, plex.tv once if you sign in to Seerr with a Plex account, and on Android Google,
+    which receives usage data from the code scanner.
   </figcaption>
 </figure>
 
@@ -52,7 +58,7 @@ import Icon from './Icon.astro';
     grid-template-areas:
       'you wire server'
       'none none none'
-      'tmdb . plex';
+      'tmdb google plex';
     gap: 18px;
     align-items: center;
   }
@@ -149,10 +155,13 @@ import Icon from './Icon.astro';
   .plex {
     grid-area: plex;
   }
+  .google {
+    grid-area: google;
+  }
   @media (max-width: 760px) {
     .reach {
       grid-template-columns: 1fr;
-      grid-template-areas: 'you' 'wire' 'server' 'none' 'tmdb' 'plex';
+      grid-template-areas: 'you' 'wire' 'server' 'none' 'tmdb' 'plex' 'google';
     }
     .wire i {
       width: 2px;

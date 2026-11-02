@@ -6,14 +6,17 @@ import { site } from '../config';
 ---
 <Guide
   page="privacy"
-  lede="Cupola has no server, so your data has nowhere else to go. It talks straight to your services, keeps their keys on your device, and contacts only two other hosts, each for one reason."
+  lede="Cupola has no server, so your data has nowhere else to go. It talks straight to your services, keeps their keys on your device, and contacts two other hosts, each for one reason. On Android, its code scanner also reports to Google."
   questions={pick('leaves', 'certs', 'account')}
   related={['install', 'faq', 'contribute']}
 >
   <div class="not-prose"><Reach /></div>
 
-  <h2>Nothing collected</h2>
+  <h2>Nothing collected by us</h2>
   <p>No sign-up, no analytics, no crash reports. Your services keep their own logins.</p>
+
+  <h2>On Android, the code scanner reports to Google</h2>
+  <p>To read the code in <strong>Copy from another device</strong>, Cupola for Android uses Google's ML Kit. ML Kit sends Google diagnostic and usage data: the device model and Android version, the app's name and version, an identifier for this installation, and how the scanner ran (speed, image settings, errors). Google offers no way to turn it off, so we plan to replace it with a scanner that sends nothing. On iPhone and iPad the scanner is Apple's and runs on the device; on a Mac you paste a link instead.</p>
 
   <h2>The two other hosts</h2>
   <ul>

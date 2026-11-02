@@ -39,7 +39,7 @@ export const faq = {
   },
   leaves: {
     q: 'What data leaves my network?',
-    a: 'Two things. Posters and cast photos come from TMDB, where Seerr points, with none of your credentials attached. And a Plex sign-in to Seerr goes through plex.tv once. Nothing else: no analytics, no crash reports. See <a href="/privacy/">privacy</a>.',
+    a: 'Two things, and on Android a third. Posters and cast photos come from TMDB, where Seerr points, with none of your credentials attached. A Plex sign-in to Seerr goes through plex.tv once. And on Android, the code scanner in Copy from another device is Google\'s ML Kit, which sends Google diagnostic and usage data; we plan to replace it. We collect nothing ourselves: no analytics, no crash reports. See <a href="/privacy/">privacy</a>.',
   },
   address: {
     q: 'What address do I type for a service?',
