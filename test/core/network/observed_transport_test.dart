@@ -10,6 +10,8 @@ import 'package:cupola/core/network/connection_failure.dart';
 import 'package:cupola/core/network/observed_transport.dart';
 import 'package:cupola/core/status/media_status.dart';
 
+import '../../test_helpers/real_network.dart';
+
 /// The lab's real transport, not a mocked adapter.
 ///
 /// Dart's HTTP client says `Connection closed before full header was received`
@@ -18,6 +20,8 @@ import 'package:cupola/core/status/media_status.dart';
 /// and the app must still put them on opposite sides of the tone rule:
 /// silence is red, a partial answer is an amber fault.
 void main() {
+  useRealNetwork();
+
   // Deliberately no `TestWidgetsFlutterBinding`: it replaces `HttpClient`
   // with a fake that answers every request with a 400, which would test the
   // fake instead of the transport. These tests speak to loopback servers.

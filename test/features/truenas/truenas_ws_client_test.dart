@@ -11,6 +11,7 @@ import 'package:cupola/features/settings/domain/service_key.dart';
 import 'package:cupola/features/truenas/data/truenas_ws_client.dart';
 
 import '../../test_helpers/fixtures.dart';
+import '../../test_helpers/real_network.dart';
 
 /// A loopback JSON-RPC server standing in for TrueNAS middleware.
 ///
@@ -178,6 +179,8 @@ class _LoopbackClient extends TrueNasWsClient {
 }
 
 void main() {
+  useRealNetwork();
+
   late _FakeMiddleware server;
 
   setUp(() async => server = await _FakeMiddleware.start());

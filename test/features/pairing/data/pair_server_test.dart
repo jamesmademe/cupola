@@ -13,6 +13,8 @@ import 'package:cupola/features/pairing/domain/pair_package.dart';
 import 'package:cupola/features/settings/domain/service_instance.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
+import '../../../test_helpers/real_network.dart';
+
 final _loopback = InternetAddress.loopbackIPv4;
 
 const _package = PairPackage(
@@ -62,6 +64,8 @@ Matcher _failsWith(PairFetchFailure failure) => throwsA(
 );
 
 void main() {
+  useRealNetwork();
+
   group('the server', () {
     test('hands the package over once, then closes', () async {
       final server = await _open();
