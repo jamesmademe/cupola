@@ -153,8 +153,7 @@ device.
 
 To get updates without checking this page, add this repository's URL to
 [**Obtainium**](https://obtainium.imranr.dev/): it installs the `.apk` from each new
-release. While Cupola is in beta its releases are marked as prereleases, so turn on
-**Include prereleases** when you add it.
+release.
 
 </details>
 

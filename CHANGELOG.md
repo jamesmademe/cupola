@@ -14,8 +14,7 @@ go through every area in detail.
   changed too. Add your services again (same addresses, same API keys), check that
   they answer, then uninstall Seekarr. *Set up another device* copies them to the
   next device.
-- **Obtainium:** remove the Seekarr entry and add Cupola as a new app, with
-  *Include prereleases* on while Cupola is in beta.
+- **Obtainium:** remove the Seekarr entry and add Cupola as a new app.
 - The minimums went up: Android 7.0 (was 6.0), iOS 17, and macOS 12 on an Apple
   silicon Mac (Seekarr also ran on Intel Macs and on macOS 10.15).
 - Cupola is released under Apache 2.0; Seekarr 0.8.0 and earlier stay under MIT
