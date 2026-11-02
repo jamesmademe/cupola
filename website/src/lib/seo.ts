@@ -1,10 +1,9 @@
-import { readFileSync } from 'node:fs';
-import { inRepo } from './paths';
 import { site } from '../config';
 import { services } from './repo';
 
-const pubspec = readFileSync(inRepo('pubspec.yaml'), 'utf8');
-export const version = pubspec.match(/^version:\s*([\d.]+)/m)?.[1] ?? '1.0.0';
+// The version people download, so the footer, the press kit and llms.txt name
+// the same release the buttons lead to.
+export const version = site.release;
 
 export const abs = (path: string) => new URL(path, site.url).toString();
 
