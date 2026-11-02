@@ -1,6 +1,4 @@
-import 'dart:io' show Platform;
-
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -13,7 +11,14 @@ import 'package:flutter/widgets.dart';
 /// promises Ctrl+K on a Mac is worse than no tooltip.
 abstract final class AppModifier {
   /// Whether the command modifier is Command rather than Control.
-  static bool get isApple => !kIsWeb && (Platform.isMacOS || Platform.isIOS);
+  ///
+  /// Read from [defaultTargetPlatform], not the host: on a device the two
+  /// agree, and a test that sets the platform gets that platform's keys
+  /// whatever machine runs it.
+  static bool get isApple =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.macOS ||
+          defaultTargetPlatform == TargetPlatform.iOS);
 
   /// The command modifier, written the way this platform writes it.
   static String get commandLabel => isApple ? '⌘' : 'Ctrl';
