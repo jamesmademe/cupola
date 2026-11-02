@@ -101,8 +101,9 @@ about all of them.
 
 ## Install
 
-> **Just want to use it?** iPhone and iPad install through TestFlight; Android and
-> macOS download from [**Releases**](https://github.com/matthw-labs/cupola/releases).
+> **Just want to use it?** iPhone and iPad install through TestFlight (or a sideloaded
+> `.ipa`); Android and macOS download from
+> [**Releases**](https://github.com/matthw-labs/cupola/releases).
 > No toolchain needed. The App Store and Google Play come later.
 
 > **No server at hand?** On the first screen, **Explore a demo home** opens an invented
@@ -111,7 +112,7 @@ about all of them.
 
 | Platform | Status | Get it |
 | --- | --- | --- |
-| **iOS / iPadOS** | Supported, iOS 17+ | [TestFlight](https://testflight.apple.com/join/tqmwnCMj) |
+| **iOS / iPadOS** | Supported, iOS 17+ | [TestFlight](https://testflight.apple.com/join/tqmwnCMj), or an unsigned `.ipa` from Releases |
 | **Android** | Supported, Android 7.0+ | `.apk` from Releases, or Obtainium |
 | **macOS** | Supported, Apple silicon, macOS 12+ | `.dmg` from Releases |
 | Windows / Linux | Built by CI, untested | `.zip` / `.tar.gz` from Releases |
@@ -132,6 +133,12 @@ Open the [TestFlight link](https://testflight.apple.com/join/tqmwnCMj) on your i
 TestFlight app when it asks, then tap **Install**. TestFlight brings each new version
 on its own. The public link has a limited number of places: if it says the beta is
 full, try again after the next release.
+
+To sideload instead, download `cupola-<version>.ipa` from Releases and install it with
+AltStore, SideStore or Sideloadly. The file is unsigned: your tool signs it with your
+own Apple ID. With a free Apple ID the install lasts 7 days and has to be refreshed,
+and the widgets may stay empty, because they share data through an App Group that a
+re-signed copy may not get. TestFlight is the way we recommend.
 
 </details>
 

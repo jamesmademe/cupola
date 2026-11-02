@@ -28,6 +28,9 @@ import { site } from '../config';
   ) : (
     <p>Cupola is coming to iPhone and iPad as a public TestFlight beta. It is not open yet: <a href={site.watch} rel="noopener">watch releases</a> to hear when it is.</p>
   )}
+  {site.downloads.ipa && (
+    <p>Prefer to sideload? <a href={site.downloads.ipa} rel="noopener">Download the unsigned <code>.ipa</code></a> and install it with AltStore, SideStore or Sideloadly. With a free Apple ID the install lasts seven days and has to be refreshed, and the widgets may stay empty. TestFlight is the way we recommend.</p>
+  )}
 
   <h2 id="android">Android</h2>
   {site.downloads.apk ? (

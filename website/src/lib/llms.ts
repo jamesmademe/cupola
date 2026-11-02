@@ -64,7 +64,7 @@ ${rows}
 
 ## Install
 
-- iPhone and iPad: TestFlight beta${d.testflight ? '' : ' (not open yet)'}.
+- iPhone and iPad: TestFlight beta${d.testflight ? '' : ' (not open yet)'}${d.ipa ? ', or an unsigned .ipa to sideload' : ''}.
 - Android: APK from GitHub releases${d.apk ? '' : ' (not out yet)'}.
 - Mac: ${d.testflight ? 'TestFlight beta' : 'TestFlight beta (not open yet)'}${d.macos ? ', or a signed and notarized .dmg' : ''}.
 - Windows and Linux: builds in every GitHub release${d.apk || d.macos ? '' : ' (from the first one, not out yet)'}, not yet tested on real machines.
