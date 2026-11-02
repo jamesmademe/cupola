@@ -43,7 +43,7 @@ export const pages = {
     name: 'Install',
     title: 'Install Cupola on iPhone, Android, Mac, Windows and Linux',
     heading: 'Get Cupola on every device you use.',
-    description: 'How to install Cupola: the TestFlight beta on iPhone, iPad and Mac, what Android, Windows and Linux get, building from source, and what you need first.',
+    description: 'How to install Cupola: the TestFlight beta on iPhone, iPad and Mac, the APK on Android, the dmg, Windows and Linux builds, building from source, and what you need first.',
     light: 'spring',
   },
   privacy: {

@@ -227,8 +227,8 @@ export const rivals: Rival[] = [
     title: 'An ArrMatey alternative for iPhone, Android and Mac · Cupola',
     heading: 'Comparing ArrMatey and Cupola.',
     description:
-      'ArrMatey ships as an Android APK, and its iOS app is built from source. Cupola installs on iPhone, iPad and Mac today, free and open source.',
-    lede: 'ArrMatey is an open-source arr client for Android; on iOS you build it yourself in Xcode. Cupola installs on iPhone, iPad and Mac from a public beta today, and reaches further into downloads, streaming and your server.',
+      'ArrMatey ships as an Android APK, and its iOS app is built from source. Cupola installs on iPhone, iPad, Mac and Android today, free and open source.',
+    lede: 'ArrMatey is an open-source arr client for Android; on iOS you build it yourself in Xcode. Cupola installs on iPhone, iPad and Mac from a public beta and on Android from an APK, and reaches further into downloads, streaming and your server.',
     checked: '30 October 2026',
     facts: [
       { label: 'Platforms', them: 'Android; iOS when built from source', cupola: cupola.platforms },

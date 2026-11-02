@@ -5,6 +5,7 @@ import Compare from '../../components/Compare.astro';
 import { rivals, type Rival } from '../../data/rivals';
 import { rivalPages } from '../../data/pages';
 import { pick, type FaqId } from '../../data/faq';
+import { site } from '../../config';
 
 export const getStaticPaths: GetStaticPaths = () => rivals.map((rival) => ({ params: { id: rival.id }, props: { rival } }));
 
@@ -38,7 +39,7 @@ const others = rivalPages.filter((p) => p !== page);
         <a href={s.url} rel="noopener">{s.label}</a>{i < rival.sources.length - 1 ? ', ' : '.'}
       </>
     ))}{' '}
-    {rival.name} is a trademark of its owner. Something out of date? <a href="https://github.com/matthw-labs/seekarr/issues/new" rel="noopener">Open an issue</a>.
+    {rival.name} is a trademark of its owner. Something out of date? <a href={`${site.issues}/new`} rel="noopener">Open an issue</a>.
   </p>
 </Guide>
 

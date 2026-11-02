@@ -2,6 +2,7 @@
 import Guide from '../layouts/Guide.astro';
 import Faq from '../components/Faq.astro';
 import { pick } from '../data/faq';
+import { site } from '../config';
 
 const groups = [
   { title: 'What it is', items: pick('arrApp', 'nzb360', 'player', 'free', 'seerr', 'lunasea', 'seekarr') },
@@ -12,7 +13,7 @@ const groups = [
 ---
 <Guide
   page="faq"
-  lede="Short answers to what people ask before they install Cupola. If yours is not here, <a href='https://github.com/matthw-labs/seekarr/issues'>ask on GitHub</a>."
+  lede={`Short answers to what people ask before they install Cupola. If yours is not here, <a href='${site.issues}'>ask on GitHub</a>.`}
   questions={groups.flatMap((g) => g.items)}
   related={['install', 'privacy', 'services']}
   showQuestions={false}

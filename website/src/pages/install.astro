@@ -34,7 +34,7 @@ import { site } from '../config';
 
   <h2 id="android">Android</h2>
   {site.downloads.apk ? (
-    <p><a href={site.downloads.apk} rel="noopener">Download the <code>.apk</code></a> and open it. Android asks once to allow installs from your browser. New versions install over the old one.</p>
+    <p><a href={site.downloads.apk} rel="noopener">Download the <code>.apk</code></a> and open it. Android asks once to allow installs from your browser. New versions install over the old one. To have them arrive on their own, add <code>{site.repo.replace('https://', '')}</code> to Obtainium.</p>
   ) : (
     <p>The Android <code>.apk</code> comes with the first release on GitHub. It is not out yet: <a href={site.watch} rel="noopener">watch releases</a> to hear when it is.</p>
   )}
@@ -44,14 +44,14 @@ import { site } from '../config';
     <p>The Mac app is in the same beta. Open the <a href={site.downloads.testflight} rel="noopener">invitation link</a> on your Mac and install it from TestFlight.</p>
   )}
   {site.downloads.macos ? (
-    <p>{site.downloads.testflight ? 'Or skip TestFlight: ' : ''}<a href={site.downloads.macos} rel="noopener">download the <code>.dmg</code></a> and drag Cupola to Applications. It is signed and notarized by Apple, so it opens like any other app.</p>
+    <p>{site.downloads.testflight ? 'Or skip TestFlight: ' : ''}<a href={site.downloads.macos} rel="noopener">download the <code>.dmg</code></a> (Apple silicon) and drag Cupola to Applications. It is signed and notarized by Apple, so it opens like any other app.</p>
   ) : !site.downloads.testflight && (
     <p>The Mac app is coming as a TestFlight beta and a signed <code>.dmg</code>. Neither is open yet: <a href={site.watch} rel="noopener">watch releases</a> to hear when it is.</p>
   )}
 
   <h2 id="windows-linux">Windows and Linux</h2>
-  {site.downloads.apk || site.downloads.macos ? (
-    <p>Every <a href={site.releases} rel="noopener">release</a> includes Windows and Linux builds. On Windows, unzip and run <code>cupola.exe</code> (SmartScreen asks once, as the build is unsigned). On Linux, untar and run <code>cupola</code>; it needs GTK 3 and libsecret. Neither is tested on a real machine yet, so tell us how it goes.</p>
+  {site.downloads.windows && site.downloads.linux ? (
+    <p>Every <a href={site.releases} rel="noopener">release</a> includes a build for <a href={site.downloads.windows} rel="noopener">Windows</a> and one for <a href={site.downloads.linux} rel="noopener">Linux</a>, both x64. On Windows, unzip and run <code>cupola.exe</code> (SmartScreen asks once, as the build is unsigned). On Linux, untar and run <code>cupola</code>; it needs GTK 3 and libsecret. Neither is tested on a real machine yet, so tell us how it goes.</p>
   ) : (
     <p>Windows and Linux builds come with the first release on GitHub. Until then, <a href="#source">build Cupola from source</a>.</p>
   )}

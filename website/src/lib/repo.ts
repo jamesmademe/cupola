@@ -4,6 +4,7 @@
 // build here rather than publishing a page that drifted from the app.
 import { readFileSync } from 'node:fs';
 import { inRepo } from './paths';
+import { site } from '../config';
 
 const read = (path: string) => readFileSync(inRepo(path), 'utf8');
 
@@ -103,7 +104,7 @@ export const stars = () => (starsOnce ??= fetchStars());
 
 async function fetchStars(): Promise<number | null> {
   try {
-    const res = await fetch('https://api.github.com/repos/matthw-labs/seekarr', {
+    const res = await fetch(site.repo.replace('https://github.com/', 'https://api.github.com/repos/'), {
       headers: { Accept: 'application/vnd.github+json' },
       signal: AbortSignal.timeout(5000),
     });

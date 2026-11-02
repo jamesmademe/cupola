@@ -6,7 +6,7 @@ import Icon from './Icon.astro';
 import { site } from '../config';
 
 const d = site.downloads;
-const released = Boolean(d.apk || d.macos);
+const desktop = d.windows && d.linux ? { windows: d.windows, linux: d.linux } : null;
 const platforms = [
   {
     id: 'ios',
@@ -34,7 +34,7 @@ const platforms = [
     href: d.testflight ?? d.macos,
     action: d.testflight ? 'Join the beta' : 'Download for Mac',
     how: d.testflight ? 'TestFlight beta, from Apple' : 'Signed and notarized .dmg',
-    alt: d.testflight && d.macos ? { href: d.macos, label: 'Or download the signed .dmg' } : null,
+    alt: d.testflight && d.macos ? { href: d.macos, label: 'Or download the signed .dmg, for Apple silicon' } : null,
   },
 ] as const;
 interface Props {
@@ -64,8 +64,8 @@ const { compact = false } = Astro.props;
   ))}
   {!compact && (
     <p class="rest t-meta">
-      {released ? (
-        <>Windows and Linux builds come with every <a href={site.releases} rel="noopener">release</a>, not yet tested on real machines. Or <a href="/install/#source">build it from source</a>.</>
+      {desktop ? (
+        <>Builds for <a href={desktop.windows} rel="noopener">Windows</a> and <a href={desktop.linux} rel="noopener">Linux</a> come with every <a href={site.releases} rel="noopener">release</a>, not yet tested on real machines. Or <a href="/install/#source">build it from source</a>.</>
       ) : (
         <>Windows and Linux builds will come with the first release on GitHub. Until then, <a href="/install/#source">build it from source</a>.</>
       )}
