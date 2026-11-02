@@ -532,7 +532,10 @@ class SeerrFake extends ServiceFake {
                 // Sprite Fright is out on digital today and on disc in
                 // thirteen days, as Radarr dates it.
                 if (t == WorldTitles.spriteFright) ...[
-                  {'type': 4, 'release_date': c.ago(const Duration(hours: 6))},
+                  {
+                    'type': 4,
+                    'release_date': c.agoToday(const Duration(hours: 6)),
+                  },
                   {
                     'type': 5,
                     'release_date': c.ahead(const Duration(days: 13)),

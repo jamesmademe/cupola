@@ -437,7 +437,7 @@ class RadarrFake extends ArrFake {
       'path': '${rootFolder(c)}/${title.title} (${title.year})',
       if (hasFile) 'movieFile': _movieFile(c, id, title),
       'added': c.ago(added),
-      if (spriteFright) 'digitalRelease': c.ago(const Duration(hours: 6)),
+      if (spriteFright) 'digitalRelease': c.agoToday(const Duration(hours: 6)),
       if (spriteFright) 'physicalRelease': c.ahead(const Duration(days: 13)),
       'images': WorldArtwork.arrImages(title),
       'genres': const ['Animation'],
