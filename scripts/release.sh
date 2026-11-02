@@ -91,8 +91,8 @@ flutter analyze --fatal-infos
 printf '==> Checking dart format...\n'
 dart format --output=none --set-exit-if-changed .
 
-printf '==> Running flutter test...\n'
-flutter test
+printf '==> Running the test suite...\n'
+dart run tool/test_bundles/test_bundles.dart
 
 printf '==> Verifying icon font subsetting...\n'
 flutter test test/tool/material_symbols_subset_test.dart

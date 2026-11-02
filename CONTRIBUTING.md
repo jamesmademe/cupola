@@ -64,9 +64,14 @@ Before opening a pull request, run:
 ```bash
 flutter analyze
 dart format --output=none --set-exit-if-changed .
-flutter test
+dart run tool/test_bundles/test_bundles.dart
 ```
 Pull requests should **not** introduce analyzer issues, formatting drift, or failing tests.
+
+The last command runs the same suite as `flutter test`, a folder per bundle,
+in a third of the time. A bundle runs the files of a folder in one isolate, so
+a test must not count on running alone in it: one that talks to a real server
+on the loopback declares `useRealNetwork()` (`test/test_helpers/real_network.dart`).
 
 ### Project Structure
 

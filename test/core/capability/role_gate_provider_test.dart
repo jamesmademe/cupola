@@ -69,7 +69,12 @@ void main() {
       () async {
         final harness = await ProfileHarness.start(Profiles.p2);
         final container = harness.container(retry: (_, _) => null);
-        final gate = container.read(roleGateProvider(''));
+        // An account's gate reads its server's facts. Held and waited for,
+        // so the read ends inside this test: left in flight, it reached the
+        // network of whichever test ran next, as a request of that test's.
+        final held = container.listen(roleGateProvider(''), (_, _) {});
+        await container.read(seerrServerFactsProvider(WorldIds.seerr).future);
+        final gate = held.read();
 
         expect(gate.audience, Audience.requester);
         expect(gate.requestAction(SeerrMediaKind.movie), const Live());

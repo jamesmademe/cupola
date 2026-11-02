@@ -20,6 +20,7 @@ import 'package:cupola/features/settings/domain/settings_model.dart';
 
 import '../../../test_helpers/pair_fixtures.dart';
 import '../../../test_helpers/settings_scope.dart';
+import '../../../test_helpers/real_network.dart';
 
 const _sender = SettingsModel(
   instances: [
@@ -90,6 +91,8 @@ Future<T> _until<T>(
 }
 
 void main() {
+  useRealNetwork();
+
   group('the sending device', () {
     test('opens a code for everything it has', () async {
       final sender = await _device(settings: _sender);

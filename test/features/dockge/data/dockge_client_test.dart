@@ -5,9 +5,13 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cupola/features/dockge/data/dockge_client.dart';
 
+import '../../../test_helpers/real_network.dart';
+
 DockgeClient _client(String url) => DockgeClient(baseUrl: url);
 
 void main() {
+  useRealNetwork();
+
   group('DockgeClient.resolveEndpoint', () {
     test('defaults a scheme-less URL to secure wss/https (443)', () {
       // Security §10.3: credentials must not be sent over an unencrypted

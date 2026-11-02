@@ -7,6 +7,8 @@ import 'package:cupola/features/settings/data/route_knock.dart';
 import 'package:cupola/features/settings/domain/connection_access.dart';
 import 'package:cupola/features/settings/domain/service_key.dart';
 
+import '../../../test_helpers/real_network.dart';
+
 KnockAnswer _answer(
   int status,
   String body, {
@@ -24,6 +26,8 @@ final _portal = _answer(
 );
 
 void main() {
+  useRealNetwork();
+
   group('what proves the service, as the lab answers', () {
     test('an arr and Bazarr: a key-less ping that says OK', () {
       for (final service in [

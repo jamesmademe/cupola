@@ -477,9 +477,13 @@ flutter run
 ```bash
 flutter analyze --fatal-infos
 dart format --output=none --set-exit-if-changed .
-flutter test
+dart run tool/test_bundles/test_bundles.dart
 scripts/release.sh all
 ```
+
+The third line is the whole `flutter test` suite, run as one bundle per folder:
+`flutter test` compiles each test file on its own, and with this many files the
+compiling takes longer than the tests. `flutter test <file>` still runs one file.
 
 `release.sh` writes the packages to `dist/<version>`. A beta keeps `pubspec.yaml` at
 three numbers and takes its suffix from `CUPOLA_PRERELEASE=beta.1`, which names the
